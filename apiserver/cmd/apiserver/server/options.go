@@ -54,7 +54,6 @@ type CalicoServerOptions struct {
 
 	// Enable Admission Controller support.
 	EnableAdmissionController bool
-	FIPSModeEnabled           bool
 
 	// Use this to populate the managementClusterAddr inside the managementClusterConnection CR.
 	// The parameters below can only be used in conjunction with

@@ -85,7 +85,6 @@ func main() {
 		// CACertPath:      cfg.LinseedCA,
 		// ClientKeyPath:   cfg.LinseedClientKey,
 		// ClientCertPath:  cfg.LinseedClientCert,
-		// FIPSModeEnabled: cfg.FIPSModeEnabled,
 	}
 	linseed, err := client.NewClient("", config)
 	if err != nil {

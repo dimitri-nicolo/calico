@@ -97,11 +97,10 @@ func (c *cluster) updateActiveFingerprint(fingerprint string) error {
 
 type clusters struct {
 	sync.RWMutex
-	clusters        map[string]*cluster
-	sniServiceMap   map[string]string
-	k8sCLI          bootstrap.K8sClient
-	client          ctrlclient.WithWatch
-	fipsModeEnabled bool
+	clusters      map[string]*cluster
+	sniServiceMap map[string]string
+	k8sCLI        bootstrap.K8sClient
+	client        ctrlclient.WithWatch
 
 	// parameters for forwarding guardian requests to a default server
 	forwardingEnabled               bool
@@ -123,7 +122,7 @@ type clusters struct {
 }
 
 func (cs *clusters) makeInnerTLSConfig() error {
-	cfg := calicotls.NewTLSConfig(cs.voltronCfg.FIPSModeEnabled)
+	cfg := calicotls.NewTLSConfig()
 	if cs.voltronCfg.LinseedServerKey != "" && cs.voltronCfg.LinseedServerCert != "" {
 		certBytes, err := os.ReadFile(cs.voltronCfg.LinseedServerCert)
 		if err != nil {
@@ -342,7 +341,6 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
 				Certificate:       mcResource.Spec.Certificate,
-				FIPSModeEnabled:   cs.fipsModeEnabled,
 			}
 
 			logrus.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -548,7 +546,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 
 	// Set up the outbound proxy, which handles traffic from the management cluster desinted
 	// to the managed cluster over the tunnel.
-	outboundTLSConfig := calicotls.NewTLSConfig(c.FIPSModeEnabled)
+	outboundTLSConfig := calicotls.NewTLSConfig()
 	outboundTLSConfig.InsecureSkipVerify = true // todo: not sure where this comes from, but this should be dealt with.
 	c.outboundTLSProxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,

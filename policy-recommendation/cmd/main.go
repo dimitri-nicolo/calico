@@ -80,11 +80,10 @@ func main() {
 	linseedClient, err := linseedclient.NewClient(
 		config.TenantID,
 		linseedrest.Config{
-			URL:             config.LinseedURL,
-			CACertPath:      config.LinseedCA,
-			ClientKeyPath:   config.LinseedClientKey,
-			ClientCertPath:  config.LinseedClientCert,
-			FIPSModeEnabled: config.FIPSModeEnabled,
+			URL:            config.LinseedURL,
+			CACertPath:     config.LinseedCA,
+			ClientKeyPath:  config.LinseedClientKey,
+			ClientCertPath: config.LinseedClientCert,
 		},
 		linseedrest.WithTokenPath(config.LinseedToken),
 	)

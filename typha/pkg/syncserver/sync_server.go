@@ -160,9 +160,6 @@ type Config struct {
 	ClientURISAN                   string
 	WriteBufferSize                int
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool
-
 	// DebugLogWrites tells the server to wrap each connection with a Writer that
 	// logs every write.  Intended only for use in tests!
 	DebugLogWrites bool

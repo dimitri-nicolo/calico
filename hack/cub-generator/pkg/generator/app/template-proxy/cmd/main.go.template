@@ -69,7 +69,7 @@ func main() {
 	logrus.Infof("Listening for HTTPS requests at %s", addr)
 
 	// Start server
-	tlsConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
+	tlsConfig := calicotls.NewTLSConfig()
 	caPem, err := os.ReadFile(cfg.TargetCAPath)
 	if err != nil {
 		logrus.WithError(err).Fatalf("Failed to read CA from location %s", cfg.TargetCAPath)
@@ -86,7 +86,6 @@ func main() {
 
 	server := &http.Server{
 		Addr:      addr,
-		TLSConfig: tls.NewTLSConfig(cfg.FIPSModeEnabled),
 		Handler:   proxy.NewProxy(targetURL, tlsConfig),
 	}
 

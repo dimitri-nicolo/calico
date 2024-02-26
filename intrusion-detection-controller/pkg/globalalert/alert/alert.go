@@ -39,7 +39,7 @@ type Alert struct {
 }
 
 // NewAlert sets and returns an Alert, builds Linseed query that will be used periodically to query Elasticsearch data.
-func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, clusterName string, tenantID string, namespace string, fipsModeEnabled bool) (*Alert, error) {
+func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, linseedClient client.Client, k8sClient kubernetes.Interface, clusterName string, tenantID string, namespace string) (*Alert, error) {
 	globalAlert.Status.Active = true
 	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
@@ -56,7 +56,7 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lin
 	}
 
 	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
-		service, err := query.NewService(linseedClient, clusterName, globalAlert, fipsModeEnabled)
+		service, err := query.NewService(linseedClient, clusterName, globalAlert)
 		if err != nil {
 			return nil, err
 		}

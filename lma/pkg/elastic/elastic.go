@@ -109,7 +109,7 @@ func NewFromConfig(cfg *Config) (Client, error) {
 			}
 		}
 
-		tlsConfig := tls.NewTLSConfig(cfg.FIPSModeEnabled)
+		tlsConfig := tls.NewTLSConfig()
 		tlsConfig.RootCAs = ca
 		h.Transport = &http.Transport{TLSClientConfig: tlsConfig}
 	}

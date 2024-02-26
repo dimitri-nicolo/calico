@@ -39,7 +39,7 @@ type globalAlertController struct {
 
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
-func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedClient client.Client, kubeClientSet kubernetes.Interface, clusterName string, tenantID string, namespace string, fipsModeEnabled bool, tenantNamespace string) (controller.Controller, []health.Pinger) {
+func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedClient client.Client, kubeClientSet kubernetes.Interface, clusterName string, tenantID string, namespace string, tenantNamespace string) (controller.Controller, []health.Pinger) {
 	c := &globalAlertController{
 		linseedClient:   linseedClient,
 		calicoClientSet: calicoClientSet,
@@ -60,7 +60,6 @@ func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedCli
 			clusterName:           c.clusterName,
 			tenantID:              c.tenantID,
 			namespace:             namespace,
-			fipsModeEnabled:       fipsModeEnabled,
 		})
 
 	pinger := c.worker.AddWatch(

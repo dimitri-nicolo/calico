@@ -72,7 +72,6 @@ func main() {
 	// Start server
 	server := &http.Server{
 		Addr:      addr,
-		TLSConfig: tls.NewTLSConfig(cfg.FIPSModeEnabled),
 	}
 
 	go func() {

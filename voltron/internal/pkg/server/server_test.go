@@ -1177,7 +1177,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			srvWg.Wait()
 		})
 
-		When("the connecting clusters fingerprint matches the md5 active fingerprint in non-FIPS mode", func() {
+		When("the connecting clusters fingerprint matches the md5 active fingerprint", func() {
 			It("upgrades the active fingerprint to sha256", func() {
 				certTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
 				privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
@@ -1212,62 +1212,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					Expect(err).NotTo(HaveOccurred())
 					return mc.Annotations[server.AnnotationActiveCertificateFingerprint]
 				}, 3*time.Second, 500*time.Millisecond).Should(Equal(utils.GenerateFingerprint(cert))) // new sha256 sum
-
-				Expect(t.Close()).NotTo(HaveOccurred())
-			})
-		})
-
-		When("the connecting clusters fingerprint matches the md5 active fingerprint in FIPS mode", func() {
-			It("doesn't modify the existing md5 active fingerprint", func() {
-				// recreate server to enable fips mode
-				srv, _, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI, fakeClient,
-					config,
-					mockAuthenticator,
-					clusterNS,
-					server.WithTunnelSigningCreds(voltronTunnelCert),
-					server.WithTunnelCert(voltronTunnelTLSCert),
-					server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
-					server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
-					server.WithDefaultProxy(defaultProxy),
-					server.WithKubernetesAPITargets(k8sTargets),
-					server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-					server.WithFIPSModeEnabled(true),
-				)
-
-				certTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
-				privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
-				Expect(err).NotTo(HaveOccurred())
-
-				fingerprintMD5 := fmt.Sprintf("%x", md5.Sum(cert.Raw))
-				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      clusterA,
-						Namespace: clusterNS,
-						Annotations: map[string]string{
-							server.AnnotationActiveCertificateFingerprint: fmt.Sprintf("%x", md5.Sum(cert.Raw)), // old md5 sum
-						},
-					},
-				})).NotTo(HaveOccurred())
-				list := &v3.ManagedClusterList{}
-				Expect(fakeClient.List(context.Background(), list, &client.ListOptions{Namespace: clusterNS})).NotTo(HaveOccurred())
-				Expect(list.Items).To(HaveLen(1))
-
-				tlsCert, err := test.X509CertToTLSCert(cert, privKey)
-				Expect(err).NotTo(HaveOccurred())
-
-				t, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
-					Certificates: []tls.Certificate{tlsCert},
-					RootCAs:      voltronTunnelCAs,
-					ServerName:   "voltron",
-				}, 5*time.Second)
-				Expect(err).NotTo(HaveOccurred())
-
-				// wait for one cycle of clusters.watchK8sFrom() to complete
-				Expect(<-watchSync).NotTo(HaveOccurred())
-
-				mc := &v3.ManagedCluster{}
-				Expect(fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterA, Namespace: clusterNS}, mc)).NotTo(HaveOccurred())
-				Expect(mc.Annotations[server.AnnotationActiveCertificateFingerprint]).To(Equal(fingerprintMD5)) // old md5 sum
 
 				Expect(t.Close()).NotTo(HaveOccurred())
 			})

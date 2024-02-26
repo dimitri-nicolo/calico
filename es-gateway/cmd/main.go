@@ -107,7 +107,6 @@ func main() {
 		cfg.KibanaClientKeyPath,
 		cfg.EnableKibanaMutualTLS,
 		false,
-		cfg.FIPSModeEnabled,
 	)
 	if err != nil {
 		log.WithError(err).Fatal("failed to configure Kibana target for ES Gateway.")
@@ -123,7 +122,6 @@ func main() {
 		cfg.ElasticClientKeyPath,
 		cfg.EnableElasticMutualTLS,
 		false,
-		cfg.FIPSModeEnabled,
 	)
 	if err != nil {
 		log.WithError(err).Fatal("failed to configure ES target for ES Gateway.")
@@ -138,7 +136,6 @@ func main() {
 		cfg.ElasticClientCertPath,
 		cfg.ElasticClientKeyPath,
 		cfg.EnableElasticMutualTLS,
-		cfg.FIPSModeEnabled,
 	)
 	if err != nil {
 		log.WithError(err).Fatal("failed to configure ES client for ES Gateway.")
@@ -153,7 +150,6 @@ func main() {
 		cfg.KibanaClientCertPath,
 		cfg.KibanaClientKeyPath,
 		cfg.EnableKibanaMutualTLS,
-		cfg.FIPSModeEnabled,
 	)
 	if err != nil {
 		log.WithError(err).Fatal("failed to configure Kibana client for ES Gateway.")
@@ -174,7 +170,6 @@ func main() {
 		server.WithKibanaClient(kbClient),
 		server.WithK8sClient(k8sClient),
 		server.WithAdminUser(cfg.ElasticUsername, cfg.ElasticPassword),
-		server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 	}
 
 	var collector metrics.Collector

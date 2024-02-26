@@ -133,11 +133,10 @@ func main() {
 
 	// Create linseed Client.
 	lsConfig := lsrest.Config{
-		URL:             cfg.LinseedURL,
-		CACertPath:      cfg.LinseedCA,
-		ClientKeyPath:   cfg.LinseedClientKey,
-		ClientCertPath:  cfg.LinseedClientCert,
-		FIPSModeEnabled: cfg.FIPSMode,
+		URL:            cfg.LinseedURL,
+		CACertPath:     cfg.LinseedCA,
+		ClientKeyPath:  cfg.LinseedClientKey,
+		ClientCertPath: cfg.LinseedClientCert,
 	}
 	linseedClient, err := lsclient.NewClient(cfg.TenantID, lsConfig, lsrest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
@@ -222,14 +221,14 @@ func main() {
 		anomalyDetectionController = anomalydetection.NewADJobDetectionController(kubeClientSet, TigeraIntrusionDetectionNamespace)
 
 		// This will manage global alerts inside the management cluster
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.FIPSMode, cfg.TenantNamespace)
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.TenantNamespace)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
 		// This will manage all waf logs inside the management cluster
 		wafEventController = waf.NewWafAlertController(linseedClient, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
 
 		// This controller will monitor managed cluster updated from K8S and create a NewGlobalAlertController per managed cluster
-		managedClusterController = managedcluster.NewManagedClusterController(calicoClientSet, linseedClient, kubeClientSet, client, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.FIPSMode, cfg.TenantID, cfg.TenantNamespace)
+		managedClusterController = managedcluster.NewManagedClusterController(calicoClientSet, linseedClient, kubeClientSet, client, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.TenantID, cfg.TenantNamespace)
 	}
 
 	f := forwarder.NewEventForwarder(e)

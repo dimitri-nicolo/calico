@@ -123,9 +123,6 @@ type Config struct {
 	DefaultForwardDialRetryAttempts int           `default:"5" split_words:"true"`
 	DefaultForwardDialInterval      time.Duration `default:"2s" split_words:"true"`
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool `default:"false" split_words:"true"`
-
 	// CheckManagedClusterAuthorizationBeforeProxy instructs Voltron
 	// to additionally check if the user has 'GET' permissions on the ManagedCluster
 	// resource before forwarding a request over the tunnel to that managed cluster.

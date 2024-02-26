@@ -73,7 +73,7 @@ func (s *Server) Start() error {
 	s.server = &http.Server{
 		Addr:      s.servercfg.ListenAddr,
 		Handler:   sm,
-		TLSConfig: calicotls.NewTLSConfig(s.servercfg.FIPSModeEnabled),
+		TLSConfig: calicotls.NewTLSConfig(),
 	}
 	if s.servercfg.TLSCert != "" && s.servercfg.TLSKey != "" {
 		log.WithField("Addr", s.server.Addr).Info("Starting HTTPS server")

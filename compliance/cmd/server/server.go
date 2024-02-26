@@ -101,11 +101,10 @@ func main() {
 
 	// Create a linseed client.
 	config := rest.Config{
-		URL:             cfg.LinseedURL,
-		CACertPath:      cfg.LinseedCA,
-		ClientKeyPath:   cfg.LinseedClientKey,
-		ClientCertPath:  cfg.LinseedClientCert,
-		FIPSModeEnabled: cfg.FIPSModeEnabled,
+		URL:            cfg.LinseedURL,
+		CACertPath:     cfg.LinseedCA,
+		ClientKeyPath:  cfg.LinseedClientKey,
+		ClientCertPath: cfg.LinseedClientCert,
 	}
 	linseed, err := client.NewClient(cfg.TenantID, config, rest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
@@ -114,7 +113,7 @@ func main() {
 
 	// Create a factory for producing ComplianceStores scoped to a particular cluster.
 	factory := api.NewStoreFactory(linseed)
-	s := server.New(k8sClientFactory, factory, authn, ":"+*apiPort, *keyPath, *certPath, cfg.FIPSModeEnabled)
+	s := server.New(k8sClientFactory, factory, authn, ":"+*apiPort, *keyPath, *certPath)
 	s.Start()
 
 	// Setup signals.

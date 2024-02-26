@@ -418,7 +418,6 @@ func (t *TyphaDaemon) CreateServer() {
 			CAFile:                         t.ConfigParams.CAFile,
 			ClientCN:                       t.ConfigParams.ClientCN,
 			ClientURISAN:                   t.ConfigParams.ClientURISAN,
-			FIPSModeEnabled:                t.ConfigParams.FIPSModeEnabled,
 		},
 	)
 }
@@ -576,11 +575,9 @@ func dumpHeapMemoryProfile(configParams *config.Config) {
 // TODO Typha: Share with Felix.
 func servePrometheusMetrics(configParams *config.Config) {
 	for {
-		fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 		log.WithFields(log.Fields{
-			"host":            configParams.PrometheusMetricsHost,
-			"port":            configParams.PrometheusMetricsPort,
-			"fipsModeEnabled": fipsModeEnabled,
+			"host": configParams.PrometheusMetricsHost,
+			"port": configParams.PrometheusMetricsPort,
 		}).Info("Starting prometheus metrics endpoint")
 		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
 			log.Info("Including Golang & Process metrics")
@@ -601,7 +598,6 @@ func servePrometheusMetrics(configParams *config.Config) {
 			configParams.PrometheusMetricsCertFile,
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
-			fipsModeEnabled,
 		)
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")

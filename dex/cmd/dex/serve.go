@@ -137,7 +137,7 @@ func runServe(options serveOptions) error {
 	var grpcOptions []grpc.ServerOption
 
 	if c.GRPC.TLSCert != "" {
-		baseTLSConfig := tls2.NewTLSConfig(os.Getenv("FIPS_MODE") == "true")
+		baseTLSConfig := tls2.NewTLSConfig()
 
 		tlsConfig, err := newTLSReloader(logger, c.GRPC.TLSCert, c.GRPC.TLSKey, c.GRPC.TLSClientCA, baseTLSConfig)
 		if err != nil {
@@ -407,7 +407,7 @@ func runServe(options serveOptions) error {
 			return fmt.Errorf("listening (%s) on %s: %v", name, c.Web.HTTPS, err)
 		}
 
-		baseTLSConfig := tls2.NewTLSConfig(os.Getenv("FIPS_MODE") == "true")
+		baseTLSConfig := tls2.NewTLSConfig()
 		tlsConfig, err := newTLSReloader(logger, c.Web.TLSCert, c.Web.TLSKey, "", baseTLSConfig)
 		if err != nil {
 			return fmt.Errorf("invalid config: get HTTP TLS: %v", err)
@@ -616,7 +616,7 @@ func newTLSReloader(logger log.Logger, certFile, keyFile, caFile string, baseCon
 		}
 	}()
 
-	conf := tls2.NewTLSConfig(os.Getenv("FIPS_MODE") == "true")
+	conf := tls2.NewTLSConfig()
 	// https://pkg.go.dev/crypto/tls#baseConfig
 	// Server configurations must set one of Certificates, GetCertificate or GetConfigForClient.
 	if caFile != "" {

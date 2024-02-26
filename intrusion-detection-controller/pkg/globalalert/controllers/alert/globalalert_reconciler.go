@@ -30,7 +30,6 @@ type globalAlertReconciler struct {
 	clusterName           string
 	tenantID              string
 	namespace             string
-	fipsModeEnabled       bool
 }
 
 // alertState has the alert and cancel function to stop the alert routine.
@@ -63,7 +62,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoClientSet, r.linseedClient, r.kubeClientSet, r.clusterName, r.tenantID, r.namespace, r.fipsModeEnabled)
+	alert, err := alert.NewAlert(obj, r.calicoClientSet, r.linseedClient, r.kubeClientSet, r.clusterName, r.tenantID, r.namespace)
 	if err != nil {
 		return err
 	}

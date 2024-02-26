@@ -22,9 +22,8 @@ type Server struct {
 	router *chi.Mux
 }
 
-// NewServer creates a new Server that binds on addr, with a TLSConfig that can be tailored
-// to match FIPS requirements and apply different customizations
-func NewServer(addr string, fipsEnabled bool, opts ...Option) *Server {
+// NewServer creates a new Server that binds on addr and applies different customizations
+func NewServer(addr string, opts ...Option) *Server {
 	const (
 		defaultIdleTimeout  = 120 * time.Second
 		defaultReadTimeout  = 5 * time.Second
@@ -35,7 +34,7 @@ func NewServer(addr string, fipsEnabled bool, opts ...Option) *Server {
 
 	srv := &http.Server{
 		Addr:         addr,
-		TLSConfig:    tls.NewTLSConfig(fipsEnabled),
+		TLSConfig:    tls.NewTLSConfig(),
 		Handler:      mux,
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,

@@ -122,9 +122,6 @@ type Server struct {
 
 	sniServiceMap map[string]string
 
-	// Enable FIPS 140-2 verified mode.
-	fipsModeEnabled bool
-
 	// checkManagedClusterAuthorizationBeforeProxy
 	checkManagedClusterAuthorizationBeforeProxy bool
 
@@ -173,7 +170,7 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 	srv.proxyMux.HandleFunc("/", wrapInMetricsAndLoggingAwareHandler(vcfg.MetricsEnabled, srv.accessLogger, wrapInCORSHandler(srv.cors, srv.clusterMuxer)))
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 
-	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
+	cfg := calicotls.NewTLSConfig()
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 	if len(srv.internalCert.Certificate) > 0 {
 		cfg.Certificates = append(cfg.Certificates, srv.internalCert)
@@ -189,7 +186,7 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 		if len(srv.internalCert.Certificate) == 0 {
 			return nil, fmt.Errorf("no internal certificates configured")
 		}
-		internalTlsCfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
+		internalTlsCfg := calicotls.NewTLSConfig()
 		internalTlsCfg.Certificates = append(internalTlsCfg.Certificates, srv.internalCert)
 
 		srv.internalHTTP = &http.Server{
@@ -205,7 +202,6 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 		tunOpts = append(tunOpts,
 			tunnel.WithClientCert(srv.tunnelSigningCert),
 			tunnel.WithServerCert(srv.tunnelCert),
-			tunnel.WithFIPSModeEnabled(srv.fipsModeEnabled),
 		)
 
 		var err error
@@ -350,13 +346,6 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 						return
 					}
 				} else {
-					// md5 is not approved in FIPS mode so not upgrading from md5 to sha256
-					if s.fipsModeEnabled {
-						log.Errorf("cluster %s stored fingerprint can not be updated in FIPS mode", clusterID)
-						closeTunnel(t)
-						return
-					}
-
 					// check pre-v3.15 fingerprint (md5)
 					if s.extractMD5Identity(t) != c.ActiveFingerprint {
 						log.Error("stored fingerprint does not match provided fingerprint")

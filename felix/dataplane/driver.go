@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 	"context"
 	"math/bits"
 	"net"
-	"os"
 	"os/exec"
 	"runtime/debug"
 	"strings"
@@ -579,11 +578,9 @@ func SupportsBPF() error {
 
 func ServePrometheusMetrics(configParams *config.Config) {
 	for {
-		fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 		log.WithFields(log.Fields{
-			"host":            configParams.PrometheusMetricsHost,
-			"port":            configParams.PrometheusMetricsPort,
-			"fipsModeEnabled": fipsModeEnabled,
+			"host": configParams.PrometheusMetricsHost,
+			"port": configParams.PrometheusMetricsPort,
 		}).Info("Starting prometheus metrics endpoint")
 		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled && configParams.PrometheusWireGuardMetricsEnabled {
 			log.Info("Including Golang, Process and WireGuard metrics")
@@ -609,7 +606,6 @@ func ServePrometheusMetrics(configParams *config.Config) {
 			configParams.PrometheusMetricsCertFile,
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
-			fipsModeEnabled,
 		)
 
 		log.WithError(err).Error(

@@ -19,9 +19,6 @@ type Config struct {
 	HTTPSKey  string `default:"/certs/https/tls.key" split_words:"true"`
 	LogLevel  string `default:"INFO" split_words:"true"`
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool `default:"false" split_words:"true"`
-
 	// Metrics configuration
 	MetricsPort int    `default:"9095" split_words:"true"`
 	MetricsCert string `default:"/certs/https/tls.crt" split_words:"true"`

@@ -56,9 +56,6 @@ type Options struct {
 	ServerURISAN   string
 	SyncerType     syncproto.SyncerType
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool
-
 	// DisableDecoderRestart disables decoder restart and the features that depend on
 	// it (such as compression).  Useful for simulating an older client in UT.
 	DisableDecoderRestart bool

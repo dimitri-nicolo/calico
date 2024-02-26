@@ -71,21 +71,19 @@ type Dialer interface {
 }
 
 type dialer struct {
-	dialerFun       DialerFunc
-	retryAttempts   int
-	retryInterval   time.Duration
-	timeout         time.Duration
-	fipsModeEnabled bool
+	dialerFun     DialerFunc
+	retryAttempts int
+	retryInterval time.Duration
+	timeout       time.Duration
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(dialerFunc DialerFunc, retryAttempts int, retryInterval time.Duration, timeout time.Duration, fipsModeEnabled bool) Dialer {
+func NewDialer(dialerFunc DialerFunc, retryAttempts int, retryInterval time.Duration, timeout time.Duration) Dialer {
 	return &dialer{
-		dialerFun:       dialerFunc,
-		retryAttempts:   retryAttempts,
-		retryInterval:   retryInterval,
-		timeout:         timeout,
-		fipsModeEnabled: fipsModeEnabled,
+		dialerFun:     dialerFunc,
+		retryAttempts: retryAttempts,
+		retryInterval: retryInterval,
+		timeout:       timeout,
 	}
 }
 

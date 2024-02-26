@@ -64,7 +64,7 @@ type service struct {
 }
 
 // NewService builds Linseed query that will be used periodically to query Elasticsearch data.
-func NewService(linseedClient client.Client, clusterName string, alert *v3.GlobalAlert, fipsModeEnabled bool) (Service, error) {
+func NewService(linseedClient client.Client, clusterName string, alert *v3.GlobalAlert) (Service, error) {
 	e := &service{
 		clusterName:   clusterName,
 		linseedClient: linseedClient,
@@ -73,7 +73,7 @@ func NewService(linseedClient client.Client, clusterName string, alert *v3.Globa
 	// We query the base API for the vulnerability dataset and Linseed for others.
 	var err error
 	if alert.Spec.DataSet == v3.GlobalAlertDataSetVulnerability {
-		cfg, cfgErr := getImageAssuranceTLSConfig(fipsModeEnabled)
+		cfg, cfgErr := getImageAssuranceTLSConfig()
 		if cfgErr != nil {
 			return nil, cfgErr
 		}

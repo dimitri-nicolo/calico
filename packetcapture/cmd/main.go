@@ -78,7 +78,7 @@ func main() {
 	// Start server
 	server := &http.Server{
 		Addr:      addr,
-		TLSConfig: tls.NewTLSConfig(cfg.FIPSModeEnabled),
+		TLSConfig: tls.NewTLSConfig(),
 	}
 
 	log.Fatal(server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey))

@@ -127,11 +127,9 @@ func main() {
 		}
 	}
 
-	// Enables FIPS 140-2 verified crypto mode.
-	fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 	// Check for liveness / readiness flags. Will only run checks specified by flags.
 	if *felixLive || *birdReady || *bird6Ready || *felixReady || *birdLive || *bird6Live || *bgpMetricsReady {
-		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, fipsModeEnabled, *thresholdTime)
+		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, *thresholdTime)
 		os.Exit(0)
 	}
 
@@ -187,7 +185,7 @@ func main() {
 		logrus.SetFormatter(&logutils.Formatter{Component: "bgp-metrics"})
 		// To halt the metrics process, close the signal
 		signal := make(chan struct{})
-		metrics.Run(signal, fipsModeEnabled)
+		metrics.Run(signal)
 	} else if *runEarlyNetworking {
 		logrus.SetFormatter(&logutils.Formatter{Component: "early-networking"})
 		earlynetworking.Run()

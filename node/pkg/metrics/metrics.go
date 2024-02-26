@@ -20,7 +20,7 @@ var exitFunction = os.Exit
 // Run is responsible for starting up the BGP Prometheus metrics reporter.
 // An empty channel can be passed into the function to trigger the metrics
 // reporter to halt operation.
-func Run(stop <-chan struct{}, fipsModeEnabled bool) {
+func Run(stop <-chan struct{}) {
 	configureLogging()
 
 	// BGP Prometheus metrics reporter directly relies on BIRD (for BGP stats).
@@ -62,18 +62,16 @@ func Run(stop <-chan struct{}, fipsModeEnabled bool) {
 	keyFile := os.Getenv("FELIX_PROMETHEUSREPORTERKEYFILE")
 	caFile := os.Getenv("FELIX_PROMETHEUSREPORTERCAFILE")
 	log.WithFields(log.Fields{
-		"port":            metricsPort,
-		"fipsModeEnabled": fipsModeEnabled,
-		certFile:          certFile,
-		keyFile:           keyFile,
-		caFile:            caFile,
+		"port":   metricsPort,
+		certFile: certFile,
+		keyFile:  keyFile,
+		caFile:   caFile,
 	}).Info("Starting prometheus BGP reporter")
 	pr := newPrometheusBGPReporter(
 		metricsPort,
 		certFile,
 		keyFile,
 		caFile,
-		fipsModeEnabled,
 	)
 	log.Infof("Created BGP Prometheus metrics reporter with config: %+v\n", pr)
 

@@ -67,11 +67,10 @@ func main() {
 
 	// Create a linseed client.
 	config := rest.Config{
-		URL:             cfg.LinseedURL,
-		CACertPath:      cfg.LinseedCA,
-		ClientKeyPath:   cfg.LinseedClientKey,
-		ClientCertPath:  cfg.LinseedClientCert,
-		FIPSModeEnabled: cfg.FIPSModeEnabled,
+		URL:            cfg.LinseedURL,
+		CACertPath:     cfg.LinseedCA,
+		ClientKeyPath:  cfg.LinseedClientKey,
+		ClientCertPath: cfg.LinseedClientCert,
 	}
 	linseed, err := client.NewClient(cfg.TenantID, config, rest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {

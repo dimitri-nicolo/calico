@@ -21,7 +21,4 @@ type Config struct {
 	OIDCAuthGroupsPrefix   string `split_words:"true"`
 
 	PrometheusEndpoint string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`
-
-	// FIPSModeEnabled uses images and features only that are using FIPS 140-2 validated cryptographic modules and standards.
-	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }

@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package client_test
 
 import (
@@ -108,7 +110,7 @@ var _ = Describe("Client", func() {
 			cli, err := client.New("http://test.com", "voltron",
 				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				}, 1, 0, 5*time.Second, false)),
+				}, 1, 0, 5*time.Second)),
 				client.WithProxyTargets([]proxy.Target{{Path: "/test", Dest: url, Token: "some-token"}}),
 			)
 
@@ -142,7 +144,7 @@ var _ = Describe("Client", func() {
 			cli, err := client.New("http://test.com", "voltron",
 				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				}, 1, 0, 5*time.Second, false)),
+				}, 1, 0, 5*time.Second)),
 			)
 			Expect(err).ShouldNot(HaveOccurred())
 

@@ -80,7 +80,7 @@ func Start(config *Config) {
 	server = &http.Server{
 		Addr:      config.ListenAddr,
 		Handler:   middleware.LogRequestHeaders(sm),
-		TLSConfig: tls.NewTLSConfig(config.FIPSModeEnabled),
+		TLSConfig: tls.NewTLSConfig(),
 	}
 
 	wg.Add(1)

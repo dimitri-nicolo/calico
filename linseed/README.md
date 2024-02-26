@@ -85,7 +85,6 @@ An example to make a paginated query to read flow logs from the last 5 minutes i
 		CACertPath:      "<replace with Linseed CA>",
 		ClientKeyPath:   "<replace with Linseed Client Certificate Path>",
 		ClientCertPath:  "<replace with Linseed Client Certificate Key>",
-		FIPSModeEnabled: true,
 	}
 	linseed, err := client.NewClient("<replace with Tenant ID or leave blank>", config, rest.WithTokenPath("<replace with Token path>"))
 	if err != nil {
@@ -133,7 +132,6 @@ An example to make a paginated query to read flow logs from the last 5 minutes i
 | LINSEED_HTTPS_CERT              |              `/certs/https/tls.crt`              |                                                                                                             Path to tls cert |
 | LINSEED_HTTPS_KEY               |              `/certs/https/tls.key`              |                                                                                                              Path to tls key |
 | LINSEED_CA_CERT                 |            `/certs/https/client.crt`             |                                                                                                              Path to ca cert |
-| LINSEED_FIPS_MODE_ENABLED       |                     `false`                      |                                                                      FIPSModeEnabled Enables FIPS 140-2 verified crypto mode |
 | LINSEED_EXPECTED_TENANT_ID      |                        -                         |                                               ExpectedTenantID will be verified against x-tenant-id header for all API calls |
 | ELASTIC_HOST                    | `tigera-secure-es-http.tigera-elasticsearch.svc` |                                                                            Elastic Host; For local development use localhost |
 | ELASTIC_PORT                    |                      `9200`                      |                                                                                 Elastic Port; For local development use 9200 |

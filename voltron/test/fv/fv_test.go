@@ -16,9 +16,10 @@ import (
 	"sync"
 	"time"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -176,7 +177,6 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 		lisTs2 net.Listener
 
 		wgSrvCnlt                                    sync.WaitGroup
-		fipsMode                                     = true
 		certPemID1, keyPemID1, certPemID2, keyPemID2 []byte
 
 		// client to be used to interact with voltron (mimic UI)
@@ -279,7 +279,6 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 				server.WithExternalCredFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
 				server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-				server.WithFIPSModeEnabled(fipsMode),
 				server.WithForwardingEnabled(true),
 
 				// This config routes requests over the tunnel with hostname testServerName to the test server at listHTTP2.
