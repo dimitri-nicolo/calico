@@ -84,9 +84,11 @@ func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
 		var params = struct {
 			ClusterName string `json:"cluster,omitempty"`
 		}{}
-		if err := httputils.DecodeIgnoreUnknownFields(w, r, &params); err != nil {
-			httputils.EncodeError(w, err)
-			return
+		if r.Method != http.MethodGet {
+			if err := httputils.DecodeIgnoreUnknownFields(w, r, &params); err != nil {
+				httputils.EncodeError(w, err)
+				return
+			}
 		}
 		clusterName := params.ClusterName
 		if clusterName == "" {

@@ -29,6 +29,7 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/application"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/audit"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/event"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/exceptions"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/process"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/rawquery"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
@@ -243,6 +244,16 @@ func Start(cfg *Config) error {
 						search.SearchTypeEvents,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
+						linseed,
+					)))))
+
+	sm.Handle("/event-exceptions",
+		middleware.ClusterRequestToResource(eventsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					exceptions.EventExceptionsHandler(
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSetFactory,
 						linseed,
 					)))))
 
