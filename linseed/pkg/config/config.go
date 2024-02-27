@@ -42,9 +42,6 @@ type Config struct {
 	// Used to verify client certificates for mTLS.
 	CACert string `default:"/certs/https/client.crt" split_words:"true"`
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool `default:"false" split_words:"true"`
-
 	// ExpectedTenantID will be verified against x-tenant-id header for all API calls
 	// in a multi-tenant environment. If left empty, Linseed will not require the x-tenant-id
 	// header to be set on incoming requests. Note that ExpectedTenantID is set for both single-tenant management clusters in CC,

@@ -22,9 +22,6 @@ type Config struct {
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
-
 	// For Calico Cloud, the tenant ID to use.
 	TenantID string `envconfig:"TENANT_ID"`
 

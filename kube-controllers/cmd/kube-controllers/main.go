@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -117,9 +117,6 @@ var (
 	version    bool
 	statusFile string
 
-	// fipsModeEnabled enables FIPS 140-2 validated crypto mode.
-	fipsModeEnabled bool
-
 	certKey    string
 	cert       string
 	requiredCN string
@@ -143,7 +140,6 @@ func init() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set klog logging configuration")
 	}
-	fipsModeEnabled = os.Getenv("FIPS_MODE_ENABLED") == "true"
 	ValidateEnvVars()
 }
 
@@ -183,7 +179,7 @@ func main() {
 	}
 
 	esURL := fmt.Sprintf("https://%s:%s", cfg.ElasticHost, cfg.ElasticPort)
-	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA, fipsModeEnabled)
+	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA)
 
 	stop := make(chan struct{})
 
@@ -297,7 +293,7 @@ func main() {
 			requiredCN = v
 		}
 
-		tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig()
 		tlsConfig.ClientAuth = cryptotls.RequireAndVerifyClientCert
 
 		if caFile, ok = os.LookupEnv(config.EnvCAFile); ok {
@@ -541,7 +537,7 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		return nil, err
 	}
 
-	baseTLSConfig := tls.NewTLSConfig(fipsModeEnabled)
+	baseTLSConfig := tls.NewTLSConfig()
 	tlsClient.MaxVersion = baseTLSConfig.MaxVersion
 	tlsClient.MinVersion = baseTLSConfig.MinVersion
 	tlsClient.CipherSuites = baseTLSConfig.CipherSuites

@@ -174,7 +174,7 @@ func main() {
 			targetList = append(targetList, loadTLSTerminatedRoutesFromFile(*cfg.UpstreamTunnelTLSTerminatedRoutesPath)...)
 		}
 
-		targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
+		targets, err := bootstrap.ProxyTargets(targetList)
 		if err != nil {
 			log.WithError(err).Fatal("failed to parse Linseed proxy targets")
 		}
@@ -191,7 +191,6 @@ func main() {
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithSNIServiceMap(sniServiceMap),
-			server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy, cfg.CheckManagedClusterAuthorizationCacheTTL),
 			server.WithTunnelInnerProxy(innerProxy),
 		)
@@ -378,7 +377,7 @@ func main() {
 
 	opts = append(opts, server.WithUnauthenticatedTargets(targetList.UnauthenticatedPaths()))
 
-	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
+	targets, err := bootstrap.ProxyTargets(targetList)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse default proxy targets.")
 	}

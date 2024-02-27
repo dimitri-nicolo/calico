@@ -69,7 +69,7 @@ func mustGetHTTPClient(config config.Config) *http.Client {
 	}
 
 	// Configure TLS
-	tlsConfig := calicotls.NewTLSConfig(config.FIPSModeEnabled)
+	tlsConfig := calicotls.NewTLSConfig()
 
 	// Configure CA certificates
 	caCertPool := mustGetCACertPool(config)

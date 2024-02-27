@@ -51,8 +51,6 @@ type Server struct {
 
 	cache     cache.SecretsCache // Used to store secrets related authN and credential swapping
 	collector metrics.Collector  // Used to collect prometheus metrics.
-
-	fipsModeEnabled bool // FIPSModeEnabled uses images and features only that are using FIPS 140-2 validated cryptographic modules and standards.
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -71,7 +69,7 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
+	cfg := calicotls.NewTLSConfig()
 	cfg.Certificates = append(cfg.Certificates, srv.internalCert)
 
 	// -----------------------------------------------------------------------------------------------------

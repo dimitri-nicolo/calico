@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package main
 
 import (
@@ -32,11 +34,6 @@ var (
 )
 
 func main() {
-	generalConfig, err := config.GetConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	cfg, err := config.GetDashboardInstallerConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -55,7 +52,7 @@ func main() {
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := tls.NewTLSConfig(generalConfig.FIPSMode)
+	tlsConfig := tls.NewTLSConfig()
 	tlsConfig.RootCAs = caCertPool
 
 	client := &http.Client{

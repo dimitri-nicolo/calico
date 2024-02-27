@@ -101,24 +101,20 @@ type ClientBuilder interface {
 	Build() (Client, error)
 }
 
-func NewClientBuilder(url, username, password string, certPath string, fipsModeEnabled bool) ClientBuilder {
+func NewClientBuilder(url, username, password string, certPath string) ClientBuilder {
 	return &clientBuilder{
 		url:      url,
 		username: username,
 		password: password,
 		certPath: certPath,
-
-		// fipsModeEnabled enables FIPS 140-2 verified crypto mode.
-		fipsModeEnabled: fipsModeEnabled,
 	}
 }
 
 type clientBuilder struct {
-	url             string
-	username        string
-	password        string
-	certPath        string
-	fipsModeEnabled bool
+	url      string
+	username string
+	password string
+	certPath string
 }
 
 func (builder *clientBuilder) Build() (Client, error) {
@@ -133,11 +129,11 @@ func (builder *clientBuilder) Build() (Client, error) {
 		return nil, fmt.Errorf("failed to parse root certificate")
 	}
 
-	return NewClient(builder.url, builder.username, builder.password, certPool, builder.fipsModeEnabled)
+	return NewClient(builder.url, builder.username, builder.password, certPool)
 }
 
-func NewClient(url, username, password string, roots *x509.CertPool, fipsModeEnabled bool) (Client, error) {
-	tlsConfig := tls.NewTLSConfig(fipsModeEnabled)
+func NewClient(url, username, password string, roots *x509.CertPool) (Client, error) {
+	tlsConfig := tls.NewTLSConfig()
 	tlsConfig.RootCAs = roots
 	config := es7.Config{
 		Addresses: []string{

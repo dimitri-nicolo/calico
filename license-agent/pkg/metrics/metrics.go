@@ -1,4 +1,5 @@
-// Copyright (c) 2019, 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package metrics
 
 import (
@@ -63,21 +64,17 @@ type LicenseReporter struct {
 	//Sampling Interval to scrape data
 	pollInterval time.Duration
 	client       clientv3.Interface
-
-	// fipsModeEnabled uses images and features only that are using FIPS 140-2 validated cryptographic modules and standards.
-	fipsModeEnabled bool
 }
 
-func NewLicenseReporter(host, certFile, keyFile, caFile string, pollInterval time.Duration, port int, fipsModeEnabled bool) *LicenseReporter {
+func NewLicenseReporter(host, certFile, keyFile, caFile string, pollInterval time.Duration, port int) *LicenseReporter {
 
 	return &LicenseReporter{
-		port:            port,
-		host:            host,
-		caFile:          caFile,
-		keyFile:         keyFile,
-		certFile:        certFile,
-		pollInterval:    pollInterval,
-		fipsModeEnabled: fipsModeEnabled,
+		port:         port,
+		host:         host,
+		caFile:       caFile,
+		keyFile:      keyFile,
+		certFile:     certFile,
+		pollInterval: pollInterval,
 	}
 }
 
@@ -109,7 +106,7 @@ func init() {
 
 // servePrometheusMetrics starts a lightweight web server to serve prometheus metrics.
 func (lr *LicenseReporter) servePrometheusMetrics() {
-	err := security.ServePrometheusMetrics(prometheus.DefaultGatherer, lr.host, lr.port, lr.certFile, lr.keyFile, lr.caFile, lr.fipsModeEnabled)
+	err := security.ServePrometheusMetrics(prometheus.DefaultGatherer, lr.host, lr.port, lr.certFile, lr.keyFile, lr.caFile)
 	if err != nil {
 		log.WithError(err).Error("Error from libcalico library")
 	}

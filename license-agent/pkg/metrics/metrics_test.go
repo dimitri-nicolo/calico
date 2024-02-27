@@ -1,4 +1,5 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package metrics_test
 
 import (
@@ -20,7 +21,7 @@ var _ = Describe("Check License Validity", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking Validity")
-		lr := metrics.NewLicenseReporter("", "", "", "", min, 9081, true)
+		lr := metrics.NewLicenseReporter("", "", "", "", min, 9081)
 		lic := licutils.ValidEnterpriseTestLicense()
 		isValid, _, maxNodes := lr.LicenseHandler(*lic)
 		Expect(isValid).To(BeTrue(), "License Valid")

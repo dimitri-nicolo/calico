@@ -56,9 +56,6 @@ type Options struct {
 	ServerURISAN   string
 	SyncerType     syncproto.SyncerType
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool
-
 	// DisableDecoderRestart disables decoder restart and the features that depend on
 	// it (such as compression).  Useful for simulating an older client in UT.
 	DisableDecoderRestart bool
@@ -284,7 +281,7 @@ func (s *SyncerClient) connect(cxt context.Context, typhaAddr discovery.Typha) e
 			log.WithError(err).Error("Failed to load certificate and key")
 			return err
 		}
-		tlsConfig := calicotls.NewTLSConfig(s.options.FIPSModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig()
 		tlsConfig.Certificates = []tls.Certificate{cert}
 
 		// Set InsecureSkipVerify true, because when it's false crypto/tls insists on

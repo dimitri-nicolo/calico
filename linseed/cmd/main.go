@@ -416,7 +416,7 @@ func run() {
 
 	// Start the server.
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	server := server.NewServer(addr, cfg.FIPSModeEnabled, opts...)
+	server := server.NewServer(addr, opts...)
 
 	go func() {
 		logrus.Infof("Listening for HTTPS requests at %s", addr)

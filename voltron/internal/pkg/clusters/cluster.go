@@ -16,7 +16,4 @@ type ManagedCluster struct {
 	ActiveFingerprint string `json:"activeFingerprint,omitempty"`
 	// Certificate stores managed cluster certificate.
 	Certificate []byte `json:"certificate,omitempty"`
-
-	// Enable FIPS 140-2 verified mode.
-	FIPSModeEnabled bool
 }

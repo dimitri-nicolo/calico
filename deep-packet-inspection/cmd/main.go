@@ -81,11 +81,10 @@ func main() {
 
 	// Create linseed Client.
 	config := lsrest.Config{
-		URL:             cfg.LinseedURL,
-		CACertPath:      cfg.LinseedCA,
-		ClientKeyPath:   cfg.LinseedClientKey,
-		ClientCertPath:  cfg.LinseedClientCert,
-		FIPSModeEnabled: cfg.FIPSModeEnabled,
+		URL:            cfg.LinseedURL,
+		CACertPath:     cfg.LinseedCA,
+		ClientKeyPath:  cfg.LinseedClientKey,
+		ClientCertPath: cfg.LinseedClientCert,
 	}
 	linseed, err := lsclient.NewClient(cfg.TenantID, config, lsrest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {

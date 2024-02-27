@@ -1,10 +1,8 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
-	"os"
-
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
@@ -58,13 +56,11 @@ func New(
 	)
 
 	if configParams.PrometheusReporterEnabled {
-		fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 		log.WithFields(log.Fields{
-			"port":            configParams.PrometheusReporterPort,
-			"fipsModeEnabled": fipsModeEnabled,
-			"certFile":        configParams.PrometheusReporterCertFile,
-			"keyFile":         configParams.PrometheusReporterKeyFile,
-			"caFile":          configParams.PrometheusReporterCAFile,
+			"port":     configParams.PrometheusReporterPort,
+			"certFile": configParams.PrometheusReporterCertFile,
+			"keyFile":  configParams.PrometheusReporterKeyFile,
+			"caFile":   configParams.PrometheusReporterCAFile,
 		}).Info("Starting prometheus reporter")
 
 		pr := p.NewReporter(
@@ -74,7 +70,6 @@ func New(
 			configParams.PrometheusReporterCertFile,
 			configParams.PrometheusReporterKeyFile,
 			configParams.PrometheusReporterCAFile,
-			fipsModeEnabled,
 		)
 		pr.AddAggregator(p.NewPolicyRulesAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		pr.AddAggregator(p.NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))

@@ -160,9 +160,6 @@ type Config struct {
 	ClientURISAN                   string
 	WriteBufferSize                int
 
-	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool
-
 	// DebugLogWrites tells the server to wrap each connection with a Writer that
 	// logs every write.  Intended only for use in tests!
 	DebugLogWrites bool
@@ -348,10 +345,7 @@ func (s *Server) serve(cxt context.Context) {
 	)
 	if s.config.requiringTLS() {
 		pwd, _ := os.Getwd()
-		logCxt.WithFields(log.Fields{
-			"pwd":             pwd,
-			"fipsModeEnabled": s.config.FIPSModeEnabled,
-		}).Info("Opening TLS listen socket")
+		logCxt.WithField("pwd", pwd).Info("Opening TLS listen socket")
 		cert, tlsErr := tls.LoadX509KeyPair(s.config.CertFile, s.config.KeyFile)
 		if tlsErr != nil {
 			logCxt.WithFields(log.Fields{
@@ -359,7 +353,7 @@ func (s *Server) serve(cxt context.Context) {
 				"keyFile":  s.config.KeyFile,
 			}).WithError(tlsErr).Panic("Failed to load certificate and key")
 		}
-		tlsConfig := calicotls.NewTLSConfig(s.config.FIPSModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig()
 		tlsConfig.Certificates = []tls.Certificate{cert}
 
 		// Arrange for server to verify the clients' certificates.

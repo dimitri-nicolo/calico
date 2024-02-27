@@ -8,8 +8,6 @@ import (
 
 // Config contains generic configuration for intrusion detection components.
 type Config struct {
-	FIPSMode bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
-
 	// Linseed configuration
 	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
 	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`

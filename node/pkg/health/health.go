@@ -90,7 +90,7 @@ func initBGPMetrics() {
 }
 
 // Run various health checks for Calico node, based on the given flag values
-func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsReady, fipsModeEnabled bool, thresholdTime time.Duration) {
+func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsReady bool, thresholdTime time.Duration) {
 	livenessChecks := felixLive || birdLive || bird6Live
 	readinessChecks := bird || felixReady || bird6 || bgpMetricsReady
 
@@ -183,7 +183,7 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsRead
 			if err != nil {
 				log.WithError(err).Fatal("Unable to create tls configuration for bgp metrics health check")
 			}
-			tlsConfig = calicotls.NewTLSConfig(fipsModeEnabled)
+			tlsConfig = calicotls.NewTLSConfig()
 			tlsConfig.Certificates = []tls.Certificate{pair}
 			tlsConfig.InsecureSkipVerify = true
 		}

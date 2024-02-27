@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package prometheus
 
@@ -413,7 +413,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 	mt := &mockTime{}
 	BeforeEach(func() {
 		// Create a PrometheusReporter and start the reporter without starting the HTTP service.
-		pr = NewReporter(prometheus.NewRegistry(), 0, retentionTime, "", "", "", true)
+		pr = NewReporter(prometheus.NewRegistry(), 0, retentionTime, "", "", "")
 		pa = NewPolicyRulesAggregator(retentionTime, "testHost")
 		pr.timeNowFn = mt.getMockTime
 		pa.timeNowFn = mt.getMockTime

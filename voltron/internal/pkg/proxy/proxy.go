@@ -3,6 +3,7 @@
 package proxy
 
 import (
+	gotls "crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"net/http"
@@ -12,8 +13,6 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
-
-	gotls "crypto/tls"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 
@@ -36,9 +35,6 @@ type Target struct {
 	// Transport to use for this target. If nil, Proxy will provide one
 	Transport        http.RoundTripper
 	AllowInsecureTLS bool
-
-	// Enables FIPS 140-2 verified mode.
-	FIPSModeEnabled bool
 
 	// Configures client key and certificate for mTLS from Voltron with the target.
 	ClientKeyPath  string
@@ -82,7 +78,7 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 	if tgt.Transport != nil {
 		p.Transport = tgt.Transport
 	} else if tgt.Dest.Scheme == "https" {
-		tlsCfg := tls.NewTLSConfig(tgt.FIPSModeEnabled)
+		tlsCfg := tls.NewTLSConfig()
 
 		if tgt.AllowInsecureTLS {
 			tlsCfg.InsecureSkipVerify = true

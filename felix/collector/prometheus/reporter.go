@@ -42,12 +42,9 @@ type PrometheusReporter struct {
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
-
-	// fipsModeEnabled Enables FIPS 140-2 verified crypto mode.
-	fipsModeEnabled bool
 }
 
-func NewReporter(registry *prometheus.Registry, port int, retentionTime time.Duration, certFile, keyFile, caFile string, fipsModeEnabled bool) *PrometheusReporter {
+func NewReporter(registry *prometheus.Registry, port int, retentionTime time.Duration, certFile, keyFile, caFile string) *PrometheusReporter {
 	// Set the ticker interval appropriately, we should be checking at least half of the retention time,
 	// or the hard-coded check interval (whichever is smaller).
 	tickerInterval := retentionTime / 2
@@ -65,7 +62,6 @@ func NewReporter(registry *prometheus.Registry, port int, retentionTime time.Dur
 		retentionTicker: jitter.NewTicker(tickerInterval, tickerInterval/10),
 		retentionTime:   retentionTime,
 		timeNowFn:       monotime.Now,
-		fipsModeEnabled: fipsModeEnabled,
 	}
 }
 
@@ -93,7 +89,7 @@ func (pr *PrometheusReporter) Report(u any) error {
 // servePrometheusMetrics starts a lightweight web server to server prometheus metrics.
 func (pr *PrometheusReporter) servePrometheusMetrics() {
 	for {
-		err := security.ServePrometheusMetrics(pr.registry, "", pr.port, pr.certFile, pr.keyFile, pr.caFile, pr.fipsModeEnabled)
+		err := security.ServePrometheusMetrics(pr.registry, "", pr.port, pr.certFile, pr.keyFile, pr.caFile)
 		log.WithError(err).Error(
 			"Prometheus reporter metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)

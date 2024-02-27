@@ -50,10 +50,6 @@ type Config struct {
 
 	// ClientKeyPath is the path to the client key used for mTLS.
 	ClientKeyPath string
-
-	// Whether or not TLS should be limited to FIPS compatible ciphers
-	// and TLS versions.
-	FIPSModeEnabled bool
 }
 
 type ClientOption func(*restClient) error
@@ -90,7 +86,7 @@ func NewClient(tenantID string, cfg Config, opts ...ClientOption) (RESTClient, e
 }
 
 func newHTTPClient(cfg Config) (*http.Client, error) {
-	tlsConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
+	tlsConfig := calicotls.NewTLSConfig()
 	if cfg.CACertPath != "" {
 		caCertPool := x509.NewCertPool()
 		caCert, err := os.ReadFile(cfg.CACertPath)

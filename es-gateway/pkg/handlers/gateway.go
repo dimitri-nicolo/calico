@@ -37,7 +37,7 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 	if t.Transport != nil {
 		p.Transport = t.Transport
 	} else if t.Dest.Scheme == "https" {
-		tlsCfg := calicotls.NewTLSConfig(t.FIPSModeEnabled)
+		tlsCfg := calicotls.NewTLSConfig()
 
 		if t.AllowInsecureTLS {
 			tlsCfg.InsecureSkipVerify = true

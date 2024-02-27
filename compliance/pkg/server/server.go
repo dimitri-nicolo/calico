@@ -22,7 +22,7 @@ import (
 
 // New creates a new server.
 func New(csFactory datastore.ClusterCtxK8sClientFactory, f api.StoreFactory,
-	authenticator auth.JWTAuth, addr string, key string, cert string, fipsMode bool,
+	authenticator auth.JWTAuth, addr string, key string, cert string,
 ) ServerControl {
 	s := &server{
 		key:       key,
@@ -45,7 +45,7 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, f api.StoreFactory,
 	s.server = &http.Server{
 		Addr:      addr,
 		Handler:   mux,
-		TLSConfig: tls.NewTLSConfig(fipsMode),
+		TLSConfig: tls.NewTLSConfig(),
 	}
 
 	return s

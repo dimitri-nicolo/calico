@@ -25,7 +25,7 @@ type Client interface {
 }
 
 // NewClient returns a newly configured ES client.
-func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS, fipsModeEnabled bool) (Client, error) {
+func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS bool) (Client, error) {
 	// Attempt to load CA cert.
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
@@ -39,7 +39,7 @@ func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPat
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
+	tlsConfig := calicotls.NewTLSConfig()
 	tlsConfig.RootCAs = caCertPool
 	httpTransport := &http.Transport{
 		TLSClientConfig: tlsConfig,

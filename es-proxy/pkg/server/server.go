@@ -120,11 +120,10 @@ func Start(cfg *Config) error {
 
 	// Create linseed Client.
 	config := lsrest.Config{
-		URL:             cfg.LinseedURL,
-		CACertPath:      cfg.LinseedCA,
-		ClientKeyPath:   cfg.LinseedClientKey,
-		ClientCertPath:  cfg.LinseedClientCert,
-		FIPSModeEnabled: cfg.FIPSModeEnabled,
+		URL:            cfg.LinseedURL,
+		CACertPath:     cfg.LinseedCA,
+		ClientKeyPath:  cfg.LinseedClientKey,
+		ClientCertPath: cfg.LinseedClientCert,
 	}
 	linseed, err := lsclient.NewClient(cfg.TenantID, config, lsrest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
@@ -322,7 +321,7 @@ func Start(cfg *Config) error {
 			return err
 		}
 
-		kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
+		kibanaTLSConfig := calicotls.NewTLSConfig()
 		kibanaTLSConfig.InsecureSkipVerify = true
 		kibanaCli := kibana.NewClient(&http.Client{
 			Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},
@@ -344,7 +343,6 @@ func Start(cfg *Config) error {
 		Addr:    cfg.ListenAddr,
 		Handler: httputils.LogRequestHeaders(sm),
 	}
-	server.TLSConfig = calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
 	wg.Add(1)
 	go func() {
 		log.Infof("Starting server on %v", cfg.ListenAddr)

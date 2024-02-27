@@ -21,7 +21,7 @@ import (
 // client with a certificate signed by a trusted CA, and (b) data is
 // sent to that client encrypted, and cannot be snooped.  Otherwise it
 // is insecure (HTTP).
-func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int, certFile, keyFile, caFile string, fipsModeEnabled bool) (err error) {
+func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int, certFile, keyFile, caFile string) (err error) {
 	mux := http.NewServeMux()
 	handler := promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{})
 	mux.Handle("/metrics", handler)
@@ -33,7 +33,7 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int,
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
-		tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig()
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 		tlsConfig.ClientCAs = caCertPool
 		srv := &http.Server{

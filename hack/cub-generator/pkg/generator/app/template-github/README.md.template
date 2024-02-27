@@ -35,7 +35,6 @@ make test
 | {{ snakecase .Name |     upper }}_LOG_LEVEL     |                 `Info` |    Log Level across service |
 | {{ snakecase .Name |       upper }}_CERT        | `/certs/https/tls.crt` |    Path to tls cert |
 | {{ snakecase .Name |        upper }}_KEY        | `/certs/https/tls.key` |    Path tp tls key |
-| {{ snakecase .Name | upper }}_FIPS_MODE_ENABLED |                `false` |    FIPSModeEnabled Enables FIPS 140-2 verified crypto mode |
 
 <!---
 Describe what permissions needs in k8s cluster

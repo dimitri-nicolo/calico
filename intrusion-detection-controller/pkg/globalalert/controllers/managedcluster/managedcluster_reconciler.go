@@ -36,9 +36,7 @@ type managedClusterReconciler struct {
 	client                          ctrlclient.WithWatch
 	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
 	alertNameToAlertControllerState map[string]alertControllerState
-
-	fipsModeEnabled bool
-	tenantNamespace string
+	tenantNamespace                 string
 }
 
 // alertControllerState has the Controller and cancel function to stop the Controller.
@@ -107,7 +105,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
 	// This will create global alerts per managed cluster
-	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, clusterName, r.tenantID, r.namespace, r.fipsModeEnabled, r.tenantNamespace)
+	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, clusterName, r.tenantID, r.namespace, r.tenantNamespace)
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,

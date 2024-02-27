@@ -204,15 +204,6 @@ func WithSNIServiceMap(serviceMap map[string]string) Option {
 	}
 }
 
-// WithFIPSModeEnabled enables FIPS 140-2 verified mode.
-func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
-	return func(s *Server) error {
-		s.fipsModeEnabled = fipsModeEnabled
-		s.clusters.fipsModeEnabled = fipsModeEnabled
-		return nil
-	}
-}
-
 func WithCheckManagedClusterAuthorizationBeforeProxy(enabled bool, cacheTTL time.Duration) Option {
 	return func(s *Server) error {
 		var authorizer auth.RBACAuthorizer = s.authenticator

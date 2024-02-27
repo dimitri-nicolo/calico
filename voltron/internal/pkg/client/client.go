@@ -47,9 +47,6 @@ type Client struct {
 
 	connRetryAttempts int
 	connRetryInterval time.Duration
-
-	// fipsModeEnabled enables FIPS 140-2 verified mode.
-	fipsModeEnabled bool
 }
 
 // New returns a new Client
@@ -100,7 +97,7 @@ func New(addr string, serverName string, opts ...Option) (*Client, error) {
 			dialerFunc = func() (*tunnel.Tunnel, error) {
 				log.Debug("Dialing tunnel...")
 
-				tlsConfig := calicotls.NewTLSConfig(client.fipsModeEnabled)
+				tlsConfig := calicotls.NewTLSConfig()
 				tlsConfig.Certificates = []tls.Certificate{*tunnelCert}
 				tlsConfig.RootCAs = tunnelRootCAs
 				tlsConfig.ServerName = client.tunnelServerName
@@ -117,7 +114,6 @@ func New(addr string, serverName string, opts ...Option) (*Client, error) {
 			client.tunnelDialRetryAttempts,
 			client.tunnelDialRetryInterval,
 			client.tunnelDialTimeout,
-			client.fipsModeEnabled,
 		)
 	}
 
@@ -162,7 +158,7 @@ func (c *Client) ServeTunnelHTTP() error {
 	if c.tunnelCert != nil {
 		// we need to upgrade the tunnel to a TLS listener to support HTTP2
 		// on this side.
-		tlsConfig := calicotls.NewTLSConfig(c.fipsModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig()
 		tlsConfig.Certificates = []tls.Certificate{*c.tunnelCert}
 		tlsConfig.NextProtos = []string{"h2"}
 		listener = tls.NewListener(listener, tlsConfig)
