@@ -1,45 +1,30 @@
-From 04bc1332533621283701cc2ce6bb49c6ae2e5fb1 Mon Sep 17 00:00:00 2001
-From: rene-dekker <rene@tigera.io>
-Date: Tue, 27 Feb 2024 14:34:56 -0800
-Subject: [PATCH] Support UBI arm64 builds
+From 81c6c20254d5223017635ba8d0a16286f8cbec63 Mon Sep 17 00:00:00 2001
+From: Jiawei Huang <jiawei@tigera.io>
+Date: Sat, 13 Jan 2024 22:02:36 -0800
+Subject: [PATCH 2/2] Support UBI arm64 builds
 
 ---
- .../build/tasks/os_packages/create_os_package_tasks.ts    | 6 ++++++
- src/dev/build/tasks/os_packages/docker_generator/run.ts   | 2 +-
+ .../build/tasks/os_packages/create_os_package_tasks.ts    | 4 ++--
  .../docker_generator/templates/base/Dockerfile            | 7 +++++++
  .../templates/build_docker_sh.template.ts                 | 8 ++++----
- 4 files changed, 18 insertions(+), 5 deletions(-)
+ 3 files changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
-index 8230f6e41b7..10064b7fe36 100644
+index 4b0654fb6f8..50ef3e417c1 100644
 --- a/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
 +++ b/src/dev/build/tasks/os_packages/create_os_package_tasks.ts
-@@ -75,6 +75,12 @@ export const CreateDockerUBI: Task = {
-   description: 'Creating Docker UBI image',
-
-   async run(config, log, build) {
-+    await runDockerGenerator(config, log, build, {
-+      architecture: 'aarch64',
-+      context: false,
-+      ubi: true,
-+      image: true,
-+    });
+@@ -82,9 +82,9 @@ export const CreateDockerUBI: Task = {
+       image: true,
+     });
      await runDockerGenerator(config, log, build, {
-       architecture: 'x64',
+-      architecture: 'x64',
++      architecture: 'aarch64',
        context: false,
-diff --git a/src/dev/build/tasks/os_packages/docker_generator/run.ts b/src/dev/build/tasks/os_packages/docker_generator/run.ts
-index 5361110ef48..2263c19068c 100644
---- a/src/dev/build/tasks/os_packages/docker_generator/run.ts
-+++ b/src/dev/build/tasks/os_packages/docker_generator/run.ts
-@@ -39,7 +39,7 @@ export async function runDockerGenerator(
- ) {
-   let baseOSImage = '';
-   if (flags.ubuntu) baseOSImage = 'ubuntu:20.04';
--  if (flags.ubi) baseOSImage = 'docker.elastic.co/ubi9/ubi-minimal:latest';
-+  if (flags.ubi) baseOSImage = 'docker.elastic.co/ubi8/ubi-minimal:latest';
-
-   let imageFlavor = '';
-   if (flags.ubi) imageFlavor += '-ubi';
+-      ubi9: true,
++      ubi8: true,
+       image: true,
+     });
+   },
 diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
 index 17102eb2643..ce9195d77e8 100644
 --- a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
@@ -51,7 +36,7 @@ index 17102eb2643..ce9195d77e8 100644
 +FROM calico/qemu-user-static as qemu
 +
  FROM {{{baseOSImage}}} AS builder
-
+ 
 +COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 +
  {{#ubi}}
@@ -65,7 +50,7 @@ index 17102eb2643..ce9195d77e8 100644
 +COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 +
  EXPOSE 5601
-
+ 
  {{#ubi}}
 diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
 index 73159cee1f0..2daef0f7451 100644
@@ -88,11 +73,12 @@ index 73159cee1f0..2daef0f7451 100644
 @@ -62,7 +62,7 @@ function generator({
    echo "Building: kibana${imageFlavor}-docker"; \\
    ${dockerBuild}
-
+ 
 -  docker save ${imageTag}${imageFlavor}:${version} | gzip -c > ${dockerTargetFilename}
 +  docker save ${imageTag}${imageFlavor}:${version}-${dockerArchitecture} | gzip -c > ${dockerTargetFilename}
-
+ 
    exit 0
    `);
---
-2.34.1
+-- 
+2.43.0
+
