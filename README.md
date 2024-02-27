@@ -22,7 +22,7 @@ To update Tigera customization patch, follow the next steps:
 4. Make your changes, and update dependencies by running `./gradlew --write-verification-metadata sha256 help`.
 5. Use [`git commit`](https://git-scm.com/docs/git-commit) to commit your changes into your clone. It can be multiple commits and  you don't need to push them.
 6. Use [`git format-patch`](https://git-scm.com/docs/git-format-patch) to generate patch files. If you have multiple commits, you need to generate one patch file for each commit.
-7. Copy patch files back to the `patches` folder and update the `Run patch` lines in `Dockerfile.amd64` and `Dockerfile-fips.amd64`.
+7. Copy patch files back to the `patches` folder and update the `Run patch` lines in `Dockerfile.amd64`.
 8. Build a new elasticsearch image and validate.
 
 You may also want to read the official [Building Elasticsearch with Gradle](https://github.com/elastic/elasticsearch/blob/main/BUILDING.md) guide.
