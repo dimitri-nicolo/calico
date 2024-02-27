@@ -13,7 +13,7 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 
 ARCHES=amd64 arm64
 
-ELASTIC_VERSION=7.17.16
+ELASTIC_VERSION=7.17.18
 TINI_VERSION=0.19.0
 
 ###############################################################################
