@@ -816,10 +816,9 @@ const (
 )
 
 type mockRouteTable struct {
-	index           int
-	kernelRoutes    map[string][]routetable.Target
-	currentRoutes   map[string][]routetable.Target
-	currentL2Routes map[string][]routetable.L2Target
+	index         int
+	kernelRoutes  map[string][]routetable.Target
+	currentRoutes map[string][]routetable.Target
 }
 
 func (t *mockRouteTable) SetRemoveExternalRoutes(_ bool) {
@@ -850,15 +849,6 @@ func (t *mockRouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
 		"cidr":      cidr,
 	}).Debug("RouteRemove")
 	t.currentRoutes[ifaceName] = nil
-}
-
-func (t *mockRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Target) {
-	log.WithFields(log.Fields{
-		"index":     t.index,
-		"ifaceName": ifaceName,
-		"targets":   targets,
-	}).Debug("SetL2Routes")
-	t.currentL2Routes[ifaceName] = targets
 }
 
 func (t *mockRouteTable) RouteUpdate(_ string, _ routetable.Target) {

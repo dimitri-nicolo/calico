@@ -102,7 +102,7 @@ func init() {
 	lnf.error = NotFoundError
 }
 
-type FailFlags uint32
+type FailFlags uint64
 
 const (
 	FailNextLinkList FailFlags = 1 << iota
@@ -115,6 +115,8 @@ const (
 	FailNextRouteDel
 	FailNextAddARP
 	FailNextNeighSet
+	FailNextNeighDel
+	FailNextNeighList
 	FailNextNewNetlink
 	FailNextSetSocketTimeout
 	FailNextLinkAdd
@@ -179,6 +181,15 @@ func (f FailFlags) String() string {
 	}
 	if f&FailNextAddARP != 0 {
 		parts = append(parts, "FailNextAddARP")
+	}
+	if f&FailNextNeighSet != 0 {
+		parts = append(parts, "FailNextNeighSet")
+	}
+	if f&FailNextNeighList != 0 {
+		parts = append(parts, "FailNextNeighList")
+	}
+	if f&FailNextNeighDel != 0 {
+		parts = append(parts, "FailNextNeighDel")
 	}
 	if f&FailNextNewNetlink != 0 {
 		parts = append(parts, "FailNextNewNetlink")
@@ -293,8 +304,9 @@ type MockNetlinkDataplane struct {
 }
 
 type NeighKey struct {
-	MAC string
-	IP  ip.Addr
+	LinkIndex int
+	MAC       string
+	IP        ip.Addr
 }
 
 func (d *MockNetlinkDataplane) FeatureGate(name string) string {
@@ -377,7 +389,7 @@ func (d *MockNetlinkDataplane) AddIface(idx int, name string, up bool, running b
 
 func (d *MockNetlinkDataplane) SetIface(name string, up bool, running bool) {
 	link, ok := d.NameToLink[name]
-	Expect(ok).To(BeTrue())
+	ExpectWithOffset(1, ok).To(BeTrue(), "SetIface called with unknown interface "+name)
 	if up {
 		link.LinkAttrs.Flags |= net.FlagUp
 		link.LinkAttrs.RawFlags |= syscall.IFF_UP
@@ -473,6 +485,7 @@ func (d *MockNetlinkDataplane) LinkByName(name string) (netlink.Link, error) {
 	if d.DeleteInterfaceAfterLinkByName {
 		defer delete(d.NameToLink, name)
 	}
+	log.Debugf("Looking for interface: %s", name)
 	if link, ok := d.NameToLink[name]; ok {
 		return link.copy(), nil
 	}
@@ -868,6 +881,37 @@ func (d *MockNetlinkDataplane) RouteDel(route *netlink.Route) error {
 	}
 }
 
+// AddNeighs allows test code to add neighbours to the mock dataplane
+// without going through the netlink API.
+func (d *MockNetlinkDataplane) AddNeighs(family int, neighs ...netlink.Neigh) {
+	err := d.checkNeighFamily(family)
+	if err != nil {
+		panic(err)
+	}
+	if d.NeighsByFamily[family] == nil {
+		d.NeighsByFamily[family] = map[NeighKey]*netlink.Neigh{}
+	}
+	addNeighs(d.NeighsByFamily[family], neighs)
+}
+
+func addNeighs(neighMap map[NeighKey]*netlink.Neigh, neighs []netlink.Neigh) {
+	for _, neigh := range neighs {
+		neigh := neigh
+		nk := NeighKey{
+			LinkIndex: neigh.LinkIndex,
+			MAC:       neigh.HardwareAddr.String(),
+			IP:        ip.FromNetIP(neigh.IP),
+		}
+		neighMap[nk] = &neigh
+	}
+}
+
+func (d *MockNetlinkDataplane) ExpectNeighs(family int, neighs ...netlink.Neigh) {
+	nm := map[NeighKey]*netlink.Neigh{}
+	addNeighs(nm, neighs)
+	ExpectWithOffset(1, nm).To(Equal(d.NeighsByFamily[family]))
+}
+
 func (d *MockNetlinkDataplane) NeighAdd(neigh *netlink.Neigh) error {
 	family := neigh.Family
 	err := d.checkNeighFamily(family)
@@ -884,9 +928,13 @@ func (d *MockNetlinkDataplane) NeighAdd(neigh *netlink.Neigh) error {
 	if neigh.HardwareAddr == nil {
 		return unix.EINVAL
 	}
+	if neigh.LinkIndex == 0 {
+		return unix.EINVAL
+	}
 	nk := NeighKey{
-		MAC: neigh.HardwareAddr.String(),
-		IP:  ip.FromNetIP(neigh.IP),
+		LinkIndex: neigh.LinkIndex,
+		MAC:       neigh.HardwareAddr.String(),
+		IP:        ip.FromNetIP(neigh.IP),
 	}
 
 	if _, ok := d.NeighsByFamily[family][nk]; ok {
@@ -910,6 +958,9 @@ func (d *MockNetlinkDataplane) NeighList(linkIndex, family int) ([]netlink.Neigh
 	err := d.checkNeighFamily(family)
 	if err != nil {
 		return nil, err
+	}
+	if d.shouldFail(FailNextNeighList) {
+		return nil, SimulatedError
 	}
 	var res []netlink.Neigh
 	for _, n := range d.NeighsByFamily[family] {
@@ -939,9 +990,13 @@ func (d *MockNetlinkDataplane) NeighSet(neigh *netlink.Neigh) error {
 	if neigh.HardwareAddr == nil {
 		return unix.EINVAL
 	}
+	if neigh.LinkIndex == 0 {
+		return unix.EINVAL
+	}
 	nk := NeighKey{
-		MAC: neigh.HardwareAddr.String(),
-		IP:  ip.FromNetIP(neigh.IP),
+		LinkIndex: neigh.LinkIndex,
+		MAC:       neigh.HardwareAddr.String(),
+		IP:        ip.FromNetIP(neigh.IP),
 	}
 
 	d.NeighsByFamily[family][nk] = neigh
@@ -954,6 +1009,9 @@ func (d *MockNetlinkDataplane) NeighDel(neigh *netlink.Neigh) error {
 	if err != nil {
 		return err
 	}
+	if d.shouldFail(FailNextNeighDel) {
+		return SimulatedError
+	}
 
 	if d.NeighsByFamily[family] == nil {
 		d.NeighsByFamily[family] = map[NeighKey]*netlink.Neigh{}
@@ -964,9 +1022,13 @@ func (d *MockNetlinkDataplane) NeighDel(neigh *netlink.Neigh) error {
 	if neigh.HardwareAddr == nil {
 		return unix.EINVAL
 	}
+	if neigh.LinkIndex == 0 {
+		return unix.EINVAL
+	}
 	nk := NeighKey{
-		MAC: neigh.HardwareAddr.String(),
-		IP:  ip.FromNetIP(neigh.IP),
+		LinkIndex: neigh.LinkIndex,
+		MAC:       neigh.HardwareAddr.String(),
+		IP:        ip.FromNetIP(neigh.IP),
 	}
 
 	if _, ok := d.NeighsByFamily[family][nk]; !ok {
@@ -999,8 +1061,9 @@ func (d *MockNetlinkDataplane) AddStaticArpEntry(cidr ip.CIDR, destMAC net.Hardw
 
 	linkIndex := d.NameToLink[ifaceName].LinkAttrs.Index
 	d.NeighsByFamily[unix.AF_INET][NeighKey{
-		MAC: destMAC.String(),
-		IP:  cidr.Addr(),
+		LinkIndex: linkIndex,
+		MAC:       destMAC.String(),
+		IP:        cidr.Addr(),
 	}] = &netlink.Neigh{
 		Family:       unix.AF_INET,
 		LinkIndex:    linkIndex,

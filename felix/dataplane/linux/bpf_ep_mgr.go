@@ -550,7 +550,6 @@ func newBPFEndpointManager(
 		m.routeTable = routetable.New(
 			[]string{bpfInDev},
 			family,
-			false, // vxlan
 			config.NetlinkTimeout,
 			nil, // deviceRouteSourceAddress
 			config.DeviceRouteProtocol,
