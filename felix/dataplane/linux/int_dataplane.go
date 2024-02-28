@@ -28,8 +28,6 @@ import (
 	"syscall"
 	"time"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -39,7 +37,10 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/felix/aws"
+
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/bpf/events"
@@ -1582,6 +1583,10 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 		// the AWS IP manager has had a chance to configure them.
 		if l.Attrs().OperState != netlink.OperUp {
 			log.WithFields(fields).Debug("Skipping interface for MTU detection (link is down)")
+			continue
+		}
+		if !ifacemonitor.LinkIsOperUp(l) {
+			log.WithFields(fields).Debug("Skipping down interface for MTU detection")
 			continue
 		}
 		log.WithFields(fields).Debug("Examining link for MTU calculation")
