@@ -13,7 +13,7 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 
 ARCHES=amd64 arm64
 
-ELASTIC_VERSION=7.17.16
+ELASTIC_VERSION=7.17.18
 TINI_VERSION=0.19.0
 
 ###############################################################################
@@ -25,7 +25,6 @@ MAKE_BRANCH?=$(GO_BUILD_VER)
 MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
 
 ELASTICSEARCH_CONTAINER_MARKER=.elasticsearch_container-$(ARCH).created
-ELASTICSEARCH_CONTAINER_FIPS_MARKER=.elasticsearch_container-$(ARCH)-fips.created
 
 Makefile.common: Makefile.common.$(MAKE_BRANCH)
 	cp "$<" "$@"
@@ -39,15 +38,6 @@ include Makefile.common
 ###############################################################################
 # Build
 ###############################################################################
-FIPS ?= false
-
-ifeq ($(FIPS),true)
-CGO_ENABLED=1
-GOEXPERIMENT=boringcrypto
-TAGS=osusergo,netgo
-else
-CGO_ENABLED=0
-endif
 
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e GOEXPERIMENT=$(GOEXPERIMENT) $(CALICO_BUILD)
 ELASTIC_DOWNLOADED=.elastic.downloaded
@@ -86,7 +76,7 @@ build-es: init-elastic
 .PHONY: clean
 clean:
 	rm -rf bin build .go-pkg-cache Makefile.*
-	rm -f $(ELASTIC_DOWNLOADED) $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
+	rm -f $(ELASTIC_DOWNLOADED) $(ELASTICSEARCH_CONTAINER_MARKER)
 	-docker image rm -f $$(docker images $(ELASTICSEARCH_IMAGE) -a -q)
 
 ###############################################################################
@@ -102,7 +92,7 @@ sub-image-%:
 .PHONY: image
 image: $(ELASTICSEARCH_IMAGE)
 
-$(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
+$(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_CONTAINER_MARKER)
 
 ELASTIC_ARCH=
 OPENJDK_ARCH=
@@ -125,23 +115,8 @@ $(ELASTICSEARCH_CONTAINER_MARKER): register Dockerfile build
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-# build fips image
-$(ELASTICSEARCH_CONTAINER_FIPS_MARKER): register Dockerfile-fips build
-	docker buildx build --load --platform=linux/$(ARCH) --pull \
-		--build-arg ELASTIC_ARCH=$(ELASTIC_ARCH) \
-		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
-		--build-arg OPENJDK_ARCH=$(OPENJDK_ARCH) \
-		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
-		--build-arg TINI_VERSION=$(TINI_VERSION) \
-		-t $(ELASTICSEARCH_IMAGE):latest-fips-$(ARCH) \
-		-f Dockerfile-fips .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
-	touch $@
-
 ###############################################################################
 # Image
 ###############################################################################
 .PHONY: cd
 cd: image-all cd-common
-	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME)-fips LATEST_IMAGE_TAG=latest-fips
-	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(GIT_VERSION)-fips LATEST_IMAGE_TAG=latest-fips
