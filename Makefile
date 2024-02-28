@@ -12,7 +12,7 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-KIBANA_VERSION = 7.17.16
+KIBANA_VERSION = 7.17.18
 
 # Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
 # accidentally enable the integration
