@@ -92,11 +92,11 @@ var _ = infrastructure.DatastoreDescribe("VXLAN topology before adding host IPs 
 				})
 
 				addDummyNIC := func(f *infrastructure.Felix, up bool) {
-					f.Exec("ip", "link", "add", "type", "dummy")
-					f.Exec("ip", "link", "set", "dev", "dummy0", "mtu", "1300")
-					f.Exec("ip", "link", "set", "name", "eth1", "dummy0")
+					f.Exec("ip", "link", "add", "eth1", "type", "veth", "peer", "name", "dummyX")
+					f.Exec("ip", "link", "set", "dev", "eth1", "mtu", "1300")
 					if up {
 						f.Exec("ip", "link", "set", "dev", "eth1", "up")
+						f.Exec("ip", "link", "set", "dev", "dummyX", "up")
 					}
 				}
 				It("should ignore a secondary interface that is down", func() {
