@@ -13,8 +13,11 @@ spec:
   imagePullSecrets:
     - name: tigera-pull-secret
 
-  # Optionally, a custom registry to use for pulling images.
-  # registry: <my-registry>
+  # The following lines instruct the Operator to use the in-built defaults for locating images.
+  # Optionally, you can change these values to specify a custom registry, path, and prefix to use when locating images.
+  registry: UseDefault
+  imagePath: UseDefault
+  imagePrefix: UseDefault
 
   # Enables provider-specific settings required for compatibility.
   kubernetesProvider: AKS
