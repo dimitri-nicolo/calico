@@ -127,6 +127,7 @@ func TestRunServer(t *testing.T) {
 	defer f.Close()
 
 	sc := jsonenc.NewDecoder(f)
+	sc.DisallowUnknownFields()
 	entries := []v1.WAFLog{}
 	for sc.More() {
 		var log v1.WAFLog

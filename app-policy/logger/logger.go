@@ -51,7 +51,7 @@ func (l *LogHandler) Process(v interface{}) {
 		log.Warnf("cannot marshal log value (%T): %v", v, err)
 		return
 	}
-	l.logger.WithFields(buf).Log(log.ErrorLevel)
+	l.logger.Log(log.ErrorLevel, buf)
 }
 
 func FileWriter(logFilePath string) (io.Writer, error) {
