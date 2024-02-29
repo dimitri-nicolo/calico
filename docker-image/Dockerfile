@@ -5,7 +5,7 @@ FROM ${QEMU_IMAGE} as qemu
 
 ARG TARGETARCH
 
-FROM docker.elastic.co/kibana/kibana-ubi8:${KIBANA_VERSION}-${TARGETARCH} AS kibana
+FROM docker.elastic.co/kibana/kibana-ubi:${KIBANA_VERSION}-${TARGETARCH} AS kibana
 
 COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 

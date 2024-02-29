@@ -72,7 +72,7 @@ clean:
 	rm -fr kibana/
 	rm -f $(KIBANA_DOWNLOADED)
 	-docker image rm -f $$(docker images $(KIBANA_IMAGE) -a -q)
-	-docker image rm -f $$(docker images docker.elastic.co/kibana/kibana-ubi8 -a -q)
+	-docker image rm -f $$(docker images docker.elastic.co/kibana/kibana-ubi -a -q)
 
 ###############################################################################
 # Image
