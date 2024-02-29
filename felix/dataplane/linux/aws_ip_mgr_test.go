@@ -1287,7 +1287,6 @@ func (f *awsIPMgrFakes) NeighList(linkIndex, family int) ([]netlink.Neigh, error
 func (f *awsIPMgrFakes) NewRouteTable(
 	regexes []string,
 	version uint8,
-	vxlan bool,
 	timeout time.Duration,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol netlink.RouteProtocol,
@@ -1297,7 +1296,6 @@ func (f *awsIPMgrFakes) NewRouteTable(
 	featureDetector environment.FeatureDetectorIface) routetable.RouteTableInterface {
 
 	Expect(version).To(BeNumerically("==", 4))
-	Expect(vxlan).To(BeFalse())
 	Expect(deviceRouteSourceAddress).To(BeNil())
 	Expect(removeExternalRoutes).To(BeTrue())
 	Expect(reporter).ToNot(BeNil())
@@ -1434,10 +1432,6 @@ func (f *fakeRouteTable) RouteUpdate(_ string, _ routetable.Target) {
 }
 
 func (f *fakeRouteTable) RouteRemove(_ string, _ ip.CIDR) {
-	panic("implement me")
-}
-
-func (f *fakeRouteTable) SetL2Routes(_ string, _ []routetable.L2Target) {
 	panic("implement me")
 }
 

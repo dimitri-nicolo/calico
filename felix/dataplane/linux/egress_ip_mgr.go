@@ -20,7 +20,6 @@ import (
 	"github.com/golang-collections/collections/stack"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
 
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/environment"
@@ -32,6 +31,7 @@ import (
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/felix/vxlanfdb"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -81,10 +81,10 @@ type healthAggregator interface {
 }
 
 type routeTableGenerator interface {
-	NewRouteTable(interfacePrefixes []string,
+	NewRouteTable(
+		interfacePrefixes []string,
 		ipVersion uint8,
 		tableIndex int,
-		vxlan bool,
 		netlinkTimeout time.Duration,
 		deviceRouteSourceAddress net.IP,
 		deviceRouteProtocol int,
@@ -98,10 +98,10 @@ type routeTableFactory struct {
 	count int
 }
 
-func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
+func (f *routeTableFactory) NewRouteTable(
+	interfacePrefixes []string,
 	ipVersion uint8,
 	tableIndex int,
-	vxlan bool,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
@@ -113,7 +113,6 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 	f.count += 1
 	return routetable.New(interfacePrefixes,
 		ipVersion,
-		vxlan,
 		netlinkTimeout,
 		deviceRouteSourceAddress,
 		netlink.RouteProtocol(deviceRouteProtocol),
@@ -255,8 +254,9 @@ type egressIPManager struct {
 
 	initialKernelState *initialKernelState
 
-	// route table for programming L2 routes.
-	l2Table routetable.RouteTableInterface
+	// vxlanFDB is responsible for programming L2 ARP and FDB entries for our
+	// VXLAN device.
+	vxlanFDB VXLANFDB
 
 	// rrGenerator dynamically creates routeRules instance to program route rules.
 	rrGenerator routeRulesGenerator
@@ -324,6 +324,7 @@ type egressIPManager struct {
 
 func newEgressIPManager(
 	deviceName string,
+	vxlanFDB VXLANFDB,
 	rtTableIndices set.Set[int],
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
@@ -350,16 +351,10 @@ func newEgressIPManager(
 		tableIndexSet.Add(element)
 	}
 
-	// Create main route table to manage L2 routing rules.
-	l2Table := routetable.New([]string{"^" + deviceName + "$"},
-		4, true, dpConfig.NetlinkTimeout, nil,
-		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
-		opRecorder, featureDetector)
-
 	hopRandSource := rand.NewSource(time.Now().UTC().UnixNano())
 
 	mgr := newEgressIPManagerWithShims(
-		l2Table,
+		vxlanFDB,
 		&routeRulesFactory{count: 0},
 		&routeTableFactory{count: 0},
 		tableIndexSet,
@@ -381,7 +376,7 @@ func newEgressIPManager(
 }
 
 func newEgressIPManagerWithShims(
-	mainTable routetable.RouteTableInterface,
+	vxlanFDB VXLANFDB,
 	rrGenerator routeRulesGenerator,
 	rtGenerator routeTableGenerator,
 	tableIndexSet set.Set[int],
@@ -401,7 +396,7 @@ func newEgressIPManagerWithShims(
 ) *egressIPManager {
 
 	mgr := egressIPManager{
-		l2Table:                    mainTable,
+		vxlanFDB:                   vxlanFDB,
 		rrGenerator:                rrGenerator,
 		rtGenerator:                rtGenerator,
 		initialKernelState:         newInitialKernelState(),
@@ -1051,19 +1046,18 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 func (m *egressIPManager) setL2Routes() {
 	gatewayIPs := m.egwTracker.AllGatewayIPs()
 
-	var l2routes []routetable.L2Target
+	var vteps []vxlanfdb.VTEP
 	for _, gatewayIP := range sortAddrSet(gatewayIPs) {
-		l2routes = append(l2routes, routetable.L2Target{
+		vteps = append(vteps, vxlanfdb.VTEP{
 			// remote VTEP mac is generated based on gateway pod ip.
-			VTEPMAC: ipToMac(gatewayIP),
-			GW:      gatewayIP,
-			IP:      gatewayIP,
+			TunnelMAC: ipToMac(gatewayIP),
+			TunnelIP:  gatewayIP,
+			HostIP:    gatewayIP,
 		})
 	}
 
-	// Set L2 route. If there is no L2Target, old entries will be removed.
-	log.WithField("l2routes", l2routes).Info("Egress ip manager sending L2 updates")
-	m.l2Table.SetL2Routes(m.vxlanDevice, l2routes)
+	log.WithField("vteps", vteps).Info("Egress IP manager updating VTEPs")
+	m.vxlanFDB.SetVTEPs(vteps)
 }
 
 func sortAddrSet(in set.Set[ip.Addr]) []ip.Addr {
@@ -1237,7 +1231,6 @@ func (m *egressIPManager) newRouteTable(tableNum int) routetable.RouteTableInter
 		[]string{"^" + m.vxlanDevice + "$", routetable.InterfaceNone},
 		4,
 		tableNum,
-		true,
 		m.dpConfig.NetlinkTimeout,
 		nil,
 		int(m.dpConfig.DeviceRouteProtocol),
@@ -1364,7 +1357,7 @@ func updateEgressTableRoutes(eTable *egressTable, targets []routetable.Target) {
 }
 
 func (m *egressIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
-	rts := []routetable.RouteTableSyncer{m.l2Table}
+	rts := make([]routetable.RouteTableSyncer, 0, len(m.tableIndexToRouteTable))
 	for _, t := range m.tableIndexToRouteTable {
 		rts = append(rts, t.(routetable.RouteTableSyncer))
 	}

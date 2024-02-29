@@ -75,7 +75,6 @@ func newTProxyManager(
 	rt := routetable.New(
 		nil,
 		4,
-		false, // vxlan
 		dpConfig.NetlinkTimeout,
 		nil, // deviceRouteSourceAddress
 		dpConfig.DeviceRouteProtocol,
@@ -125,7 +124,6 @@ func newTProxyManager(
 		rt := routetable.New(
 			nil,
 			6,
-			false, // vxlan
 			dpConfig.NetlinkTimeout,
 			nil, // deviceRouteSourceAddress
 			dpConfig.DeviceRouteProtocol,

@@ -11,6 +11,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/calico/felix/vxlanfdb"
+
 	"github.com/projectcalico/calico/felix/environment"
 
 	"github.com/golang-collections/collections/stack"
@@ -38,6 +40,7 @@ var _ = Describe("EgressIPManager", func() {
 	var dpConfig Config
 	var rr *mockRouteRules
 	var mainTable *mockRouteTable
+	var fdb *mockVXLANFDB
 	var rrFactory *mockRouteRulesFactory
 	var rtFactory *mockRouteTableFactory
 	var podStatusCallback *mockEgressPodStatusCallback
@@ -47,10 +50,10 @@ var _ = Describe("EgressIPManager", func() {
 		rrFactory = &mockRouteRulesFactory{routeRules: nil}
 
 		mainTable = &mockRouteTable{
-			index:           0,
-			currentRoutes:   map[string][]routetable.Target{},
-			currentL2Routes: map[string][]routetable.L2Target{},
+			index:         0,
+			currentRoutes: map[string][]routetable.Target{},
 		}
+		fdb = &mockVXLANFDB{}
 		rtFactory = &mockRouteTableFactory{count: 0, tables: make(map[int]*mockRouteTable)}
 
 		// Ten free tables to use.
@@ -80,7 +83,7 @@ var _ = Describe("EgressIPManager", func() {
 		la := netlink.NewLinkAttrs()
 		la.Name = "egress.calico"
 		manager = newEgressIPManagerWithShims(
-			mainTable,
+			fdb,
 			rrFactory,
 			rtFactory,
 			tableIndexSet,
@@ -287,8 +290,6 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 			})
-			rtFactory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
-			rtFactory.Table(1).checkL2Routes("egress.calico", nil)
 
 			expectRulesAndTable([]string{"10.0.241.0/32"}, 2, routetable.InterfaceNone, []routetable.Target{
 				{
@@ -297,8 +298,6 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 			})
-			rtFactory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
-			rtFactory.Table(1).checkL2Routes("egress.calico", nil)
 
 			expectRulesAndTable([]string{"10.0.242.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
 				{
@@ -307,8 +306,6 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 			})
-			rtFactory.Table(1).checkL2Routes(routetable.InterfaceNone, nil)
-			rtFactory.Table(1).checkL2Routes("egress.calico", nil)
 
 			expectRulesAndTable([]string{"10.0.243.0/32"}, 4, routetable.InterfaceNone, []routetable.Target{
 				{
@@ -321,8 +318,6 @@ var _ = Describe("EgressIPManager", func() {
 					Type: routetable.TargetTypeThrow,
 				},
 			})
-			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
-			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
 
 			expectRulesAndTable([]string{"10.0.244.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
 				{
@@ -335,8 +330,6 @@ var _ = Describe("EgressIPManager", func() {
 					Type: routetable.TargetTypeThrow,
 				},
 			})
-			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
-			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
 
 			expectRulesAndTable([]string{"10.0.245.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
 				{
@@ -349,43 +342,42 @@ var _ = Describe("EgressIPManager", func() {
 					Type: routetable.TargetTypeThrow,
 				},
 			})
-			rtFactory.Table(2).checkL2Routes(routetable.InterfaceNone, nil)
-			rtFactory.Table(2).checkL2Routes("egress.calico", nil)
 
 			mainTable.checkRoutes(routetable.InterfaceNone, nil)
 			mainTable.checkRoutes("egress.calico", nil)
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
-					GW:      ip.FromString("10.0.1.1"),
-					IP:      ip.FromString("10.0.1.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					TunnelIP:  ip.FromString("10.0.1.1"),
+					HostIP:    ip.FromString("10.0.1.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-			})
+			))
 		})
 
 		It("should have the right routes when PreferLocalEgressGateway is set", func() {
@@ -544,38 +536,39 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
-					GW:      ip.FromString("10.0.1.1"),
-					IP:      ip.FromString("10.0.1.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					TunnelIP:  ip.FromString("10.0.1.1"),
+					HostIP:    ip.FromString("10.0.1.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-			})
+			))
 		})
 
 		It("should be possible to skip egress gateway for a destination", func() {
@@ -604,38 +597,39 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2", "10.0.1.3"}),
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
-					GW:      ip.FromString("10.0.1.1"),
-					IP:      ip.FromString("10.0.1.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					TunnelIP:  ip.FromString("10.0.1.1"),
+					HostIP:    ip.FromString("10.0.1.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-			})
+			))
 		})
 
 		It("should support delta update", func() {
@@ -682,43 +676,44 @@ var _ = Describe("EgressIPManager", func() {
 					Type: routetable.TargetTypeThrow,
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x04},
-					GW:      ip.FromString("10.0.1.4"),
-					IP:      ip.FromString("10.0.1.4"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x04},
+					TunnelIP:  ip.FromString("10.0.1.4"),
+					HostIP:    ip.FromString("10.0.1.4"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x05},
-					GW:      ip.FromString("10.0.1.5"),
-					IP:      ip.FromString("10.0.1.5"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x05},
+					TunnelIP:  ip.FromString("10.0.1.5"),
+					HostIP:    ip.FromString("10.0.1.5"),
 				},
-			})
+			))
 		})
 
 		It("should release table correctly", func() {
@@ -736,38 +731,39 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(manager.tableIndexStack.Peek()).To(Equal(2))
 			Expect(manager.tableIndexStack.Len()).To(Equal(5))
 			expectNoRulesAndTable([]string{"10.0.241.0/32"}, 2)
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
-					GW:      ip.FromString("10.0.1.1"),
-					IP:      ip.FromString("10.0.1.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					TunnelIP:  ip.FromString("10.0.1.1"),
+					HostIP:    ip.FromString("10.0.1.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-			})
+			))
 
 			// Send same workload endpoint remove
 			manager.OnUpdate(&proto.WorkloadEndpointRemove{
@@ -831,38 +827,39 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
-					GW:      ip.FromString("10.0.1.1"),
-					IP:      ip.FromString("10.0.1.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					TunnelIP:  ip.FromString("10.0.1.1"),
+					HostIP:    ip.FromString("10.0.1.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-			})
+			))
 		})
 
 		It("should set unreachable route if egress ipset has all members removed", func() {
@@ -886,23 +883,24 @@ var _ = Describe("EgressIPManager", func() {
 					Type: routetable.TargetTypeUnreachable,
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-			})
+			))
 		})
 
 		It("should remove routes and tables for old workload", func() {
@@ -1004,53 +1002,54 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.10.1", "10.0.10.2", "10.0.10.3"}),
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
-					GW:      ip.FromString("10.0.1.1"),
-					IP:      ip.FromString("10.0.1.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					TunnelIP:  ip.FromString("10.0.1.1"),
+					HostIP:    ip.FromString("10.0.1.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x01},
-					GW:      ip.FromString("10.0.10.1"),
-					IP:      ip.FromString("10.0.10.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x01},
+					TunnelIP:  ip.FromString("10.0.10.1"),
+					HostIP:    ip.FromString("10.0.10.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x02},
-					GW:      ip.FromString("10.0.10.2"),
-					IP:      ip.FromString("10.0.10.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x02},
+					TunnelIP:  ip.FromString("10.0.10.2"),
+					HostIP:    ip.FromString("10.0.10.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x03},
-					GW:      ip.FromString("10.0.10.3"),
-					IP:      ip.FromString("10.0.10.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x03},
+					TunnelIP:  ip.FromString("10.0.10.3"),
+					HostIP:    ip.FromString("10.0.10.3"),
 				},
-			})
+			))
 		})
 
 		It("should leave terminating egw pod in existing tables, but not use it for new tables", func() {
@@ -1083,38 +1082,39 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
-					GW:      ip.FromString("10.0.1.1"),
-					IP:      ip.FromString("10.0.1.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01},
+					TunnelIP:  ip.FromString("10.0.1.1"),
+					HostIP:    ip.FromString("10.0.1.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-			})
+			))
 			podStatusCallback.checkState([]statusCallbackEntry{
 				{
 					namespace: "default",
@@ -1416,43 +1416,44 @@ var _ = Describe("EgressIPManager", func() {
 					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3", "10.0.3.1"}),
 				},
 			})
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
-					GW:      ip.FromString("10.0.1.2"),
-					IP:      ip.FromString("10.0.1.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02},
+					TunnelIP:  ip.FromString("10.0.1.2"),
+					HostIP:    ip.FromString("10.0.1.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
-					GW:      ip.FromString("10.0.1.3"),
-					IP:      ip.FromString("10.0.1.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x03},
+					TunnelIP:  ip.FromString("10.0.1.3"),
+					HostIP:    ip.FromString("10.0.1.3"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x03, 0x00},
-					GW:      ip.FromString("10.0.3.0"),
-					IP:      ip.FromString("10.0.3.0"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x03, 0x00},
+					TunnelIP:  ip.FromString("10.0.3.0"),
+					HostIP:    ip.FromString("10.0.3.0"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x03, 0x01},
-					GW:      ip.FromString("10.0.3.1"),
-					IP:      ip.FromString("10.0.3.1"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x03, 0x01},
+					TunnelIP:  ip.FromString("10.0.3.1"),
+					HostIP:    ip.FromString("10.0.3.1"),
 				},
-			})
+			))
 		})
 	})
 
@@ -1508,23 +1509,24 @@ var _ = Describe("EgressIPManager", func() {
 
 			mainTable.checkRoutes(routetable.InterfaceNone, nil)
 			mainTable.checkRoutes("egress.calico", nil)
-			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
-					GW:      ip.FromString("10.0.0.1"),
-					IP:      ip.FromString("10.0.0.1"),
+
+			Expect(fdb.currentVTEPs).To(ConsistOf(
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01},
+					TunnelIP:  ip.FromString("10.0.0.1"),
+					HostIP:    ip.FromString("10.0.0.1"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
-					GW:      ip.FromString("10.0.0.2"),
-					IP:      ip.FromString("10.0.0.2"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02},
+					TunnelIP:  ip.FromString("10.0.0.2"),
+					HostIP:    ip.FromString("10.0.0.2"),
 				},
-				{
-					VTEPMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
-					GW:      ip.FromString("10.0.0.3"),
-					IP:      ip.FromString("10.0.0.3"),
+				vxlanfdb.VTEP{
+					TunnelMAC: []byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x03},
+					TunnelIP:  ip.FromString("10.0.0.3"),
+					HostIP:    ip.FromString("10.0.0.3"),
 				},
-			})
+			))
 		})
 
 		It("should allocate a new rule and table with three hops when maxNextHops is zero", func() {
@@ -1891,21 +1893,21 @@ type mockRouteTableFactory struct {
 	tables map[int]*mockRouteTable
 }
 
-func (f *mockRouteTableFactory) NewRouteTable(interfacePrefixes []string,
+func (f *mockRouteTableFactory) NewRouteTable(
+	interfacePrefixes []string,
 	ipVersion uint8,
 	tableIndex int,
-	vxlan bool,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
 	removeExternalRoutes bool,
 	opRecorder logutils.OpRecorder,
-	featureDetector environment.FeatureDetectorIface) routetable.RouteTableInterface {
+	featureDetector environment.FeatureDetectorIface,
+) routetable.RouteTableInterface {
 
 	table := &mockRouteTable{
-		index:           tableIndex,
-		currentRoutes:   map[string][]routetable.Target{},
-		currentL2Routes: map[string][]routetable.L2Target{},
+		index:         tableIndex,
+		currentRoutes: map[string][]routetable.Target{},
 	}
 	f.tables[tableIndex] = table
 	f.count += 1

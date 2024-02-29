@@ -17,6 +17,7 @@ package intdataplane
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -31,38 +32,31 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/felix/aws"
-
+	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
+	bpfifstate "github.com/projectcalico/calico/felix/bpf/ifstate"
+	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/kprobe"
 	bpfmaps "github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/nat"
-	"github.com/projectcalico/calico/felix/bpf/stats"
-	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
-	"github.com/projectcalico/calico/felix/environment"
-	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/iptables/cmdshim"
-
-	"github.com/projectcalico/calico/felix/bpf"
-	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack"
-	bpfifstate "github.com/projectcalico/calico/felix/bpf/ifstate"
-	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	bpfnat "github.com/projectcalico/calico/felix/bpf/nat"
 	bpfproxy "github.com/projectcalico/calico/felix/bpf/proxy"
 	bpfroutes "github.com/projectcalico/calico/felix/bpf/routes"
-
+	"github.com/projectcalico/calico/felix/bpf/stats"
 	"github.com/projectcalico/calico/felix/bpf/tc"
+	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
@@ -70,11 +64,14 @@ import (
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/dataplane/linux/debugconsole"
+	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
+	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/ipsec"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
+	"github.com/projectcalico/calico/felix/iptables/cmdshim"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/k8sutils"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -86,6 +83,7 @@ import (
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/throttle"
+	"github.com/projectcalico/calico/felix/vxlanfdb"
 	"github.com/projectcalico/calico/felix/wireguard"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
@@ -395,6 +393,7 @@ type InternalDataplane struct {
 	vxlanParentC   chan string
 	vxlanManagerV6 *vxlanManager
 	vxlanParentCV6 chan string
+	vxlanFDBs      []*vxlanfdb.VXLANFDB
 
 	wireguardManager   *wireguardManager
 	wireguardManagerV6 *wireguardManager
@@ -664,7 +663,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		var routeTableVXLAN routetable.RouteTableInterface
 		if !config.RouteSyncDisabled {
 			log.Debug("RouteSyncDisabled is false.")
-			routeTableVXLAN = routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
+			routeTableVXLAN = routetable.New([]string{"^" + VXLANIfaceNameV4 + "$"}, 4, config.NetlinkTimeout,
 				config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_MAIN,
 				dp.loopSummarizer, featureDetector, routetable.WithLivenessCB(dp.reportHealth))
 		} else {
@@ -672,10 +671,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			routeTableVXLAN = &routetable.DummyTable{}
 		}
 
+		vxlanFDB := vxlanfdb.New(netlink.FAMILY_V4, VXLANIfaceNameV4, featureDetector, config.NetlinkTimeout)
+		dp.vxlanFDBs = append(dp.vxlanFDBs, vxlanFDB)
+
 		dp.vxlanManager = newVXLANManager(
 			ipSetsV4,
 			routeTableVXLAN,
-			"vxlan.calico",
+			vxlanFDB,
+			VXLANIfaceNameV4,
 			config,
 			dp.loopSummarizer,
 			4,
@@ -686,7 +689,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(dp.vxlanManager)
 	} else {
 		// Start a cleanup goroutine not to block felix if it needs to retry
-		go cleanUpVXLANDevice("vxlan.calico")
+		go cleanUpVXLANDevice(VXLANIfaceNameV4)
 	}
 
 	// Allocate the tproxy route table indices before Egress grabs them all.
@@ -1031,11 +1034,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			conntrackScanner, bpfIPSets = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocator, config, ipsetsManager, dp)
 		}
 
-		filterTbl := filterTableV4
-		if config.BPFIpv6Enabled {
-			filterTbl = filterTableV6
-		}
-
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 
 		if config.BPFConnTimeLB == string(apiv3.BPFConnectTimeLBDisabled) &&
@@ -1056,7 +1054,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			workloadIfaceRegex,
 			ipSetIDAllocator,
 			ruleRenderer,
-			filterTbl,
+			filterTableV4,
+			filterTableV6,
 			dp.reportHealth,
 			dp.loopSummarizer,
 			featureDetector,
@@ -1165,8 +1164,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			return nil
 		}
 		dp.egwHealthReportC = make(chan EGWHealthReport, 100)
+		egressFDB := vxlanfdb.New(netlink.FAMILY_V4, "egress.calico", featureDetector, config.NetlinkTimeout)
+		dp.vxlanFDBs = append(dp.vxlanFDBs, egressFDB)
 		dp.egressIPManager = newEgressIPManager(
 			"egress.calico",
+			egressFDB,
 			egressTablesIndices,
 			config,
 			dp.loopSummarizer,
@@ -1200,7 +1202,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if !config.RouteSyncDisabled {
 		log.Debug("RouteSyncDisabled is false.")
-		routeTableV4 = routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
+		routeTableV4 = routetable.New(interfaceRegexes, 4, config.NetlinkTimeout,
 			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_MAIN,
 			dp.loopSummarizer, featureDetector, routetable.WithLivenessCB(dp.reportHealth),
 			routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
@@ -1342,7 +1344,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			var routeTableVXLANV6 routetable.RouteTableInterface
 			if !config.RouteSyncDisabled {
 				log.Debug("RouteSyncDisabled is false.")
-				routeTableVXLANV6 = routetable.New([]string{"^vxlan-v6.calico$"}, 6, true, config.NetlinkTimeout,
+				routeTableVXLANV6 = routetable.New([]string{"^" + VXLANIfaceNameV6 + "$"}, 6, config.NetlinkTimeout,
 					config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, true, unix.RT_TABLE_MAIN,
 					dp.loopSummarizer, featureDetector, routetable.WithLivenessCB(dp.reportHealth))
 			} else {
@@ -1350,10 +1352,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				routeTableVXLANV6 = &routetable.DummyTable{}
 			}
 
+			vxlanFDBV6 := vxlanfdb.New(netlink.FAMILY_V6, VXLANIfaceNameV6, featureDetector, config.NetlinkTimeout)
+			dp.vxlanFDBs = append(dp.vxlanFDBs, vxlanFDBV6)
+
 			dp.vxlanManagerV6 = newVXLANManager(
 				ipSetsV6,
 				routeTableVXLANV6,
-				"vxlan-v6.calico",
+				vxlanFDBV6,
+				VXLANIfaceNameV6,
 				config,
 				dp.loopSummarizer,
 				6,
@@ -1364,14 +1370,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.RegisterManager(dp.vxlanManagerV6)
 		} else {
 			// Start a cleanup goroutine not to block felix if it needs to retry
-			go cleanUpVXLANDevice("vxlan-v6.calico")
+			go cleanUpVXLANDevice(VXLANIfaceNameV6)
 		}
 
 		var routeTableV6 routetable.RouteTableInterface
 		if !config.RouteSyncDisabled {
 			log.Debug("RouteSyncDisabled is false.")
 			routeTableV6 = routetable.New(
-				interfaceRegexes, 6, false, config.NetlinkTimeout,
+				interfaceRegexes, 6, config.NetlinkTimeout,
 				config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
 				unix.RT_TABLE_MAIN, dp.loopSummarizer, featureDetector, routetable.WithLivenessCB(dp.reportHealth),
 				routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
@@ -2629,6 +2635,10 @@ func (d *InternalDataplane) processIfaceStateUpdate(ifaceUpdate *ifaceStateUpdat
 		mgr.OnUpdate(ifaceUpdate)
 	}
 
+	for _, fdb := range d.vxlanFDBs {
+		fdb.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
+	}
+
 	for _, mgr := range d.managersWithRouteTables {
 		for _, routeTable := range mgr.GetRouteTableSyncers() {
 			routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
@@ -2786,6 +2796,9 @@ func (d *InternalDataplane) apply() {
 			// Queue a resync on the next Apply().
 			r.QueueResync()
 		}
+		for _, fdb := range d.vxlanFDBs {
+			fdb.QueueResync()
+		}
 		d.forceRouteRefresh = false
 	}
 
@@ -2806,6 +2819,20 @@ func (d *InternalDataplane) apply() {
 		defer ipSetsWG.Done()
 		d.applyIPSetsAndNotifyDomainInfoStore()
 	}()
+
+	// Update any VXLAN FDB entries.
+	for _, fdb := range d.vxlanFDBs {
+		err := fdb.Apply()
+		if err != nil {
+			var lnf netlink.LinkNotFoundError
+			if errors.As(err, &lnf) || errors.Is(err, vxlanfdb.ErrLinkDown) {
+				log.Debug("VXLAN interface not ready yet, can't sync FDB entries.")
+			} else {
+				log.WithError(err).Warn("Failed to synchronize VXLAN FDB entries, will retry...")
+				d.dataplaneNeedsSync = true
+			}
+		}
+	}
 
 	// Update the routing table in parallel with the other updates.  We'll wait for it to finish
 	// before we return.

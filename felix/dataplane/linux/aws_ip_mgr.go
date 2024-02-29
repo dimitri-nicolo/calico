@@ -902,7 +902,6 @@ func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.Route
 		rt := a.newRouteTable(
 			[]string{"^" + regexp.QuoteMeta(ifaceName) + "$", routetable.InterfaceNone},
 			4,
-			false,
 			a.dpConfig.NetlinkTimeout,
 			nil,
 			a.dpConfig.DeviceRouteProtocol,
@@ -963,7 +962,6 @@ type routeRulesNewFn func(
 type routeTableNewFn func(
 	interfaceRegexes []string,
 	ipVersion uint8,
-	vxlan bool,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol netlink.RouteProtocol,
@@ -1003,7 +1001,6 @@ func realRouteRuleNew(
 func realRouteTableNew(
 	interfaceRegexes []string,
 	ipVersion uint8,
-	vxlan bool,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol netlink.RouteProtocol,
@@ -1012,7 +1009,7 @@ func realRouteTableNew(
 	opReporter logutils.OpRecorder,
 	featureDetector environment.FeatureDetectorIface,
 ) routetable.RouteTableInterface {
-	return routetable.New(interfaceRegexes, ipVersion, vxlan, netlinkTimeout, deviceRouteSourceAddress,
+	return routetable.New(interfaceRegexes, ipVersion, netlinkTimeout, deviceRouteSourceAddress,
 		deviceRouteProtocol, removeExternalRoutes, tableIndex, opReporter, featureDetector)
 }
 

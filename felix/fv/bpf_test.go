@@ -1085,7 +1085,33 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						g.Expect(natbe).To(HaveKey(nat.NewNATBackendKey(bckID, 1)))
 						g.Expect(natbe).NotTo(HaveKey(nat.NewNATBackendKey(bckID, 2)))
 					}, "5s").Should(Succeed(), "NAT did not get updated properly")
+				})
 
+				It("should cleanup after we disable eBPF", func() {
+					By("Waiting for dp to get setup up")
+
+					ensureAllNodesBPFProgramsAttached(tc.Felixes)
+
+					By("Changing env and restarting felix")
+
+					tc.Felixes[0].SetEnv(map[string]string{"FELIX_BPFENABLED": "false"})
+					tc.Felixes[0].Restart()
+
+					By("Checking that all programs got cleaned up")
+
+					Eventually(func() string {
+						out, _ := tc.Felixes[0].ExecOutput("bpftool", "-jp", "prog", "show")
+						return out
+					}, "15s", "1s").ShouldNot(
+						Or(ContainSubstring("cali_"), ContainSubstring("calico_"), ContainSubstring("xdp_cali_")))
+
+					// N.B. calico_failsafe map is created in iptables mode by
+					// bpf.NewFailsafeMap() It has calico_ prefix. All other bpf
+					// maps have only cali_ prefix.
+					Eventually(func() string {
+						out, _ := tc.Felixes[0].ExecOutput("bpftool", "-jp", "map", "show")
+						return out
+					}, "15s", "1s").ShouldNot(Or(ContainSubstring("cali_"), ContainSubstring("xdp_cali_")))
 				})
 			}
 		})
@@ -5000,8 +5026,15 @@ func ensureBPFProgramsAttachedOffset(offset int, felix *infrastructure.Felix, if
 		prog := []string{}
 		m := dumpIfStateMap(felix)
 		for _, v := range m {
-			if (v.Flags() & ifstate.FlgReady) > 0 {
-				prog = append(prog, v.IfName())
+			flags := v.Flags()
+			if felix.TopologyOptions.EnableIPv6 {
+				if (flags & ifstate.FlgIPv6Ready) > 0 {
+					prog = append(prog, v.IfName())
+				}
+			} else {
+				if (flags & ifstate.FlgIPv4Ready) > 0 {
+					prog = append(prog, v.IfName())
+				}
 			}
 		}
 		return prog
