@@ -1435,10 +1435,6 @@ func (f *fakeRouteTable) RouteRemove(_ string, _ ip.CIDR) {
 	panic("implement me")
 }
 
-func (f *fakeRouteTable) SetL2Routes(_ string, _ []routetable.L2Target) {
-	panic("implement me")
-}
-
 func (f *fakeRouteTable) QueueResyncIface(_ string) {
 	panic("implement me")
 }
