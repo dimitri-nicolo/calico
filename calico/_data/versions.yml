@@ -59,12 +59,12 @@
       image: tigera/es-proxy
       version: master
     eck-kibana:
-      version: 7.17.16
+      version: 7.17.18
     kibana:
       image: tigera/kibana
       version: master
     eck-elasticsearch:
-      version: 7.17.16
+      version: 7.17.18
     elasticsearch:
       image: tigera/elasticsearch
       version: master
