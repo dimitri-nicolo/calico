@@ -1168,8 +1168,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			return nil
 		}
 		dp.egwHealthReportC = make(chan EGWHealthReport, 100)
+		egressFDB := vxlanfdb.New(netlink.FAMILY_V4, "egress.calico", featureDetector, config.NetlinkTimeout)
+		dp.vxlanFDBs = append(dp.vxlanFDBs, egressFDB)
 		dp.egressIPManager = newEgressIPManager(
 			"egress.calico",
+			egressFDB,
 			egressTablesIndices,
 			config,
 			dp.loopSummarizer,

@@ -865,10 +865,6 @@ func (t *mockRouteTable) checkRoutes(ifaceName string, expected []routetable.Tar
 	Expect(t.currentRoutes[ifaceName]).To(ConsistOf(expected), "Expect route to exist in table %d. Current routes = %v", t.index, t.currentRoutes)
 }
 
-func (t *mockRouteTable) checkL2Routes(ifaceName string, expected []routetable.L2Target) {
-	Expect(t.currentL2Routes[ifaceName]).To(Equal(expected))
-}
-
 type statusReportRecorder struct {
 	currentState map[interface{}]string
 }

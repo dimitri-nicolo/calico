@@ -517,12 +517,10 @@ var _ = Describe("VXLANManager", func() {
 		mac, err := net.ParseMAC("00:0a:95:9d:68:16")
 		Expect(err).NotTo(HaveOccurred())
 		// Expect the nodes VTEP to be programmed with the remote cluster VTEP route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{
-			{
-				VTEPMAC: mac,
-				GW:      ip.FromString("10.0.80.0"),
-				IP:      ip.FromString("172.0.12.1"),
-			},
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.80.0"),
+			HostIP:    ip.FromString("172.0.12.1"),
 		}))
 	})
 
@@ -555,7 +553,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect the nodes VTEP to not be programmed with the remote cluster VTEP route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(HaveLen(0))
+		Expect(fdb.currentVTEPs).To(HaveLen(0))
 	})
 
 	It("does not program remote VTEP L2 route if it conflicts with local cluster VTEP IP on another node", func() {
@@ -580,12 +578,11 @@ var _ = Describe("VXLANManager", func() {
 
 		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
-		localL2Route := routetable.L2Target{
-			VTEPMAC: mac,
-			GW:      ip.FromString("10.0.0.1"),
-			IP:      ip.FromString("172.0.0.3"),
-		}
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{localL2Route}))
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}))
 
 		// Add the remote node with conflicting IP, along with the route updates.
 		// The remote cluster node does not have a route update, as the Calc Graph picks the local VTEP to win the IP conflict.
@@ -617,7 +614,11 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect the nodes VTEP to still only be programmed with the local route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{localL2Route}))
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
+		}))
 	})
 
 	It("does not program remote VTEP L2 routes if they conflict with a different remote cluster VTEP IP", func() {
@@ -667,12 +668,10 @@ var _ = Describe("VXLANManager", func() {
 		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
 		// Expect the nodes VTEP to be programmed with the remote cluster A VTEP route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{
-			{
-				VTEPMAC: mac,
-				GW:      ip.FromString("10.0.0.1"),
-				IP:      ip.FromString("172.0.0.3"),
-			},
+		Expect(fdb.currentVTEPs).To(ConsistOf(vxlanfdb.VTEP{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
 		}))
 	})
 
@@ -722,17 +721,17 @@ var _ = Describe("VXLANManager", func() {
 		}
 		localMAC, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
-		localL2Route := routetable.L2Target{
-			VTEPMAC: localMAC,
-			GW:      ip.FromString("10.0.0.1"),
-			IP:      ip.FromString("172.0.0.3"),
+		localL2Route := vxlanfdb.VTEP{
+			TunnelMAC: localMAC,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
 		}
 		remoteMAC, err := net.ParseMAC("00:0a:95:9d:68:16")
 		Expect(err).NotTo(HaveOccurred())
-		remoteL2Route := routetable.L2Target{
-			VTEPMAC: remoteMAC,
-			GW:      ip.FromString("10.0.0.1"),
-			IP:      ip.FromString("172.0.12.1"),
+		remoteL2Route := vxlanfdb.VTEP{
+			TunnelMAC: remoteMAC,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.12.1"),
 		}
 
 		// Establish local VTEPs for this node, and another local node.
@@ -745,7 +744,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect that the local node VTEP has an L2 route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{localL2Route}))
+		Expect(fdb.currentVTEPs).To(ConsistOf(localL2Route))
 
 		// Add the remote node with conflicting IP.
 		// We don't add a route update as the Calc Graph should pick the local VTEP as the winner of the IP conflict.
@@ -754,7 +753,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect the nodes VTEP to still only be programmed with the local route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{localL2Route}))
+		Expect(fdb.currentVTEPs).To(ConsistOf(localL2Route))
 
 		// Now remove the local VTEP. The routes should shift to the remote VTEP.
 		// We also add the route update for the remote VTEP, as it is no longer conflicted in the calc graph.
@@ -765,7 +764,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect that the routes shifted to the remote VTEP.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{remoteL2Route}))
+		Expect(fdb.currentVTEPs).To(ConsistOf(remoteL2Route))
 
 		// Now restore the local VTEP.
 		manager.OnUpdate(localNodeVTEP)
@@ -775,7 +774,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect the routes have shifted back to the local VTEP.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{localL2Route}))
+		Expect(fdb.currentVTEPs).To(ConsistOf(localL2Route))
 	})
 
 	It("does not program remote VTEP L2 route if it conflicts with local cluster VTEP MAC of this node", func() {
@@ -812,7 +811,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect the nodes VTEP to not be programmed with the remote cluster VTEP route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(HaveLen(0))
+		Expect(fdb.currentVTEPs).To(HaveLen(0))
 	})
 
 	It("does not program remote VTEP L2 route if it conflicts with local cluster VTEP MAC of another node", func() {
@@ -866,11 +865,11 @@ var _ = Describe("VXLANManager", func() {
 		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
 		// Expect the nodes VTEP to only be programmed with the local route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{
 			{
-				VTEPMAC: mac,
-				GW:      ip.FromString("10.0.0.1"),
-				IP:      ip.FromString("172.0.0.3"),
+				TunnelMAC: mac,
+				TunnelIP:  ip.FromString("10.0.0.1"),
+				HostIP:    ip.FromString("172.0.0.3"),
 			},
 		}))
 	})
@@ -926,10 +925,10 @@ var _ = Describe("VXLANManager", func() {
 		// Expect remote A VTEP to be programmed, due to sort on node name to resolve MAC conflict.
 		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{{
-			VTEPMAC: mac,
-			GW:      ip.FromString("10.0.0.1"),
-			IP:      ip.FromString("172.0.0.3"),
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{{
+			TunnelMAC: mac,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
 		}}))
 	})
 
@@ -979,17 +978,17 @@ var _ = Describe("VXLANManager", func() {
 		}
 		remoteAMAC, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
-		remoteAL2Route := routetable.L2Target{
-			VTEPMAC: remoteAMAC,
-			GW:      ip.FromString("10.0.0.1"),
-			IP:      ip.FromString("172.0.0.3"),
+		remoteAL2Route := vxlanfdb.VTEP{
+			TunnelMAC: remoteAMAC,
+			TunnelIP:  ip.FromString("10.0.0.1"),
+			HostIP:    ip.FromString("172.0.0.3"),
 		}
 		remoteBMAC, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
-		remoteBL2Route := routetable.L2Target{
-			VTEPMAC: remoteBMAC,
-			GW:      ip.FromString("10.0.0.3"),
-			IP:      ip.FromString("172.0.12.1"),
+		remoteBL2Route := vxlanfdb.VTEP{
+			TunnelMAC: remoteBMAC,
+			TunnelIP:  ip.FromString("10.0.0.3"),
+			HostIP:    ip.FromString("172.0.12.1"),
 		}
 
 		// Program the remote B VTEP along with this nodes VTEP.
@@ -1002,7 +1001,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect remote B to be programmed as the L2 route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{remoteBL2Route}))
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{remoteBL2Route}))
 
 		// Program the remote A VTEP.
 		manager.OnUpdate(remoteANodeVTEP)
@@ -1011,7 +1010,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect remote A to be programmed as the L2 route, since it wins the MAC conflict resolution by node name order.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{remoteAL2Route}))
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{remoteAL2Route}))
 
 		// Remove the remote B VTEP.
 		manager.OnUpdate(&proto.VXLANTunnelEndpointRemove{Node: remoteBNodeVTEP.Node})
@@ -1020,7 +1019,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Expect remote A to still be programmed as the L2 route.
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{remoteAL2Route}))
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{remoteAL2Route}))
 	})
 
 	It("utilizes L3 routes to resolve L2 conflicts when two VTEPs have the same IP and MAC", func() {
@@ -1069,11 +1068,11 @@ var _ = Describe("VXLANManager", func() {
 		// Expect the remote A L2 route to be programmed, rather than neither, since the remote B VTEP is conflicted in the Calc Graph.
 		mac, err := net.ParseMAC("00:ab:22:32:af:e2")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(Equal([]routetable.L2Target{
+		Expect(fdb.currentVTEPs).To(Equal([]vxlanfdb.VTEP{
 			{
-				VTEPMAC: mac,
-				GW:      ip.FromString("10.0.0.1"),
-				IP:      ip.FromString("172.0.0.3"),
+				TunnelMAC: mac,
+				TunnelIP:  ip.FromString("10.0.0.1"),
+				HostIP:    ip.FromString("172.0.0.3"),
 			},
 		}))
 	})
@@ -1141,16 +1140,16 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 		bMAC, err := net.ParseMAC("00:bc:22:32:ea:33")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rt.currentL2Routes["vxlan.calico"]).To(ConsistOf([]routetable.L2Target{
+		Expect(fdb.currentVTEPs).To(ConsistOf([]vxlanfdb.VTEP{
 			{
-				VTEPMAC: aMAC,
-				GW:      ip.FromString("10.0.0.1"),
-				IP:      ip.FromString("172.0.0.3"),
+				TunnelMAC: aMAC,
+				TunnelIP:  ip.FromString("10.0.0.1"),
+				HostIP:    ip.FromString("172.0.0.3"),
 			},
 			{
-				VTEPMAC: bMAC,
-				GW:      ip.FromString("10.0.0.2"),
-				IP:      ip.FromString("172.0.12.1"),
+				TunnelMAC: bMAC,
+				TunnelIP:  ip.FromString("10.0.0.2"),
+				HostIP:    ip.FromString("172.0.12.1"),
 			},
 		}))
 	})
