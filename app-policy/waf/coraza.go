@@ -107,15 +107,22 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 
 	// after the transaction is closed, process the http info for
 	// the events pipeline
-	defer w.evp.Process(&txHttpInfo{
-		txID:     tx.ID(),
-		destIP:   dstHost,
-		uri:      httpReq.Path,
-		method:   httpReq.Method,
-		protocol: req.Http.Protocol,
-		srcPort:  srcPort,
-		dstPort:  dstPort,
-	})
+	defer func() {
+		action := "pass"
+		if in := tx.Interruption(); in != nil {
+			action = in.Action
+		}
+		w.evp.Process(&txHttpInfo{
+			txID:     tx.ID(),
+			destIP:   dstHost,
+			uri:      httpReq.Path,
+			method:   httpReq.Method,
+			protocol: req.Http.Protocol,
+			srcPort:  srcPort,
+			dstPort:  dstPort,
+			action:   action,
+		})
+	}()
 
 	tx.ProcessConnection(srcHost, int(srcPort), dstHost, int(dstPort))
 	tx.ProcessURI(httpReq.Path, httpReq.Method, httpReq.Protocol)
@@ -127,7 +134,7 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		tx.SetServerName(host)
 	}
 	if it := tx.ProcessRequestHeaders(); it != nil {
-		return w.processInterruption(st, checkReq, tx, it)
+		return w.processInterruption(it)
 	}
 
 	if tx.IsRequestBodyAccessible() {
@@ -142,12 +149,12 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 	case err != nil:
 		return nil, err
 	case it != nil:
-		return w.processInterruption(st, checkReq, tx, it)
+		return w.processInterruption(it)
 	}
 	return OK, nil
 }
 
-func (w *Server) processInterruption(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest, tx corazatypes.Transaction, it *corazatypes.Interruption) (*envoyauthz.CheckResponse, error) {
+func (w *Server) processInterruption(it *corazatypes.Interruption) (*envoyauthz.CheckResponse, error) {
 	resp := &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code.Code_OK)}}
 
 	switch it.Action {

@@ -27,6 +27,7 @@ type cacheEntry struct {
 	uri              map[string]int
 	rules            map[int]linseedv1.WAFRuleHit
 	count            int
+	action           string
 }
 
 type wafEventsPipeline struct {
@@ -40,6 +41,7 @@ type txHttpInfo struct {
 	txID, destIP          string
 	uri, method, protocol string
 	srcPort, dstPort      uint32
+	action                string
 }
 
 func NewEventsPipeline(store policystore.PolicyStoreManager, cb eventCallbackFn) *wafEventsPipeline {
@@ -119,6 +121,7 @@ func (p *wafEventsPipeline) processTxHttpInfo(info *txHttpInfo) {
 	entry.protocol = info.protocol
 	entry.srcPort = info.srcPort
 	entry.dstPort = info.dstPort
+	entry.action = info.action
 }
 
 func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog {
@@ -154,13 +157,11 @@ func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog 
 	)
 
 	log := &linseedv1.WAFLog{
-		Timestamp:   time.Now(),
-		Level:       "WARN",
 		RequestId:   entry.transactionID,
 		Source:      srcEp,
 		Destination: dstEp,
 		Rules:       unMapHits(entry.rules),
-		Msg:         fmt.Sprintf("WAF detected %d violations", entry.count),
+		Msg:         fmt.Sprintf("WAF detected %d violations %s", entry.count, bracket(entry.action)),
 		// path needs to be aggregated in the future
 		Path: mostFrequentURI(entry.uri),
 		// we can't exactly source these from the matched rule alone
@@ -173,6 +174,13 @@ func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog 
 	}
 
 	return log
+}
+
+func bracket(s string) string {
+	if s == "" {
+		return s
+	}
+	return "[" + s + "]"
 }
 
 func (p *wafEventsPipeline) Flush() {

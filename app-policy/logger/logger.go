@@ -10,6 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -39,19 +41,32 @@ func New(writers ...io.Writer) *LogHandler {
 }
 
 func (l *LogHandler) Process(v interface{}) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		// skip on un-marshalable value
-		log.Warnf("cannot marshal log value (%T): %v", v, err)
-		return
+	switch entry := v.(type) {
+	case *v1.WAFLog:
+		b, err := json.Marshal(entry)
+		if err != nil {
+			// skip on un-marshalable value
+			log.Warnf("cannot marshal log value (%T): %v", v, err)
+			return
+		}
+		var buf log.Fields
+		if err := json.Unmarshal(b, &buf); err != nil {
+			// skip on un-unmarshalable value
+			log.Warnf("cannot marshal log value (%T): %v", v, err)
+			return
+		}
+
+		// hack: delete conflicting log fields
+		// 		logrus will add its own prefixes if these conflict
+		//  	with the logrus fields created by the JSONFormatter hook
+		delete(buf, "@timestamp")
+		delete(buf, "msg")
+		delete(buf, "level")
+
+		l.logger.WithFields(buf).Log(log.ErrorLevel, entry.Msg)
+	default:
+		// skip on unhandled type
 	}
-	var buf log.Fields
-	if err := json.Unmarshal(b, &buf); err != nil {
-		// skip on un-unmarshalable value
-		log.Warnf("cannot marshal log value (%T): %v", v, err)
-		return
-	}
-	l.logger.Log(log.ErrorLevel, buf)
 }
 
 func FileWriter(logFilePath string) (io.Writer, error) {
