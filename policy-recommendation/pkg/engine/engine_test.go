@@ -1,7 +1,10 @@
 package engine
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -13,12 +16,19 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/tigera/api/pkg/lib/numorstring"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	fakeK8s "k8s.io/client-go/kubernetes/fake"
 
+	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	libcselector "github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/lma/pkg/api"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	calicores "github.com/projectcalico/calico/policy-recommendation/pkg/calico-resources"
 	querymocks "github.com/projectcalico/calico/policy-recommendation/pkg/flows/mocks"
+	rectypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
 type MockClock struct{}
@@ -27,10 +37,18 @@ func (MockClock) NowRFC3339() string { return []string{"2022-01-01T00:00:00Z"}[0
 
 var _ = Describe("RecommendationEngine", func() {
 
-	const newSelector = `!(projectcalico.org/name starts with 'tigera-') && ` +
-		`!(projectcalico.org/name starts with 'calico-') && ` +
-		`!(projectcalico.org/name starts with 'kube-') && ` +
-		`!(projectcalico.org/name starts with 'openshift-')`
+	const (
+		newSelector = `!(projectcalico.org/name starts with 'tigera-') && ` +
+			`!(projectcalico.org/name starts with 'calico-') && ` +
+			`!(projectcalico.org/name starts with 'kube-') && ` +
+			`!(projectcalico.org/name starts with 'openshift-')`
+
+			// kindRecommendations is the kind of the recommendations resource.
+		kindRecommendations = "recommendations"
+
+		retryInterval = 100 * time.Millisecond
+		retries       = 5
+	)
 
 	var (
 		stopChan chan struct{}
@@ -39,6 +57,7 @@ var _ = Describe("RecommendationEngine", func() {
 	)
 
 	BeforeEach(func() {
+		ctx := context.Background()
 		logEntry = log.WithField("test", "test")
 		mockClock := MockClock{}
 		stopChan = make(chan struct{})
@@ -67,7 +86,72 @@ var _ = Describe("RecommendationEngine", func() {
 		parsedSelector, err := libcselector.Parse(`projectcalico.org/name == 'default'`)
 		Expect(err).NotTo(HaveOccurred())
 
+		mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
+		mockClientSet.On("ProjectcalicoV3").Return(fakecalico.NewSimpleClientset().ProjectcalicoV3())
+		mockClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+
+		_, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies("test-namespace").Create(ctx, &v3.StagedNetworkPolicy{}, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		_, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies("tigera-namespace").Create(ctx, &v3.StagedNetworkPolicy{}, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		_, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies("openshift-namespace").Create(ctx, &v3.StagedNetworkPolicy{}, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Get the list of recommendations from the datastore with retries.
+		listRecommendations := func(ret int) ([]v3.StagedNetworkPolicy, error) {
+			var err error
+			var snps *v3.StagedNetworkPolicyList
+			for i := 0; i < ret; i++ {
+				snps, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(v1.NamespaceAll).List(ctx, metav1.ListOptions{
+					LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
+				})
+				if err == nil {
+					break
+				}
+				time.Sleep(retryInterval) // Wait before retrying
+			}
+
+			if err != nil {
+				return nil, err
+			}
+
+			return snps.Items, nil
+		}
+		// Define the list of items handled by the policy recommendation cache.
+		listFunc := func() (map[string]interface{}, error) {
+			snps, err := listRecommendations(retries)
+			if err != nil {
+				return nil, err
+			}
+
+			snpMap := make(map[string]interface{})
+			for _, snp := range snps {
+				snpMap[snp.Namespace] = snp
+			}
+
+			return snpMap, nil
+		}
+
+		// Create a cache to store recommendations in.
+		cacheArgs := rcache.ResourceCacheArgs{
+			ListFunc:    listFunc,
+			ObjectType:  reflect.TypeOf(v3.StagedNetworkPolicy{}),
+			LogTypeDesc: kindRecommendations,
+			ReconcilerConfig: rcache.ReconcilerConfig{
+				DisableUpdateOnChange: true,
+				DisableMissingInCache: true,
+			},
+		}
+		cache := rcache.NewResourceCache(cacheArgs)
+
+		cache.Set("test-namespace", v3.StagedNetworkPolicy{})
+		cache.Set("tigera-namespace", v3.StagedNetworkPolicy{})
+		cache.Set("openshift-namespace", v3.StagedNetworkPolicy{})
+
 		engine = &RecommendationEngine{
+			Namespaces:         set.FromArray[string]([]string{"test-namespace", "tigera-namespace", "openshift-namespace"}),
+			FilteredNamespaces: set.New[string](),
+			cache:              cache,
 			scope: &recommendationScope{
 				interval:                  1 * time.Minute,
 				initialLookback:           1 * time.Hour,
@@ -120,6 +204,19 @@ var _ = Describe("RecommendationEngine", func() {
 				return engine.scope.interval == 2*time.Second && engine.scope.initialLookback == 2*time.Minute &&
 					engine.scope.stabilization == 2*time.Minute && engine.scope.selector.String() == newParsedSelector.String() &&
 					engine.scope.passIntraNamespaceTraffic == true && engine.scope.uid == "rrf2w-2343f-2342f-11111"
+			}, 2*time.Second, 100*time.Millisecond).Should(BeTrue())
+
+			logEntry.Infof("Filtered namespaces: %s", engine.FilteredNamespaces)
+			Eventually(func() bool {
+				return engine.FilteredNamespaces.Contains("test-namespace") && !engine.FilteredNamespaces.Contains("openshift-namespace") &&
+					!engine.FilteredNamespaces.Contains("tiger-namespace")
+			}, 2*time.Second, 100*time.Millisecond).Should(BeTrue())
+
+			Eventually(func() bool {
+				_, ok1 := engine.cache.Get("test-namespace")
+				_, ok2 := engine.cache.Get("tigera-namespace")
+				_, ok3 := engine.cache.Get("openshift-namespace")
+				return ok1 && !ok2 && !ok3
 			}, 2*time.Second, 100*time.Millisecond).Should(BeTrue())
 
 			// Stop the engine

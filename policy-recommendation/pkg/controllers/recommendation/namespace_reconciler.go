@@ -66,72 +66,74 @@ func (r *namespaceReconciler) Reconcile(key types.NamespacedName) error {
 		return false
 	}
 
-	// Adds a namespace to the set for further processing by the engine. Only add selected namespaces.
-	addNamespace := func(namespace string) {
-		if _, ok := r.cache.Get(namespace); !ok {
-			if r.engine == nil {
-				r.clog.Debug("Engine is empty, will not add namespace for processing")
-				return
-			}
-			if !r.engine.ProcessedNamespaces.Contains(namespace) {
-				selector := r.engine.GetScope().GetSelector()
-				if selector.String() == "" || selector.Evaluate(map[string]string{v3.LabelName: namespace}) {
-					// Add the namespace to the engine for processing, if the recommendation selector
-					// evaluates to true or the selector is empty.
-					r.clog.WithField("namespace", namespace).Info("Adding namespace for recommendation processing")
-					r.engine.ProcessedNamespaces.Add(namespace)
-				}
-			}
-		}
-	}
-
-	// Removes every rule from the staged network policy referencing the passed in namespace.
-	removeRulesReferencingDeletedNamespace := func(snp *v3.StagedNetworkPolicy, namespace string) {
-		r.clog.Debugf("Remoe all references to namespace: %s, from staged network policy: %s", namespace, snp.Name)
-		ingress := []v3.Rule{}
-		for i, rule := range snp.Spec.Ingress {
-			if rule.Source.NamespaceSelector != namespace {
-				ingress = append(ingress, snp.Spec.Ingress[i])
-			}
-		}
-		snp.Spec.Ingress = ingress
-
-		egress := []v3.Rule{}
-		for i, rule := range snp.Spec.Egress {
-			if rule.Destination.NamespaceSelector != namespace {
-				egress = append(egress, snp.Spec.Egress[i])
-			}
-		}
-		snp.Spec.Egress = egress
-	}
-
-	// Removes items from further processing, and any reference of the namespace in the other policy
-	// rules.
-	removeNamespace := func(namespace string) {
-		if _, ok := r.cache.Get(namespace); ok {
-			// Remove the namespace from the engine runnable items, and the cache.
-			r.clog.WithField("namespace", key).Debug("Removing namespace from cache")
-			r.engine.ProcessedNamespaces.Discard(namespace)
-			r.cache.Delete(namespace)
-
-			// Remove every rule referencing the deleted namespace from the cache items.
-			for _, key := range r.cache.ListKeys() {
-				if val, ok := r.cache.Get(key); ok {
-					snp := val.(v3.StagedNetworkPolicy)
-					removeRulesReferencingDeletedNamespace(&snp, namespace)
-					r.cache.Set(key, snp)
-				}
-			}
-		}
-	}
-
 	if !isDelete(key) {
 		// Add the namespace to the engine for processing. The engine holds a set of namespaces.
-		addNamespace(key.Name)
+		r.addNamespace(key.Name)
 	} else {
 		// Remove the namespace from the engine processing items, and the cache.
-		removeNamespace(key.Name)
+		r.removeNamespace(key.Name)
 	}
 
 	return nil
+}
+
+// addNamespace adds a namespace for tracking, and adds it to the filtered namespaces for
+// processing, if it is selected by the recommendation selector.
+func (r *namespaceReconciler) addNamespace(namespace string) {
+	if !r.engine.Namespaces.Contains(namespace) {
+		// Keep track of every namespace.
+		r.engine.Namespaces.Add(namespace)
+		r.clog.WithField("namespace", namespace).Debug("Added namespace for tracking.")
+		// Only add a namespace for processing if it is selected by the recommendation selector.
+		selector := r.engine.GetScope().GetSelector()
+		if selector.String() == "" || selector.Evaluate(map[string]string{v3.LabelName: namespace}) {
+			if !r.engine.FilteredNamespaces.Contains(namespace) {
+				r.engine.FilteredNamespaces.Add(namespace)
+				r.clog.WithField("namespace", namespace).Info("Added namespace for processing.")
+			}
+		}
+	}
+}
+
+// removeNamespace removes items from further processing, and any reference of the namespace in the other policy
+// rules.
+func (r *namespaceReconciler) removeNamespace(namespace string) {
+	// Remove the namespace from the engine runnable items, and the cache.
+	r.engine.Namespaces.Discard(namespace)
+	if r.engine.FilteredNamespaces.Contains(namespace) {
+		r.engine.FilteredNamespaces.Discard(namespace)
+	}
+	if _, ok := r.cache.Get(namespace); ok {
+		r.cache.Delete(namespace)
+	}
+	r.clog.WithField("namespace", namespace).Debug("Removed namespace from further processing.")
+
+	// Remove every rule referencing the deleted namespace from the cache items.
+	for _, key := range r.cache.ListKeys() {
+		if val, ok := r.cache.Get(key); ok {
+			snp := val.(v3.StagedNetworkPolicy)
+			r.removeRulesReferencingDeletedNamespace(&snp, namespace)
+			r.cache.Set(key, snp)
+		}
+	}
+}
+
+// removeRulesReferencingDeletedNamespace removes every rule from the staged network policy referencing the passed in namespace.
+func (r *namespaceReconciler) removeRulesReferencingDeletedNamespace(snp *v3.StagedNetworkPolicy, namespace string) {
+	r.clog.Debugf("Remove all references to namespace: %s, from staged network policy: %s", namespace, snp.Name)
+	ingress := []v3.Rule{}
+	for i, rule := range snp.Spec.Ingress {
+		if rule.Source.NamespaceSelector != namespace {
+			ingress = append(ingress, snp.Spec.Ingress[i])
+		}
+	}
+	snp.Spec.Ingress = ingress
+
+	egress := []v3.Rule{}
+	for i, rule := range snp.Spec.Egress {
+		if rule.Destination.NamespaceSelector != namespace {
+			egress = append(egress, snp.Spec.Egress[i])
+		}
+	}
+	snp.Spec.Egress = egress
 }

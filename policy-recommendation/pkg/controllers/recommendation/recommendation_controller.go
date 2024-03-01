@@ -219,64 +219,22 @@ func (c *recommendationController) syncToDatastore(key string) error {
 	defer c.mutex.Unlock()
 
 	if c.cache.GetQueue().ShuttingDown() {
-		c.clog.WithField("namespace", key).Debug("Cache queue is shutting down, will not sync recommendation to datastore.")
+		c.clog.WithField("namespace", key).Debug("Cache queue is shutting down, do not sync recommendation to datastore.")
 		return nil
 	}
 
 	c.clog.WithField("key", key).Debug("SyncToDatastore")
 
-	// Sets the cache item and adds missing context to the StagedNetworkPolicy.
-	setCacheItem := func(namespace string, snp *v3.StagedNetworkPolicy) {
-		// The TypeMeta is not copied over to the StagedNetworkPolicy in the call to Create()
-		snp.APIVersion = v3.GroupVersionCurrent
-		snp.Kind = v3.KindStagedNetworkPolicy
-		// Reconcile the cache value with the value added to the store
-		c.cache.Set(key, *snp)
-		c.clog.WithField("name", snp.Name).Debug("Set cache item")
-	}
-	// Creates a recommendation in the datastore and sets the cache item, with the new datastore
-	// value.
-	createStoreItem := func(namespace string, snp *v3.StagedNetworkPolicy) error {
-		// The resource version should be automatically generated.
-		snp.ResourceVersion = ""
-
-		createdItem, err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Create(c.ctx, snp, metav1.CreateOptions{})
-		if err != nil || createdItem == nil {
-			c.clog.WithError(err).WithField("name", snp.Name).Error("failed creating recommendation")
-			return err
-		}
-		setCacheItem(namespace, createdItem)
-
-		return nil
-	}
-	// Gets the recommendation from the datastore. We cannot use the necessary label to get the item
-	// from the datastore. Therefore, we get the first item from the list of recommendations in the
-	// namespace, as there should only be one recommendation per namespace.
-	getStoreItem := func(namespace string) (*v3.StagedNetworkPolicy, error) {
-		list, err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).List(c.ctx, metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
-		})
-		if err != nil {
-			c.clog.WithError(err).WithField("namespace", namespace).Errorf("failed getting recommendation")
-			return nil, err
-		} else if len(list.Items) == 0 {
-			c.clog.WithField("namespace", namespace).Debug("No recommendation found")
-			return nil, nil
-		}
-		return &list.Items[0], nil
-	}
-
-	// Sync to datastore
-
-	// Get the cache item
+	// Get the cached recommendation for the key.
 	item, ok := c.cache.Get(key)
 	if !ok {
-		c.clog.WithField("key", key).Warning("key queued but not found in cache")
-		return nil
+		// The item is no longer in the cache, delete it from the store.
+		return c.deleteStoreItem(key)
 	}
 	cacheItem := item.(v3.StagedNetworkPolicy)
-	// Get the recommendation from the store for this namespace.
-	storeItem, err := getStoreItem(key)
+
+	// Get the store recommendation for the key.
+	storeItem, err := c.getStoreItem(key)
 	if err != nil {
 		return err
 	}
@@ -288,7 +246,7 @@ func (c *recommendationController) syncToDatastore(key string) error {
 			c.clog.WithError(err).WithField("name", rectypes.PolicyRecommendationTierName).Error("failed creating Tier")
 			return err
 		}
-		if err := createStoreItem(key, &cacheItem); err != nil {
+		if err := c.createStoreItem(key, &cacheItem); err != nil {
 			return err
 		}
 		c.clog.WithField("name", cacheItem.Name).Info("Created recommendation")
@@ -296,33 +254,34 @@ func (c *recommendationController) syncToDatastore(key string) error {
 		return nil
 	}
 
-	// Update the store value, if the cache differs.
+	// Update the store value, if the cache differs from the store.
 	if !reflect.DeepEqual(cacheItem, *storeItem) {
-		c.clog.Debug("Cache and store differ")
-		c.clog.Debugf("Diff: %s\n", cmp.Diff(cacheItem, *storeItem))
+		c.clog.Debugf("Cache and store differ: %s", cmp.Diff(cacheItem, *storeItem))
 
+		// If the names differ, replace the store item.
+		// When the status becomes stable, the cache item is replaced with a new SNP. Subsequently,
+		// the cache diff will trigger a recommendation replacement in the datastore.
 		if cacheItem.Name != storeItem.Name {
-			// When the status becomes stable, the cache item is replaced with a new SNP. Subsequently,
-			// the cache diff will trigger a recommendation replacement in the datastore.
 			err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(key).Delete(c.ctx, storeItem.Name, metav1.DeleteOptions{})
 			if err != nil {
 				c.clog.WithError(err).WithField("name", cacheItem.Name).Error("failed to delete recommendation")
 				return err
 			}
-			if err := createStoreItem(key, &cacheItem); err != nil {
+			if err := c.createStoreItem(key, &cacheItem); err != nil {
 				return err
 			}
 			c.clog.Infof("Replaced recommendation %s with %s", storeItem.Name, cacheItem.Name)
 
 			return nil
 		}
+
 		// A value within the cache item has changed, triggering an update to the datastore.
 		updatedItem, err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(key).Update(c.ctx, &cacheItem, metav1.UpdateOptions{})
 		if err != nil || updatedItem == nil {
 			c.clog.WithError(err).WithField("name", cacheItem.Name).Error("failed to update recommendation")
 			return err
 		}
-		setCacheItem(key, updatedItem)
+		c.setCacheItem(key, updatedItem)
 	}
 
 	return nil
@@ -345,7 +304,7 @@ func (c *recommendationController) handleErr(err error, key string) {
 	if workqueue.NumRequeues(key) < retries {
 		// Re-enqueue the key rate limited. Based on the rate limiter on the queue and the re-enqueue
 		// history, the key will be processed later again.
-		c.clog.WithError(err).Errorf("failed to sync Profile %v: %v", key, err)
+		c.clog.WithError(err).Infof("failed to sync Profile %v: %v", key, err)
 		workqueue.AddRateLimited(key)
 		return
 	}
@@ -355,6 +314,69 @@ func (c *recommendationController) handleErr(err error, key string) {
 	// process this key
 	uruntime.HandleError(err)
 	c.clog.WithError(err).Errorf("dropping profile %q out of the queue: %v", key, err)
+}
+
+// createStoreItem creates a recommendation in the datastore and and brings parity to the cache
+// item.
+func (c *recommendationController) createStoreItem(namespace string, snp *v3.StagedNetworkPolicy) error {
+	// The resource version should be automatically generated.
+	snp.ResourceVersion = ""
+
+	createdItem, err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Create(c.ctx, snp, metav1.CreateOptions{})
+	if err != nil || createdItem == nil {
+		c.clog.WithError(err).WithField("name", snp.Name).Error("failed creating recommendation")
+		return err
+	}
+	c.setCacheItem(namespace, createdItem)
+
+	return nil
+}
+
+// deleteStoreItem deletes a recommendation from the datastore.
+func (c *recommendationController) deleteStoreItem(namespace string) error {
+	storeItem, err := c.getStoreItem(namespace)
+	if err != nil {
+		c.clog.WithError(err).WithField("name", namespace).Info("failed to get recommendation")
+		return nil
+	}
+	if storeItem != nil {
+		// The item is no longer in the cache, delete it from the store.
+		err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).Delete(c.ctx, storeItem.Name, metav1.DeleteOptions{})
+		if err != nil {
+			c.clog.WithError(err).WithField("name", namespace).Info("failed to delete recommendation")
+			return err
+		}
+		c.clog.WithField("name", storeItem.Name).Info("Deleted recommendation from store")
+	}
+
+	return nil
+}
+
+// getStoreItem gets the recommendation from the datastore. We cannot use the necessary label to get
+// the item from the datastore. Therefore, we get the first item from the list of recommendations in
+// the namespace, as there should only be one recommendation per namespace.
+func (c *recommendationController) getStoreItem(namespace string) (*v3.StagedNetworkPolicy, error) {
+	list, err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(namespace).List(c.ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
+	})
+	if err != nil {
+		c.clog.WithError(err).WithField("namespace", namespace).Errorf("failed getting recommendation")
+		return nil, err
+	} else if len(list.Items) == 0 {
+		c.clog.WithField("namespace", namespace).Debug("No recommendation found")
+		return nil, nil
+	}
+	return &list.Items[0], nil
+}
+
+// setCacheItem sets the cache item and adds missing context to the StagedNetworkPolicy.
+func (c *recommendationController) setCacheItem(namespace string, snp *v3.StagedNetworkPolicy) {
+	// The TypeMeta is not copied over to the StagedNetworkPolicy in the call to Create()
+	snp.APIVersion = v3.GroupVersionCurrent
+	snp.Kind = v3.KindStagedNetworkPolicy
+	// Reconcile the cache value with the value added to the store
+	c.cache.Set(namespace, *snp)
+	c.clog.WithField("name", snp.Name).Debug("Set cache item")
 }
 
 // warmupCacheAndEngine warms up the cache with the existing recommendations in the datastore. Adds
@@ -379,12 +401,13 @@ func (c *recommendationController) warmupCacheAndEngine() {
 		c.clog.WithError(err).Error("unexpected error querying namespaces")
 	}
 	for _, ns := range namespaces.Items {
+		c.engine.Namespaces.Add(ns.Name)
 		selector := c.engine.GetScope().GetSelector()
 		if selector.String() == "" || selector.Evaluate(map[string]string{v3.LabelName: ns.Name}) {
 			// Add the namespace to the engine for processing, if the recommendation selector
 			// evaluates to true or the selector is empty.
 			c.clog.WithField("namespace", ns.Name).Info("Adding namespace for recommendation processing")
-			c.engine.ProcessedNamespaces.Add(ns.Name)
+			c.engine.FilteredNamespaces.Add(ns.Name)
 		}
 	}
 }

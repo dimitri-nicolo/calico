@@ -68,8 +68,11 @@ type RecommendationEngine struct {
 	// Cache for storing the recommendations (SNPs)
 	cache rcache.ResourceCache
 
-	// ProcessedNamespaces to process and recommend policies for
-	ProcessedNamespaces set.Set[string]
+	// FilteredNamespaces are the namespaces that are selected for processing.
+	FilteredNamespaces set.Set[string]
+
+	// Namespaces are the namespaces that are present in the cluster.
+	Namespaces set.Set[string]
 
 	// Channel for receiving PolicyRecommendationScope updates
 	UpdateChannel chan v3.PolicyRecommendationScope
@@ -139,18 +142,19 @@ func NewRecommendationEngine(
 	updateScope(logEntry, newScope, *scope)
 
 	return &RecommendationEngine{
-		ctx:                 ctx,
-		calico:              calico,
-		linseedClient:       linseedClient,
-		cache:               cache,
-		ProcessedNamespaces: namespaces,
-		cluster:             clusterID,
-		scope:               newScope,
-		UpdateChannel:       make(chan v3.PolicyRecommendationScope),
-		clock:               clock,
-		clusterDomain:       clusterDomain,
-		query:               query,
-		clog:                logEntry,
+		ctx:                ctx,
+		calico:             calico,
+		linseedClient:      linseedClient,
+		cache:              cache,
+		Namespaces:         namespaces,
+		FilteredNamespaces: set.New[string](),
+		cluster:            clusterID,
+		scope:              newScope,
+		UpdateChannel:      make(chan v3.PolicyRecommendationScope),
+		clock:              clock,
+		clusterDomain:      clusterDomain,
+		query:              query,
+		clog:               logEntry,
 	}
 }
 
@@ -172,15 +176,42 @@ func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 				// Start the ticker with the default interval.
 				ticker = time.NewTicker(interval)
 			}
+			selector := e.scope.selector.String()
 			e.clog.Debugf("[Consumer] Received scope update: %+v", update)
 			// Update the engine scope with the new PolicyRecommendationScopeSpec.
 			updateScope(e.clog, e.scope, update)
+
 			if interval != e.scope.interval {
 				// The interval has changed, update the ticker with the new interval.
 				// Stop the previous ticker and start a new one with the updated interval.
 				ticker.Stop()
 				ticker.C = time.NewTicker(e.scope.interval).C
 				e.clog.Debugf("Updated ticker with new interval %s", e.scope.interval.String())
+			}
+
+			if selector != e.scope.selector.String() {
+				// The namespace selector has changed, iterate over the tracked namespaces and update the
+				// FilteredNamespaces based on the new selector.
+				e.FilteredNamespaces = set.New[string]()
+				e.Namespaces.Iter(func(namespace string) error {
+					if e.scope.selector.String() == "" || e.scope.selector.Evaluate(map[string]string{v3.LabelName: namespace}) {
+						// The namespace is selected by the new selector, add it to the filteredNamespaces for
+						// processing.
+						if !e.FilteredNamespaces.Contains(namespace) {
+							e.clog.WithField("namespace", namespace).Info("Adding namespace for processing")
+							e.FilteredNamespaces.Add(namespace)
+						}
+					} else {
+						// The namespace is not selected by the new selector, remove it from the
+						// cache. This will subsequently remove it from the datastore.
+						if _, ok := e.cache.Get(namespace); ok {
+							e.cache.Delete(namespace)
+							e.clog.WithField("namespace", namespace).Info("Deleted namespace from cache")
+						}
+					}
+
+					return nil
+				})
 			}
 		case <-ticker.C:
 			e.clog.Debug("Running engine")
@@ -190,10 +221,11 @@ func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 				continue
 			}
 
-			// Iterate through the namespaces and process the recommendations (SNPs). Add each
+			// Iterate through the filtered namespaces and process the recommendations (SNPs). Add each
 			// new/updated recommendation to the cache for reconciliation with datastore.
-			e.ProcessedNamespaces.Iter(func(namespace string) error {
+			e.FilteredNamespaces.Iter(func(namespace string) error {
 				e.clog.WithField("namespace", namespace).Debug("Processing")
+
 				var recommendation *v3.StagedNetworkPolicy
 				if item, found := e.cache.Get(namespace); found {
 					var ok bool
@@ -214,11 +246,12 @@ func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 						e.scope.uid,
 					)
 				}
+
 				if e.update(recommendation) {
 					// The recommendation contains new rules, or status metadata has been updated so add to
-					// cache for syncing.
+					// cache for syncing. This will trigger an update in the datastore.
 					e.cache.Set(namespace, *recommendation)
-					e.clog.WithField("name", recommendation.Name).Debug("Add/Update cache item")
+					e.clog.WithField("namespace", namespace).Debug("Updated cache item")
 				}
 
 				return nil
