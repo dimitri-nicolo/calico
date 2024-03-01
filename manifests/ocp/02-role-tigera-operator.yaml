@@ -107,6 +107,7 @@ rules:
       - applicationlayers
       - applicationlayers/status
       - authentications
+      - authentications/status
       - compliances
       - compliances/status
       - egressgateways
