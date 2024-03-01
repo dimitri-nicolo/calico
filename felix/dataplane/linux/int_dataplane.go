@@ -1062,6 +1062,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.LookupsCache,
 			config.RulesConfig.ActionOnDrop,
 			config.FlowLogsCollectTcpStats,
+			config.HealthAggregator,
 		)
 
 		if err != nil {

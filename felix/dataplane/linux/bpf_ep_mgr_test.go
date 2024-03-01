@@ -408,6 +408,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			lookupsCache,
 			actionOnDrop,
 			enableTcpStats,
+			nil,
 		)
 		Expect(err).NotTo(HaveOccurred())
 		bpfEpMgr.Features = environment.NewFeatureDetector(nil).GetFeatures()

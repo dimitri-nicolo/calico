@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/felix/ethtool"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -83,6 +84,8 @@ import (
 const (
 	bpfInDev  = "bpfin.cali"
 	bpfOutDev = "bpfout.cali"
+
+	bpfEPManagerHealthName = "BPFEndpointManager"
 )
 
 var (
@@ -158,7 +161,8 @@ type bpfDataplane interface {
 }
 
 type hasLoadPolicyProgram interface {
-	loadPolicyProgram(progName string,
+	loadPolicyProgram(
+		progName string,
 		ipFamily proto.IPVersion,
 		rules polprog.Rules,
 		staticProgsMap maps.Map,
@@ -352,13 +356,14 @@ type bpfEndpointManager struct {
 
 	// CaliEnt features below
 
-	enableTcpStats bool
-	lookupsCache   *calc.LookupsCache
-	actionOnDrop   string
-	egIPEnabled    bool
-	egwVxlanPort   uint16
-	v4             *bpfEndpointManagerDataplane
-	v6             *bpfEndpointManagerDataplane
+	enableTcpStats   bool
+	lookupsCache     *calc.LookupsCache
+	actionOnDrop     string
+	egIPEnabled      bool
+	egwVxlanPort     uint16
+	v4               *bpfEndpointManagerDataplane
+	v6               *bpfEndpointManagerDataplane
+	healthAggregator *health.HealthAggregator
 }
 
 type bpfEndpointManagerDataplane struct {
@@ -388,7 +393,11 @@ type ManagerWithHEPUpdate interface {
 	OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostEndpoint)
 }
 
-func NewTestEpMgr(config *Config, bpfmaps *bpfmap.Maps, workloadIfaceRegex *regexp.Regexp) (ManagerWithHEPUpdate, error) {
+func NewTestEpMgr(
+	config *Config,
+	bpfmaps *bpfmap.Maps,
+	workloadIfaceRegex *regexp.Regexp,
+) (ManagerWithHEPUpdate, error) {
 	return newBPFEndpointManager(nil, config, bpfmaps, true, workloadIfaceRegex, idalloc.New(),
 		rules.NewRenderer(rules.Config{
 			BPFEnabled:                  true,
@@ -419,6 +428,7 @@ func NewTestEpMgr(config *Config, bpfmaps *bpfmap.Maps, workloadIfaceRegex *rege
 		calc.NewLookupsCache(),
 		"DROP",
 		false,
+		nil,
 	)
 }
 
@@ -441,6 +451,7 @@ func newBPFEndpointManager(
 	lookupsCache *calc.LookupsCache,
 	actionOnDrop string,
 	enableTcpStats bool,
+	healthAggregator *health.HealthAggregator,
 ) (*bpfEndpointManager, error) {
 	if livenessCallback == nil {
 		livenessCallback = func() {}
@@ -508,6 +519,19 @@ func newBPFEndpointManager(
 		egIPEnabled:            config.EgressIPEnabled,
 		polNameToMatchIDs:      map[string]set.Set[polprog.RuleMatchID]{},
 		dirtyRules:             set.New[polprog.RuleMatchID](),
+
+		healthAggregator: healthAggregator,
+	}
+
+	if healthAggregator != nil {
+		healthAggregator.RegisterReporter(bpfEPManagerHealthName, &health.HealthReport{
+			Ready: true,
+			Live:  false,
+		}, 0)
+		healthAggregator.Report(bpfEPManagerHealthName, &health.HealthReport{
+			Ready:  false,
+			Detail: "Not yet synced.",
+		})
 	}
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
@@ -1501,6 +1525,7 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 
 	if err := m.ifStateMap.ApplyAllChanges(); err != nil {
 		log.WithError(err).Warn("Failed to write updates to ifstate BPF map.")
+		m.reportHealth(false, "Failed to update interface state map.")
 		return err
 	}
 
@@ -1532,6 +1557,7 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 		if m.removeOldJumps {
 			oldBase := path.Join(bpfdefs.GlobalPinDir, "old_jumps")
 			if err := os.RemoveAll(oldBase); err != nil && os.IsNotExist(err) {
+				m.reportHealth(false, "Failed to clean up old jump maps.")
 				return fmt.Errorf("failed to remove %s: %w", oldBase, err)
 			}
 			m.removeOldJumps = false
@@ -1540,9 +1566,22 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 			legacy.CleanUpMaps()
 			m.legacyCleanUp = false
 		}
+		m.reportHealth(true, "")
+	} else {
+		m.reportHealth(false, "Failed to configure some interfaces.")
 	}
 
 	return nil
+}
+
+func (m *bpfEndpointManager) reportHealth(ready bool, detail string) {
+	if m.healthAggregator == nil {
+		return
+	}
+	m.healthAggregator.Report(bpfEPManagerHealthName, &health.HealthReport{
+		Ready:  ready,
+		Detail: detail,
+	})
 }
 
 func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface string) (bpfInterfaceState, error) {
