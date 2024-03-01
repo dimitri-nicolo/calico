@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 ARG GIT_VERSION=unknown
 ARG IPTABLES_VER=1.8.8-6
 ARG LIBNFTNL_VER=1.2.2-1
@@ -28,6 +27,9 @@ FROM ${BIRD_IMAGE} as bird
 # We need to build runit because there aren't any rpms for it in CentOS or ubi repositories.
 FROM quay.io/centos/centos:stream8 as centos
 
+# Enable non-native builds of this image on an amd64 hosts.
+# This must be the first RUN command in this file!
+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 ARG IPTABLES_VER
 ARG LIBNFTNL_VER
 ARG IPSET_VER
@@ -45,9 +47,9 @@ RUN dnf install -y 'dnf-command(config-manager)' && \
     # Install required packages for building rpms. yum-utils is not required but it gives us yum-builddep to easily install build deps.
     dnf install --allowerasing -y rpm-build yum-utils make && \
     # Need these to build runit.
-    dnf install --allowerasing -y wget glibc-static gcc && \
+    yum install --allowerasing -y wget glibc-static gcc && \
     # Ensure all security updates are installed.
-    dnf -y update-minimal --security
+    yum -y update-minimal --security
 
 # In order to rebuild the iptables RPM, we first need to rebuild the libnftnl RPM because building
 # iptables requires libnftnl-devel but libnftnl-devel is not available on ubi or CentOS repos.
