@@ -27,9 +27,6 @@ FROM ${BIRD_IMAGE} as bird
 # We need to build runit because there aren't any rpms for it in CentOS or ubi repositories.
 FROM quay.io/centos/centos:stream8 as centos
 
-# Enable non-native builds of this image on an amd64 hosts.
-# This must be the first RUN command in this file!
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 ARG IPTABLES_VER
 ARG LIBNFTNL_VER
 ARG IPSET_VER
