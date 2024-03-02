@@ -1,6 +1,6 @@
-ARG UBI_IMAGE
+ARG UBI8_IMAGE
 
-FROM ${UBI_IMAGE} AS ubi
+FROM ${UBI8_IMAGE} AS ubi
 
 COPY clean.sh /usr/local/bin/clean.sh
 RUN touch /in-the-container

@@ -18,7 +18,7 @@ ARG LIBNFTNL_VER=1.2.2-1
 ARG IPSET_VER=7.11-6
 ARG RUNIT_VER=2.1.2
 ARG BIRD_IMAGE=calico/bird:latest
-ARG UBI_IMAGE
+ARG UBI8_IMAGE
 
 FROM calico/bpftool:v5.3-amd64 as bpftool
 FROM ${BIRD_IMAGE} as bird
@@ -82,7 +82,7 @@ RUN wget -P /tmp https://ftp.debian.org/debian/pool/main/r/runit/runit_${RUNIT_V
     cd /tmp/admin/runit-${RUNIT_VER}/ && \
     package/install
 
-FROM ${UBI_IMAGE} as ubi
+FROM ${UBI8_IMAGE} as ubi
 
 ARG GIT_VERSION
 ARG IPTABLES_VER
