@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG UBI_IMAGE
+ARG UBI8_IMAGE
 
-FROM ${UBI_IMAGE} as ubi
+FROM ${UBI8_IMAGE} as ubi
 
 FROM scratch as source
 

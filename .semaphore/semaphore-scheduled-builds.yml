@@ -99,6 +99,10 @@ promotions:
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push envoy images
+    pipeline_file: push-images/envoy.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push es-gateway images
     pipeline_file: push-images/es-gateway.yml
     auto_promote:
@@ -719,10 +723,6 @@ blocks:
       - name: Build Windows image
         commands:
           - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
-    epilogue:
-      always:
-        commands:
-          - test-results publish ./report/nosetests.xml --name "node-ci" || true
 
 - name: "Node: Build - native arm64 runner"
   run:
@@ -1351,7 +1351,7 @@ blocks:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: selinux
   run:
-    when: "true or change_in(['/selinux/'])"
+    when: "true or change_in(['/selinux/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
@@ -1374,6 +1374,26 @@ blocks:
       always:
         commands:
           - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+- name: envoy
+  run:
+    when: "true or change_in(['/envoy/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd envoy
+    jobs:
+      - name: envoy tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: Flow log generator
   run:
     when: "true or change_in(['/*', '/test-tools/flow-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

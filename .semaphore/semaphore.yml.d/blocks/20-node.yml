@@ -46,10 +46,6 @@
       - name: Build Windows image
         commands:
           - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
-    epilogue:
-      always:
-        commands:
-          - test-results publish ./report/nosetests.xml --name "node-ci" || true
 
 - name: "Node: Build - native arm64 runner"
   run:
