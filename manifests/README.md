@@ -19,7 +19,6 @@ make gen-manifests
 Some of these manifests are not automatically generated. To edit these, modify the manifests directly and
 commit your changes. **The following manifests are not auto generated:**
 
-<<<<<<< HEAD
 - aks/custom-resources.yaml
 - aks/custom-resources-calico-cni.yaml
 - aks/custom-resources-upgrade-from-calico.yaml
