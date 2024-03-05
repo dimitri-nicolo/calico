@@ -1409,6 +1409,30 @@ blocks:
               - arm64
         commands:
           - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+- name: prometheus
+  run:
+    when: "true or change_in(['/third_party/prometheus/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    prologue:
+      commands:
+        - cd third_party/prometheus
+    jobs:
+      - name: prometheus tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: Flow log generator
   run:
     when: "true or change_in(['/*', '/test-tools/flow-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

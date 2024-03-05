@@ -1,0 +1,25 @@
+From 456b58f2d8c740f30de6c13e8314d73a99f4298a Mon Sep 17 00:00:00 2001
+From: Jiawei Huang <jiawei@tigera.io>
+Date: Tue, 2 Jan 2024 21:25:02 -0800
+Subject: [PATCH] String Go binary debug symbols
+
+---
+ .promu.yml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/.promu.yml b/.promu.yml
+index 9f5948523..bef634d22 100644
+--- a/.promu.yml
++++ b/.promu.yml
+@@ -25,6 +25,8 @@ build:
+         -X github.com/prometheus/common/version.Branch={{.Branch}}
+         -X github.com/prometheus/common/version.BuildUser={{user}}@{{host}}
+         -X github.com/prometheus/common/version.BuildDate={{date "20060102-15:04:05"}}
++        -s
++        -w
+ tarball:
+     # Whenever there are new files to include in the tarball,
+     # remember to make sure the new files will be generated after `make build`.
+-- 
+2.43.0
+

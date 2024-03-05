@@ -134,6 +134,10 @@ promotions:
     pipeline_file: ../prometheus-service/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Prometheus Release
+    pipeline_file: ../third_party/prometheus/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Pod2daemon Release
     pipeline_file: ../pod2daemon/.semaphore/cut-release.yml
     auto_promote:
