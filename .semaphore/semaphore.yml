@@ -155,6 +155,10 @@ promotions:
     pipeline_file: push-images/policy-recommendation.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push prometheus-operator images
+    pipeline_file: push-images/prometheus-operator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push prometheus-service images
     pipeline_file: push-images/prometheus-service.yml
     auto_promote:
@@ -1376,6 +1380,26 @@ blocks:
         - cd third_party/envoy
     jobs:
       - name: envoy tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+- name: prometheus-operator
+  run:
+    when: "false or change_in(['/third_party/prometheus-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/prometheus-operator
+    jobs:
+      - name: prometheus-operator tests
         commands:
           - ../../.semaphore/run-and-monitor ci.log make ci
       - name: Build image

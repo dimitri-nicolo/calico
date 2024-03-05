@@ -106,6 +106,10 @@ promotions:
     pipeline_file: push-images/policy-recommendation.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push prometheus-operator images
+    pipeline_file: push-images/prometheus-operator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push prometheus-service images
     pipeline_file: push-images/prometheus-service.yml
     auto_promote:

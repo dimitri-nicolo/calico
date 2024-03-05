@@ -122,6 +122,10 @@ promotions:
     pipeline_file: ../voltron/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Prometheus Operator Release
+    pipeline_file: ../third_party/prometheus-operator/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut Prometheus Service Release
     pipeline_file: ../prometheus-service/.semaphore/test-cut-release.yml
     auto_promote:
