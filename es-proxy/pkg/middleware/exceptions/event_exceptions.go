@@ -14,6 +14,9 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager/checksum"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
@@ -31,6 +34,7 @@ type EventExceptions interface {
 
 type eventExceptions struct {
 	alertExceptions clientsetV3.AlertExceptionInterface
+	eventsProvider  client.EventsInterface
 }
 
 // We just list everything. No fear :)
@@ -47,10 +51,42 @@ func (ee *eventExceptions) List(ctx context.Context) ([]*v1.EventException, erro
 		if err != nil {
 			return nil, err
 		}
+		err = ee.updateIgnoredEventsCount(e, alertException)
+		if err != nil {
+			return nil, err
+		}
 		eventExceptions = append(eventExceptions, e)
 	}
 
 	return eventExceptions, nil
+}
+
+func (ee *eventExceptions) updateIgnoredEventsCount(eventException *v1.EventException, alertException v3.AlertException) error {
+	if ee.eventsProvider != nil {
+		params := lapi.EventParams{
+			QueryParams: lapi.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: alertException.Spec.StartTime.Time,
+				},
+				MaxPageSize: 1, // We don't need a big request, only interested in the total count
+			},
+			LogSelectionParams: lapi.LogSelectionParams{
+				Selector: alertException.Spec.Selector,
+			},
+		}
+		if alertException.Spec.EndTime != nil {
+			params.TimeRange.To = alertException.Spec.EndTime.Time
+		} else {
+			params.TimeRange.To = time.Now()
+		}
+
+		results, err := ee.eventsProvider.List(context.TODO(), &params)
+		if err != nil {
+			return err
+		}
+		eventException.Count = int(results.TotalHits)
+	}
+	return nil
 }
 
 func (ee *eventExceptions) Create(ctx context.Context, eventException *v1.EventException) (*v1.EventException, error) {

@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 type FakeAlertExceptions struct {
@@ -85,17 +86,38 @@ func (f *FakeAlertExceptions) Patch(ctx context.Context, name string, pt types.P
 	return nil, nil
 }
 
+type FakeEventsProvider struct {
+	PretendNumEventsRead int64
+}
+
+func (f *FakeEventsProvider) List(context.Context, lapi.Params) (*lapi.List[lapi.Event], error) {
+	return &lapi.List[lapi.Event]{
+		TotalHits: f.PretendNumEventsRead,
+	}, nil
+}
+func (f *FakeEventsProvider) Create(context.Context, []lapi.Event) (*lapi.BulkResponse, error) {
+	return nil, nil
+}
+func (f *FakeEventsProvider) UpdateDismissFlag(context.Context, []lapi.Event) (*lapi.BulkResponse, error) {
+	return nil, nil
+}
+func (f *FakeEventsProvider) Delete(context.Context, []lapi.Event) (*lapi.BulkResponse, error) {
+	return nil, nil
+}
+
 var _ = Describe("Exceptions middleware tests", func() {
 
 	Context("EventExceptions API", func() {
 		var fae FakeAlertExceptions
+		var fep FakeEventsProvider
 		var ee eventExceptions
 		var ctx context.Context
 		var cancel func()
 
 		BeforeEach(func() {
 			fae = FakeAlertExceptions{}
-			ee = eventExceptions{alertExceptions: &fae}
+			fep = FakeEventsProvider{}
+			ee = eventExceptions{alertExceptions: &fae, eventsProvider: &fep}
 
 			ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 		})
@@ -267,6 +289,18 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(exceptions[0].Description).To(Equal("\"Let's ignore 'hipster-shop' for now!\""))
 		})
 
+		It("List updates matching events count of exceptions", func() {
+			newException, err := ee.Create(ctx, &v1.EventException{Type: "waf", Event: "WAF Event", Namespace: "hipster-shop"})
+			Expect(err).NotTo(HaveOccurred())
+			// This could be a surprise and technically we probably should update Count but there is no need for it so not doing it
+			Expect(newException.Count).To(Equal(0))
+
+			fep.PretendNumEventsRead = 12
+			exceptions, err := ee.List(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exceptions[0].Count).To(Equal(12))
+		})
+
 		It("Full Description is shown if AlertException created with kubectl", func() {
 			description := "Should really edit global alerts instead of ignoring them..."
 			ae := v3.NewAlertException()
@@ -313,7 +347,10 @@ var _ = Describe("Exceptions middleware tests", func() {
 		It("Should be able to edit alert exceptions using various /event-exceptions requests", func() {
 			var err error
 			rr := httptest.NewRecorder()
-			fae := &FakeAlertExceptions{}
+			ee := &eventExceptions{
+				alertExceptions: &FakeAlertExceptions{},
+				eventsProvider:  &FakeEventsProvider{},
+			}
 
 			// Create new event exception
 			newException := v1.EventException{Type: "waf", Event: "WAF Event", Namespace: "default"}
@@ -324,7 +361,7 @@ var _ = Describe("Exceptions middleware tests", func() {
 			newExceptionReq, err = http.NewRequest(http.MethodPost, "", bytes.NewReader(newExceptionBytes))
 			Expect(err).NotTo(HaveOccurred())
 
-			handleExceptionRequest(rr, newExceptionReq, fae)
+			handleExceptionRequest(rr, newExceptionReq, ee)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 
@@ -334,7 +371,7 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			rr = httptest.NewRecorder()
 
-			handleExceptionRequest(rr, listExceptionReq, fae)
+			handleExceptionRequest(rr, listExceptionReq, ee)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 
@@ -357,7 +394,7 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			rr = httptest.NewRecorder()
 
-			handleExceptionRequest(rr, deleteReq, fae)
+			handleExceptionRequest(rr, deleteReq, ee)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 
@@ -367,7 +404,7 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			rr = httptest.NewRecorder()
 
-			handleExceptionRequest(rr, listAgainReq, fae)
+			handleExceptionRequest(rr, listAgainReq, ee)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			err = json.Unmarshal(rr.Body.Bytes(), &exceptions)
@@ -380,7 +417,7 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			rr = httptest.NewRecorder()
 
-			handleExceptionRequest(rr, deleteAgainReq, fae)
+			handleExceptionRequest(rr, deleteAgainReq, ee)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
 		})

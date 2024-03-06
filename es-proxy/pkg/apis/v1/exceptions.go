@@ -10,4 +10,5 @@ type EventException struct {
 	UseNameAggr       bool   `json:"use_name_aggr,omitempty"`
 	Description       string `json:"description,omitempty"`
 	HasUnexpectedData bool   `json:"has_unexpected_data,omitempty"`
+	Count             int    `json:"count,omitempty"`
 }
