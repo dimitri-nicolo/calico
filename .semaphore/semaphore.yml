@@ -176,7 +176,7 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
 
-  - name: Push alertmanager images
+  - name: Push third-party alertmanager images
     pipeline_file: push-images/third_party/alertmanager.yml
     auto_promote:
       when: "branch =~ 'master|release-.*'"
@@ -188,11 +188,11 @@ promotions:
     pipeline_file: push-images/third_party/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push prometheus-operator images
+  - name: Push third-party prometheus-operator images
     pipeline_file: push-images/third_party/prometheus-operator.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push prometheus images
+  - name: Push third-party prometheus images
     pipeline_file: push-images/third_party/prometheus.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
@@ -1369,6 +1369,7 @@ blocks:
         os_image: ubuntu2004
     prologue:
       commands:
+        - sem-version go 1.21
         - cd third_party/alertmanager
     jobs:
       - name: alertmanager tests

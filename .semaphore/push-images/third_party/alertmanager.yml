@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish alertmanager images
+name: Publish third-party alertmanager images
 agent:
   machine:
     type: e1-standard-2
