@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
@@ -81,7 +82,7 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []v1.Event,
 	}
 	suspiciousIP.Events = append(suspiciousIP.Events, expectedSecurityEvents...)
 	eventsDB := &storage.MockEvents{ErrorIndex: eventsErrorIdx, Events: []v1.Event{}}
-	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
+	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}).(*searcher)
 	feedCacher := cacher.NewMockGlobalThreatFeedCache()
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -117,7 +118,7 @@ func TestFlowSearcher_SetFeed(t *testing.T) {
 	f2 := util.NewGlobalThreatFeedFromName("swap")
 	suspiciousIP := &storage.MockSuspicious{}
 	eventsDB := &storage.MockEvents{}
-	searcher := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
+	searcher := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}).(*searcher)
 
 	searcher.SetFeed(f2)
 	g.Expect(searcher.feed).Should(Equal(f2))

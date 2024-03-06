@@ -33,6 +33,7 @@ import (
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
+	geo "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/rbac"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	feedsWatcher "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/watcher"
@@ -183,6 +184,11 @@ func main() {
 	edn := sync.NewDomainNameSetController(e)
 	sIP := events.NewSuspiciousIP(e)
 	sDN := events.NewSuspiciousDomainNameSet(e)
+	g, err := geo.NewGeoDB()
+	if err != nil {
+		log.WithError(err).Error("Error while opening Geo IP database.")
+	}
+	defer g.Close()
 
 	s := feedsWatcher.NewWatcher(
 		kubeClientSet.CoreV1().ConfigMaps(configMapNamespace),
@@ -194,7 +200,7 @@ func main() {
 		eip,
 		edn,
 		&http.Client{},
-		e, e, sIP, sDN, e)
+		e, e, sIP, sDN, e, g)
 
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 
