@@ -91,16 +91,8 @@ promotions:
     pipeline_file: push-images/dex.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push eck-operator images
-    pipeline_file: push-images/eck-operator.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push egress-gateway images
     pipeline_file: push-images/egress-gateway.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push envoy images
-    pipeline_file: push-images/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push es-gateway images
@@ -181,6 +173,15 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push webhooks-processor images
     pipeline_file: push-images/webhooks-processor.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+
+  - name: Push third-party eck-operator images
+    pipeline_file: push-images/third-party/eck-operator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push third-party envoy images
+    pipeline_file: push-images/third-party/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
 
@@ -924,26 +925,6 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: eck-operator
-  run:
-    when: "true or change_in(['/*', '/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd eck-operator
-    jobs:
-      - name: eck-operator tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: egress-gateway
   run:
     when: "true or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1374,26 +1355,46 @@ blocks:
       always:
         commands:
           - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
-- name: envoy
+- name: eck-operator
   run:
-    when: "true or change_in(['/envoy/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
     prologue:
       commands:
-        - cd envoy
+        - cd third_party/eck-operator
+    jobs:
+      - name: eck-operator tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+- name: envoy
+  run:
+    when: "true or change_in(['/third_party/envoy/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/envoy
     jobs:
       - name: envoy tests
         commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
+          - ../../.semaphore/run-and-monitor ci.log make ci
       - name: Build image
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: Flow log generator
   run:
     when: "true or change_in(['/*', '/test-tools/flow-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

@@ -18,10 +18,10 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - retry git fetch --unshallow
-      - cd envoy
+      - cd third_party/eck-operator
 
 blocks:
-  - name: "Cut Release"
+  - name: 'Cut Release'
     task:
       secrets:
         - name: marvin-github-ssh-private-key
@@ -39,4 +39,4 @@ blocks:
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
-            - make cut-release IMAGE_ONLY=true CONFIRM=true
+            - make cut-release CONFIRM=true IMAGE_ONLY=true
