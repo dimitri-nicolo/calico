@@ -10,6 +10,7 @@
         os_image: ubuntu2004
     prologue:
       commands:
+        - sem-version go 1.21
         - cd third_party/alertmanager
     jobs:
       - name: alertmanager tests
