@@ -155,10 +155,6 @@ promotions:
     pipeline_file: push-images/policy-recommendation.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push prometheus-operator images
-    pipeline_file: push-images/prometheus-operator.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push prometheus-service images
     pipeline_file: push-images/prometheus-service.yml
     auto_promote:
@@ -180,12 +176,24 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
 
+  - name: Push alertmanager images
+    pipeline_file: push-images/third_party/alertmanager.yml
+    auto_promote:
+      when: "branch =~ 'master|release-.*'"
   - name: Push third-party eck-operator images
     pipeline_file: push-images/third_party/eck-operator.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push third-party envoy images
     pipeline_file: push-images/third_party/envoy.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push prometheus-operator images
+    pipeline_file: push-images/third_party/prometheus-operator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push prometheus images
+    pipeline_file: push-images/third_party/prometheus.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
 
@@ -1349,6 +1357,30 @@ blocks:
       always:
         commands:
           - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+- name: alertmanager
+  run:
+    when: "false or change_in(['/third_party/alertmanager/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    prologue:
+      commands:
+        - cd third_party/alertmanager
+    jobs:
+      - name: alertmanager tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: eck-operator
   run:
     when: "false or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

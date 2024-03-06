@@ -122,16 +122,8 @@ promotions:
     pipeline_file: ../voltron/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
-  - name: Test Cut Prometheus Operator Release
-    pipeline_file: ../third_party/prometheus-operator/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
   - name: Test Cut Prometheus Service Release
     pipeline_file: ../prometheus-service/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut Prometheus Release
-    pipeline_file: ../third_party/prometheus/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut License Agent Release
@@ -151,11 +143,23 @@ promotions:
     auto_promote:
       when: "result = 'passed'"
 
+  - name: Test Cut third-party Alertmanager Release
+    pipeline_file: ../third_party/alertmanager/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut third-party ECK Operator Release
     pipeline_file: ../third_party/eck-operator/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut third-party Envoy Release
     pipeline_file: ../third_party/envoy/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut third-party Prometheus Operator Release
+    pipeline_file: ../third_party/prometheus-operator/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut third-party Prometheus Release
+    pipeline_file: ../third_party/prometheus/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"

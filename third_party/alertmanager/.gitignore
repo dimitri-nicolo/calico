@@ -1,0 +1,3 @@
+.alertmanager.created-*
+.alertmanager.downloaded
+alertmanager/

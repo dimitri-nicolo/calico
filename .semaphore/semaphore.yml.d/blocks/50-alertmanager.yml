@@ -1,0 +1,24 @@
+- name: alertmanager
+  run:
+    when: "${FORCE_RUN} or change_in(['/third_party/alertmanager/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    prologue:
+      commands:
+        - cd third_party/alertmanager
+    jobs:
+      - name: alertmanager tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
