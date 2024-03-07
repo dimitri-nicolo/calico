@@ -1,0 +1,20 @@
+- name: envoy
+  run:
+    when: "${FORCE_RUN} or change_in(['/third_party/envoy/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/envoy
+    jobs:
+      - name: envoy tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH

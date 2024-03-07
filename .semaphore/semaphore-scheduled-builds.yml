@@ -91,10 +91,6 @@ promotions:
     pipeline_file: push-images/dex.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push eck-operator images
-    pipeline_file: push-images/eck-operator.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push egress-gateway images
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
@@ -177,6 +173,15 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push webhooks-processor images
     pipeline_file: push-images/webhooks-processor.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+
+  - name: Push third-party eck-operator images
+    pipeline_file: push-images/third_party/eck-operator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push third-party envoy images
+    pipeline_file: push-images/third_party/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
 
@@ -372,17 +377,7 @@ blocks:
         value: master_ssh_key
       - name: WIN_PPK_KEY
         value: win_ppk_key
-      - name: K8S_VERSION
-        value: 1.22.6
     jobs:
-      - name: Docker - Windows FV
-        execution_time_limit:
-          minutes: 60
-        commands:
-          - ../.semaphore/run-and-monitor win-fv-docker.log ./.semaphore/run-win-fv.sh
-        env_vars:
-          - name: CONTAINER_RUNTIME
-            value: docker
       - name: Containerd - Windows FV
         execution_time_limit:
           minutes: 60
@@ -392,7 +387,7 @@ blocks:
           - name: CONTAINER_RUNTIME
             value: containerd
           - name: CONTAINERD_VERSION
-            value: 1.6.0
+            value: 1.6.22
 - name: confd
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/confd/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -719,10 +714,6 @@ blocks:
       - name: Build Windows image
         commands:
           - ../.semaphore/run-and-monitor build-windows-image.log make image-windows
-    epilogue:
-      always:
-        commands:
-          - test-results publish ./report/nosetests.xml --name "node-ci" || true
 
 - name: "Node: Build - native arm64 runner"
   run:
@@ -915,26 +906,6 @@ blocks:
         - cd dex
     jobs:
       - name: dex tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: eck-operator
-  run:
-    when: "true or change_in(['/*', '/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd eck-operator
-    jobs:
-      - name: eck-operator tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
       - name: Build binary
@@ -1351,7 +1322,7 @@ blocks:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: selinux
   run:
-    when: "true or change_in(['/selinux/'])"
+    when: "true or change_in(['/selinux/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
@@ -1374,6 +1345,46 @@ blocks:
       always:
         commands:
           - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+- name: eck-operator
+  run:
+    when: "true or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/eck-operator
+    jobs:
+      - name: eck-operator tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+- name: envoy
+  run:
+    when: "true or change_in(['/third_party/envoy/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/envoy
+    jobs:
+      - name: envoy tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: Flow log generator
   run:
     when: "true or change_in(['/*', '/test-tools/flow-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

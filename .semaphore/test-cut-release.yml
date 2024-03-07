@@ -22,7 +22,7 @@ global_job_config:
       - retry git fetch --unshallow
 
 blocks:
-  - name: 'Test Cut Release'
+  - name: Test Cut Release
     task:
       jobs:
         - name: Test Cut Release
@@ -76,10 +76,6 @@ promotions:
       when: "result = 'passed'"
   - name: Test Cut Deep Packet Inspection Release
     pipeline_file: ../deep-packet-inspection/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut ECK Operator Release
-    pipeline_file: ../eck-operator/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut Egress Gateway Release
@@ -144,5 +140,14 @@ promotions:
       when: "result = 'passed'"
   - name: Test Cut Dex
     pipeline_file: ../dex/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+
+  - name: Test Cut third-party ECK Operator Release
+    pipeline_file: ../third_party/eck-operator/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut third-party Envoy Release
+    pipeline_file: ../third_party/envoy/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"

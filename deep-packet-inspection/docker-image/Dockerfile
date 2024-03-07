@@ -1,7 +1,5 @@
 # Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-ARG UBI_IMAGE
-
 FROM rockylinux:8 AS snort
 
 ARG SNORT3_VERSION=3.1.81.0

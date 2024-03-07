@@ -42,10 +42,6 @@ promotions:
     pipeline_file: push-images/dex.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push eck-operator images
-    pipeline_file: push-images/eck-operator.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push egress-gateway images
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
@@ -128,6 +124,15 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push webhooks-processor images
     pipeline_file: push-images/webhooks-processor.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+
+  - name: Push third-party eck-operator images
+    pipeline_file: push-images/third_party/eck-operator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push third-party envoy images
+    pipeline_file: push-images/third_party/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
 

@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish eck-operator images
+name: Publish third-party eck-operator images
 agent:
   machine:
     type: e1-standard-2
@@ -42,7 +42,7 @@ blocks:
       jobs:
         - name: Linux multi-arch
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C eck-operator cd CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/eck-operator cd CONFIRM=true; fi
   - name: Publish eck-operator multi-arch manifests
     dependencies:
       - Publish eck-operator images
@@ -52,4 +52,4 @@ blocks:
       jobs:
         - name: Linux multi-arch manifests
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C eck-operator push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/eck-operator push-manifests-with-tag CONFIRM=true; fi

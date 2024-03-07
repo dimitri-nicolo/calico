@@ -22,7 +22,7 @@ global_job_config:
       - retry git fetch --unshallow
 
 blocks:
-  - name: 'Cut Release'
+  - name: Cut Release
     task:
       jobs:
         - name: Cut Release
@@ -76,10 +76,6 @@ promotions:
       when: "result = 'passed'"
   - name: Cut Deep Packet Inspection Release
     pipeline_file: ../deep-packet-inspection/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut ECK Operator Release
-    pipeline_file: ../eck-operator/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut Egress Gateway Release
@@ -160,5 +156,14 @@ promotions:
       when: "result = 'passed'"
   - name: Cut Webhooks Processor Release
     pipeline_file: ../webhooks-processor/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+
+  - name: Cut third-party ECK Operator Release
+    pipeline_file: ../third_party/eck-operator/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut third-party Envoy Release
+    pipeline_file: ../third_party/envoy/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"

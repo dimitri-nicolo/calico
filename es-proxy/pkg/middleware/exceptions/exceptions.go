@@ -10,8 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	clientsetV3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -45,13 +43,17 @@ func EventExceptionsHandler(authReview middleware.AuthorizationReview, k8sClient
 			return
 		}
 
-		alertExceptions := k8sClient.ProjectcalicoV3().AlertExceptions()
+		// Initialize eventExceptions object that handles logic for the request
+		ee := eventExceptions{
+			alertExceptions: k8sClient.ProjectcalicoV3().AlertExceptions(),
+			eventsProvider:  lsclient.Events(cluster),
+		}
 
-		handleExceptionRequest(w, r, alertExceptions)
+		handleExceptionRequest(w, r, &ee)
 	})
 }
 
-func handleExceptionRequest(w http.ResponseWriter, r *http.Request, alertExceptions clientsetV3.AlertExceptionInterface) {
+func handleExceptionRequest(w http.ResponseWriter, r *http.Request, eventExceptions EventExceptions) {
 	// Validate http method.
 	if r.Method != http.MethodGet && r.Method != http.MethodPost && r.Method != http.MethodDelete {
 		logrus.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
@@ -87,9 +89,6 @@ func handleExceptionRequest(w http.ResponseWriter, r *http.Request, alertExcepti
 		}
 	}
 
-	// Initialize eventExceptions object that handles logic for the request
-	ee := eventExceptions{alertExceptions: alertExceptions}
-
 	// Create a context with timeout to ensure we don't block for too long with this query.
 	// This releases timer resources if the operation completes before the timeout.
 	ctx, cancel := context.WithTimeout(r.Context(), time.Minute)
@@ -99,7 +98,7 @@ func handleExceptionRequest(w http.ResponseWriter, r *http.Request, alertExcepti
 	switch r.Method {
 	case http.MethodGet:
 		var results []*v1.EventException
-		results, err := ee.List(ctx)
+		results, err := eventExceptions.List(ctx)
 		if err != nil {
 			httputils.EncodeError(w, err)
 		} else {
@@ -107,14 +106,14 @@ func handleExceptionRequest(w http.ResponseWriter, r *http.Request, alertExcepti
 		}
 	case http.MethodPost:
 		var eventException *v1.EventException
-		eventException, err := ee.Create(ctx, &params)
+		eventException, err := eventExceptions.Create(ctx, &params)
 		if err != nil {
 			httputils.EncodeError(w, err)
 		} else {
 			httputils.Encode(w, eventException)
 		}
 	case http.MethodDelete:
-		err := ee.Delete(ctx, &params)
+		err := eventExceptions.Delete(ctx, &params)
 		if err != nil {
 			httputils.EncodeError(w, err)
 		}
