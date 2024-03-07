@@ -18,10 +18,10 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - retry git fetch --unshallow
-      - cd eck-operator
+      - cd third_party/envoy
 
 blocks:
-  - name: 'Test Cut Release'
+  - name: "Test Cut Release"
     task:
       secrets:
         - name: marvin-github-ssh-private-key
