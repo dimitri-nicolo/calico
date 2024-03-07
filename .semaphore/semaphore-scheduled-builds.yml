@@ -177,11 +177,11 @@ promotions:
       when: "branch =~ 'master|release-'"
 
   - name: Push third-party eck-operator images
-    pipeline_file: push-images/third-party/eck-operator.yml
+    pipeline_file: push-images/third_party/eck-operator.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push third-party envoy images
-    pipeline_file: push-images/third-party/envoy.yml
+    pipeline_file: push-images/third_party/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
 
