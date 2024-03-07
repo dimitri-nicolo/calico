@@ -46,6 +46,7 @@ type Workload struct {
 	Name                  string
 	InterfaceName         string
 	IP                    string
+	IP6                   string
 	Ports                 string
 	DefaultPort           string
 	runCmd                *exec.Cmd
@@ -140,6 +141,12 @@ func WithMTU(mtu int) Opt {
 	}
 }
 
+func WithIPv6Address(ipv6 string) Opt {
+	return func(w *Workload) {
+		w.IP6 = ipv6
+	}
+}
+
 func WithListenAnyIP() Opt {
 	return func(w *Workload) {
 		w.listenAnyIP = true
@@ -190,10 +197,10 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, opt
 	workload := &Workload{
 		C:                  c.Container,
 		Name:               n,
+		IP:                 ip,
 		SpoofName:          spoofN,
 		InterfaceName:      interfaceName,
 		SpoofInterfaceName: spoofIfaceName,
-		IP:                 ip,
 		Ports:              ports,
 		Protocol:           protocol,
 		WorkloadEndpoint:   wep,
@@ -202,6 +209,10 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, opt
 
 	for _, o := range opts {
 		o(workload)
+	}
+
+	if workload.IP6 != "" {
+		wep.Spec.IPNetworks = append(wep.Spec.IPNetworks, workload.IP6+"/128")
 	}
 
 	c.Workloads = append(c.Workloads, workload)
@@ -223,10 +234,14 @@ func (w *Workload) Start() error {
 		protoArg = "--protocol=" + w.Protocol
 	}
 
+	wIP := w.IP
+	if w.IP6 != "" {
+		wIP = wIP + "," + w.IP6
+	}
 	command := fmt.Sprintf("echo $$; exec test-workload %v '%v' '%v' '%v'",
 		protoArg,
 		w.InterfaceName,
-		w.IP,
+		wIP,
 		w.Ports,
 	)
 
@@ -424,7 +439,14 @@ func (w *Workload) SourceName() string {
 }
 
 func (w *Workload) SourceIPs() []string {
-	return []string{w.IP}
+	ips := []string{}
+	if w.IP != "" {
+		ips = append(ips, w.IP)
+	}
+	if w.IP6 != "" {
+		ips = append(ips, w.IP6)
+	}
+	return ips
 }
 
 func (w *Workload) PreRetryCleanup(ip, port, protocol string, opts ...connectivity.CheckOption) {
@@ -650,6 +672,7 @@ func (w *Workload) ToMatcher(explicitPort ...uint16) *connectivity.Matcher {
 	}
 	return &connectivity.Matcher{
 		IP:         w.IP,
+		IP6:        w.IP6,
 		Port:       port,
 		TargetName: fmt.Sprintf("%s on port %s", w.Name, port),
 		Protocol:   "tcp",

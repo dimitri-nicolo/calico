@@ -273,7 +273,6 @@ type bpfEndpointManager struct {
 	dataIfaceRegex          *regexp.Regexp
 	l3IfaceRegex            *regexp.Regexp
 	workloadIfaceRegex      *regexp.Regexp
-	ipSetIDAlloc            *idalloc.IDAllocator
 	epToHostAction          string
 	vxlanMTU                int
 	vxlanPort               uint16
@@ -342,7 +341,8 @@ type bpfEndpointManager struct {
 
 	bpfPolicyDebugEnabled bool
 
-	routeTable       routetable.RouteTableInterface
+	routeTableV4     routetable.RouteTableInterface
+	routeTableV6     routetable.RouteTableInterface
 	services         map[serviceKey][]ip.CIDR
 	dirtyServices    set.Set[serviceKey]
 	natExcludedCIDRs *ip.CIDRTrie
@@ -377,6 +377,7 @@ type bpfEndpointManagerDataplane struct {
 	// IP of the tunnel / overlay device
 	tunnelIP            net.IP
 	iptablesFilterTable IptablesTable
+	ipSetIDAlloc        *idalloc.IDAllocator
 }
 
 type serviceKey struct {
@@ -398,7 +399,7 @@ func NewTestEpMgr(
 	bpfmaps *bpfmap.Maps,
 	workloadIfaceRegex *regexp.Regexp,
 ) (ManagerWithHEPUpdate, error) {
-	return newBPFEndpointManager(nil, config, bpfmaps, true, workloadIfaceRegex, idalloc.New(),
+	return newBPFEndpointManager(nil, config, bpfmaps, true, workloadIfaceRegex, idalloc.New(), idalloc.New(),
 		rules.NewRenderer(rules.Config{
 			BPFEnabled:                  true,
 			IPIPEnabled:                 true,
@@ -438,7 +439,8 @@ func newBPFEndpointManager(
 	bpfmaps *bpfmap.Maps,
 	fibLookupEnabled bool,
 	workloadIfaceRegex *regexp.Regexp,
-	ipSetIDAlloc *idalloc.IDAllocator,
+	ipSetIDAllocV4 *idalloc.IDAllocator,
+	ipSetIDAllocV6 *idalloc.IDAllocator,
 	iptablesRuleRenderer bpfAllowChainRenderer,
 	iptablesFilterTableV4 IptablesTable,
 	iptablesFilterTableV6 IptablesTable,
@@ -481,7 +483,6 @@ func newBPFEndpointManager(
 		dataIfaceRegex:          config.BPFDataIfacePattern,
 		l3IfaceRegex:            config.BPFL3IfacePattern,
 		workloadIfaceRegex:      workloadIfaceRegex,
-		ipSetIDAlloc:            ipSetIDAlloc,
 		epToHostAction:          config.RulesConfig.EndpointToHostAction,
 		vxlanMTU:                config.VXLANMTU,
 		vxlanPort:               uint16(config.VXLANPort),
@@ -561,29 +562,41 @@ func newBPFEndpointManager(
 		m.hostNetworkedNATMode = hostNetworkedNATEnabled
 	}
 
-	m.v4 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV4, bpfmaps.V4, iptablesFilterTableV4, m)
+	m.v4 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV4, bpfmaps.V4, iptablesFilterTableV4, ipSetIDAllocV4, m)
 
 	if m.ipv6Enabled {
-		m.v6 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV6, bpfmaps.V6, iptablesFilterTableV6, m)
+		m.v6 = newBPFEndpointManagerDataplane(proto.IPVersion_IPV6, bpfmaps.V6, iptablesFilterTableV6, ipSetIDAllocV6, m)
 	}
 
 	if m.hostNetworkedNATMode != hostNetworkedNATDisabled {
 		log.Infof("HostNetworkedNATMode is %d", m.hostNetworkedNATMode)
-		family := uint8(4)
-		if m.ipv6Enabled {
-			family = 6
+		if m.v4 != nil {
+			m.routeTableV4 = routetable.New(
+				[]string{bpfInDev},
+				uint8(4),
+				config.NetlinkTimeout,
+				nil, // deviceRouteSourceAddress
+				config.DeviceRouteProtocol,
+				true, // removeExternalRoutes
+				unix.RT_TABLE_MAIN,
+				opReporter,
+				featureDetector,
+			)
 		}
-		m.routeTable = routetable.New(
-			[]string{bpfInDev},
-			family,
-			config.NetlinkTimeout,
-			nil, // deviceRouteSourceAddress
-			config.DeviceRouteProtocol,
-			true, // removeExternalRoutes
-			unix.RT_TABLE_MAIN,
-			opReporter,
-			featureDetector,
-		)
+		if m.v6 != nil {
+			m.routeTableV6 = routetable.New(
+				[]string{bpfInDev},
+				uint8(6),
+				config.NetlinkTimeout,
+				nil, // deviceRouteSourceAddress
+				config.DeviceRouteProtocol,
+				true, // removeExternalRoutes
+				unix.RT_TABLE_MAIN,
+				opReporter,
+				featureDetector,
+			)
+		}
+
 		m.services = make(map[serviceKey][]ip.CIDR)
 		m.dirtyServices = set.New[serviceKey]()
 		m.natExcludedCIDRs = ip.NewCIDRTrie()
@@ -606,7 +619,7 @@ func newBPFEndpointManager(
 		// Anything else would prevent packets being accepted from the special
 		// service veth. It does not create a security hole since BPF does the RPF
 		// on its own.
-		if !m.ipv6Enabled {
+		if m.v4 != nil {
 			if err := m.dp.setRPFilter("all", 0); err != nil {
 				return nil, fmt.Errorf("setting rp_filter for all: %w", err)
 			}
@@ -659,6 +672,7 @@ func newBPFEndpointManagerDataplane(
 	ipFamily proto.IPVersion,
 	ipMaps *bpfmap.IPMaps,
 	iptablesFilterTable IptablesTable,
+	ipSetIDAlloc *idalloc.IDAllocator,
 	epMgr *bpfEndpointManager,
 ) *bpfEndpointManagerDataplane {
 
@@ -668,6 +682,7 @@ func newBPFEndpointManagerDataplane(
 		mgr:                 epMgr,
 		IPMaps:              ipMaps,
 		iptablesFilterTable: iptablesFilterTable,
+		ipSetIDAlloc:        ipSetIDAlloc,
 	}
 }
 
@@ -800,12 +815,12 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 		m.onProfileRemove(msg)
 
 	case *proto.HostMetadataUpdate:
-		if msg.Hostname == m.hostname {
+		if m.v4 != nil && msg.Hostname == m.hostname {
 			log.WithField("HostMetadataUpdate", msg).Infof("Host IP changed: %s", msg.Ipv4Addr)
 			m.updateHostIP(net.ParseIP(msg.Ipv4Addr), 4)
 		}
 	case *proto.HostMetadataV6Update:
-		if m.ipv6Enabled && msg.Hostname == m.hostname {
+		if m.v6 != nil && msg.Hostname == m.hostname {
 			log.WithField("HostMetadataV6Update", msg).Infof("Host IPv6 changed: %s", msg.Ipv6Addr)
 			m.updateHostIP(net.ParseIP(msg.Ipv6Addr), 6)
 		}
@@ -813,10 +828,11 @@ func (m *bpfEndpointManager) OnUpdate(msg interface{}) {
 		if msg.Hostname != m.hostname {
 			break
 		}
-		log.WithField("HostMetadataV4V6Update", msg).Infof("Host IP changed: %s", msg.Ipv4Addr)
-		m.updateHostIP(net.ParseIP(msg.Ipv4Addr), 4)
-
-		if m.ipv6Enabled {
+		if m.v4 != nil {
+			log.WithField("HostMetadataV4V6Update", msg).Infof("Host IP changed: %s", msg.Ipv4Addr)
+			m.updateHostIP(net.ParseIP(msg.Ipv4Addr), 4)
+		}
+		if m.v6 != nil {
 			log.WithField("HostMetadataV4V6Update", msg).Infof("Host IPv6 changed: %s", msg.Ipv6Addr)
 			m.updateHostIP(net.ParseIP(msg.Ipv6Addr), 6)
 		}
@@ -836,13 +852,15 @@ func (m *bpfEndpointManager) onRouteUpdate(update *proto.RouteUpdate) {
 			log.WithField("local tunnel cird", update.Dst).WithError(err).Warn("not parsable")
 			return
 		}
-		if m.ipv6Enabled {
+		if m.v6 != nil {
 			if ip.To4() == nil {
 				m.v6.tunnelIP = ip
 			}
 		}
-		if ip.To4() != nil {
-			m.v4.tunnelIP = ip
+		if m.v4 != nil {
+			if ip.To4() != nil {
+				m.v4.tunnelIP = ip
+			}
 		}
 		log.WithField("ip", update.Dst).Info("host tunnel")
 		m.dirtyIfaceNames.Add(bpfOutDev)
@@ -853,9 +871,11 @@ func (m *bpfEndpointManager) onInterfaceAddrsUpdate(update *ifaceAddrsUpdate) {
 	m.ifacesLock.Lock()
 	defer m.ifacesLock.Unlock()
 
-	var v6AddrsUpdate bool
-	v4AddrsUpdate := m.v4.updateIfaceIP(update)
-	if m.ipv6Enabled {
+	var v6AddrsUpdate, v4AddrsUpdate bool
+	if m.v4 != nil {
+		v4AddrsUpdate = m.v4.updateIfaceIP(update)
+	}
+	if m.v6 != nil {
 		v6AddrsUpdate = m.v6.updateIfaceIP(update)
 	}
 	if v4AddrsUpdate || v6AddrsUpdate {
@@ -951,9 +971,10 @@ func (m *bpfEndpointManager) updateIfaceStateMap(name string, iface *bpfInterfac
 		)
 		m.ifStateMap.Desired().Set(k, v)
 	} else {
-		if !m.ipv6Enabled {
+		if m.v4 != nil {
 			m.reclaimPolicyIdx(name, 4, iface)
-		} else {
+		}
+		if m.v6 != nil {
 			m.reclaimPolicyIdx(name, 6, iface)
 		}
 		m.ifStateMap.Desired().Delete(k)
@@ -1057,14 +1078,14 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceStateUpdate) {
 			case bpfInDev, bpfOutDev:
 				// do nothing
 			default:
-				if !m.ipv6Enabled {
+				if m.v4 != nil {
 					if err := m.dp.setRPFilter(update.Name, 2); err != nil {
 						log.WithError(err).Warnf("Failed to set rp_filter for %s.", update.Name)
 					}
 				}
 			}
 
-			if !m.ipv6Enabled {
+			if m.v4 != nil {
 				_ = m.dp.setAcceptLocal(update.Name, true)
 			}
 
@@ -1335,18 +1356,19 @@ func (m *bpfEndpointManager) syncIfStateMap() {
 					indexMap[h] = idx
 				}
 
-				if m.ipv6Enabled {
-					checkAndReclaimIdx(v.IngressPolicyV6(), hook.Ingress, iface.dpState.v6.policyIdx[:])
-					checkAndReclaimIdx(v.EgressPolicyV6(), hook.Egress, iface.dpState.v6.policyIdx[:])
-					if !m.isWorkloadIface(netiface.Name) {
-						checkAndReclaimIdx(v.XDPPolicyV6(), hook.XDP, iface.dpState.v6.policyIdx[:])
-					}
-				} else {
+				if m.v4 != nil {
 					checkAndReclaimIdx(v.IngressPolicyV4(), hook.Ingress, iface.dpState.v4.policyIdx[:])
 					checkAndReclaimIdx(v.EgressPolicyV4(), hook.Egress, iface.dpState.v4.policyIdx[:])
 					if !m.isWorkloadIface(netiface.Name) {
 						// We don't use XDP for WEPs so any ID we read back must be a mistake.
 						checkAndReclaimIdx(v.XDPPolicyV4(), hook.XDP, iface.dpState.v4.policyIdx[:])
+					}
+				}
+				if m.v6 != nil {
+					checkAndReclaimIdx(v.IngressPolicyV6(), hook.Ingress, iface.dpState.v6.policyIdx[:])
+					checkAndReclaimIdx(v.EgressPolicyV6(), hook.Egress, iface.dpState.v6.policyIdx[:])
+					if !m.isWorkloadIface(netiface.Name) {
+						checkAndReclaimIdx(v.XDPPolicyV6(), hook.XDP, iface.dpState.v6.policyIdx[:])
 					}
 				}
 				checkAndReclaimIdx(v.TcIngressFilter(), hook.Ingress, iface.dpState.filterIdx[:])
@@ -1531,10 +1553,11 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 
 	if m.happyWEPsDirty {
 		chains := m.ruleRenderer.WorkloadInterfaceAllowChains(m.happyWEPs)
+		if m.v4 != nil {
+			m.v4.iptablesFilterTable.UpdateChains(chains)
+		}
 		if m.v6 != nil {
 			m.v6.iptablesFilterTable.UpdateChains(chains)
-		} else {
-			m.v4.iptablesFilterTable.UpdateChains(chains)
 		}
 		m.happyWEPsDirty = false
 	}
@@ -1639,12 +1662,14 @@ func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface string) (bpfInterfac
 			ingressAP6, egressAP6, xdpAP6, err6 = m.v6.applyPolicyToDataIface(iface, hepPtr, &state,
 				tcAttachPoint, xdpAttachPoint)
 		}()
-	} else if m.v4 != nil {
+	}
+	if m.v4 != nil {
 		ingressAP4, egressAP4, xdpAP4, err4 = m.v4.applyPolicyToDataIface(iface, hepPtr, &state,
 			tcAttachPoint, xdpAttachPoint)
 	}
 
 	parallelWG.Wait()
+
 	// Attach ingress program.
 	parallelWG.Add(1)
 	go func() {
@@ -1657,7 +1682,7 @@ func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface string) (bpfInterfac
 	}()
 
 	// Attach xdp program.
-	if !m.ipv6Enabled {
+	if m.v4 != nil {
 		parallelWG.Add(1)
 		go func() {
 			defer parallelWG.Done()
@@ -1688,11 +1713,10 @@ func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface string) (bpfInterfac
 		return state, xdpErr
 	}
 
-	if m.v6 != nil {
-		if err6 == nil {
-			state.v6Readiness = ifaceIsReady
-		}
-	} else if err4 == nil {
+	if m.v6 != nil && err6 == nil {
+		state.v6Readiness = ifaceIsReady
+	}
+	if m.v4 != nil && err4 == nil {
 		state.v4Readiness = ifaceIsReady
 	}
 	return state, errors.Join(err4, err6)
@@ -1724,7 +1748,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 			if err == nil {
 				// This is required to allow NodePort forwarding with
 				// encapsulation with the host's IP as the source address
-				if !m.ipv6Enabled {
+				if m.v4 != nil {
 					_ = m.dp.setAcceptLocal(iface, true)
 				}
 			}
@@ -1792,7 +1816,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 			defer sem.Release(1)
 			err := m.applyPolicy(ifaceName)
 			if err == nil {
-				if !m.ipv6Enabled {
+				if m.v4 != nil {
 					_ = m.dp.setAcceptLocal(ifaceName, true)
 				}
 			}
@@ -1898,13 +1922,18 @@ func (m *bpfEndpointManager) allocJumpIndicesForDataIface(ifaceName string, idx 
 
 func (m *bpfEndpointManager) wepStateFillJumps(ifaceName string, state *bpfInterfaceState) error {
 	var err error
-	if m.ipv6Enabled {
-		err = m.allocJumpIndicesForWEP(ifaceName, &state.v6)
+
+	// Allocate indices for IPv4
+	if m.v4 != nil {
+		err = m.allocJumpIndicesForWEP(ifaceName, &state.v4)
 		if err != nil {
 			return err
 		}
-	} else {
-		err = m.allocJumpIndicesForWEP(ifaceName, &state.v4)
+	}
+
+	// Allocate indices for IPv6
+	if m.v6 != nil {
+		err = m.allocJumpIndicesForWEP(ifaceName, &state.v6)
 		if err != nil {
 			return err
 		}
@@ -1929,13 +1958,16 @@ func (m *bpfEndpointManager) wepStateFillJumps(ifaceName string, state *bpfInter
 
 func (m *bpfEndpointManager) dataIfaceStateFillJumps(ifaceName string, state *bpfInterfaceState) error {
 	var err error
-	if m.ipv6Enabled {
-		err = m.allocJumpIndicesForDataIface(ifaceName, &state.v6)
+
+	if m.v4 != nil {
+		err = m.allocJumpIndicesForDataIface(ifaceName, &state.v4)
 		if err != nil {
 			return err
 		}
-	} else {
-		err = m.allocJumpIndicesForDataIface(ifaceName, &state.v4)
+	}
+
+	if m.v6 != nil {
+		err = m.allocJumpIndicesForDataIface(ifaceName, &state.v6)
 		if err != nil {
 			return err
 		}
@@ -2048,17 +2080,27 @@ func (m *bpfEndpointManager) doApplyPolicy(ifaceName string) (bpfInterfaceState,
 			defer wg.Done()
 			ingressAP6, egressAP6, err6 = m.v6.applyPolicyToWeps(v6Readiness, ifaceName, &state, wep, ap)
 		}()
-	} else if m.v4 != nil {
+	}
+
+	if m.v4 != nil {
 		ingressAP4, egressAP4, err4 = m.v4.applyPolicyToWeps(v4Readiness, ifaceName, &state, wep, ap)
 	}
+
 	wg.Wait()
 
 	attachPreamble := false
 	if m.v6 != nil {
 		attachPreamble = v6Readiness != ifaceIsReady
-	} else {
-		attachPreamble = v4Readiness != ifaceIsReady
 	}
+	if m.v4 != nil {
+		forceReAttach := false
+		if ingressAP4 != nil && ingressAP4.ForceReattach ||
+			egressAP4 != nil && egressAP4.ForceReattach {
+			forceReAttach = true
+		}
+		attachPreamble = v4Readiness != ifaceIsReady || forceReAttach
+	}
+
 	//Attach preamble TC program
 	if attachPreamble {
 		wg.Add(1)
@@ -2086,30 +2128,26 @@ func (m *bpfEndpointManager) doApplyPolicy(ifaceName string) (bpfInterfaceState,
 		return state, egressErr
 	}
 
-	if m.v6 != nil {
-		if err6 == nil {
-			v6Readiness = ifaceIsReady
-		}
-	} else if err4 == nil {
-		v4Readiness = ifaceIsReady
+	if egressQdisc != ingressQdisc {
+		return state, fmt.Errorf("ingress qdisc info (%v) does not equal egress qdisc info (%v)",
+			ingressQdisc, egressQdisc)
+	}
+	state.qdisc = ingressQdisc
+
+	if m.v6 != nil && err6 == nil {
+		state.v6Readiness = ifaceIsReady
+	}
+	if m.v4 != nil && err4 == nil {
+		state.v4Readiness = ifaceIsReady
 	}
 
 	if errors.Join(err4, err6) != nil {
 		return state, errors.Join(err4, err6)
 	}
 
-	if egressQdisc != ingressQdisc {
-		return state, fmt.Errorf("ingress qdisc info (%v) does not equal egress qdist info (%v)",
-			ingressQdisc, egressQdisc)
-	}
-
 	applyTime := time.Since(startTime)
 	log.WithFields(log.Fields{"timeTaken": applyTime, "ifaceName": ifaceName}).
 		Info("Finished applying BPF programs for workload")
-
-	state.v4Readiness = v4Readiness
-	state.v6Readiness = v6Readiness
-	state.qdisc = ingressQdisc
 	return state, nil
 }
 
@@ -2148,6 +2186,13 @@ func mergeAttachPoints(ap4, ap6 attachPoint) attachPoint {
 				return aptcV4
 			} else if aptcV6 != nil && aptcV4 == nil {
 				return aptcV6
+			} else if aptcV4 != nil && aptcV6 != nil {
+				aptcV4.HostIPv6 = aptcV6.HostIPv6
+				aptcV4.IntfIPv6 = aptcV6.IntfIPv6
+				aptcV4.HostTunnelIPv6 = aptcV6.HostTunnelIPv6
+				aptcV4.HookLayoutV6 = aptcV6.HookLayoutV6
+				aptcV4.PolicyIdxV6 = aptcV6.PolicyIdxV6
+				return aptcV4
 			}
 		}
 	} else if apxdpV4, v4ok := ap4.(*xdp.AttachPoint); v4ok {
@@ -2235,9 +2280,9 @@ func (d *bpfEndpointManagerDataplane) wepApplyPolicyToDirection(readiness ifaceR
 
 	ap = d.wepTCAttachPoint(ap, policyIdx, filterIdx, polDirection, endpoint)
 
-	// AttachPoint config can change even without reload. Hence we need to re attach the program if ForceReattach is
+	// AttachPoint config can change even without reload. Hence we need to re attach the program if attach is
 	// true.
-	log.WithField("iface", ap.IfaceName()).Debugf("readiness: %d, ForceReattach: %v", readiness, ap.ForceReattach)
+	log.WithField("iface", ap.IfaceName()).Debugf("readiness: %d, attach: %v", readiness, ap.ForceReattach)
 	if (readiness != ifaceIsReady) || ap.ForceReattach {
 		err := d.mgr.loadPrograms(ap, d.ipFamily)
 		if err != nil {
@@ -3090,13 +3135,14 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 	m.natInIdx = bpfin.Attrs().Index
 	m.natOutIdx = bpfout.Attrs().Index
 
-	if m.ipv6Enabled {
+	if m.v6 != nil {
 		anyV6, _ := ip.CIDRFromString("::/128")
 		err = m.v6.ArpMap.Update(
 			bpfarp.NewKeyV6(anyV6.Addr().AsNetIP(), uint32(m.natInIdx)).AsBytes(),
 			bpfarp.NewValue(bpfin.Attrs().HardwareAddr, bpfout.Attrs().HardwareAddr).AsBytes(),
 		)
-	} else {
+	}
+	if m.v4 != nil {
 		anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
 		err = m.v4.ArpMap.Update(
 			bpfarp.NewKey(anyV4.Addr().AsNetIP(), uint32(m.natInIdx)).AsBytes(),
@@ -3116,37 +3162,40 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 		LinkIndex:    bpfin.Attrs().Index,
 	}
 
-	var cidr ip.CIDR
-
-	if m.ipv6Enabled {
-		arp.Family = netlink.FAMILY_V6
-		arp.IP = bpfnatGWv6
-		cidr = bpfnatGWCIDRv6
-	} else {
-		arp.Family = netlink.FAMILY_V4
-		arp.IP = bpfnatGW
-		cidr = bpfnatGWCIDR
+	ipFamilies := []int{}
+	if m.v4 != nil {
+		ipFamilies = append(ipFamilies, netlink.FAMILY_V4)
+	}
+	if m.v6 != nil {
+		ipFamilies = append(ipFamilies, netlink.FAMILY_V6)
 	}
 
-	retries := 10
-	i := retries
-	for {
-		if err := netlink.NeighAdd(arp); err != nil && err != syscall.EEXIST {
-			log.WithError(err).Warnf("Failed to update neigh for %s (arp %#v), retrying.", bpfOutDev, arp)
-			i--
-			if i > 0 {
-				time.Sleep(250 * time.Millisecond)
-				continue
-			} else {
-				return fmt.Errorf("failed to update neigh for %s (arp %#v) after %d tries: %w",
-					bpfOutDev, arp, retries, err)
-			}
+	for _, ipFamily := range ipFamilies {
+		arp.Family = ipFamily
+		arp.IP = bpfnatGW
+		if ipFamily == netlink.FAMILY_V6 {
+			arp.IP = bpfnatGWv6
 		}
-		break
+		retries := 10
+		i := retries
+		for {
+			if err := netlink.NeighAdd(arp); err != nil && err != syscall.EEXIST {
+				log.WithError(err).Warnf("Failed to update neigh for %s (arp %#v), retrying.", bpfOutDev, arp)
+				i--
+				if i > 0 {
+					time.Sleep(250 * time.Millisecond)
+					continue
+				} else {
+					return fmt.Errorf("failed to update neigh for %s (arp %#v) after %d tries: %w",
+						bpfOutDev, arp, retries, err)
+				}
+			}
+			break
+		}
 	}
 	log.Infof("Updated neigh for %s (arp %v)", bpfOutDev, arp)
 
-	if !m.ipv6Enabled {
+	if m.v4 != nil {
 		if err := configureInterface(bpfInDev, 4, "0", writeProcSys); err != nil {
 			return fmt.Errorf("failed to configure %s parameters: %w", bpfOutDev, err)
 		}
@@ -3168,10 +3217,18 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 	// Setup a link local route to a nonexistent link local address that would
 	// serve as a gateway to route services via bpfnat veth rather than having
 	// link local routes for each service that would trigger ARP queries.
-	m.routeTable.RouteUpdate(bpfInDev, routetable.Target{
-		Type: routetable.TargetTypeLinkLocalUnicast,
-		CIDR: cidr,
-	})
+	if m.v4 != nil {
+		m.routeTableV4.RouteUpdate(bpfInDev, routetable.Target{
+			Type: routetable.TargetTypeLinkLocalUnicast,
+			CIDR: bpfnatGWCIDR,
+		})
+	}
+	if m.v6 != nil {
+		m.routeTableV6.RouteUpdate(bpfInDev, routetable.Target{
+			Type: routetable.TargetTypeLinkLocalUnicast,
+			CIDR: bpfnatGWCIDRv6,
+		})
+	}
 
 	return nil
 }
@@ -3263,29 +3320,25 @@ func (m *bpfEndpointManager) ensureNoProgram(ap attachPoint) error {
 	// Ensure interface does not have our program attached.
 	err := ap.DetachProgram()
 
-	// Forget the policy debug info
-	if m.ipv6Enabled {
-		if err := m.jumpMapDelete(ap.HookName(), ap.PolicyJmp(proto.IPVersion_IPV6)); err != nil {
-			log.WithError(err).Warn("Policy program may leak.")
-		}
-		m.removePolicyDebugInfo(ap.IfaceName(), 6, ap.HookName())
-	} else {
+	if m.v4 != nil {
 		if err := m.jumpMapDelete(ap.HookName(), ap.PolicyJmp(proto.IPVersion_IPV4)); err != nil {
 			log.WithError(err).Warn("Policy program may leak.")
 		}
 		m.removePolicyDebugInfo(ap.IfaceName(), 4, ap.HookName())
+	}
+	// Forget the policy debug info
+	if m.v6 != nil {
+		if err := m.jumpMapDelete(ap.HookName(), ap.PolicyJmp(proto.IPVersion_IPV6)); err != nil {
+			log.WithError(err).Warn("Policy program may leak.")
+		}
+		m.removePolicyDebugInfo(ap.IfaceName(), 6, ap.HookName())
 	}
 
 	return err
 }
 
 func (m *bpfEndpointManager) removeIfaceAllPolicyDebugInfo(ifaceName string) {
-	ipVersions := []proto.IPVersion{proto.IPVersion_IPV4}
-	if m.ipv6Enabled {
-		ipVersions = append(ipVersions, proto.IPVersion_IPV6)
-	}
-
-	for _, ipFamily := range ipVersions {
+	for _, ipFamily := range []proto.IPVersion{proto.IPVersion_IPV4, proto.IPVersion_IPV6} {
 		for _, hook := range hook.All {
 			m.removePolicyDebugInfo(ifaceName, ipFamily, hook)
 		}
@@ -3464,13 +3517,15 @@ func (m *bpfEndpointManager) loadPolicyProgram(
 	}).Debug("Generating policy program...")
 
 	ipsetsMapFD := m.v4.IpsetsMap.MapFD()
+	ipSetIDAlloc := m.v4.ipSetIDAlloc
 	if ipFamily == proto.IPVersion_IPV6 {
 		opts = append(opts, polprog.WithIPv6())
 		ipsetsMapFD = m.v6.IpsetsMap.MapFD()
+		ipSetIDAlloc = m.v6.ipSetIDAlloc
 	}
 
 	pg := polprog.NewBuilder(
-		m.ipSetIDAlloc,
+		ipSetIDAlloc,
 		ipsetsMapFD,
 		m.commonMaps.StateMap.MapFD(),
 		staticProgsMap.MapFD(),
@@ -3748,11 +3803,12 @@ func (m *bpfEndpointManager) onServiceUpdate(update *proto.ServiceUpdate) {
 			if v != nil {
 				continue
 			}
-			if m.ipv6Enabled {
+			if m.v6 != nil {
 				if _, ok := cidr.(ip.V6CIDR); ok {
 					ips = append(ips, cidr)
 				}
-			} else {
+			}
+			if m.v4 != nil {
 				if _, ok := cidr.(ip.V4CIDR); ok {
 					ips = append(ips, cidr)
 				}
@@ -3807,24 +3863,33 @@ var (
 )
 
 func (m *bpfEndpointManager) setRoute(cidr ip.CIDR) {
-	var gw ip.Addr
-	if m.ipv6Enabled {
-		gw = bpfnatGWIPv6
-	} else {
-		gw = bpfnatGWIP
+	if m.v6 != nil && cidr.Version() == 6 {
+		m.routeTableV6.RouteUpdate(bpfInDev, routetable.Target{
+			Type: routetable.TargetTypeGlobalUnicast,
+			CIDR: cidr,
+			GW:   bpfnatGWIPv6,
+		})
 	}
-	m.routeTable.RouteUpdate(bpfInDev, routetable.Target{
-		Type: routetable.TargetTypeGlobalUnicast,
-		CIDR: cidr,
-		GW:   gw,
-	})
+	if m.v4 != nil && cidr.Version() == 4 {
+		m.routeTableV4.RouteUpdate(bpfInDev, routetable.Target{
+			Type: routetable.TargetTypeGlobalUnicast,
+			CIDR: cidr,
+			GW:   bpfnatGWIP,
+		})
+	}
+
 	log.WithFields(log.Fields{
 		"cidr": cidr,
 	}).Debug("setRoute")
 }
 
 func (m *bpfEndpointManager) delRoute(cidr ip.CIDR) {
-	m.routeTable.RouteRemove(bpfInDev, cidr)
+	if m.v6 != nil && cidr.Version() == 6 {
+		m.routeTableV6.RouteRemove(bpfInDev, cidr)
+	}
+	if m.v4 != nil && cidr.Version() == 4 {
+		m.routeTableV4.RouteRemove(bpfInDev, cidr)
+	}
 	log.WithFields(log.Fields{
 		"cidr": cidr,
 	}).Debug("delRoute")
@@ -3835,7 +3900,13 @@ func (m *bpfEndpointManager) GetRouteTableSyncers() []routetable.RouteTableSynce
 		return nil
 	}
 
-	tables := []routetable.RouteTableSyncer{m.routeTable}
+	tables := []routetable.RouteTableSyncer{}
+	if m.v4 != nil {
+		tables = append(tables, m.routeTableV4)
+	}
+	if m.v6 != nil {
+		tables = append(tables, m.routeTableV6)
+	}
 
 	return tables
 }
