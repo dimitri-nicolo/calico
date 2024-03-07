@@ -54,7 +54,17 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		if err != nil {
 			return
 		}
-		request.Header.Set("Content-Type", "application/json")
+
+		headers := make(map[string]string)
+		if rawHeaders, ok := config["headers"]; ok {
+			headers = helpers.ProcessHeaders(rawHeaders)
+		}
+		if _, contentTypePresent := headers["Content-Type"]; !contentTypePresent {
+			headers["Content-Type"] = "application/json"
+		}
+		for header, value := range headers {
+			request.Header.Set(header, value)
+		}
 
 		response, err := new(http.Client).Do(request)
 		if err != nil {
