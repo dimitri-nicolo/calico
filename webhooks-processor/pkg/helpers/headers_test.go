@@ -5,8 +5,9 @@ package helpers_test
 import (
 	"testing"
 
-	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 )
 
 func TestProcessHeaders(t *testing.T) {
