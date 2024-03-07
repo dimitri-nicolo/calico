@@ -102,7 +102,7 @@ func TestWebhookDependencyModifications(t *testing.T) {
 		// create the "test-webhook" webhook referencing the "test-secret" create above
 		webhook := testutils.NewTestWebhook("test-webhook")
 		webhook.Spec.Config = []api.SecurityEventWebhookConfigVar{
-			api.SecurityEventWebhookConfigVar{
+			{
 				Name: "url",
 				ValueFrom: &api.SecurityEventWebhookConfigVarSource{
 					SecretKeyRef: &v1.SecretKeySelector{
@@ -398,11 +398,21 @@ func TestGenericProvider(t *testing.T) {
 
 	whUrl := fmt.Sprintf("%s/test-hook", ts.URL)
 	wh := testutils.NewTestWebhook("test-generic-webhook")
+	// Set the Webhook consumer to Generic
 	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
 	// Making sure we'll update the right config...
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
 	// Updating URL to point to the test server
 	wh.Spec.Config[0].Value = whUrl
+	// Adding arbitrary headers:
+	wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
+		Name: "headers",
+		Value: `
+Origin:unit-test:the-generic-webhook
+Warning:this is a deprecated header so be wary
+this line will be ignored
+		`,
+	})
 	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
 	require.NoError(t, err)
 
@@ -412,6 +422,13 @@ func TestGenericProvider(t *testing.T) {
 	// We got the webhook as expected
 	require.Equal(t, "POST", requests[0].Method)
 	require.Equal(t, "/test-hook", requests[0].URL)
+	require.Contains(t, requests[0].Header, "Content-Type")
+	require.Equal(t, requests[0].Header["Content-Type"], []string{"application/json"})
+	require.Contains(t, requests[0].Header, "Origin")
+	require.Equal(t, requests[0].Header["Origin"], []string{"unit-test:the-generic-webhook"})
+	require.Contains(t, requests[0].Header, "Warning")
+	require.Equal(t, requests[0].Header["Warning"], []string{"this is a deprecated header so be wary"})
+
 	// And check that we get a JSON of the original event
 	var whEvent lsApi.Event
 	err = json.Unmarshal(requests[0].Body, &whEvent)
