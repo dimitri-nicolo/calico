@@ -53,6 +53,7 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
 	patch -d kibana -p1 < patches/0002-Reduce-all-platforms-to-linux-variants-only.patch
 	patch -d kibana -p1 < patches/0003-Support-UBI-arm64-builds.patch
+	patch -d kibana -p1 < patches/0004-Update-IP-dependency-to-patch-CVE.patch
 	touch $@
 
 # always register because build target will build images for all supported arches
