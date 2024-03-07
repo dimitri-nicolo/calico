@@ -1011,7 +1011,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	)
 	dp.RegisterManager(tproxyMgr)
 
-	var bpfIPSets egressIPSets
+	var bpfIPSetsV4 egressIPSets
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 
@@ -1023,19 +1023,19 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// Register map managers first since they create the maps that will be used by the endpoint manager.
 		// Important that we create the maps before we load a BPF program with TC since we make sure the map
 		// metadata name is set whereas TC doesn't set that field.
-		var conntrackScanner *bpfconntrack.Scanner
+		var conntrackScannerV4, conntrackScannerV6 *bpfconntrack.Scanner
 		var ipSetIDAllocatorV4, ipSetIDAllocatorV6 *idalloc.IDAllocator
 		ipSetIDAllocatorV4 = idalloc.New()
 		ipSetIDAllocatorV4.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
 		ipSetIDAllocatorV4.ReserveWellKnownID(bpfipsets.EgressGWHealthPortsName, bpfipsets.EgressGWHealthPortsID)
 
 		// Start IPv4 BPF dataplane components
-		conntrackScanner, bpfIPSets = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocatorV4, config, ipsetsManager, dp)
+		conntrackScannerV4, bpfIPSetsV4 = startBPFDataplaneComponents(proto.IPVersion_IPV4, bpfMaps.V4, ipSetIDAllocatorV4, config, ipsetsManager, dp)
 		if config.BPFIpv6Enabled {
 			// Start IPv6 BPF dataplane components
 			ipSetIDAllocatorV6 = idalloc.New()
 			ipSetIDAllocatorV6.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
-			startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocatorV6, config, ipsetsManagerV6, dp)
+			conntrackScannerV6, _ = startBPFDataplaneComponents(proto.IPVersion_IPV6, bpfMaps.V6, ipSetIDAllocatorV6, config, ipsetsManagerV6, dp)
 		}
 
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
@@ -1140,12 +1140,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			// We must add the collectorConntrackInfoReader before
 			// conntrack.LivenessScanner as we want to see expired connections and the
 			// liveness scanner would remove them for us.
-			conntrackScanner.AddFirstUnlocked(conntrackInfoReader)
+			conntrackScannerV4.AddFirstUnlocked(conntrackInfoReader)
 			log.Info("BPF: ConntrackInfoReader added to conntrackScanner")
 			collectorConntrackInfoReader = conntrackInfoReader
 		}
 
-		conntrackScanner.Start()
+		if conntrackScannerV4 != nil {
+			conntrackScannerV4.Start()
+		}
+		if conntrackScannerV6 != nil {
+			conntrackScannerV6.Start()
+		}
+
 		log.Info("conntrackScanner started")
 	}
 
@@ -1178,7 +1184,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.HealthAggregator,
 			dp.egwHealthReportC,
 			ipSetsV4,
-			bpfIPSets,
+			bpfIPSetsV4,
 			featureDetector,
 		)
 		dp.RegisterManager(dp.egressIPManager)
