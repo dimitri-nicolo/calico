@@ -135,7 +135,6 @@ migrate-dashboards:
 	bash migrate_dashboards.sh
 
 MMDB_DOWNLOADED=.mmdb.downloaded
-GOOGLE_APPLICATION_CREDENTIALS ?= $(HOME)/secrets/banzai-google-service-account.json
 mmdb-download: $(MMDB_DOWNLOADED)
 $(MMDB_DOWNLOADED):
 	@echo "[INFO] pulling MaxMind database frpom GCP bucket..."

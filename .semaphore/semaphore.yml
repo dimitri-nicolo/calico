@@ -15,8 +15,8 @@ auto_cancel:
     when: "branch != 'master'"
 global_job_config:
   secrets:
-    - name: docker-hub
     - name: banzai-secrets
+    - name: docker-hub
     - name: private-repo
   prologue:
     commands:
@@ -340,9 +340,6 @@ blocks:
   dependencies:
     - cni-plugin
   task:
-    secrets:
-      - name: banzai-secrets
-      - name: private-repo
     prologue:
       commands:
         # Load the github access secrets.  First fix the permissions.
@@ -493,11 +490,9 @@ blocks:
 - name: "Felix: Windows FV capz"
   run:
     when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Felix: Build Windows binaries"]
+  dependencies:
+    - "Felix: Build Windows binaries"
   task:
-    secrets:
-      - name: banzai-secrets
-      - name: private-repo
     prologue:
       commands:
         - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv/report
