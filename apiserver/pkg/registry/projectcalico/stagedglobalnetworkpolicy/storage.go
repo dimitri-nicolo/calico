@@ -18,7 +18,7 @@ package stagedglobalpolicy
 
 import (
 	"context"
-
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
@@ -39,6 +39,7 @@ import (
 // rest implements a RESTStorage for API services against etcd
 type REST struct {
 	*genericregistry.Store
+	rbac.CalicoResourceLister
 	authorizer authorizer.TierAuthorizer
 }
 
@@ -53,7 +54,7 @@ func NewList() runtime.Object {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
+func NewREST(scheme *runtime.Scheme, opts server.Options, calicoResourceLister rbac.CalicoResourceLister) (*REST, error) {
 	strategy := NewStrategy(scheme)
 
 	prefix := "/" + opts.ResourcePrefix()
@@ -103,18 +104,15 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store, authorizer.NewTierAuthorizer(opts.Authorizer)}, nil
+	return &REST{store, calicoResourceLister, authorizer.NewTierAuthorizer(opts.Authorizer)}, nil
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	tierName, err := util.GetTierNameFromSelector(options)
+	err := util.EnsureTierSelector(ctx, options, r.authorizer, r.CalicoResourceLister)
 	if err != nil {
 		return nil, err
 	}
-	err = r.authorizer.AuthorizeTierOperation(ctx, "", tierName)
-	if err != nil {
-		return nil, err
-	}
+
 	return r.Store.List(ctx, options)
 }
 
@@ -163,11 +161,7 @@ func (r *REST) Delete(ctx context.Context, name string, deleteValidation rest.Va
 }
 
 func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-	tierName, err := util.GetTierNameFromSelector(options)
-	if err != nil {
-		return nil, err
-	}
-	err = r.authorizer.AuthorizeTierOperation(ctx, "", tierName)
+	err := util.EnsureTierSelector(ctx, options, r.authorizer, r.CalicoResourceLister)
 	if err != nil {
 		return nil, err
 	}

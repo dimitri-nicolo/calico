@@ -87,6 +87,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	resources *calicostorage.ManagedClusterResources,
 	calculator rbac.Calculator,
 	licenseMonitor monitor.LicenseMonitor,
+	calicoLister rbac.CalicoResourceLister,
 ) (map[string]rest.Storage, error) {
 	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networkpolicies"))
 	if err != nil {
@@ -1013,12 +1014,12 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{"egresspolicy"},
 	)
 	storage := map[string]rest.Storage{}
-	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
-	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
+	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts, calicoLister))
+	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts, calicoLister))
 	storage["stagedkubernetesnetworkpolicies"] = rESTInPeace(calicostagedk8spolicy.NewREST(scheme, *stagedk8spolicyOpts))
 	storage["tiers"] = rESTInPeace(calicotier.NewREST(scheme, *tierOpts))
-	storage["globalnetworkpolicies"] = rESTInPeace(calicogpolicy.NewREST(scheme, *gpolicyOpts))
-	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts))
+	storage["globalnetworkpolicies"] = rESTInPeace(calicogpolicy.NewREST(scheme, *gpolicyOpts, calicoLister))
+	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts, calicoLister))
 
 	policyRecommendationScopeStorage, policyRecommendationScopeStatusStorage, err := calicopolicyrecommendationscope.NewREST(
 		scheme,

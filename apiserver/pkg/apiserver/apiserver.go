@@ -164,7 +164,7 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	}
 
 	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(
-		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, calculator, licenseMonitor,
+		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, calculator, licenseMonitor, calicoLister,
 	)
 	if err != nil {
 		return nil, err
