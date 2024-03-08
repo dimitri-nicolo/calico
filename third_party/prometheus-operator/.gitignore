@@ -1,0 +1,4 @@
+.prometheus-config-reloader.created-*
+.prometheus-operator.created-*
+.prometheus-operator.downloaded
+prometheus-operator/

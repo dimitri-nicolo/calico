@@ -37,7 +37,7 @@ global_job_config:
       - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
       - sudo systemctl start docker
       # Free up space on the build machine.
-      - sudo rm -rf ~/{.kerl,.kiex,.npm,.nvm,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,golang,phantomjs*}
+      - sudo rm -rf ~/{.kerl,.kiex,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,phantomjs*}
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
       # Disable initramfs update to save space on the Semaphore VM (and we don't need it because we're not going to reboot).
       - sudo apt-get install -y -u crudini
@@ -176,12 +176,24 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
 
+  - name: Push third-party alertmanager images
+    pipeline_file: push-images/third_party/alertmanager.yml
+    auto_promote:
+      when: "branch =~ 'master|release-.*'"
   - name: Push third-party eck-operator images
     pipeline_file: push-images/third_party/eck-operator.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push third-party envoy images
     pipeline_file: push-images/third_party/envoy.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push third-party prometheus-operator images
+    pipeline_file: push-images/third_party/prometheus-operator.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push third-party prometheus images
+    pipeline_file: push-images/third_party/prometheus.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
 
@@ -1342,6 +1354,31 @@ blocks:
       always:
         commands:
           - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
+- name: alertmanager
+  run:
+    when: "true or change_in(['/third_party/alertmanager/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    prologue:
+      commands:
+        - sem-version go 1.21
+        - cd third_party/alertmanager
+    jobs:
+      - name: alertmanager tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: eck-operator
   run:
     when: "true or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1373,6 +1410,50 @@ blocks:
         - cd third_party/envoy
     jobs:
       - name: envoy tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+- name: prometheus-operator
+  run:
+    when: "true or change_in(['/third_party/prometheus-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/prometheus-operator
+    jobs:
+      - name: prometheus-operator tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+- name: prometheus
+  run:
+    when: "true or change_in(['/third_party/prometheus/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    prologue:
+      commands:
+        - cd third_party/prometheus
+    jobs:
+      - name: prometheus tests
         commands:
           - ../../.semaphore/run-and-monitor ci.log make ci
       - name: Build image
