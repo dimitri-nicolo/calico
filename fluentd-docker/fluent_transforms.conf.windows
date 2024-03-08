@@ -1,0 +1,19 @@
+<filter flows>
+  @type record_transformer
+  enable_ruby
+  <record>
+    host "#{ENV['NODENAME']}"
+  </record>
+  <record>
+    @timestamp ${record['end_time'] * 1000}
+  </record>
+</filter>
+
+<filter audit.*>
+  @type record_transformer
+  enable_ruby
+  <record>
+    # Create a name field from the objectRef.name, responseObject.metadata.name or responseObject.details.name
+    name ${record["responseObject"].nil? ? (record["objectRef"].nil? ? "-" : record["objectRef"]["name"]) :	(record["responseObject"]["metadata"].nil? ? record["responseObject"]["details"]["name"] : record["responseObject"]["metadata"]["name"])}
+  </record>
+</filter>
