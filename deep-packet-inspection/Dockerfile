@@ -1,6 +1,6 @@
 # Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
 
-FROM tigera/snort3:latest-${TARGETARCH} as snort
+FROM tigera/snort3:latest-${TARGETARCH} AS snort
 
 FROM scratch as source
 
