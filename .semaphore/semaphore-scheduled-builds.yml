@@ -1067,6 +1067,8 @@ blocks:
   task:
     prologue:
       commands:
+        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
+        - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
         - cd intrusion-detection-controller
     jobs:
       - name: intrusion-detection-controller tests

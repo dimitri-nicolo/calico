@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
@@ -64,6 +65,12 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		Feeds:            []string{"testfeed"},
 		SuspiciousPrefix: nil,
 	}
+	geoIP := v1.IPGeoInfo{
+		CityName:    "Naucelles",
+		CountryName: "France",
+		ISO:         "FR",
+		ASN:         "3215",
+	}
 	expected := v1.Event{
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
 		Time:            v1.NewEventTimestamp(0),
@@ -82,6 +89,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
+		GeoInfo:         geoIP,
 
 		Name:         "Suspicious Flow",
 		AttackVector: "Network",
@@ -90,7 +98,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		MitreTactic:  "Exfiltration",
 	}
 
-	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogSourceIP, record.Feeds...)
+	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogSourceIP, &geodb.MockGeoDB{}, record.Feeds...)
 
 	// Clearing event time as we can't accurately test it
 	actual.Time = v1.NewEventTimestamp(0)
@@ -137,7 +145,7 @@ func TestConvertFlowLogEventTime(t *testing.T) {
 		SuspiciousPrefix: nil,
 	}
 
-	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogDestIP, record.Feeds...)
+	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogDestIP, &geodb.MockGeoDB{}, record.Feeds...)
 
 	end := time.Now()
 
@@ -193,6 +201,12 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		Feeds:            []string{"testfeed"},
 		SuspiciousPrefix: nil,
 	}
+	geoinfo := v1.IPGeoInfo{
+		CityName:    "Naucelles",
+		CountryName: "France",
+		ISO:         "FR",
+		ASN:         "3215",
+	}
 	expected := v1.Event{
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
 		Time:            v1.NewEventTimestamp(0),
@@ -211,6 +225,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
+		GeoInfo:         geoinfo,
 		Name:            "Suspicious Flow",
 		AttackVector:    "Network",
 		MitreIDs:        &[]string{"T1090"},
@@ -218,7 +233,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		MitreTactic:     "Command and Control",
 	}
 
-	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogDestIP, record.Feeds...)
+	actual := ConvertFlowLog(tc, storage.QueryKeyFlowLogDestIP, &geodb.MockGeoDB{}, record.Feeds...)
 	// Clearing event time as we can't accurately test it
 	actual.Time = v1.NewEventTimestamp(0)
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
@@ -272,6 +287,12 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		Feeds:            []string{"testfeed"},
 		SuspiciousPrefix: nil,
 	}
+	geoinfo := v1.IPGeoInfo{
+		CityName:    "Naucelles",
+		CountryName: "France",
+		ISO:         "FR",
+		ASN:         "3215",
+	}
 	expected := v1.Event{
 		ID:              "testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80",
 		Time:            v1.NewEventTimestamp(0),
@@ -290,6 +311,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		DestName:        "dest-foo",
 		DestNameAggr:    "dest",
 		Record:          record,
+		GeoInfo:         geoinfo,
 		Name:            "Suspicious Flow",
 		AttackVector:    "Network",
 		MitreIDs:        &[]string{"T1041"},
@@ -297,7 +319,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		MitreTactic:     "Exfiltration",
 	}
 
-	actual := ConvertFlowLog(tc, storage.QueryKeyUnknown, record.Feeds...)
+	actual := ConvertFlowLog(tc, storage.QueryKeyUnknown, &geodb.MockGeoDB{}, record.Feeds...)
 	// Clearing event time as we can't accurately test it
 	actual.Time = v1.NewEventTimestamp(0)
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")

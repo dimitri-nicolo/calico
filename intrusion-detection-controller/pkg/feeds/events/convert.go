@@ -4,12 +4,14 @@ package events
 
 import (
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
@@ -24,7 +26,7 @@ const (
 	Severity               = 100
 )
 
-func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v1.Event {
+func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, geoDB geodb.GeoDatabase, feeds ...string) v1.Event {
 	var description string
 	switch key {
 	case storage.QueryKeyFlowLogSourceIP:
@@ -64,6 +66,21 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		}
 	}
 
+	parsedIP := net.ParseIP(*flowLog.DestIP)
+	geoInfo, err := geoDB.City(parsedIP)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"feeds": feeds,
+		}).Error("Could not find City/Country of origin for destination IP")
+	}
+
+	geoInfo.ASN, err = geoDB.ASN(parsedIP)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"feeds": feeds,
+		}).Warn("Could not find ASN for destination IP")
+	}
+
 	return v1.Event{
 		ID:              generateSuspicousIPSetID(flowLog.StartTime, flowLog.SourceIP, flowLog.SourcePort, flowLog.DestIP, flowLog.DestPort, record),
 		Time:            v1.NewEventTimestamp(time.Now().Unix()),
@@ -82,6 +99,7 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, feeds ...string) v
 		DestName:        flowLog.DestName,
 		DestNameAggr:    flowLog.DestNameAggr,
 		Record:          record,
+		GeoInfo:         geoInfo,
 
 		Name:         SuspiciousFlowName,
 		AttackVector: "Network",

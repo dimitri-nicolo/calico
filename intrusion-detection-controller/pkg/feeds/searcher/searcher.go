@@ -16,6 +16,7 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/errorcondition"
+	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
@@ -36,6 +37,7 @@ type searcher struct {
 	events storage.Events
 	once   sync.Once
 	cancel context.CancelFunc
+	geoDB  geodb.GeoDatabase
 }
 
 func (d *searcher) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
@@ -71,7 +73,7 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
 	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
 		log.Debug("Check if any flow logs have been generated with a suspicious IP")
-		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, getCachedFeedResponse.GlobalThreatFeed)
+		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, d.geoDB, getCachedFeedResponse.GlobalThreatFeed)
 		if err != nil {
 			log.WithError(err).Error("query failed")
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
@@ -96,12 +98,13 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	}
 }
 
-func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events) Searcher {
+func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events, geoDB geodb.GeoDatabase) Searcher {
 	return &searcher{
 		feed:   feed.DeepCopy(),
 		period: period,
 		q:      suspiciousSet,
 		events: events,
+		geoDB:  geoDB,
 	}
 }
 

@@ -30,6 +30,13 @@ type TimestampOrDate struct {
 // while this format will render this infomation like +00:00
 const ISO8601Format = "2006-01-02T15:04:05-07:00"
 
+type IPGeoInfo struct {
+	CityName    string `json:"city_name,omitempty"`
+	CountryName string `json:"country_name,omitempty"`
+	ISO         string `json:"iso,omitempty"`
+	ASN         string `json:"asn,omitempty"`
+}
+
 type Event struct {
 	ID              string          `json:"id"`
 	Time            TimestampOrDate `json:"time" validate:"required"`
@@ -56,6 +63,7 @@ type Event struct {
 	MitreIDs        *[]string       `json:"mitre_ids,omitempty"`
 	Mitigations     *[]string       `json:"mitigations,omitempty"`
 	Record          interface{}     `json:"record,omitempty"`
+	GeoInfo         IPGeoInfo       `json:"geo_info,omitempty"`
 }
 
 // Events can take records of numerous forms. GetRecord extracts the record

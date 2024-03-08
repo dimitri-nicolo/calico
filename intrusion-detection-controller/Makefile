@@ -79,7 +79,7 @@ sub-image-%:
 image: $(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
 $(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_CONTAINER_CREATED)
-$(IDS_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+$(IDS_CONTROLLER_CONTAINER_CREATED): mmdb-download docker-image/controller/Dockerfile $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(IDS_CONTROLLER_IMAGE)
 	touch $@
@@ -96,14 +96,17 @@ $(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile $(BINDIR)/in
 .PHONY: ut
 ut: run-elastic run-ut stop-elastic
 
-run-ut:
-	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
-			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+run-ut: mmdb-download
+	$(DOCKER_RUN) \
+		-v $(CURDIR)/bin/database/GeoLite2-ASN.mmdb:/etc/maxmind/GeoLite2-ASN.mmdb \
+		-v $(CURDIR)/bin/database/GeoLite2-City.mmdb:/etc/maxmind/GeoLite2-City.mmdb \
+		$(CALICO_BUILD) \
+			sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: clean
 clean:
 	rm -fr $(BINDIR)
+	rm -f $(MMDB_DOWNLOADED)
 	rm -f $(IDS_CONTROLLER_CONTAINER_CREATED)
 	rm -f $(JOB_INSTALLER_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(IDS_CONTROLLER_IMAGE) -a -q)
@@ -130,3 +133,13 @@ cd: image-all cd-common
 ###############################################################################
 migrate-dashboards:
 	bash migrate_dashboards.sh
+
+MMDB_DOWNLOADED=.mmdb.downloaded
+GOOGLE_APPLICATION_CREDENTIALS ?= $(HOME)/secrets/banzai-google-service-account.json
+mmdb-download: $(MMDB_DOWNLOADED)
+$(MMDB_DOWNLOADED):
+	@echo "[INFO] pulling MaxMind database frpom GCP bucket..."
+	mkdir -p bin/database/
+	gsutil cp gs://intrusion-detection-geoip-maxmind-db/GeoLite2-City.mmdb bin/database/GeoLite2-City.mmdb
+	gsutil cp gs://intrusion-detection-geoip-maxmind-db/GeoLite2-ASN.mmdb bin/database/GeoLite2-ASN.mmdb
+	touch $@

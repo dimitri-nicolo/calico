@@ -19,6 +19,7 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/puller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/searcher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
@@ -58,6 +59,7 @@ type watcher struct {
 	feedWatchers           map[string]*feedWatcher
 	feedWatchersMutex      sync.RWMutex
 	cancel                 context.CancelFunc
+	geoDB                  geodb.GeoDatabase
 
 	// Unfortunately, cache.Controller callbacks can't accept
 	// a context, so we need to store this on the watcher so we can pass it
@@ -92,6 +94,7 @@ func NewWatcher(
 	suspiciousIP storage.SuspiciousSet,
 	suspiciousDomains storage.SuspiciousSet,
 	events storage.Events,
+	geodb geodb.GeoDatabase,
 ) Watcher {
 	feedWatchers := map[string]*feedWatcher{}
 
@@ -118,6 +121,7 @@ func NewWatcher(
 		events:                 events,
 		feedWatchers:           feedWatchers,
 		ping:                   make(chan struct{}),
+		geoDB:                  geodb,
 	}
 
 	w.fifo, w.feeds = util.NewPingableFifo()
@@ -236,11 +240,11 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 		s.startFeedWatcherDomains(ctx, f)
 	default:
 		// Note: ThreatFeedContentIPset is the default
-		s.startFeedWatcherIP(ctx, f)
+		s.startFeedWatcherIP(ctx, s.geoDB, f)
 	}
 }
 
-func (s *watcher) startFeedWatcherIP(ctx context.Context, f *v3.GlobalThreatFeed) {
+func (s *watcher) startFeedWatcherIP(ctx context.Context, geodb geodb.GeoDatabase, f *v3.GlobalThreatFeed) {
 	if _, ok := s.getFeedWatcher(f.Name); ok {
 		panic(fmt.Sprintf("Feed %s already started", f.Name))
 	}
@@ -252,7 +256,7 @@ func (s *watcher) startFeedWatcherIP(ctx context.Context, f *v3.GlobalThreatFeed
 
 	fw := feedWatcher{
 		feed:       fCopy,
-		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
+		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events, geodb),
 		feedCacher: feedCacher,
 	}
 
@@ -285,7 +289,7 @@ func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThrea
 
 	fw := feedWatcher{
 		feed:       fCopy,
-		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events),
+		searcher:   searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events, &geodb.GeoDB{}),
 		feedCacher: feedCacher,
 	}
 

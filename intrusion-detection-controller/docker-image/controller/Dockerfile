@@ -4,6 +4,9 @@ FROM scratch as source
 
 ARG TARGETARCH
 
+COPY bin/database/GeoLite2-ASN.mmdb /etc/maxmind/GeoLite2-ASN.mmdb
+COPY bin/database/GeoLite2-City.mmdb /etc/maxmind/GeoLite2-City.mmdb
+
 COPY bin/controller-${TARGETARCH} /usr/bin/intrusion-detection-controller
 COPY bin/healthz-${TARGETARCH} /usr/bin/healthz
 

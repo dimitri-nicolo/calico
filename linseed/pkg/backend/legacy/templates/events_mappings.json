@@ -84,6 +84,9 @@
     },
     "record": {
       "type": "object"
+    },
+    "geo_info": {
+      "type": "object"
     }
   }
 }

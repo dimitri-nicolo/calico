@@ -24,6 +24,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -172,7 +173,7 @@ func Test_QueryIPSet(t *testing.T) {
 	toBeUpdated.Name = "test"
 	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
-	itr, _, err := e.QueryIPSet(ctx, toBeUpdated)
+	itr, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, toBeUpdated)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	c := 0
@@ -249,7 +250,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	toBeUpdated.SetAnnotations(map[string]string{IpSetHashKey: util.ComputeSha256Hash(cachedIpSet)})
 
-	itr, _, err := e.QueryIPSet(ctx, toBeUpdated)
+	itr, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, toBeUpdated)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	c := 0
@@ -297,7 +298,7 @@ func Test_QueryIPSet_Big(t *testing.T) {
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test_big"
-	i, _, err := e.QueryIPSet(ctx, testFeed)
+	i, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	itr := i.(*queryIterator[v1.FlowLog, v1.FlowLogParams])
