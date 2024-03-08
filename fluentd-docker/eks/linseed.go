@@ -6,9 +6,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v1 "github.com/tigera/linseed-client/pkg/apis/v1"
-	lsclient "github.com/tigera/linseed-client/pkg/client"
-	lsrest "github.com/tigera/linseed-client/pkg/client/rest"
+	v1 "github.com/projectcalico/calico/linseed-client/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed-client/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed-client/pkg/client/rest"
 )
 
 const (
