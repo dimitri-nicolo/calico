@@ -1,7 +1,7 @@
 global_job_config:
   secrets:
-    - name: docker-hub
     - name: banzai-secrets
+    - name: docker-hub
     - name: private-repo
   prologue:
     commands:

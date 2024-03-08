@@ -39,9 +39,13 @@ blocks:
     skip:
       when: "branch !~ '.+'"
     task:
+      secrets:
+        - name: banzai-secrets
       jobs:
         - name: Linux multi-arch
           commands:
+            - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
+            - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C intrusion-detection-controller cd CONFIRM=true; fi
   - name: Publish intrusion-detection-controller multi-arch manifests
     dependencies:
