@@ -160,7 +160,7 @@ current-context: test-context`
 				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
 				Expect(err).NotTo(HaveOccurred())
 				m = &mockKCC{get: initialConfig.DeepCopy()}
-				ctrl = config.NewRunConfigController(ctx, *cfg, m)
+				ctrl = config.NewRunConfigController(ctx, *cfg, m, false)
 			})
 
 			AfterEach(func() {
@@ -259,7 +259,7 @@ current-context: test-context`
 				}
 				m = &mockKCC{get: kcc}
 				ctx, cancel = context.WithCancel(context.Background())
-				ctrl = config.NewRunConfigController(ctx, *cfg, m)
+				ctrl = config.NewRunConfigController(ctx, *cfg, m, false)
 			})
 
 			AfterEach(func() {
@@ -321,7 +321,7 @@ current-context: test-context`
 			BeforeEach(func() {
 				m = &mockKCC{geterror: errors.ErrorResourceDoesNotExist{}}
 				ctx, cancel = context.WithCancel(context.Background())
-				ctrl = config.NewRunConfigController(ctx, *cfg, m)
+				ctrl = config.NewRunConfigController(ctx, *cfg, m, false)
 			})
 
 			AfterEach(func() {
@@ -470,7 +470,7 @@ current-context: test-context`
 			m := &mockKCC{get: kcc}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			ctrl := config.NewRunConfigController(ctx, *cfg, m)
+			ctrl := config.NewRunConfigController(ctx, *cfg, m, false)
 			runCfg := <-ctrl.ConfigChan()
 			Expect(runCfg.Controllers.FederatedServices).To(BeNil())
 
@@ -547,7 +547,7 @@ current-context: test-context`
 				initialConfig, err := configfactory.NewDefaultKubeControllersConfig(cfg.KubeControllersConfigName)
 				Expect(err).NotTo(HaveOccurred())
 				m = &mockKCC{get: initialConfig.DeepCopy()}
-				ctrl = config.NewRunConfigController(ctx, *cfg, m)
+				ctrl = config.NewRunConfigController(ctx, *cfg, m, false)
 			})
 
 			AfterEach(func() {
@@ -641,7 +641,7 @@ current-context: test-context`
 				}
 				m = &mockKCC{get: kcc}
 				ctx, cancel = context.WithCancel(context.Background())
-				ctrl = config.NewRunConfigController(ctx, *cfg, m)
+				ctrl = config.NewRunConfigController(ctx, *cfg, m, false)
 			})
 
 			AfterEach(func() {
@@ -769,7 +769,7 @@ current-context: test-context`
 			m := &mockKCC{get: kcc}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			ctrl := config.NewRunConfigController(ctx, *cfg, m)
+			ctrl := config.NewRunConfigController(ctx, *cfg, m, false)
 			runCfg := <-ctrl.ConfigChan()
 			Expect(runCfg.Controllers.Policy.ReconcilerPeriod).To(Equal(time.Second * 30))
 			Expect(runCfg.Controllers.WorkloadEndpoint.ReconcilerPeriod).To(Equal(time.Second * 31))

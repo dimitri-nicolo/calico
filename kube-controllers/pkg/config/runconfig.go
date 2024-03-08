@@ -73,6 +73,7 @@ type ControllersConfig struct {
 	ElasticsearchConfiguration *ElasticsearchCfgControllerCfg
 	AuthorizationConfiguration *AuthorizationControllerCfg
 	ManagedCluster             *ManagedClusterControllerConfig
+	ManagedClusterLicensing    *ManagedClusterControllerConfig
 }
 
 type GenericControllerConfig struct {
@@ -117,8 +118,10 @@ type ManagedClusterControllerConfig struct {
 	LicenseConfig                  LicenseControllerCfg
 	TenantNamespace                string
 }
+
 type RunConfigController struct {
-	out chan RunConfig
+	out                             chan RunConfig
+	disableKubeControllersConfigAPI bool
 }
 
 type LicenseControllerCfg struct {
@@ -137,13 +140,13 @@ func (r *RunConfigController) ConfigChan() <-chan RunConfig {
 // the config from environment variables, and emits RunConfig objects over a channel
 // to push config out to the rest of the controllers.  It also handles setting the
 // KubeControllersConfiguration.Status with the current running configuration
-func NewRunConfigController(ctx context.Context, cfg Config, client clientv3.KubeControllersConfigurationInterface) *RunConfigController {
-	ctrl := &RunConfigController{out: make(chan RunConfig)}
-	go syncDatastore(ctx, cfg, client, ctrl.out)
+func NewRunConfigController(ctx context.Context, cfg Config, client clientv3.KubeControllersConfigurationInterface, disableKubeControllersConfigAP bool) *RunConfigController {
+	ctrl := &RunConfigController{out: make(chan RunConfig), disableKubeControllersConfigAPI: disableKubeControllersConfigAP}
+	go syncDatastore(ctx, cfg, client, disableKubeControllersConfigAP, ctrl.out)
 	return ctrl
 }
 
-func syncDatastore(ctx context.Context, cfg Config, client clientv3.KubeControllersConfigurationInterface, out chan<- RunConfig) {
+func syncDatastore(ctx context.Context, cfg Config, client clientv3.KubeControllersConfigurationInterface, disableRunControllerConfig bool, out chan<- RunConfig) {
 	var snapshot *v3.KubeControllersConfiguration
 	var err error
 	var current RunConfig
@@ -159,6 +162,12 @@ func syncDatastore(ctx context.Context, cfg Config, client clientv3.KubeControll
 		if ok {
 			env[k] = v
 		}
+	}
+
+	if disableRunControllerConfig {
+		runConfig, _ := mergeConfig(env, cfg, v3.KubeControllersConfigurationSpec{})
+		out <- runConfig
+		return
 	}
 
 MAINLOOP:
@@ -412,6 +421,22 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		// TenantNamespace will be available in Multitenant Mode.
 		rc.ManagedCluster.TenantNamespace = envCfg.TenantNamespace
 	}
+
+	if rc.ManagedClusterLicensing != nil {
+		rc.ManagedClusterLicensing.NumberOfWorkers = envCfg.ManagedClusterWorkers
+		rc.ManagedClusterLicensing.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
+		rc.ManagedClusterLicensing.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
+		rc.ManagedClusterLicensing.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
+		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build kubernetes client config")
+		}
+		rc.ManagedClusterLicensing.RESTConfig = restCfg
+
+		// TenantNamespace will be available in Multitenant Mode.
+		rc.ManagedClusterLicensing.TenantNamespace = envCfg.TenantNamespace
+	}
+
 	if rc.AuthorizationConfiguration != nil {
 		rc.AuthorizationConfiguration.NumberOfWorkers = envCfg.AuthorizationWorkers
 		rc.AuthorizationConfiguration.OIDCAuthUsernamePrefix = envCfg.OIDCAuthUsernamePrefix
@@ -573,6 +598,10 @@ func mergeReconcilerPeriod(envVars map[string]string, status *v3.KubeControllers
 			rc.ManagedCluster.ReconcilerPeriod = d
 			// not supported on KubeControllersConfiguration
 		}
+		if rc.ManagedClusterLicensing != nil {
+			rc.ManagedClusterLicensing.ReconcilerPeriod = d
+			// not supported on KubeControllersConfiguration
+		}
 		if rc.AuthorizationConfiguration != nil {
 			rc.AuthorizationConfiguration.ReconcilerPeriod = d
 			// not supported on KubeControllersConfiguration
@@ -627,6 +656,8 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			case "managedcluster":
 				rc.ManagedCluster = &ManagedClusterControllerConfig{}
 				// managed cluster not supported on KubeControllersConfiguration yet
+			case "managedclusterlicensing":
+				rc.ManagedClusterLicensing = &ManagedClusterControllerConfig{}
 			case "authorization":
 				rc.AuthorizationConfiguration = &AuthorizationControllerCfg{}
 				// authorization not supported on KubeControllersConfiguration yet

@@ -26,6 +26,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
+
+	"k8s.io/apiserver/pkg/authentication/user"
+
+	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
+	restclient "k8s.io/client-go/rest"
+
 	"github.com/pkg/profile"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -255,7 +262,7 @@ func main() {
 		controllerCtrl.restartCfgChan = make(chan config.RunConfig)
 	} else {
 		log.Info("Getting initial config snapshot from datastore")
-		cCtrlr := config.NewRunConfigController(ctx, *cfg, calicoClient.KubeControllersConfiguration())
+		cCtrlr := config.NewRunConfigController(ctx, *cfg, calicoClient.KubeControllersConfiguration(), cfg.DisableKubeControllersConfigAPI)
 		runCfg = <-cCtrlr.ConfigChan()
 		log.Info("Got initial config snapshot")
 		log.Debugf("Initial config: %+v", runCfg)
@@ -648,9 +655,22 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		}
 	}
 
-	if cfg.Controllers.ManagedCluster != nil {
+	// Zero and single tenant used managedcluster configuration that enables both the managed cluster
+	// controller (this configures users for elasticsearch for managed clusters) and the licensing controller.
+	// (this copies licensed for managed cluster). Multi-tenant controller will only be using managedclusterlicensing
+	// configuration to copy licenses to the managed clusters
+	if cfg.Controllers.ManagedCluster != nil && cfg.Controllers.ManagedClusterLicensing != nil {
+		log.Fatal("Invalid configuration. You can activate either managedcluster controller or managedclusterlicensing controller")
+	}
+
+	if cfg.Controllers.ManagedCluster != nil || cfg.Controllers.ManagedClusterLicensing != nil {
 		// We only want these clients created if the managedcluster controller type is enabled
-		kubeconfig := cfg.Controllers.ManagedCluster.RESTConfig
+		var kubeconfig *restclient.Config
+		if cfg.Controllers.ManagedCluster != nil {
+			kubeconfig = cfg.Controllers.ManagedCluster.RESTConfig
+		} else if cfg.Controllers.ManagedClusterLicensing != nil {
+			kubeconfig = cfg.Controllers.ManagedClusterLicensing.RESTConfig
+		}
 
 		esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)
 		if err != nil {
@@ -672,38 +692,94 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 			log.WithError(err).Fatal("failed to build controller runtime client set with watch")
 		}
 
-		cc.controllerStates["ManagedCluster"] = &controllerState{
-			controller: managedcluster.New(
-				func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
-					kubeconfig.Host = cfg.Controllers.ManagedCluster.MultiClusterForwardingEndpoint
-					kubeconfig.CAFile = cfg.Controllers.ManagedCluster.MultiClusterForwardingCA
-					kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-						return &addHeaderRoundTripper{
-							headers: map[string][]string{"x-cluster-id": {clustername}},
-							rt:      rt,
+		if cfg.Controllers.ManagedCluster != nil {
+			// we enable this for single tenant and zero tenant
+			cc.controllerStates["ManagedCluster"] = &controllerState{
+				controller: managedcluster.New(
+					func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
+						kubeconfig.Host = cfg.Controllers.ManagedCluster.MultiClusterForwardingEndpoint
+						kubeconfig.CAFile = cfg.Controllers.ManagedCluster.MultiClusterForwardingCA
+						kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+							return &addHeaderRoundTripper{
+								headers: map[string][]string{"x-cluster-id": {clustername}},
+								rt:      rt,
+							}
 						}
-					}
-					kubeClientSet, err := kubernetes.NewForConfig(kubeconfig)
-					if err != nil {
-						return kubeClientSet, nil, err
-					}
+						kubeClientSet, err := kubernetes.NewForConfig(kubeconfig)
+						if err != nil {
+							return kubeClientSet, nil, err
+						}
 
-					calicoClientSet, err := tigeraapi.NewForConfig(kubeconfig)
-					if err != nil {
-						return kubeClientSet, calicoClientSet, err
-					}
+						calicoClientSet, err := tigeraapi.NewForConfig(kubeconfig)
+						if err != nil {
+							return kubeClientSet, calicoClientSet, err
+						}
 
-					return kubeClientSet, calicoClientSet, nil
-				},
-				k8sClientset,
-				calicoClientSet,
-				client,
-				*cfg.Controllers.ManagedCluster,
-				cc.restartCntrlChan,
-				getCloudManagedClusterControllerManagers(esK8sREST, esClientBuilder, cfg),
-			),
-			licenseFeature: features.MultiClusterManagement,
+						return kubeClientSet, calicoClientSet, nil
+					},
+					k8sClientset,
+					calicoClientSet,
+					client,
+					*cfg.Controllers.ManagedCluster,
+					cc.restartCntrlChan,
+					getCloudManagedClusterControllerManagers(esK8sREST, esClientBuilder, cfg),
+				),
+				licenseFeature: features.MultiClusterManagement,
+			}
 		}
+
+		if cfg.Controllers.ManagedClusterLicensing != nil {
+			// we enable this only for multi-tenancy
+			cc.controllerStates["ManagedClusterLicensing"] = &controllerState{
+				controller: managedcluster.New(
+					func(clustername string) (kubernetes.Interface, *tigeraapi.Clientset, error) {
+						kubeconfig.Host = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingEndpoint
+						kubeconfig.CAFile = cfg.Controllers.ManagedClusterLicensing.MultiClusterForwardingCA
+						kubeconfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+							return &addHeaderRoundTripper{
+								headers: map[string][]string{"x-cluster-id": {clustername}},
+								rt:      rt,
+							}
+						}
+						userKubeControllers := user.DefaultInfo{
+							Name: "system:serviceaccount:calico-system:calico-kube-controllers",
+							Groups: []string{
+								k8sserviceaccount.AllServiceAccountsGroup,
+								"system:authenticated",
+								fmt.Sprintf("%s%s", k8sserviceaccount.ServiceAccountGroupPrefix, common.CalicoNamespace),
+							},
+						}
+						kubeconfig.Impersonate = restclient.ImpersonationConfig{
+							UserName: userKubeControllers.Name,
+							Groups:   userKubeControllers.Groups,
+							Extra:    userKubeControllers.Extra,
+							UID:      userKubeControllers.UID,
+						}
+						kubeClientSet, err := kubernetes.NewForConfig(kubeconfig)
+						if err != nil {
+							return kubeClientSet, nil, err
+						}
+
+						calicoClientSet, err := tigeraapi.NewForConfig(kubeconfig)
+						if err != nil {
+							return kubeClientSet, calicoClientSet, err
+						}
+
+						return kubeClientSet, calicoClientSet, nil
+					},
+					k8sClientset,
+					calicoClientSet,
+					client,
+					*cfg.Controllers.ManagedClusterLicensing,
+					cc.restartCntrlChan,
+					[]managedcluster.ControllerManager{
+						managedcluster.NewLicensingController(cfg.Controllers.ManagedClusterLicensing.LicenseConfig),
+					},
+				),
+				licenseFeature: features.MultiClusterManagement,
+			}
+		}
+
 		cc.needLicenseMonitoring = true
 	}
 

@@ -78,7 +78,9 @@ type Config struct {
 	ElasticPort                       string `default:"9200" split_words:"true"`
 	ElasticCA                         string `default:"" split_words:"true"`
 
-	KubeControllersConfigName string `split_words:"true"`
+	// DisableKubeControllersConfigAPI will disable creating and watching KubeControllerConfig
+	DisableKubeControllersConfigAPI bool   `split_words:"true"`
+	KubeControllersConfigName       string `split_words:"true"`
 
 	// TenantNamespace configuration for MultiTenant.
 	TenantNamespace string `split_words:"true" default:""`
