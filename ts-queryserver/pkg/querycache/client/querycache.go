@@ -4,11 +4,12 @@ package client
 import (
 	"context"
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
+	"regexp"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+
+	log "github.com/sirupsen/logrus"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -22,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/cache"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/labelhandler"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -152,12 +154,13 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 	case QueryClusterReq:
 		return c.runQuerySummary(cxt, qreq)
 	case QueryEndpointsReq:
-		return c.runQueryEndpoints(cxt, qreq)
+		return c.runQueryEndpoints(qreq)
 	case QueryPoliciesReq:
 		return c.runQueryPolicies(cxt, qreq)
 	case QueryNodesReq:
 		return c.runQueryNodes(cxt, qreq)
 	default:
+
 		return nil, fmt.Errorf("unhandled query type: %#v", req)
 	}
 }
@@ -237,7 +240,11 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 	return resp, nil
 }
 
-func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsReq) (*QueryEndpointsResp, error) {
+// runQueryEndpoints is searching for endpoints based on the provided parameters in QueryEndpointsReq
+//
+// if EndpointsList is provided as part of the QueryEndpointsReq, search will only run on the provided EndpointsList,
+// not all the endpoints in the environment.
+func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsResp, error) {
 	// If an endpoint was specified, just return that (if it exists).
 	if req.Endpoint != nil {
 		ep := c.endpoints.GetEndpoint(req.Endpoint)
@@ -275,13 +282,38 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 		}
 	}
 
+	// skip searching of endpoint if endpointList != nil but length is 0
+	if req.EndpointsList != nil && len(req.EndpointsList) == 0 {
+		return &QueryEndpointsResp{
+			Count: 0,
+			Items: make([]Endpoint, 0),
+		}, nil
+	}
+
 	epkeys, err := c.policyEndpointLabelHandler.QueryEndpoints(selector)
 	if err != nil {
 		return nil, err
 	}
 
+	// build regex pattern from the list of endpoints_name / endpointaggregate_name
+	// for a list of 100 endpoints, the resulting regexPattern will look like: ep1^|ep2^|ep3^|...|ep_100^
+	var epListRegex *regexp.Regexp
+	if req.EndpointsList != nil {
+		epListRegex, err = utils.BuildSubstringRegexMatcher(req.EndpointsList)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	items := make([]Endpoint, 0, len(epkeys))
 	for _, result := range epkeys {
+		// if endpointList is not nil --> epListRegex is not nil. Thus, we should check endpoint (result.String) to
+		// be from the endpointList (by checking of epListRegex can match result.String())
+		if epListRegex != nil && !epListRegex.MatchString(result.String()) {
+			log.Debug("skipping endpoint: endpoint is not part of the search domain.")
+			continue
+		}
+
 		ep := c.endpoints.GetEndpoint(result)
 		if req.Node != "" && ep.GetNode() != req.Node {
 			continue
@@ -294,6 +326,7 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 		}
 		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
 	}
+
 	sortEndpoints(items, req.Sort)
 
 	count := len(items)

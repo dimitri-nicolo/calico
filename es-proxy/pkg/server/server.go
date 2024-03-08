@@ -3,12 +3,9 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	log "github.com/sirupsen/logrus"
 
@@ -40,8 +37,12 @@ import (
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
+	queryserverclient "github.com/projectcalico/calico/ts-queryserver/queryserver/client"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (
@@ -126,10 +127,19 @@ func Start(cfg *Config) error {
 		ClientKeyPath:  cfg.LinseedClientKey,
 		ClientCertPath: cfg.LinseedClientCert,
 	}
+
 	linseed, err := lsclient.NewClient(cfg.TenantID, config, lsrest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
 		log.WithError(err).Error("failed to create linseed client")
 		return err
+	}
+
+	// Create queryserver Config.
+	qsConfig := &queryserverclient.QueryServerConfig{
+		QueryServerTunnelURL: fmt.Sprintf("%s%s", cfg.VoltronURL, cfg.QueryServerURL),
+		QueryServerURL:       cfg.QueryServerEndpoint,
+		QueryServerCA:        cfg.QueryServerCA,
+		QueryServerToken:     cfg.QueryServerToken,
 	}
 
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, cfg.VoltronURL)
@@ -201,6 +211,14 @@ func Start(cfg *Config) error {
 						k8sClientSet,
 						linseed,
 					)))))
+	sm.Handle("/endpoints/aggregation",
+		middleware.ClusterRequestToResource(flowLogsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.EndpointsAggregationHandler(authz,
+					middleware.NewAuthorizationReview(k8sClientSetFactory),
+					qsConfig,
+					linseed,
+				))))
 	sm.Handle("/dnsLogs/aggregation",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -262,7 +280,6 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					audit.NewHandler(linseed)))))
-
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,

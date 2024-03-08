@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
@@ -35,20 +36,30 @@ const (
 	SearchTypeEvents
 )
 
-type RequestType interface {
-	v1.CommonSearchRequest | v1.FlowLogSearchRequest
-}
-
 // SearchHandler is a handler for the /search endpoint.
 //
-// Calls different handlers based on the SearchType - flowLogTypeSearchHandler for SearchTypeFlows and commonTypeSearchHandler
-// for other types.
+// Validates request http method and calls different handlers based on the SearchType - flowLogTypeSearchHandler for
+// SearchTypeFlows and commonTypeSearchHandler for other types.
 func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
 		var response *v1.SearchResponse
 		var err error
+
+		// Validate http method.
+		if r.Method != http.MethodGet && r.Method != http.MethodPost {
+			logrus.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
+
+			httputils.EncodeError(w, &httputils.HttpStatusError{
+				Status: http.StatusMethodNotAllowed,
+				Msg:    middleware.ErrInvalidMethod.Error(),
+				Err:    middleware.ErrInvalidMethod,
+			})
+
+			return
+		}
+
 		switch t {
 		case SearchTypeFlows:
 			response, err = flowlogTypeSearchHandler(authReview, k8sClient, lsclient, w, r)
@@ -73,7 +84,7 @@ func flowlogTypeSearchHandler(authReview middleware.AuthorizationReview, k8sClie
 	lsclient client.Client, w http.ResponseWriter, r *http.Request) (*v1.SearchResponse, error) {
 
 	// Decode the request
-	searchRequest, err := parseBody[v1.FlowLogSearchRequest](w, r)
+	searchRequest, err := middleware.ParseBody[v1.FlowLogSearchRequest](w, r)
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +110,9 @@ func flowlogTypeSearchHandler(authReview middleware.AuthorizationReview, k8sClie
 // executes it and returns the results.
 func commonTypeSearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClient datastore.ClientSet,
 	lsclient client.Client, w http.ResponseWriter, r *http.Request) (*v1.SearchResponse, error) {
+
 	// Decode the request
-	searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+	searchRequest, err := middleware.ParseBody[v1.CommonSearchRequest](w, r)
 	if err != nil {
 		return nil, err
 	}
@@ -125,42 +137,6 @@ func commonTypeSearchHandler(t SearchType, authReview middleware.AuthorizationRe
 		return searchEvents(ctx, lsclient, searchRequest, authReview, k8sClient)
 	}
 	return nil, fmt.Errorf("Unhandled search type")
-}
-
-// parseBody extracts query parameters from the request body (JSON.blob) into RequestType.
-//
-// Will define an http.Error if an error occurs.
-func parseBody[T RequestType](w http.ResponseWriter, r *http.Request) (*T, error) {
-	// Validate http method.
-	if r.Method != http.MethodGet && r.Method != http.MethodPost {
-		logrus.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
-
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusMethodNotAllowed,
-			Msg:    middleware.ErrInvalidMethod.Error(),
-			Err:    middleware.ErrInvalidMethod,
-		}
-	}
-
-	params := new(T)
-
-	// Decode the http request body into the struct.
-	if err := httputils.Decode(w, r, params); err != nil {
-		var mr *httputils.HttpStatusError
-		if errors.As(err, &mr) {
-			logrus.WithError(mr.Err).Info(mr.Msg)
-			return nil, mr
-		} else {
-			logrus.WithError(mr.Err).Info("Error parsing /search request.")
-			return nil, &httputils.HttpStatusError{
-				Status: http.StatusMethodNotAllowed,
-				Msg:    http.StatusText(http.StatusInternalServerError),
-				Err:    err,
-			}
-		}
-	}
-
-	return params, nil
 }
 
 // defaultAndValidateCommonRequest validates CommonSearchRequest fields and defaults them where needed.
@@ -354,7 +330,7 @@ func searchFlowLogs(
 	}
 
 	listFn := lsclient.FlowLogs(request.ClusterName).List
-	return searchLogs(ctx, listFn, params, authReview, k8sClient)
+	return searchLogs(ctx, listFn, params)
 }
 
 // searchFlowLogs calls searchLogs, configured for DNS logs.
@@ -371,7 +347,7 @@ func searchDNSLogs(
 		return nil, err
 	}
 	listFn := lsclient.DNSLogs(request.ClusterName).List
-	return searchLogs(ctx, listFn, params, authReview, k8sClient)
+	return searchLogs(ctx, listFn, params)
 }
 
 // searchL7Logs calls searchLogs, configured for DNS logs.
@@ -388,7 +364,7 @@ func searchL7Logs(
 		return nil, err
 	}
 	listFn := lsclient.L7Logs(request.ClusterName).List
-	return searchLogs(ctx, listFn, params, authReview, k8sClient)
+	return searchLogs(ctx, listFn, params)
 }
 
 // searchEvents calls searchLogs, configured for events.
@@ -460,7 +436,7 @@ func searchEvents(
 	}
 
 	listFn := lsclient.Events(request.ClusterName).List
-	return searchLogs(ctx, listFn, params, authReview, k8sClient)
+	return searchLogs(ctx, listFn, params)
 }
 
 type Hit[T any] struct {
@@ -474,8 +450,6 @@ func searchLogs[T any](
 	ctx context.Context,
 	listFunc client.ListFunc[T],
 	params lapi.LogParams,
-	authReview middleware.AuthorizationReview,
-	k8sClient datastore.ClientSet,
 ) (*v1.SearchResponse, error) {
 	pageSize := params.GetMaxPageSize()
 

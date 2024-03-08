@@ -8,7 +8,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
-//TODO (rlb):  These data types are basically focussed on the requirements of the web server
+// TODO (rlb):  These data types are basically focussed on the requirements of the web server
 // and calicoq.  However this means we have already selected what data we want to return to
 // the client application.  This feels wrong.  We should probably just return a full copy of
 // the data associated with each resource and let the app display it however it wants. Not
@@ -121,6 +121,27 @@ type RuleEntity struct {
 	NumWorkloadEndpoints int `json:"numWorkloadEndpoints"`
 }
 
+// QueryEndpointsReqBody is used to UnMarshal endpoints request body.
+type QueryEndpointsReqBody struct {
+	// Queries
+	Policy              []string `json:"policy,omitempty" validate:"omitempty"`
+	RuleDirection       string   `json:"ruleDirection,omitempty" validate:"omitempty"`
+	RuleIndex           int      `json:"ruleIndex,omitempty" validate:"omitempty"`
+	RuleEntity          string   `json:"ruleEntity,omitempty" validate:"omitempty"`
+	RuleNegatedSelector bool     `json:"ruleNegatedSelector,omitempty" validate:"omitempty"`
+	Selector            string   `json:"selector,omitempty" validate:"omitempty"`
+	Endpoint            string   `json:"endpoint,omitempty" validate:"omitempty"`
+	Unprotected         bool     `json:"unprotected,omitempty" validate:"omitempty"`
+
+	// Filters
+	EndpointsList []string `json:"endpointsList,omitempty" validate:"omitempty"` // we need to identify when this field is passed as empty list or is not passed
+	Node          string   `json:"node,omitempty" validate:"omitempty"`
+	Unlabelled    bool     `json:"unlabelled,omitempty"  validate:"omitempty"`
+	Page          *Page    `json:"page,omitempty" validate:"omitempty"`
+	Sort          *Sort    `json:"sort,omitempty" validate:"omitempty"`
+}
+
+// QueryEndpointsReq is the intenal struct. Endpoints request.body --> QueryEndpointsReqBody --> QueryEndpointReq
 type QueryEndpointsReq struct {
 	// Queries
 	Policy              model.Key
@@ -133,10 +154,11 @@ type QueryEndpointsReq struct {
 	Unprotected         bool
 
 	// Filters
-	Node       string
-	Unlabelled bool
-	Page       *Page
-	Sort       *Sort
+	EndpointsList []string
+	Node          string
+	Unlabelled    bool
+	Page          *Page
+	Sort          *Sort
 }
 
 const (
@@ -177,11 +199,11 @@ type Endpoint struct {
 }
 
 type Page struct {
-	PageNum    int
-	NumPerPage int
+	PageNum    int `json:"pageNum,omitempty" validate:"gte=0,omitempty"`
+	NumPerPage int `json:"numPerPage,omitempty" validate:"gt=0,omitempty"`
 }
 
 type Sort struct {
-	SortBy  []string
-	Reverse bool
+	SortBy  []string `json:"sortBy,omitempty" validate:"omitempty"`
+	Reverse bool     `json:"reverse,omitempty" validate:"omitempty"`
 }

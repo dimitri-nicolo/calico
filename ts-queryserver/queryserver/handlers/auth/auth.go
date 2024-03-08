@@ -12,15 +12,29 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 )
 
+type HTTPMethod string
+
+const (
+	MethodGET  HTTPMethod = http.MethodGet
+	MethodPOST HTTPMethod = http.MethodPost
+)
+
 // The RBAC permissions that allow a user to perform an HTTP GET to Queryserver.
-var resource = &authzv1.ResourceAttributes{
+var resourceGET = &authzv1.ResourceAttributes{
 	Verb:     "get",
 	Resource: "services/proxy",
 	Name:     "https:tigera-api:8080",
 }
 
+// The RBAC permissions that allow a user to perform an HTTP POST to Queryserver.
+var resourcePOST = &authzv1.ResourceAttributes{
+	Verb:     "create",
+	Resource: "services/proxy",
+	Name:     "https:tigera-api:8080",
+}
+
 type AuthHandler interface {
-	AuthenticationHandler(handlerFunc http.HandlerFunc) http.HandlerFunc
+	AuthenticationHandler(handlerFunc http.HandlerFunc, httpMethodAllowed HTTPMethod) http.HandlerFunc
 }
 
 type authHandler struct {
@@ -34,9 +48,9 @@ func NewAuthHandler(a auth.JWTAuth) AuthHandler {
 	}
 }
 
-// AuthenticationHandler is a handler that authenticates a request. Supports GET,
+// AuthenticationHandler is a handler that authenticates a request. Supports GET and POST
 // returns an error for other methods.
-func (ah *authHandler) AuthenticationHandler(handlerFunc http.HandlerFunc) http.HandlerFunc {
+func (ah *authHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpMethodAllowed HTTPMethod) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if ah.authJWT == nil {
 			log.Warnf("Authentication checks for request to path %s are skipped", req.URL.RawPath)
@@ -54,7 +68,7 @@ func (ah *authHandler) AuthenticationHandler(handlerFunc http.HandlerFunc) http.
 			w.WriteHeader(stat)
 			_, err := w.Write([]byte(err.Error()))
 			if err != nil {
-				log.Errorf("error when writing body to response: %v", err)
+				log.WithError(err).Error("failed to write body to response")
 			}
 			return
 		}
@@ -62,8 +76,25 @@ func (ah *authHandler) AuthenticationHandler(handlerFunc http.HandlerFunc) http.
 		// Authorization.
 		// TODO(dimitri): Replace simple with query result authorization [EV-2033].
 
-		if req.Method != http.MethodGet {
-			// At this time only HTTP GET are allowed. Respond with 405 otherwise.
+		if req.Method != string(httpMethodAllowed) {
+			// Operation not allowed
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_, err := w.Write([]byte("Method Not Allowed"))
+			if err != nil {
+				log.WithError(err).Error("failed to write body to response")
+			}
+			return
+		}
+
+		// Generate resource based on httpMethod
+		var resource *authzv1.ResourceAttributes
+
+		switch req.Method {
+		case http.MethodGet:
+			resource = resourceGET
+		case http.MethodPost:
+			resource = resourcePOST
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			_, err := w.Write([]byte("Method Not Allowed"))
 			if err != nil {

@@ -2,6 +2,7 @@
 package fv
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
@@ -86,6 +87,27 @@ func endpointTestQueryData() []testQueryData {
 					qcEndpoint(hep4_n4_unlabelled, 0, 0), qcEndpoint(hep3_n4, 0, 0), qcEndpoint(wep1_n1_ns1, 0, 0),
 					qcEndpoint(wep3_n1_ns2, 0, 0), qcEndpoint(wep4_n2_ns1, 0, 0), qcEndpoint(hep1_n2, 0, 0),
 					qcEndpoint(wep5_n3_ns2_unlabelled, 0, 0), qcEndpoint(hep2_n3, 0, 0),
+				},
+			},
+		},
+		{
+			"multiple weps and heps, no policy - query endpoints from a given list of endpoints",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, wep1_n1_ns1, wep5_n3_ns2_unlabelled,
+			},
+			client.QueryEndpointsReq{
+				EndpointsList: []string{
+					fmt.Sprintf(".*%s/%s", wep1_n1_ns1.Namespace, wep1_n1_ns1.Name),
+					fmt.Sprintf(".*%s/%s", wep3_n1_ns2.Namespace, wep3_n1_ns2.Name),
+					fmt.Sprintf(".*%s/%s", wep4_n2_ns1.Namespace, wep4_n2_ns1.Name),
+				},
+			},
+			&client.QueryEndpointsResp{
+				Count: 3,
+				Items: []client.Endpoint{
+					qcEndpoint(wep1_n1_ns1, 0, 0),
+					qcEndpoint(wep3_n1_ns2, 0, 0),
+					qcEndpoint(wep4_n2_ns1, 0, 0),
 				},
 			},
 		},

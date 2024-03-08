@@ -41,6 +41,12 @@ type Config struct {
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
+	// QueryServer Config
+	QueryServerEndpoint string `envconfig:"QUEYRSERVER_ENDPOINT" default:"https://tigera-api.tigera-system.svc:8080"`
+	QueryServerURL      string `envconfig:"QUERYSERVER_URL" default:"/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy"`
+	QueryServerCA       string `envconfig:"QUERYSERVER_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	QueryServerToken    string `envconfig:"QUSERYSERVER_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
+
 	// TenantID is the unique identifier for the tenant this instance is serving. If left blank, this is a
 	// zero-tenant (enterprise) instance. If set and TENANT_NAMESPACE is empty, this is a single-tenant management cluster.
 	// If set and TENANT_NAMESPACE is set, this is a multi-tenant management cluster.

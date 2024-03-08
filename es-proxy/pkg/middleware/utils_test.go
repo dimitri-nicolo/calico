@@ -2,10 +2,21 @@
 package middleware
 
 import (
+	"bytes"
+	_ "embed"
+	"errors"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+)
+
+var (
+	//go:embed testdata/invalid_request_body_badly_formed_string_value.json
+	invalidRequestBodyBadlyFormedStringValue string
 )
 
 var _ = Describe("Middleware utility tests", func() {
@@ -28,6 +39,21 @@ var _ = Describe("Middleware utility tests", func() {
 		It("should return default cluster name when request is nil", func() {
 			clusterName := MaybeParseClusterNameFromRequest(nil)
 			Expect(clusterName).To(Equal("cluster"))
+		})
+	})
+
+	Context("parseBody response validation", func() {
+		It("Should return a HttpStatusError when parsing a http status error body", func() {
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(invalidRequestBodyBadlyFormedStringValue)))
+			Expect(err).NotTo(HaveOccurred())
+
+			var w http.ResponseWriter
+			_, err = ParseBody[v1.CommonSearchRequest](w, r)
+			Expect(err).To(HaveOccurred())
+
+			var mr *httputils.HttpStatusError
+			Expect(errors.As(err, &mr)).To(BeTrue())
 		})
 	})
 })

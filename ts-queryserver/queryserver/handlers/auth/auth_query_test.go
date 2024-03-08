@@ -2,6 +2,8 @@
 package authhandler_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -12,8 +14,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	authzv1 "k8s.io/api/authorization/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
+
 	"k8s.io/apiserver/pkg/authentication/user"
+
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
@@ -64,26 +69,29 @@ var _ = Describe("Queryserver query auth test", func() {
 
 	It("returns a valid handler", func() {
 		name := "/endpoints"
-		verb := "get"
+		verb := "post"
 
 		By("Defining a new request.")
-		req, _ := http.NewRequest(strings.ToUpper(verb), name, nil)
+		body := client.QueryEndpointsReqBody{}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+		req, _ := http.NewRequest(strings.ToUpper(verb), name, bytes.NewReader(bodyData))
 
 		By("Adding the authorization bearer token to the request header.")
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 
 		By("Adding access for the user.")
 		mAuth.MockJWTAuth.On("Authenticate", req).Return(userInfo, 200, nil)
-		addAccessReviewsReactor(fakeK8sCli, true, userInfo)
+		addAccessReviewsReactor(fakeK8sCli, true, userInfo, verb)
 
 		user := &user.DefaultInfo{Name: "default", UID: "", Groups: []string(nil), Extra: map[string][]string(nil)}
-		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "get", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
+		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
 		nonResource := (*authzv1.NonResourceAttributes)(nil)
 		mAuth.MockJWTAuth.On("Authorize", user, resource, nonResource).Return(true, nil)
 
 		By("Defining the authentication handler.")
 		handler := authhandler.NewAuthHandler(mAuth)
-		ah := handler.AuthenticationHandler(qh.Endpoints)
+		ah := handler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST)
 
 		By("Calling the handler function.")
 		rr := httptest.NewRecorder()
@@ -97,14 +105,17 @@ var _ = Describe("Queryserver query auth test", func() {
 
 	It("blocks requests without a bearer token, 401", func() {
 		name := "/endpoints"
-		verb := "get"
+		verb := "post"
 
 		By("Defining a new request.")
-		req, _ := http.NewRequest(strings.ToUpper(verb), name, nil)
+		body := client.QueryEndpointsReqBody{}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+		req, _ := http.NewRequest(strings.ToUpper(verb), name, bytes.NewReader(bodyData))
 
 		By("Defining the authentication handler.")
 		handler := authhandler.NewAuthHandler(authnz)
-		ah := handler.AuthenticationHandler(qh.Endpoints)
+		ah := handler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST)
 
 		By("Calling the handler function.")
 		rr := httptest.NewRecorder()
@@ -119,11 +130,14 @@ var _ = Describe("Queryserver query auth test", func() {
 
 	It("blocks requests with invalid bearer token, 401", func() {
 		name := "/endpoints"
-		verb := "get"
+		verb := "post"
 		invalidToken := "Bearer FXqRgmleo343ygsl34kl"
 
 		By("Defining a new request.")
-		req, _ := http.NewRequest(strings.ToUpper(verb), name, nil)
+		body := client.QueryEndpointsReqBody{}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+		req, _ := http.NewRequest(strings.ToUpper(verb), name, bytes.NewReader(bodyData))
 
 		By("Adding the authorization bearer token to the request header.")
 		req.Header.Set("Authorization", invalidToken)
@@ -132,7 +146,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		handler := authhandler.NewAuthHandler(authnz)
 
 		By("Getting the authentication handler function.")
-		ah := handler.AuthenticationHandler(qh.Endpoints)
+		ah := handler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST)
 
 		By("Calling the handler function.")
 		rr := httptest.NewRecorder()
@@ -146,13 +160,16 @@ var _ = Describe("Queryserver query auth test", func() {
 
 	It("blocks requests with a bearer token with invalid prefix, 401", func() {
 		name := "/endpoints"
-		verb := "get"
+		verb := "post"
 		invalidToken := jwt.BearerTokenHeader()
 		prefix := "Bearer "
 		invalidToken = strings.TrimPrefix(invalidToken, prefix)
 
 		By("Defining a new request.")
-		req, _ := http.NewRequest(strings.ToUpper(verb), name, nil)
+		body := client.QueryEndpointsReqBody{}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+		req, _ := http.NewRequest(strings.ToUpper(verb), name, bytes.NewReader(bodyData))
 
 		By("Adding the authorization bearer token to the request header.")
 		req.Header.Set("Authorization", invalidToken)
@@ -161,7 +178,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		handler := authhandler.NewAuthHandler(authnz)
 
 		By("Getting the authentication handler function.")
-		ah := handler.AuthenticationHandler(qh.Endpoints)
+		ah := handler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST)
 
 		By("Calling the handler function.")
 		rr := httptest.NewRecorder()
@@ -175,10 +192,13 @@ var _ = Describe("Queryserver query auth test", func() {
 
 	It("blocks unauthorized requests", func() {
 		name := "/endpoints"
-		verb := "get"
+		verb := "post"
 
 		By("Defining a new request.")
-		req, _ := http.NewRequest(strings.ToUpper(verb), name, nil)
+		body := client.QueryEndpointsReqBody{}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+		req, _ := http.NewRequest(strings.ToUpper(verb), name, bytes.NewReader(bodyData))
 
 		By("Adding the authorization bearer token to the request header.")
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
@@ -186,10 +206,10 @@ var _ = Describe("Queryserver query auth test", func() {
 		By("Denying access for the user.")
 		isAuthorized := false
 		mAuth.MockJWTAuth.On("Authenticate", req).Return(userInfo, 200, nil)
-		addAccessReviewsReactor(fakeK8sCli, isAuthorized, userInfo)
+		addAccessReviewsReactor(fakeK8sCli, isAuthorized, userInfo, verb)
 
 		user := &user.DefaultInfo{Name: "default", UID: "", Groups: []string(nil), Extra: map[string][]string(nil)}
-		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "get", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
+		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
 		nonResource := (*authzv1.NonResourceAttributes)(nil)
 		mAuth.MockJWTAuth.On("Authorize", user, resource, nonResource).Return(false, nil)
 
@@ -197,7 +217,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		handler := authhandler.NewAuthHandler(mAuth)
 
 		By("Getting the authentication handler function.")
-		ah := handler.AuthenticationHandler(qh.Endpoints)
+		ah := handler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST)
 
 		By("Calling the handler function.")
 		rr := httptest.NewRecorder()
@@ -205,24 +225,27 @@ var _ = Describe("Queryserver query auth test", func() {
 		time.Sleep(interval)
 
 		By("Verifying the recorder error code is 403.")
-		Expect(rr.Body.String()).To(Equal("user &{default  [] map[]} is not authorized to perform GET https:tigera-api:8080"))
+		Expect(rr.Body.String()).To(Equal("user &{default  [] map[]} is not authorized to perform POST https:tigera-api:8080"))
 		Expect(rr.Code).To(Equal(http.StatusForbidden))
 		Expect(req.URL.Path).To(Equal(name))
 	})
 
 	It("blocks unauthorized requests, due to authorization error", func() {
 		name := "/endpoints"
-		verb := "get"
+		verb := "post"
 
 		By("Defining a new request.")
-		req, _ := http.NewRequest(strings.ToUpper(verb), name, nil)
+		body := client.QueryEndpointsReqBody{}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+		req, _ := http.NewRequest(strings.ToUpper(verb), name, bytes.NewReader(bodyData))
 		By("Adding the authorization bearer token to the request header.")
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 
 		mAuth.MockJWTAuth.On("Authenticate", req).Return(userInfo, 200, nil)
 
 		user := &user.DefaultInfo{Name: "default", UID: "", Groups: []string(nil), Extra: map[string][]string(nil)}
-		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "get", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
+		resource := &authzv1.ResourceAttributes{Namespace: "", Verb: "create", Group: "", Version: "", Resource: "services/proxy", Subresource: "", Name: "https:tigera-api:8080"}
 		nonResource := (*authzv1.NonResourceAttributes)(nil)
 		mAuth.MockJWTAuth.On("Authorize", user, resource, nonResource).Return(true, errors.New("internal server error."))
 
@@ -230,7 +253,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		handler := authhandler.NewAuthHandler(mAuth)
 
 		By("Getting the authentication handler function.")
-		ah := handler.AuthenticationHandler(qh.Endpoints)
+		ah := handler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST)
 
 		By("Calling the handler function.")
 		rr := httptest.NewRecorder()
@@ -245,21 +268,24 @@ var _ = Describe("Queryserver query auth test", func() {
 
 	It("blocks invalid method", func() {
 		name := "/endpoints"
-		verb := "git"
+		verb := "get"
 
 		By("Defining a new request.")
-		req, _ := http.NewRequest(strings.ToUpper(verb), name, nil)
+		body := client.QueryEndpointsReqBody{}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+		req, _ := http.NewRequest(strings.ToUpper(verb), name, bytes.NewReader(bodyData))
 		By("Adding the authorization bearer token to the request header.")
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 
 		mAuth.MockJWTAuth.On("Authenticate", req).Return(userInfo, 200, nil)
-		addAccessReviewsReactor(fakeK8sCli, false, userInfo)
+		addAccessReviewsReactor(fakeK8sCli, false, userInfo, verb)
 
 		By("Defining the authentication handler.")
 		handler := authhandler.NewAuthHandler(mAuth)
 
 		By("Getting the authentication handler function.")
-		authHandler := handler.AuthenticationHandler(qh.Endpoints)
+		authHandler := handler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST)
 
 		By("Calling the handler function.")
 		rr := httptest.NewRecorder()
@@ -273,7 +299,7 @@ var _ = Describe("Queryserver query auth test", func() {
 	})
 })
 
-func addAccessReviewsReactor(fakeK8sCli *fake.Clientset, authorized bool, userInfo user.Info) {
+func addAccessReviewsReactor(fakeK8sCli *fake.Clientset, authorized bool, userInfo user.Info, expectedVerb string) {
 	fakeK8sCli.AddReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		extra := make(map[string]authzv1.ExtraValue)
 		for k, v := range userInfo.GetExtra() {
@@ -291,7 +317,7 @@ func addAccessReviewsReactor(fakeK8sCli *fake.Clientset, authorized bool, userIn
 			"/endpoints", "/endpoints/", "/policies", "/policies/", "/nodes", "/nodes/",
 			"/summary", "/version", "/license"))
 		Expect(review.Spec.ResourceAttributes.Resource).To(Equal("services/proxy"))
-		Expect(review.Spec.ResourceAttributes.Verb).To(Equal("get"))
+		Expect(review.Spec.ResourceAttributes.Verb).To(Equal(expectedVerb))
 		return true, &authzv1.SubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{Allowed: authorized}}, nil
 	})
 }
