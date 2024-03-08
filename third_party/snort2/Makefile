@@ -2,13 +2,15 @@
 
 include ../../metadata.mk
 
-PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort3
+PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort2
 
 #############################################
 # Env vars related to packaging and releasing
 #############################################
-SNORT3_IMAGE ?= snort3
-BUILD_IMAGES ?= $(SNORT3_IMAGE)
+SNORT2_IMAGE ?= snort2
+BUILD_IMAGES ?= $(SNORT2_IMAGE)
+
+SNORT_VERSION ?= 2.9.20
 
 ###############################################################################
 # Include lib.Makefile
@@ -20,7 +22,7 @@ include ../../lib.Makefile
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
-SNORT3_IMAGE_CREATED=.snort3.created-$(ARCH)
+SNORT2_IMAGE_CREATED=.snort2.created-$(ARCH)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -29,15 +31,15 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(SNORT3_IMAGE)
+image: $(SNORT2_IMAGE)
 
-$(SNORT3_IMAGE): $(SNORT3_IMAGE_CREATED)
-$(SNORT3_IMAGE_CREATED): Dockerfile snort3-community.rules
-	$(DOCKER_BUILD) -t $(SNORT3_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(SNORT2_IMAGE): $(SNORT2_IMAGE_CREATED)
+$(SNORT2_IMAGE_CREATED): Dockerfile community.rules
+	$(DOCKER_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) -t $(SNORT2_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 .PHONY: clean
 clean:
-	rm -f $(SNORT3_IMAGE_CREATED)
-	-docker image rm -f $$(docker images $(SNORT3_IMAGE) -a -q)
+	rm -f $(SNORT2_IMAGE_CREATED)
+	-docker image rm -f $$(docker images $(SNORT2_IMAGE) -a -q)
