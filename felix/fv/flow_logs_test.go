@@ -924,6 +924,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				felix.Exec("ip", "r")
 				felix.Exec("ip", "a")
 			}
+			if bpfEnabled {
+				for _, felix := range tc.Felixes {
+					felix.Exec("calico-bpf", "ipsets", "dump")
+					felix.Exec("calico-bpf", "routes", "dump")
+					felix.Exec("calico-bpf", "nat", "dump")
+					felix.Exec("calico-bpf", "nat", "aff")
+					felix.Exec("calico-bpf", "conntrack", "dump")
+					felix.Exec("calico-bpf", "arp", "dump")
+					felix.Exec("calico-bpf", "counters", "dump")
+					felix.Exec("calico-bpf", "ifstate", "dump")
+					felix.Exec("calico-bpf", "policy", "dump", "eth0", "all")
+				}
+				for _, w := range wlHost1 {
+					tc.Felixes[0].Exec("calico-bpf", "policy", "dump", w.InterfaceName, "all")
+				}
+				for _, w := range wlHost1 {
+					tc.Felixes[1].Exec("calico-bpf", "policy", "dump", w.InterfaceName, "all")
+				}
+			}
 		}
 
 		for _, wl := range wlHost1 {
