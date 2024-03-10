@@ -57,18 +57,18 @@ func (s *Server) Start() error {
 
 	sm := http.NewServeMux()
 	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh), s.servercfg)
-	sm.HandleFunc("/endpoints", s.authHandler.AuthenticationHandler(qh.Endpoints))
-	sm.HandleFunc("/endpoints/", s.authHandler.AuthenticationHandler(qh.Endpoint))
-	sm.HandleFunc("/policies", s.authHandler.AuthenticationHandler(qh.Policies))
-	sm.HandleFunc("/policies/", s.authHandler.AuthenticationHandler(qh.Policy))
-	sm.HandleFunc("/nodes", s.authHandler.AuthenticationHandler(qh.Nodes))
-	sm.HandleFunc("/nodes/", s.authHandler.AuthenticationHandler(qh.Node))
-	sm.HandleFunc("/summary", s.authHandler.AuthenticationHandler(qh.Summary))
-	sm.HandleFunc("/metrics", s.authHandler.AuthenticationHandler(qh.Metrics))
+	sm.HandleFunc("/endpoints", s.authHandler.AuthenticationHandler(qh.Endpoints, handler.MethodPOST))
+	sm.HandleFunc("/endpoints/", s.authHandler.AuthenticationHandler(qh.Endpoint, handler.MethodGET))
+	sm.HandleFunc("/policies", s.authHandler.AuthenticationHandler(qh.Policies, handler.MethodGET))
+	sm.HandleFunc("/policies/", s.authHandler.AuthenticationHandler(qh.Policy, handler.MethodGET))
+	sm.HandleFunc("/nodes", s.authHandler.AuthenticationHandler(qh.Nodes, handler.MethodGET))
+	sm.HandleFunc("/nodes/", s.authHandler.AuthenticationHandler(qh.Node, handler.MethodGET))
+	sm.HandleFunc("/summary", s.authHandler.AuthenticationHandler(qh.Summary, handler.MethodGET))
+	sm.HandleFunc("/metrics", s.authHandler.AuthenticationHandler(qh.Metrics, handler.MethodGET))
 	sm.HandleFunc("/version", handlers.VersionHandler)
 
 	lic := handlers.License{Client: c}
-	sm.HandleFunc("/license", s.authHandler.AuthenticationHandler(lic.LicenseHandler))
+	sm.HandleFunc("/license", s.authHandler.AuthenticationHandler(lic.LicenseHandler, handler.MethodGET))
 
 	s.server = &http.Server{
 		Addr:      s.servercfg.ListenAddr,

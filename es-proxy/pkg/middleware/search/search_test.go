@@ -15,12 +15,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
@@ -34,8 +36,6 @@ import (
 )
 
 var (
-	//go:embed testdata/valid_request_body.json
-	validRequestBody string
 	//go:embed testdata/valid_request_body_no_cluster.json
 	validRequestBodyNoCluster string
 	//go:embed testdata/valid_request_body_page_size_greater_than_lte.json
@@ -46,8 +46,6 @@ var (
 	validRequestBodyOnlyFrom string
 	//go:embed testdata/valid_request_body_only_to.json
 	validRequestBodyOnlyTo string
-	//go:embed testdata/invalid_request_body_badly_formed_string_value.json
-	invalidRequestBodyBadlyFormedStringValue string
 	//go:embed testdata/invalid_request_body_time_range_contains_invalid_time_value.json
 	invalidRequestBodyTimeRangeContainsInvalidTimeValue string
 
@@ -570,32 +568,6 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 	})
 
-	Context("parseBody response validation", func() {
-		It("Should return a SearchError when http request not POST or GET", func() {
-			var w http.ResponseWriter
-			r, err := http.NewRequest(http.MethodPut, "", bytes.NewReader([]byte(validRequestBody)))
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = parseBody[v1.CommonSearchRequest](w, r)
-			Expect(err).To(HaveOccurred())
-			var se *httputils.HttpStatusError
-			Expect(errors.As(err, &se)).To(BeTrue())
-		})
-
-		It("Should return a HttpStatusError when parsing a http status error body", func() {
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(invalidRequestBodyBadlyFormedStringValue)))
-			Expect(err).NotTo(HaveOccurred())
-
-			var w http.ResponseWriter
-			_, err = parseBody[v1.CommonSearchRequest](w, r)
-			Expect(err).To(HaveOccurred())
-
-			var mr *httputils.HttpStatusError
-			Expect(errors.As(err, &mr)).To(BeTrue())
-		})
-	})
-
 	Context("defaultAndValidateCommonRequest defaulting and validating parseBody result", func() {
 		It("Should parse x-cluster-id in the request header when cluster is missing in body", func() {
 			r, err := http.NewRequest(
@@ -604,7 +576,7 @@ var _ = Describe("SearchElasticHits", func() {
 			r.Header.Add("x-cluster-id", "cluster-id-in-header")
 
 			var w http.ResponseWriter
-			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			searchRequest, err := middleware.ParseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).NotTo(HaveOccurred())
 			err = defaultAndValidateCommonRequest(r, searchRequest)
 			Expect(err).NotTo(HaveOccurred())
@@ -617,7 +589,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			searchRequest, err := middleware.ParseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).NotTo(HaveOccurred())
 			err = defaultAndValidateCommonRequest(r, searchRequest)
 			Expect(err).To(HaveOccurred())
@@ -634,7 +606,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			searchRequest, err := middleware.ParseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).NotTo(HaveOccurred())
 			err = defaultAndValidateCommonRequest(r, searchRequest)
 			Expect(err).To(HaveOccurred())
@@ -651,7 +623,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseBody[v1.CommonSearchRequest](w, r)
+			_, err = middleware.ParseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
@@ -667,7 +639,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			searchRequest, err := middleware.ParseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).NotTo(HaveOccurred())
 			err = defaultAndValidateCommonRequest(r, searchRequest)
 			Expect(err).NotTo(HaveOccurred())
@@ -682,7 +654,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			searchRequest, err := parseBody[v1.CommonSearchRequest](w, r)
+			searchRequest, err := middleware.ParseBody[v1.CommonSearchRequest](w, r)
 			Expect(err).NotTo(HaveOccurred())
 			err = defaultAndValidateCommonRequest(r, searchRequest)
 			Expect(err).NotTo(HaveOccurred())

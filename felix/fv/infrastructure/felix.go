@@ -305,6 +305,9 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 }
 
 func (f *Felix) Stop() {
+	if f == nil {
+		return
+	}
 	if CreateCgroupV2 {
 		_ = f.ExecMayFail("rmdir", path.Join("/run/calico/cgroup/", f.Name))
 	}

@@ -2,6 +2,7 @@
 package fv
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
+	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
 	queryhdr "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/server"
 )
@@ -95,15 +96,25 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 })
 
 func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() interface{} {
-	By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
-	qurl := calculateQueryUrl(addr, tqd.query)
 
 	By(fmt.Sprintf("Creating the query function for test: %s", tqd.description))
 	return func() interface{} {
+		By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
+		qurl, httpMethod := calculateQueryUrl(addr, tqd.query)
+		qbody := calculateQueryBody(tqd.query)
+
 		// Return the result if we have it, otherwise the error, this allows us to use Eventually to
 		// check both values and errors.
 		log.WithField("url", qurl).Debug("Running query")
-		r, err := netClient.Get(qurl)
+
+		var r *http.Response
+		var err error
+		switch httpMethod {
+		case authhandler.MethodPOST:
+			r, err = netClient.Post(qurl, "Application/Json", qbody)
+		default:
+			r, err = netClient.Get(qurl)
+		}
 		if err != nil {
 			return err
 		}
@@ -136,9 +147,11 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 	}
 }
 
-func calculateQueryUrl(addr string, query interface{}) string {
+func calculateQueryUrl(addr string, query interface{}) (string, authhandler.HTTPMethod) {
 	var parms []string
 	u := "http://" + addr + "/"
+	httpMethod := authhandler.MethodGET
+
 	switch qt := query.(type) {
 	case client.QueryEndpointsReq:
 		u += "endpoints"
@@ -146,17 +159,8 @@ func calculateQueryUrl(addr string, query interface{}) string {
 			u = u + "/" + getNameFromResource(qt.Endpoint)
 			break
 		}
-		parms = appendStringParm(parms, queryhdr.QuerySelector, qt.Selector)
-		parms = appendStringParm(parms, queryhdr.QueryUnprotected, strconv.FormatBool(qt.Unprotected))
-		parms = appendStringParm(parms, queryhdr.QueryUnlabelled, fmt.Sprint(qt.Unlabelled))
-		parms = appendStringParm(parms, queryhdr.QueryNode, qt.Node)
-		parms = appendResourceParm(parms, queryhdr.QueryPolicy, qt.Policy)
-		parms = appendStringParm(parms, queryhdr.QueryRuleDirection, qt.RuleDirection)
-		parms = appendStringParm(parms, queryhdr.QueryRuleIndex, fmt.Sprint(qt.RuleIndex))
-		parms = appendStringParm(parms, queryhdr.QueryRuleEntity, qt.RuleEntity)
-		parms = appendStringParm(parms, queryhdr.QueryRuleNegatedSelector, fmt.Sprint(qt.RuleNegatedSelector))
-		parms = appendPageParms(parms, qt.Page)
-		parms = appendSortParms(parms, qt.Sort)
+
+		httpMethod = authhandler.MethodPOST
 	case client.QueryPoliciesReq:
 		u += "policies"
 		if qt.Policy != nil {
@@ -185,9 +189,40 @@ func calculateQueryUrl(addr string, query interface{}) string {
 	}
 
 	if len(parms) == 0 {
-		return u
+		return u, httpMethod
 	}
-	return u + "?" + strings.Join(parms, "&")
+	return u + "?" + strings.Join(parms, "&"), httpMethod
+}
+
+func calculateQueryBody(query interface{}) io.Reader {
+	switch qt := query.(type) {
+	case client.QueryEndpointsReq:
+		var policy []string
+		if qt.Policy != nil {
+			policy = []string{getNameFromResource(qt.Policy)}
+		}
+		body := client.QueryEndpointsReqBody{
+			Policy:              policy,
+			RuleDirection:       qt.RuleDirection,
+			RuleIndex:           qt.RuleIndex,
+			RuleEntity:          qt.RuleEntity,
+			RuleNegatedSelector: qt.RuleNegatedSelector,
+			Selector:            qt.Selector,
+			Unprotected:         qt.Unprotected,
+			EndpointsList:       qt.EndpointsList,
+			Node:                qt.Node,
+			Unlabelled:          qt.Unlabelled,
+			Page:                qt.Page,
+			Sort:                qt.Sort,
+		}
+
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		return bytes.NewReader(bodyData)
+	}
+
+	return nil
 }
 
 func appendPageParms(parms []string, page *client.Page) []string {
@@ -245,9 +280,15 @@ func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Clien
 		}
 
 		By(fmt.Sprintf("Running endpoint query for policy: %s", policy))
-		qurl := "http://" + addr + "/endpoints?policy=" + policy + "&page=all"
+		qurl := "http://" + addr + "/endpoints"
+		body := client.QueryEndpointsReqBody{
+			Policy: []string{policy},
+			Page:   nil,
+		}
+		bodyData, err := json.Marshal(body)
+		Expect(err).ShouldNot(HaveOccurred())
 
-		r, err := netClient.Get(qurl)
+		r, err := netClient.Post(qurl, "Application/Json", bytes.NewReader(bodyData))
 		Expect(err).NotTo(HaveOccurred())
 		defer r.Body.Close()
 		bodyBytes, err := io.ReadAll(r.Body)
@@ -320,12 +361,22 @@ func getDummyConfigFromEnvFv(addr, webKey, webCert string) *config.Config {
 type mockHandler struct {
 }
 
-func (mh *mockHandler) AuthenticationHandler(handlerFunc http.HandlerFunc) http.HandlerFunc {
+func (mh *mockHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpMethodAllowed authhandler.HTTPMethod) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != string(httpMethodAllowed) {
+			// Operation not allowed
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_, err := w.Write([]byte("Method Not Allowed"))
+			if err != nil {
+				log.WithError(err).Error("failed to write body to response.")
+			}
+			return
+		}
+
 		handlerFunc.ServeHTTP(w, req)
 	}
 }
 
-//TODO(rlb):
+// TODO(rlb):
 // - reorder policies
 // - re-node a HostEndpoint

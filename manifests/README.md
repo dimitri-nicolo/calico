@@ -23,8 +23,6 @@ commit your changes. **The following manifests are not auto generated:**
 - aks/custom-resources-calico-cni.yaml
 - aks/custom-resources-upgrade-from-calico.yaml
 - aws/*
-- calico-windows-bgp.yaml
-- calico-windows-vxlan.yaml
 - calicoctl.yaml
 - compliance-reporter-pod.yaml
 - custom-resources.yaml
@@ -48,4 +46,3 @@ commit your changes. **The following manifests are not auto generated:**
 - tigera-policy-integration.yaml
 - tigera-prometheus-operator.yaml
 - operator-crds.yaml
-- windows-kube-proxy.yaml

@@ -234,12 +234,12 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Should be listing the policy under default tier.
-	policies, err = policyClient.List(ctx, metav1.ListOptions{})
+	policies, err = policyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=default"})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
 	if len(policies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(policies.Items))
 	}
 
 	// Should be listing the policy under "net-sec" tier
@@ -248,7 +248,37 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
 	if len(policies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(policies.Items))
+	}
+
+	// Should be listing all policy
+	policies, err = policyClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing policies (%s)", err)
+	}
+	if len(policies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(policies.Items))
+	}
+
+	// Should be listing the policy under "net-sec" tier
+	policies, err = policyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(policies.Items) != 1 {
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(policies.Items))
+	}
+	if policies.Items[0].Spec.Tier != "net-sec" {
+		return fmt.Errorf("should have list policy from net-sec tier, had %s tier", policies.Items[0].Spec.Tier)
+	}
+
+	// Should be listing the policy under "net-sec" and "default tier
+	policies, err = policyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (default, net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(policies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(policies.Items))
 	}
 
 	policyServer, err = policyClient.Get(ctx, name, metav1.GetOptions{})
@@ -384,12 +414,12 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// Should be listing the policy under default tier.
-	policies, err = policyClient.List(ctx, metav1.ListOptions{})
+	policies, err = policyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=default"})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
 	if len(policies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(policies.Items))
 	}
 
 	// Should be listing the policy under "net-sec" tier
@@ -398,7 +428,37 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
 	if len(policies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(policies.Items))
+	}
+
+	// Should be listing all policies
+	policies, err = policyClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing policies (%s)", err)
+	}
+	if len(policies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(policies.Items))
+	}
+
+	// Should be listing the policy under "net-sec" tier
+	policies, err = policyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(policies.Items) != 1 {
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(policies.Items))
+	}
+	if policies.Items[0].Spec.Tier != "net-sec" {
+		return fmt.Errorf("should have list policy from net-sec tier, had %s tier", policies.Items[0].Spec.Tier)
+	}
+
+	// Should be listing the policy under "net-sec" and "default tier
+	policies, err = policyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (default, net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(policies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(policies.Items))
 	}
 
 	policyServer, err = policyClient.Get(ctx, name, metav1.GetOptions{})
@@ -779,12 +839,12 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// Should be listing the policy under "default" tier
-	globalNetworkPolicies, err = globalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=default"})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
 	}
 	if len(globalNetworkPolicies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(globalNetworkPolicies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(globalNetworkPolicies.Items))
 	}
 
 	// Should be listing the policy under "net-sec" tier
@@ -793,7 +853,37 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
 	}
 	if len(globalNetworkPolicies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(globalNetworkPolicies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(globalNetworkPolicies.Items))
+	}
+
+	// Should be listing all policies
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
+	}
+	if len(globalNetworkPolicies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(globalNetworkPolicies.Items))
+	}
+
+	// Should be listing the policy under "net-sec" tier
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(globalNetworkPolicies.Items) != 1 {
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(globalNetworkPolicies.Items))
+	}
+	if globalNetworkPolicies.Items[0].Spec.Tier != "net-sec" {
+		return fmt.Errorf("should have list policy from net-sec tier, had %s tier", globalNetworkPolicies.Items[0].Spec.Tier)
+	}
+
+	// Should be listing the policy under "net-sec" and "default tier
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (default, net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(globalNetworkPolicies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(globalNetworkPolicies.Items))
 	}
 
 	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Get(ctx, name, metav1.GetOptions{})
@@ -888,12 +978,12 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 	}
 
 	// Should be listing the policy under "default" tier
-	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
+	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.tier=default"})
 	if err != nil {
 		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
 	}
 	if len(stagedGlobalNetworkPolicies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(stagedGlobalNetworkPolicies.Items))
 	}
 
 	// Should be listing the policy under "net-sec" tier
@@ -902,7 +992,37 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
 	}
 	if len(stagedGlobalNetworkPolicies.Items) != 1 {
-		return fmt.Errorf("should have exactly one policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(stagedGlobalNetworkPolicies.Items))
+	}
+
+	// Should be listing all policies
+	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(stagedGlobalNetworkPolicies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
+	}
+
+	// Should be listing the policy under "net-sec" tier
+	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(stagedGlobalNetworkPolicies.Items) != 1 {
+		return fmt.Errorf("should have exactly one policy, had %v policies", len(stagedGlobalNetworkPolicies.Items))
+	}
+	if stagedGlobalNetworkPolicies.Items[0].Spec.Tier != "net-sec" {
+		return fmt.Errorf("should have list policy from net-sec tier, had %s tier", stagedGlobalNetworkPolicies.Items[0].Spec.Tier)
+	}
+
+	// Should be listing the policy under "net-sec" and "default tier
+	stagedGlobalNetworkPolicies, err = stagedGlobalNetworkPolicyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (default, net-sec)"})
+	if err != nil {
+		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+	}
+	if len(stagedGlobalNetworkPolicies.Items) != 2 {
+		return fmt.Errorf("should have exactly two policies, had %v policies", len(stagedGlobalNetworkPolicies.Items))
 	}
 
 	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Get(ctx, name, metav1.GetOptions{})

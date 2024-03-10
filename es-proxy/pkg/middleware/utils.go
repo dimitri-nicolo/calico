@@ -9,7 +9,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
@@ -59,4 +61,33 @@ func MaybeParseClusterNameFromRequest(r *http.Request) string {
 		}
 	}
 	return clusterName
+}
+
+type RequestType interface {
+	v1.CommonSearchRequest | v1.FlowLogSearchRequest | EndpointsAggregationRequest
+}
+
+// ParseBody extracts query parameters from the request body (JSON.blob) into RequestType.
+//
+// Will define an http.Error if an error occurs.
+func ParseBody[T RequestType](w http.ResponseWriter, r *http.Request) (*T, error) {
+	params := new(T)
+
+	// Decode the http request body into the struct.
+	if err := httputils.Decode(w, r, params); err != nil {
+		var mr *httputils.HttpStatusError
+		if errors.As(err, &mr) {
+			log.WithError(mr.Err).Error(mr.Msg)
+			return nil, mr
+		} else {
+			log.WithError(mr.Err).Error("error parsing request body.")
+			return nil, &httputils.HttpStatusError{
+				Status: http.StatusBadRequest,
+				Msg:    "failed to parse request body into expected parameters.",
+				Err:    err,
+			}
+		}
+	}
+
+	return params, nil
 }
