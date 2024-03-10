@@ -137,7 +137,7 @@ st:
 ## fluentd config tests
 fv: image
 ifeq ($(ARCH),amd64)
-	cd test && IMAGETAG=latest IMAGE=$(FLUENTD_IMAGE) ./test.sh
+	cd test && IMAGETAG=latest-$(ARCH) IMAGE=tigera/$(FLUENTD_IMAGE) ./test.sh
 endif
 
 ci: test image

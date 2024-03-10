@@ -42,7 +42,7 @@ blocks:
       jobs:
         - name: Linux amd64
           commands:
-            - make -C third_party/fluentd cd ARCHES=amd64 CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd cd ARCHES=amd64 CONFIRM=true; fi
   - name: Publish fluentd images - native arm64 runner
     dependencies: []
     skip:
@@ -54,7 +54,7 @@ blocks:
       jobs:
         - name: Linux arm64
           commands:
-            - make -C third_party/fluentd cd ARCHES=arm64 CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd cd ARCHES=arm64 CONFIRM=true; fi
   - name: Publish fluentd multi-arch manifests
     dependencies:
       - Publish fluentd images
@@ -65,7 +65,7 @@ blocks:
       jobs:
         - name: Linux multi-arch manifests
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C fluentd push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd push-manifests-with-tag CONFIRM=true; fi
 
   - name: Publish Windows images
     dependencies: []

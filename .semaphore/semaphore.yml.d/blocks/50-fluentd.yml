@@ -31,4 +31,4 @@
     jobs:
       - name: Build image
         commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
+          - ../../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64

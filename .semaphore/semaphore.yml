@@ -1456,7 +1456,7 @@ blocks:
     jobs:
       - name: Build image
         commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
+          - ../../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
 - name: prometheus-operator
   run:
     when: "false or change_in(['/third_party/prometheus-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
