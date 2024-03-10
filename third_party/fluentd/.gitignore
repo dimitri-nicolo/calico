@@ -1,9 +1,1 @@
-*.go-build-cache*
-*.go-pkg-cache*
-*.swp
-*/bin/*
-.idea
-.manifest.yaml
-.vscode
-Makefile.common*
-test/tmp/*
+test/tmp/
