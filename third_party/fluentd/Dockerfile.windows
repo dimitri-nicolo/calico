@@ -48,14 +48,14 @@ RUN mklink /D c:\ruby c:\ruby31 \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\plugins" \
  && c:\ruby\msys64\usr\bin\bash.exe -lc "curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe"
 
-# On Windows, the destination format for ADD and COPY must use forward slashes.
-ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
-ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
-ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
-ADD elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
-ADD elastic_mapping_waf.template /fluentd/etc/elastic_mapping_waf.template
-ADD elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
-ADD elastic_mapping_runtime.template /fluentd/etc/elastic_mapping_runtime.template
+# On Windows, the destination format for COPY must use forward slashes.
+COPY elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
+COPY elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
+COPY elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
+COPY elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
+COPY elastic_mapping_waf.template /fluentd/etc/elastic_mapping_waf.template
+COPY elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
+COPY elastic_mapping_runtime.template /fluentd/etc/elastic_mapping_runtime.template
 
 ENV FLOW_LOG_FILE=${ROOT_DIR}/TigeraCalico/flowlogs/flows.log
 ENV POS_DIR=${ROOT_DIR}/TigeraCalico/flowlogs
