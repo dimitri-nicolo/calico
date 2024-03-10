@@ -1,6 +1,8 @@
 # Copyright 2019-2024 Tigera Inc. All rights reserved.
 
-GO_BUILD_VER ?= v0.90
+include ../../metadata.mk
+
+PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/fluentd
 
 # Override shell if we're on Windows
 # https://stackoverflow.com/a/63840549
@@ -48,46 +50,13 @@ endif
 endif
 
 BUILD_IMAGES          ?= $(FLUENTD_IMAGE)
-DEV_REGISTRIES        ?= gcr.io/unique-caldron-775/cnx/tigera
-RELEASE_REGISTRIES    ?= quay.io/tigera
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
-
-
-# This variable is used to filter out values from DEV_REGISTRIES, with the
-# result assigned to MANIFEST_REGISTRIES.
-# Currently, go-build v0.65 sets this to empty but that results in an empty
-# MANIFEST_REGISTRIES so we set NONMANIFEST_REGISTRIES to a placeholder value for now.
-NONMANIFEST_REGISTRIES ?= non-manifest-registries-defined-here
-
-GCR_REPO?=gcr.io/unique-caldron-775/cnx
-REPO?=$(GCR_REPO)
-PUSH_IMAGE_BASE?=$(REPO)
-PUSH_IMAGE?=$(PUSH_IMAGE_BASE)/$(BUILD_IMAGE)
-
-GIT_USE_SSH=true
 
 ##############################################################################
-# Download and include Makefile.common before anything else
+# Include lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-ifeq ($(OS),Windows_NT)
-	rm -force Makefile.common.*
-	curl -usebasicparsing -uri $(MAKE_REPO)/Makefile.common -outfile "$@"
-else
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-endif
-
-include Makefile.common
+include ../../lib.Makefile
 
 ###############################################################################
 # Build
@@ -131,8 +100,6 @@ clean:
 ###############################################################################
 # Image
 ###############################################################################
-QEMU_IMAGE ?= calico/qemu-user-static:latest
-
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(VALIDARCHES)) 
 sub-image-%:
@@ -146,14 +113,9 @@ build-image-%:
 ifeq ($(OS),Windows_NT)
 	docker build --pull -t $(FLUENTD_IMAGE):latest-$* -f Dockerfile.windows .
 else
-	$(MAKE) register
 	$(MAKE) build
-	docker buildx build --load --platform=linux/$(ARCH) --pull \
-		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
-		-t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
-ifeq ($(ARCH),amd64)
-	docker tag $(FLUENTD_IMAGE):latest-$(ARCH) $(FLUENTD_IMAGE):latest
-endif
+	$(DOCKER_BUILD) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 endif
 
 ###############################################################################
@@ -178,7 +140,7 @@ ifeq ($(ARCH),amd64)
 	cd test && IMAGETAG=latest IMAGE=$(FLUENTD_IMAGE) ./test.sh
 endif
 
-ci: build test image
+ci: test image
 
 ## push fluentd image to GCR_REPO.
 #  Note: this is called from both Linux and Windows so ARCH_TAG is required.

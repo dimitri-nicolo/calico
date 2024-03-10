@@ -6,9 +6,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v1 "github.com/projectcalico/calico/linseed-client/pkg/apis/v1"
-	lsclient "github.com/projectcalico/calico/linseed-client/pkg/client"
-	lsrest "github.com/projectcalico/calico/linseed-client/pkg/client/rest"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 const (
@@ -23,11 +23,10 @@ func GetLinseedClient(cfg *Config) (lsclient.Client, error) {
 	var err error
 	var linseedClient lsclient.Client
 	lsConfig := lsrest.Config{
-		URL:             cfg.LinseedURL,
-		CACertPath:      cfg.LinseedCA,
-		ClientKeyPath:   cfg.LinseedClientKey,
-		ClientCertPath:  cfg.LinseedClientCert,
-		FIPSModeEnabled: cfg.FIPSModeEnabled,
+		URL:            cfg.LinseedURL,
+		CACertPath:     cfg.LinseedCA,
+		ClientKeyPath:  cfg.LinseedClientKey,
+		ClientCertPath: cfg.LinseedClientCert,
 	}
 	if linseedClient, err = lsclient.NewClient(cfg.TenantID, lsConfig, lsrest.WithTokenPath(cfg.LinseedToken)); err == nil {
 		return linseedClient, err

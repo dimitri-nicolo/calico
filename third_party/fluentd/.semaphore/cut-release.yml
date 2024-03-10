@@ -20,7 +20,7 @@ global_job_config:
       - git fetch --unshallow || true
 
 blocks:
-  - name: 'Cut Release'
+  - name: Cut Release
     task:
       secrets:
         - name: marvin-github-ssh-private-key
