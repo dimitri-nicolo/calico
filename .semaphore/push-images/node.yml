@@ -51,11 +51,9 @@ blocks:
         # Mount the github SSH secret for pulling private repositories for go.mod (windows-networking in particular).
         - name: private-repo
       jobs:
-        # The node build takes a long time due to some architectures, so we split it up.
-        # TODO: Add support for other architectures
         - name: Linux amd64
           commands:
-            - make -C node cd ARCHES=amd64 CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node cd ARCHES=amd64 CONFIRM=true; fi
         - name: Windows
           commands:
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node release-windows CONFIRM=true; fi
@@ -70,7 +68,7 @@ blocks:
       jobs:
         - name: Linux arm64
           commands:
-            - make -C node cd ARCHES=arm64 CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node cd ARCHES=arm64 CONFIRM=true; fi
   - name: Publish node multi-arch manifests
     dependencies:
       - Publish node images
