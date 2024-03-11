@@ -1025,6 +1025,82 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string
 		}
 		require.Eventually(t, tokenUpdated, 5*time.Second, 100*time.Millisecond)
 	})
+
+	t.Run("provision multiple secrets for different services in a connected managed cluster in"+tenantMode, func(t *testing.T) {
+		defer setup(t)()
+
+		// Add a managed cluster.
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(context.Background(), &mc)
+		require.NoError(t, err)
+
+		tokens := []token.UserInfo{
+			{Name: "secret-a", Namespace: "ns-a"},
+			{Name: "failing-secret-b", Namespace: "ns-b"},
+			{Name: "secret-c", Namespace: "ns-c"},
+		}
+
+		mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			name := action.(k8stesting.GetAction).GetName()
+
+			// We configure a failure when creating the second secret
+			if name == "failing-secret-b-testissuer-token" {
+				return true, nil, fmt.Errorf("Error getting secret")
+			}
+
+			return false, &corev1.Secret{}, nil
+		})
+
+		// Make a new controller.
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos(tokens),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithNamespace(tenantNamespace),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		// Set the mock client set as the return value for the factory.
+		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		// Expect a token to have been generated. This happens asynchronously, so we need
+		// to wait for the controller to finish processing.
+		secretCreated := func(ns, name string) bool {
+			_, err = mockK8sClient.CoreV1().Secrets(ns).Get(ctx, name, v1.GetOptions{})
+			return err == nil
+		}
+
+		require.Eventually(t, func() bool {
+			return secretCreated("ns-a", "secret-a-testissuer-token")
+		}, 5*time.Minute, 100*time.Millisecond)
+		require.Eventually(t, func() bool {
+			return secretCreated("ns-c", "secret-c-testissuer-token")
+		}, 5*time.Second, 100*time.Millisecond)
+		require.Eventually(t, func() bool {
+			return !secretCreated("ns-b", "failing-secret-b-testissuer-token")
+		}, 5*time.Second, 100*time.Millisecond)
+
+	})
 }
 
 func TestMultiTenant(t *testing.T) {
