@@ -16,10 +16,7 @@ package globalpolicy
 
 import (
 	"context"
-	"github.com/projectcalico/calico/apiserver/pkg/rbac"
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/util"
+
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -30,6 +27,11 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/util"
 )
 
 // rest implements a RESTStorage for API services against etcd

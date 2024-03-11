@@ -18,6 +18,7 @@ package stagednetworkpolicy
 
 import (
 	"context"
+
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"

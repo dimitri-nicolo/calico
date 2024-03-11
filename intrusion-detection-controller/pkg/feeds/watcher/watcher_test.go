@@ -39,11 +39,7 @@ func TestWatcher_processQueue(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-<<<<<<< HEAD
 	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
-=======
-	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, 1).(*watcher)
->>>>>>> Add field value to es query
 
 	g.Expect(w).ShouldNot(BeNil())
 
