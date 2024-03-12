@@ -87,10 +87,6 @@ promotions:
     pipeline_file: push-images/deep-packet-inspection.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push dex images
-    pipeline_file: push-images/dex.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push egress-gateway images
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
@@ -180,6 +176,10 @@ promotions:
     pipeline_file: push-images/third_party/alertmanager.yml
     auto_promote:
       when: "branch =~ 'master|release-.*'"
+  - name: Push third-party dex images
+    pipeline_file: push-images/third_party/dex.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push third-party eck-operator images
     pipeline_file: push-images/third_party/eck-operator.yml
     auto_promote:
@@ -921,26 +921,6 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: dex
-  run:
-    when: "false or change_in(['/*', '/dex/', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd dex
-    jobs:
-      - name: dex tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: egress-gateway
   run:
     when: "false or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1398,6 +1378,26 @@ blocks:
               - arm64
         commands:
           - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+- name: dex
+  run:
+    when: "false or change_in(['/*', '/third_party/dex/', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/dex
+    jobs:
+      - name: dex tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: eck-operator
   run:
     when: "false or change_in(['/third_party/eck-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
