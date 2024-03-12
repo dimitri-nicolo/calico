@@ -37,6 +37,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/security"
+
 	"github.com/projectcalico/calico/felix/buildinfo"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
@@ -65,7 +67,6 @@ import (
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	lclogutils "github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -756,9 +757,13 @@ configRetry:
 		gaugeHost.Set(1)
 		prometheus.MustRegister(gaugeHost)
 		dp.ConfigurePrometheusMetrics(configParams)
-		go metricsserver.ServePrometheusMetricsForever(
+		go security.ServePrometheusMetricsForever(
+			prometheus.DefaultGatherer,
 			configParams.PrometheusMetricsHost,
 			configParams.PrometheusMetricsPort,
+			configParams.PrometheusMetricsCertFile,
+			configParams.PrometheusMetricsKeyFile,
+			configParams.PrometheusMetricsCAFile,
 		)
 	}
 

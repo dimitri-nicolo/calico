@@ -56,7 +56,6 @@ import (
 	"github.com/projectcalico/calico/felix/wireguard"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
-	"github.com/projectcalico/calico/libcalico-go/lib/security"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -591,13 +590,4 @@ func ConfigurePrometheusMetrics(configParams *config.Config) {
 			prometheus.Unregister(wireguard.MustNewWireguardMetrics())
 		}
 	}
-
-	err := security.ServePrometheusMetrics(
-		prometheus.DefaultGatherer,
-		"",
-		configParams.PrometheusMetricsPort,
-		configParams.PrometheusMetricsCertFile,
-		configParams.PrometheusMetricsKeyFile,
-		configParams.PrometheusMetricsCAFile,
-	)
 }

@@ -31,7 +31,6 @@ import (
 	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
-	"github.com/projectcalico/calico/libcalico-go/lib/security"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -91,12 +90,4 @@ func ConfigurePrometheusMetrics(configParams *config.Config) {
 			prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 		}
 	}
-	err := security.ServePrometheusMetrics(
-		prometheus.DefaultGatherer,
-		"",
-		configParams.PrometheusMetricsPort,
-		configParams.PrometheusMetricsCertFile,
-		configParams.PrometheusMetricsKeyFile,
-		configParams.PrometheusMetricsCAFile,
-	)
 }

@@ -24,13 +24,12 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
 	"github.com/docopt/docopt-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	log "github.com/sirupsen/logrus"
-	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
-	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/bgpsyncer"
@@ -40,8 +39,10 @@ import (
 	remotecluster "github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/remotecluster"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/tunnelipsyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator/clients"
 	"github.com/projectcalico/calico/typha/pkg/buildinfo"
@@ -445,9 +446,13 @@ func (t *TyphaDaemon) Start(cxt context.Context) {
 	if t.ConfigParams.PrometheusMetricsEnabled {
 		log.Info("Prometheus metrics enabled.  Starting server.")
 		t.configurePrometheusMetrics()
-		go metricsserver.ServePrometheusMetricsForever(
+		go security.ServePrometheusMetricsForever(
+			prometheus.DefaultGatherer,
 			t.ConfigParams.PrometheusMetricsHost,
 			t.ConfigParams.PrometheusMetricsPort,
+			t.ConfigParams.PrometheusMetricsCertFile,
+			t.ConfigParams.PrometheusMetricsKeyFile,
+			t.ConfigParams.PrometheusMetricsCAFile,
 		)
 	}
 
