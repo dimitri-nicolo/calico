@@ -1,7 +1,7 @@
 # Copyright 2024 Tigera Inc. All rights reserved.
-include ../metadata.mk
+include ../../metadata.mk
 
-PACKAGE_NAME ?= github.com/projectcalico/calico/dex
+PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/dex
 
 #############################################
 # Env vars related to packaging and releasing
@@ -12,11 +12,11 @@ BUILD_IMAGES ?= $(DEX_IMAGE)
 UPSTREAM_DEX_VERSION = v2.37.0
 
 ###############################################################################
-# Include ../lib.Makefile
+# Include lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-include ../lib.Makefile
+include ../../lib.Makefile
 
 ###############################################################################
 # BUILD BINARY

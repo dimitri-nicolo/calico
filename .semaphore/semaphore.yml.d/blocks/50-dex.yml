@@ -1,0 +1,20 @@
+- name: dex
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/third_party/dex/', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/dex
+    jobs:
+      - name: dex tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
