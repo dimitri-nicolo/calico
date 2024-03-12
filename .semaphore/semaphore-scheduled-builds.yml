@@ -75,12 +75,12 @@ promotions:
     pipeline_file: push-images/node.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push compliance images
-    pipeline_file: push-images/compliance.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push cni-plugin images
     pipeline_file: push-images/cni-plugin.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push compliance images
+    pipeline_file: push-images/compliance.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push deep-packet-inspection images
@@ -414,7 +414,7 @@ blocks:
           - ../.semaphore/run-and-monitor ci.log make ci
 - name: crypto
   run:
-    when: "true or change_in(['/*', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/lib.Makefile', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
@@ -487,6 +487,25 @@ blocks:
         commands:
           - ../.semaphore/run-and-monitor static-checks.log make static-checks
 
+- name: "Felix: Build - native arm64 runner"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - "Felix: Build"
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    prologue:
+      commands:
+        - cd felix
+        - cache restore go-pkg-cache
+        - cache restore go-mod-cache
+    jobs:
+      - name: Build binary
+        commands:
+          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
+
 - name: "Felix: Build Windows binaries"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -501,7 +520,7 @@ blocks:
 
 - name: "Felix: Windows FV capz"
   run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - "Felix: Build Windows binaries"
   task:
@@ -604,7 +623,7 @@ blocks:
   run:
     when: "true or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
-    - "Felix: Build"
+    - Prerequisites
   task:
     prologue:
       commands:

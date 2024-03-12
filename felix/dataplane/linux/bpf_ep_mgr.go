@@ -2695,7 +2695,6 @@ func (d *bpfEndpointManagerDataplane) configureTCAttachPoint(policyDirection Pol
 	}
 
 	ap.ToOrFrom = toOrFrom
-	ap.IPv6Enabled = (d.ipFamily == proto.IPVersion_IPV6)
 	return ap
 }
 

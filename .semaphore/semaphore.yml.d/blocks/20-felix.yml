@@ -40,6 +40,25 @@
         commands:
           - ../.semaphore/run-and-monitor static-checks.log make static-checks
 
+- name: "Felix: Build - native arm64 runner"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/linseed/pkg/apis/v1/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - "Felix: Build"
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    prologue:
+      commands:
+        - cd felix
+        - cache restore go-pkg-cache
+        - cache restore go-mod-cache
+    jobs:
+      - name: Build binary
+        commands:
+          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
+
 - name: "Felix: Build Windows binaries"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -54,7 +73,7 @@
 
 - name: "Felix: Windows FV capz"
   run:
-    when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - "Felix: Build Windows binaries"
   task:
@@ -157,7 +176,7 @@
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/api/', '/linseed/pkg/apis/v1/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
-    - "Felix: Build"
+    - Prerequisites
   task:
     prologue:
       commands:
