@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,9 +61,11 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	lclogutils "github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -477,6 +479,10 @@ configRetry:
 		simulateDataRace()
 	}
 
+	if configParams.DebugPort != 0 {
+		debugserver.StartDebugPprofServer(configParams.DebugHost, configParams.DebugPort)
+	}
+
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
 	// one.
 	var dpDriver dp.DataplaneDriver
@@ -749,7 +755,11 @@ configRetry:
 		})
 		gaugeHost.Set(1)
 		prometheus.MustRegister(gaugeHost)
-		go dp.ServePrometheusMetrics(configParams)
+		dp.ConfigurePrometheusMetrics(configParams)
+		go metricsserver.ServePrometheusMetricsForever(
+			configParams.PrometheusMetricsHost,
+			configParams.PrometheusMetricsPort,
+		)
 	}
 
 	// Register signal handlers to dump memory/CPU profiles.

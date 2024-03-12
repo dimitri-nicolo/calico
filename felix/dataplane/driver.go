@@ -24,17 +24,17 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
-	"time"
 
+	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/vishvananda/netlink"
 	coreV1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/clock"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
-	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
@@ -57,8 +57,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/calico/libcalico-go/lib/security"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -576,40 +574,30 @@ func SupportsBPF() error {
 	return bpf.SupportsBPFDataplane()
 }
 
-func ServePrometheusMetrics(configParams *config.Config) {
-	for {
-		log.WithFields(log.Fields{
-			"host": configParams.PrometheusMetricsHost,
-			"port": configParams.PrometheusMetricsPort,
-		}).Info("Starting prometheus metrics endpoint")
-		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled && configParams.PrometheusWireGuardMetricsEnabled {
-			log.Info("Including Golang, Process and WireGuard metrics")
-		} else {
-			if !configParams.PrometheusGoMetricsEnabled {
-				log.Info("Discarding Golang metrics")
-				prometheus.Unregister(collectors.NewGoCollector())
-			}
-			if !configParams.PrometheusProcessMetricsEnabled {
-				log.Info("Discarding process metrics")
-				prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-			}
-			if !configParams.PrometheusWireGuardMetricsEnabled || (!configParams.WireguardEnabled && !configParams.WireguardEnabledV6) {
-				log.Info("Discarding WireGuard metrics")
-				prometheus.Unregister(wireguard.MustNewWireguardMetrics())
-			}
+func ConfigurePrometheusMetrics(configParams *config.Config) {
+	if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled && configParams.PrometheusWireGuardMetricsEnabled {
+		log.Info("Including Golang, Process and WireGuard metrics")
+	} else {
+		if !configParams.PrometheusGoMetricsEnabled {
+			log.Info("Discarding Golang metrics")
+			prometheus.Unregister(collectors.NewGoCollector())
 		}
-
-		err := security.ServePrometheusMetrics(
-			prometheus.DefaultGatherer,
-			"",
-			configParams.PrometheusMetricsPort,
-			configParams.PrometheusMetricsCertFile,
-			configParams.PrometheusMetricsKeyFile,
-			configParams.PrometheusMetricsCAFile,
-		)
-
-		log.WithError(err).Error(
-			"Prometheus metrics endpoint failed, trying to restart it...")
-		time.Sleep(1 * time.Second)
+		if !configParams.PrometheusProcessMetricsEnabled {
+			log.Info("Discarding process metrics")
+			prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+		}
+		if !configParams.PrometheusWireGuardMetricsEnabled || (!configParams.WireguardEnabled && !configParams.WireguardEnabledV6) {
+			log.Info("Discarding WireGuard metrics")
+			prometheus.Unregister(wireguard.MustNewWireguardMetrics())
+		}
 	}
+
+	err := security.ServePrometheusMetrics(
+		prometheus.DefaultGatherer,
+		"",
+		configParams.PrometheusMetricsPort,
+		configParams.PrometheusMetricsCertFile,
+		configParams.PrometheusMetricsKeyFile,
+		configParams.PrometheusMetricsCAFile,
+	)
 }
