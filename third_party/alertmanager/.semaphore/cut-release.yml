@@ -18,6 +18,7 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - retry git fetch --unshallow
+      - cd third_party/alertmanager
 
 blocks:
   - name: "Cut Release"
