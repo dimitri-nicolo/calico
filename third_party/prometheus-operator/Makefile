@@ -32,21 +32,15 @@ build: bin/prometheus-operator-$(ARCH) bin/prometheus-config-reloader-$(ARCH)
 
 .PHONY: bin/prometheus-config-reloader-$(ARCH)
 bin/prometheus-config-reloader-$(ARCH): $(PROMETHEUS_OPERATOR_DOWNLOADED)
-	$(DOCKER_RUN) \
-		-e CGO_ENABLED=0 \
-		$(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			cd prometheus-operator && \
-			go build -o ../$@ -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" cmd/prometheus-config-reloader/main.go'
+			CGO_ENABLED=0 go build -C prometheus-operator -o ../$@ -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" cmd/prometheus-config-reloader/main.go'
 
 .PHONY: bin/prometheus-operator-$(ARCH)
 bin/prometheus-operator-$(ARCH): $(PROMETHEUS_OPERATOR_DOWNLOADED)
-	$(DOCKER_RUN) \
-		-e CGO_ENABLED=0 \
-		$(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			cd prometheus-operator && \
-			go build -o ../$@ -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" cmd/operator/main.go'
+			CGO_ENABLED=0 go build -C prometheus-operator -o ../$@ -v -buildvcs=false -ldflags "$(LDFLAGS) -s -w" cmd/operator/main.go'
 
 .PHONY: clean
 clean:

@@ -188,6 +188,10 @@ promotions:
     pipeline_file: push-images/third_party/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push third-party fluentd images
+    pipeline_file: push-images/third_party/fluentd.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push third-party prometheus-operator images
     pipeline_file: push-images/third_party/prometheus-operator.yml
     auto_promote:
@@ -1438,6 +1442,40 @@ blocks:
               - arm64
         commands:
           - ../../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
+- name: fluentd
+  run:
+    when: "true or change_in(['/third_party/fluentd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    prologue:
+      commands:
+        - cd third_party/fluentd
+    jobs:
+      - name: fluentd tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+
+- name: fluentd - native arm64 runner
+  run:
+    when: "true or change_in(['/third_party/fluentd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - fluentd
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    prologue:
+      commands:
+        - cd third_party/fluentd
+    jobs:
+      - name: Build image
+        commands:
+          - ../../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
 - name: prometheus-operator
   run:
     when: "true or change_in(['/third_party/prometheus-operator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
