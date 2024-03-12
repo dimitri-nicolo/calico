@@ -5,6 +5,7 @@ package token
 import (
 	"context"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,7 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -572,6 +573,7 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 		return nil
 	}
 
+	var tokenErrors []error
 	for _, user := range c.userInfos {
 		log = log.WithField("service", user.Name)
 
@@ -579,7 +581,8 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 		tokenName := c.tokenNameForService(user.Name)
 		if update, err := c.needsUpdate(log, managedClient, mc.Name, tokenName, user.Name, user.Namespace); err != nil {
 			log.WithError(err).Error("error checking token")
-			return err
+			tokenErrors = append(tokenErrors, err)
+			continue
 		} else if !update {
 			log.Debug("Token does not need to be updated")
 			continue
@@ -588,7 +591,9 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 		// Token needs to be created or updated.
 		token, err := c.createToken(c.tenant, mc.Name, user)
 		if err != nil {
-			return err
+			log.WithError(err).Error("error creating token")
+			tokenErrors = append(tokenErrors, err)
+			continue
 		}
 
 		secret := corev1.Secret{
@@ -602,12 +607,14 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 		}
 
 		if err = resource.WriteSecretToK8s(managedClient, resource.CopySecret(&secret)); err != nil {
-			return err
+			log.WithError(err).Error("error copying secrets")
+			tokenErrors = append(tokenErrors, err)
+			continue
 		}
 		log.WithField("name", secret.Name).Info("Created/updated token secret")
 	}
 
-	return nil
+	return errors.Join(tokenErrors...)
 }
 
 func (c *controller) reconcileSecretsForCluster(mc *v3.ManagedCluster, secretsToCopy []corev1.Secret, managedClient k8s.ClientSet) error {
@@ -659,10 +666,10 @@ func (c *controller) needsUpdate(log *logrus.Entry, cs kubernetes.Interface, mcN
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	cm, err := cs.CoreV1().Secrets(namespace).Get(ctx, tokenName, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		// Error querying the token.
 		return false, err
-	} else if errors.IsNotFound(err) {
+	} else if k8serrors.IsNotFound(err) {
 		// No token exists.
 		return true, nil
 	} else {

@@ -18,7 +18,7 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - retry git fetch --unshallow
-      - cd dex
+      - cd third_party/dex
 
 blocks:
   - name: 'Test Cut Release'

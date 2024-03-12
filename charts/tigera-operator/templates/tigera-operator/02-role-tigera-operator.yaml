@@ -122,6 +122,7 @@ rules:
       - logstorages
       - logstorages/status
       - managementclusterconnections
+      - managementclusterconnections/status
       - managementclusters
       - managers
       - managers/status
