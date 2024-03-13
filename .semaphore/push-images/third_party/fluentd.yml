@@ -15,8 +15,13 @@ global_job_config:
   secrets:
     - name: docker-hub
     - name: google-service-account-for-gcr
+    - name: private-repo
   prologue:
     commands:
+      # Correct permissions since they are too open by default:
+      - chmod 0600 ~/.keys/*
+      # Add the key to the ssh agent:
+      - ssh-add ~/.keys/*
       - checkout
       # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
       # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given
@@ -72,6 +77,8 @@ blocks:
     skip:
       when: "branch !~ '.+'"
     task:
+      secrets:
+        - name: banzai-secrets
       prologue:
         commands:
           # Login to docker in order to pull images.
@@ -85,6 +92,7 @@ blocks:
           - tar cvzf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
           - artifact push job --expire-in 2w ~/windows-tf.tar.gz
           - popd
+          - cd third_party/fluentd
       epilogue:
         always:
           commands:
@@ -104,4 +112,4 @@ blocks:
       jobs:
         - name: Publish Windows manifests
           commands:
-            - CONFIRM=true WINDOWS_RELEASE=true make push-windows-manifest
+            - CONFIRM=true WINDOWS_RELEASE=true make -C third_party/fluentd push-windows-manifest
