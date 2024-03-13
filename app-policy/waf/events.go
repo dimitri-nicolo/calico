@@ -128,14 +128,23 @@ func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog 
 	var srcEp, dstEp *linseedv1.WAFEndpoint
 	p.store.Read(
 		func(ps *policystore.PolicyStore) {
+			log.WithFields(log.Fields{
+				"srcIP": entry.srcIP,
+				"dstIP": entry.destIP,
+			}).Debug("Looking up endpoint keys")
 			src, dst, err := checker.LookupEndpointKeysFromSrcDst(
 				ps,
 				entry.srcIP,
 				entry.destIP,
 			)
 			if err != nil {
+				log.WithError(err).Debug("Failed to lookup endpoint keys")
 				return
 			}
+			log.WithFields(log.Fields{
+				"src": src,
+				"dst": dst,
+			}).Debug("Found endpoint keys")
 
 			srcNamespace, srcName := extractFirstWepNameAndNamespace(src)
 			dstNamespace, dstName := extractFirstWepNameAndNamespace(dst)
