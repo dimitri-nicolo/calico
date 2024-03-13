@@ -178,7 +178,7 @@ func GetK8sDatastoreInfra(index K8sInfraIndex, opts ...CreateOption) (*K8sDatast
 			ginkgo.Fail(fmt.Sprintf("Previous test didn't clean up the infra: %s", K8sInfra[index].runningTest))
 		}
 
-		resetAll := temp.ipv6 != kds.ipv6
+		resetAll := temp.ipv6 != kds.ipv6 || temp.serviceClusterIPRange != kds.serviceClusterIPRange
 
 		if !resetAll {
 			kds.EnsureReady()
