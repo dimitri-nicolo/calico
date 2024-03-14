@@ -631,9 +631,8 @@ blocks:
   task:
     prologue:
       commands:
-        - cd $HOME
-        - tar -czf calico-private.tar.gz calico-private
-        - cd calico-private/felix
+        - tar --exclude='.go-pkg-cache' -czf $HOME/calico-private.tar.gz $HOME/$SEMAPHORE_GIT_DIR
+        - cd felix
         - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
         - export ZONE=us-east4-c
