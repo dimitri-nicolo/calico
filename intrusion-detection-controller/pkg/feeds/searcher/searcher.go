@@ -77,7 +77,7 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
 	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
 		log.Debug("Check if any flow logs have been generated with a suspicious IP")
-		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, d.geoDB, getCachedFeedResponse.GlobalThreatFeed)
+		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, d.geoDB, d.cachedEvents.maxTTL, getCachedFeedResponse.GlobalThreatFeed)
 		if err != nil {
 			log.WithError(err).Error("query failed")
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
@@ -109,7 +109,7 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	}
 }
 
-func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events, geoDB geodb.GeoDatabase, maxLinseedTimeSkew int) Searcher {
+func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events, geoDB geodb.GeoDatabase, maxLinseedTimeSkew time.Duration) Searcher {
 	return &searcher{
 		feed:         feed.DeepCopy(),
 		period:       period,
@@ -221,11 +221,10 @@ type EventCache struct {
 	maxTTL time.Duration
 }
 
-func NewEventCache(maxTTL int) *EventCache {
-	ttl := maxTTL * int(time.Minute)
+func NewEventCache(maxTTL time.Duration) *EventCache {
 	return &EventCache{
 		cache:  make(map[cacheKey]time.Time),
-		maxTTL: time.Duration(ttl),
+		maxTTL: maxTTL,
 	}
 }
 

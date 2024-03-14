@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -59,7 +60,7 @@ const (
 
 	DefaultConfigMapNamespace = TigeraIntrusionDetectionNamespace
 	DefaultSecretsNamespace   = TigeraIntrusionDetectionNamespace
-	DefaultMaxLinseedTimeSkew = 1
+	DefaultMaxLinseedTimeSkew = 1 // minute
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -74,7 +75,7 @@ func main() {
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.IntVar(&healthzSockPort, "port", health.DefaultHealthzSockPort, "Healthz port")
-	flag.IntVar(&maxLinseedTimeSkew, "maxttl", DefaultMaxLinseedTimeSkew, "Max time for time skew with linseed")
+	flag.IntVar(&maxLinseedTimeSkew, "maxLinseedTimeSkew", DefaultMaxLinseedTimeSkew, "Max time for time skew with linseed")
 	// enable klog flags for API call logging (to stderr).
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
@@ -192,6 +193,8 @@ func main() {
 	}
 	defer g.Close()
 
+	maxLinseedTimeSkewiDuration := time.Duration(maxLinseedTimeSkew * int(time.Minute))
+
 	s := feedsWatcher.NewWatcher(
 		kubeClientSet.CoreV1().ConfigMaps(configMapNamespace),
 		rbac.RestrictedSecretsClient{
@@ -202,7 +205,7 @@ func main() {
 		eip,
 		edn,
 		&http.Client{},
-		e, e, sIP, sDN, e, g, maxLinseedTimeSkew)
+		e, e, sIP, sDN, e, g, maxLinseedTimeSkewiDuration)
 
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 

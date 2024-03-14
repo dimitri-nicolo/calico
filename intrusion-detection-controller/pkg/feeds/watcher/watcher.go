@@ -60,7 +60,7 @@ type watcher struct {
 	feedWatchersMutex      sync.RWMutex
 	cancel                 context.CancelFunc
 	geoDB                  geodb.GeoDatabase
-	maxLinseedTimeSkew     int
+	maxLinseedTimeSkew     time.Duration
 
 	// Unfortunately, cache.Controller callbacks can't accept
 	// a context, so we need to store this on the watcher so we can pass it
@@ -96,7 +96,7 @@ func NewWatcher(
 	suspiciousDomains storage.SuspiciousSet,
 	events storage.Events,
 	geodb geodb.GeoDatabase,
-	maxLinseedTimeSkew int,
+	maxLinseedTimeSkew time.Duration,
 ) Watcher {
 	feedWatchers := map[string]*feedWatcher{}
 

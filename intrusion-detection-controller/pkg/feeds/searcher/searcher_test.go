@@ -57,27 +57,24 @@ func TestCacheEvents(t *testing.T) {
 
 	processEvents := []v1.Event{e1, e2, e3}
 
-	cachedEvents := []v1.Event{e1, e2}
-
 	f := util.NewGlobalThreatFeedFromName("mock")
-	suspiciousIP := &storage.MockSuspicious{
+	suspiciousIP := storage.MockSuspicious{
 		Error:                nil,
 		LastSuccessfulSearch: time.Now(),
 		SetHash:              "",
 	}
 	suspiciousIP.Events = append(suspiciousIP.Events, processEvents...)
-	eventsDB := &storage.MockEvents{ErrorIndex: -1, Events: []v1.Event{}}
-	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, 1).(*searcher)
+	eventsDB := storage.MockEvents{ErrorIndex: -1, Events: []v1.Event{}}
+	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, time.Duration(5*time.Minute)).(*searcher)
 
-	for _, e := range cachedEvents {
-		uut.cachedEvents.Add(&e)
-	}
 	feedCacher := cacher.NewMockGlobalThreatFeedCache()
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 	uut.doSearch(ctx, feedCacher)
 
-	g.Expect(eventsDB.Events).Should(ConsistOf([]v1.Event{e3}), "1 Event should be in DB")
+	g.Expect(uut.cachedEvents.Contains(&e1)).Should(Equal(true), "First event should be cached")
+	g.Expect(uut.cachedEvents.Contains(&e2)).Should(Equal(true), "Second event should be cached")
+	g.Expect(uut.cachedEvents.Contains(&e3)).Should(Equal(true), "Third event should be cached")
 }
 
 // TestDoIPSetNoResults tests the case where no results are returned

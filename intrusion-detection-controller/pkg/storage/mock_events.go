@@ -18,7 +18,7 @@ type MockEvents struct {
 	Events     []v1.Event
 }
 
-func (m *MockEvents) PutSecurityEventWithID(ctx context.Context, l []v1.Event) error {
+func (m MockEvents) PutSecurityEventWithID(ctx context.Context, l []v1.Event) error {
 	if m.ErrorIndex >= 0 {
 		m.Events = copyWithSkip(m.ErrorIndex, l)
 		return errors.New("PutSecurityEventWithID error")
@@ -44,14 +44,14 @@ func copyWithSkip(index int, values []v1.Event) []v1.Event {
 	return copyOfEvents
 }
 
-func (m *MockEvents) GetSecurityEvents(ctx context.Context, p client.ListPager[v1.Event]) <-chan *lmaAPI.EventResult {
+func (m MockEvents) GetSecurityEvents(ctx context.Context, p client.ListPager[v1.Event]) <-chan *lmaAPI.EventResult {
 	return nil
 }
 
-func (m *MockEvents) PutForwarderConfig(ctx context.Context, f *ForwarderConfig) error {
+func (m MockEvents) PutForwarderConfig(ctx context.Context, f *ForwarderConfig) error {
 	return nil
 }
 
-func (m *MockEvents) GetForwarderConfig(ctx context.Context) (*ForwarderConfig, error) {
+func (m MockEvents) GetForwarderConfig(ctx context.Context) (*ForwarderConfig, error) {
 	return nil, nil
 }

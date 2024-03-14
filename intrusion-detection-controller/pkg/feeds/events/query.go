@@ -20,10 +20,10 @@ type ipSetQuerier struct {
 	storage.SetQuerier
 }
 
-func (i ipSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
+func (i ipSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, maxLinseedTimeSkew time.Duration, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
 	var results []v1.Event
 	lastSuccessfulSearch := time.Now()
-	iter, ipSetHash, err := i.QueryIPSet(ctx, geoDB, feed)
+	iter, ipSetHash, err := i.QueryIPSet(ctx, geoDB, maxLinseedTimeSkew, feed)
 	if err != nil {
 		return nil, time.Time{}, ipSetHash, err
 	}
@@ -46,7 +46,7 @@ type domainNameSetQuerier struct {
 	storage.SetQuerier
 }
 
-func (d domainNameSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
+func (d domainNameSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, maxLinseedTimeSkew time.Duration, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
 	set, err := d.GetDomainNameSet(ctx, feed.Name)
 	if err != nil {
 		return nil, time.Time{}, "", err
