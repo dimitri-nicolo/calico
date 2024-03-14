@@ -11,9 +11,6 @@ SHELL := powershell.exe
 .SHELLFLAGS := -NoProfile -Command
 endif
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_FLUENTD_DOCKER_PROJECT_ID)
-
 # If this is a windows release we're not building the images and they will all be "cut" together
 ifdef WINDOWS_RELEASE
 FLUENTD_IMAGE=fluentd-windows
@@ -43,6 +40,8 @@ $(error Unknown WINDOWS_BUILD_VERSION)
 endif
 
 ARCHES ?=windows-$(WINDOWS_VERSION)
+
+DEV_REGISTRIES = gcr.io/unique-caldron-775/cnx/tigera
 else
 FLUENTD_IMAGE ?= fluentd
 ARCHES        ?= amd64 arm64

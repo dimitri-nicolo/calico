@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish fluentd images
+name: Publish third-party fluentd images
 agent:
   machine:
     type: e1-standard-2

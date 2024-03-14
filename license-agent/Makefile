@@ -2,9 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/license-agent
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LICENSE_AGENT_PROJECT_ID)
-
 LICENSE_AGENT_IMAGE        ?=license-agent
 BUILD_IMAGES               ?=$(LICENSE_AGENT_IMAGE)
 

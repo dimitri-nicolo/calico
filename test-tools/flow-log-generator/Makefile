@@ -1,7 +1,6 @@
 include ../../metadata.mk
 
 PACKAGE_NAME?=github.com/projectcalico/calico/test-tools/flow-log-generator
-SEMAPHORE_PROJECT_ID=""
 
 IMAGE_NAME  ?=flow-log-generator
 BUILD_IMAGES          ?=$(IMAGE_NAME)

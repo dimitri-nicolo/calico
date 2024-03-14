@@ -1,7 +1,6 @@
 include ../metadata.mk
 
 PACKAGE_NAME?=github.com/projectcalico/calico/egress-gateway
-SEMAPHORE_PROJECT_ID=$(SEMAPHORE_EGRESS_GATEWAY_PROJECT_ID)
 
 EGRESS_GATEWAY_IMAGE  ?=egress-gateway
 EGRESS_GATEWAY_TESTING_IMAGE ?=egress-gateway-testing
