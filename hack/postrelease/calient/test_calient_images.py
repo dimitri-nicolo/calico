@@ -19,8 +19,8 @@ def versions_data():
 def operator_images():
     """
     Take the parsed version data from versions.yaml
-    and create a list of images (including FIPS images
-    and the operator image) and return that.
+    and create a list of images (including the operator
+    image) and return that.
     """
     yaml_data = versions_data()
     components = yaml_data["components"]
@@ -31,8 +31,6 @@ def operator_images():
     for component in components.values():
         if "image" in component:
             images_list.append((component["image"], component["version"]))
-            if "fips-image" in component:
-                images_list.append((component["image"], component["version"] + "-fips"))
     return sorted(images_list)
 
 

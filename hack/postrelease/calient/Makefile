@@ -31,7 +31,9 @@ require-var-%:
 require-vars-%:
 	$(foreach var,$(subst -, ,$*),$(call require_var,$(var)))
 
-install_rpm:
+install_rpm: /usr/bin/rpmspec
+
+/usr/bin/rpmspec:
 	$(info *** Installing apt package `rpm` (for `rpmspec`))
 	@apt-get -qq update
 	@apt-get -qq install --no-install-recommends rpm > /dev/null
