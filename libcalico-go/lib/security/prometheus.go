@@ -45,7 +45,7 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int,
 		}
 		err = srv.ListenAndServeTLS(certFile, keyFile)
 	} else {
-		err = http.ListenAndServe(fmt.Sprintf("[%v]:%v", host, port), handler)
+		err = http.ListenAndServe(fmt.Sprintf("[%v]:%v", host, port), mux)
 	}
 	return
 }
