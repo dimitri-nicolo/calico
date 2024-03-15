@@ -60,6 +60,12 @@ int calico_tc_main(struct __sk_buff *skb)
 	 */
 	skb->mark = SKB_MARK;
 #endif
+
+	if (CALI_F_LO && CALI_F_TO_HOST) {
+		/* Do nothing, it is a packet that just looped around. */
+		return TC_ACT_UNSPEC;
+	}
+
 	/* Optimisation: if another BPF program has already pre-approved the packet,
 	 * skip all processing. */
 	if (CALI_F_FROM_HOST && skb->mark == CALI_SKB_MARK_BYPASS) {
@@ -271,6 +277,16 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 	calico_dns_check(ctx);
 
 	if (HAS_HOST_CONFLICT_PROG &&
+			/* Do not do conflict resolution for host-self loop. Unlike with
+			 * traffic to another backend, we are not able to tell traffic to
+			 * self via service from straight to self.
+			 */
+			!CALI_F_LO &&
+			/* Do conflict resolution on other device if it clashes with
+			 * traffic looped via the NAT_IF but it hasn't been seen yet and
+			 * is not looped via the NAT_IF, that is, it is from host, but not
+			 * to a service.
+			 */
 			(ctx->state->ct_result.flags & CALI_CT_FLAG_VIA_NAT_IF) &&
 			!(ctx->skb->mark & (CALI_SKB_MARK_FROM_NAT_IFACE_OUT | CALI_SKB_MARK_SEEN))) {
 		CALI_DEBUG("Host source SNAT conflict\n");
