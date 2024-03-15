@@ -17,6 +17,7 @@ type EventsInterface interface {
 	Create(context.Context, []v1.Event) (*v1.BulkResponse, error)
 	UpdateDismissFlag(context.Context, []v1.Event) (*v1.BulkResponse, error)
 	Delete(context.Context, []v1.Event) (*v1.BulkResponse, error)
+	Statistics(context.Context, v1.EventStatisticsParams) (*v1.EventStatistics, error)
 }
 
 // Events implements EventsInterface.
@@ -133,6 +134,26 @@ func (f *events) Delete(ctx context.Context, events []v1.Event) (*v1.BulkRespons
 		Cluster(f.clusterID).
 		BodyJSON(body).
 		ContentType(rest.ContentTypeMultilineJSON).
+		Do(ctx).
+		Into(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (f *events) Statistics(ctx context.Context, params v1.EventStatisticsParams) (*v1.EventStatistics, error) {
+	body, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := v1.EventStatistics{}
+	err = f.restClient.Post().
+		Path("/events/statistics").
+		Cluster(f.clusterID).
+		BodyJSON(body).
+		ContentType(rest.ContentTypeJSON).
 		Do(ctx).
 		Into(&resp)
 	if err != nil {

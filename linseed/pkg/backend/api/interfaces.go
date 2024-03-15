@@ -131,6 +131,9 @@ type EventsBackend interface {
 
 	// Delete the given events.
 	Delete(context.Context, ClusterInfo, []v1.Event) (*v1.BulkResponse, error)
+
+	// Statistics for matching events.
+	Statistics(context.Context, ClusterInfo, *v1.EventStatisticsParams) (*v1.EventStatistics, error)
 }
 
 // RuntimeBackend defines the interface for interacting with runtime reports.

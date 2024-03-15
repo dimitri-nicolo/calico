@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tidwall/gjson"
+
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
@@ -17,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
@@ -547,6 +550,338 @@ func TestSelectorMaxLength(t *testing.T) {
 			testEventsFiltering(t, tt.numExceptions, tt.expectedError)
 		})
 	}
+}
+
+func TestEventsStatistics(t *testing.T) {
+	events := []v1.Event{
+		{
+			Time:            v1.NewEventTimestamp(time.Date(2024, 2, 20, 10, 32, 55, 0, time.UTC).Unix()),
+			Description:     "A sample Security Event",
+			Name:            "Proc File Access",
+			Origin:          "Proc File Access",
+			Severity:        100,
+			Type:            "runtime_security",
+			Dismissed:       false,
+			Host:            "test-host",
+			SourceName:      "my-pod-123",
+			SourceNameAggr:  "my-pod",
+			SourceNamespace: "test-ns",
+			AttackVector:    "Process",
+			MitreTactic:     "Access",
+			MitreIDs:        &[]string{"T1003.007", "T1057", "T1083"},
+			Mitigations:     &[]string{"Do not expose proc file system to your containers.", "Do not run containers as root."},
+		},
+		{
+			Time:         v1.NewEventTimestamp(time.Date(2024, 2, 20, 11, 32, 55, 0, time.UTC).Unix()),
+			Description:  "A sample WAF Security Event",
+			Name:         "WAF Event",
+			Origin:       "waf-new-alert-rule-info",
+			Severity:     100,
+			Type:         "global_alert",
+			Dismissed:    false,
+			Host:         "test-host",
+			AttackVector: "Network",
+			MitreTactic:  "Access",
+			MitreIDs:     &[]string{"T1190"},
+			Mitigations:  &[]string{"Use WAF :)"},
+		},
+		{
+			Time:         v1.NewEventTimestamp(time.Date(2024, 2, 21, 11, 32, 55, 0, time.UTC).Unix()),
+			Description:  "A sample WAF Security Event",
+			Name:         "WAF Event",
+			Origin:       "waf-new-alert-rule-info",
+			Severity:     90,
+			Type:         "global_alert",
+			Dismissed:    false,
+			Host:         "test-host",
+			AttackVector: "Network",
+			MitreTactic:  "Access",
+			MitreIDs:     &[]string{"T1190"},
+			Mitigations:  &[]string{"Use WAF :)"},
+		},
+	}
+
+	createEvents := func(t *testing.T, clusterInfo bapi.ClusterInfo) {
+		// Create the event in ES.
+		resp, err := b.Create(ctx, clusterInfo, events)
+		require.NoError(t, err)
+		logrus.Warn(resp.Errors)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, len(events), resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, len(events), resp.Succeeded)
+
+		// Refresh the index.
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+	}
+
+	getJsonValues := func(src string, path string) []string {
+		values := []string{}
+		for _, value := range gjson.Get(src, path).Array() {
+			values = append(values, value.String())
+		}
+		return values
+	}
+
+	RunAllModes(t, "Test distinct values count", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		createEvents(t, clusterInfo)
+
+		params := &v1.EventStatisticsParams{
+			EventParams: v1.EventParams{
+				LogSelectionParams: v1.LogSelectionParams{
+					Selector: "NOT dismissed = true",
+				},
+			},
+			FieldValues: &v1.FieldValuesParam{
+				NameValues:            &v1.FieldValueParam{Count: true},
+				SeverityValues:        &v1.FieldValueParam{Count: true},
+				SourceNamespaceValues: &v1.FieldValueParam{Count: true},
+				DestNamespaceValues:   &v1.FieldValueParam{Count: true},
+				SourceNameValues:      &v1.FieldValueParam{Count: true},
+				DestNameValues:        &v1.FieldValueParam{Count: true},
+				AttackVectorValues:    &v1.FieldValueParam{Count: true},
+				MitreTacticValues:     &v1.FieldValueParam{Count: true},
+				MitreIDsValues:        &v1.FieldValueParam{Count: true},
+			},
+		}
+
+		r, e := b.Statistics(ctx, clusterInfo, params)
+		require.NoError(t, e)
+
+		bytes, e := json.Marshal(r)
+		require.NoError(t, e)
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.name"), []string{
+			gjson.Parse(`{"value":"WAF Event","count":2}`).String(),
+			gjson.Parse(`{"value":"Proc File Access","count":1}`).String(),
+		})
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.severity"), []string{
+			gjson.Parse(`{"value":90,"count":1}`).String(),
+			gjson.Parse(`{"value":100,"count":2}`).String(),
+		})
+
+		// source_namespace is only set on one event
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.source_namespace"), []string{
+			gjson.Parse(`{"value":"test-ns","count":1}`).String(),
+		})
+
+		// dest_namespace is not set on any event
+		require.Len(t, getJsonValues(string(bytes), "field_values.dest_namespace"), 0)
+
+		// source_name is only set on one event
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.source_name"), []string{
+			gjson.Parse(`{"value":"my-pod-123","count":1}`).String(),
+		})
+
+		// dest_name is not set on any event
+		require.Len(t, getJsonValues(string(bytes), "field_values.dest_name"), 0)
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.attack_vector"), []string{
+			gjson.Parse(`{"value":"Network","count":2}`).String(),
+			gjson.Parse(`{"value":"Process","count":1}`).String(),
+		})
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.mitre_tactic"), []string{
+			gjson.Parse(`{"value":"Access","count":3}`).String(),
+		})
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.mitre_ids"), []string{
+			gjson.Parse(`{"value":"T1190","count":2}`).String(),
+			gjson.Parse(`{"value":"T1003.007","count":1}`).String(),
+			gjson.Parse(`{"value":"T1057","count":1}`).String(),
+			gjson.Parse(`{"value":"T1083","count":1}`).String(),
+		})
+	})
+
+	tests := []struct {
+		name        string
+		params      *v1.EventStatisticsParams
+		expectError bool
+	}{
+		{"cannot sort by time", &v1.EventStatisticsParams{
+			EventParams: v1.EventParams{
+				QuerySortParams: v1.QuerySortParams{
+					Sort: []v1.SearchRequestSortBy{{
+						Field: "time",
+					}},
+				},
+			},
+			FieldValues: &v1.FieldValuesParam{
+				SeverityValues: &v1.FieldValueParam{Count: true},
+			},
+		}, true},
+		// Not our most used feature but harmless
+		{"can sort by name", &v1.EventStatisticsParams{
+			EventParams: v1.EventParams{
+				QuerySortParams: v1.QuerySortParams{
+					Sort: []v1.SearchRequestSortBy{{
+						Field: "name",
+					}},
+				},
+			},
+			FieldValues: &v1.FieldValuesParam{
+				SeverityValues: &v1.FieldValueParam{Count: true},
+			},
+		}, false},
+		{"sample good date histogram", &v1.EventStatisticsParams{
+			SeverityHistograms: []v1.SeverityHistogramParam{{Name: "sample"}},
+		}, false},
+		{"date histogram missing name", &v1.EventStatisticsParams{
+			SeverityHistograms: []v1.SeverityHistogramParam{{}},
+		}, true},
+		{"sample good severity histogram with selector", &v1.EventStatisticsParams{
+			SeverityHistograms: []v1.SeverityHistogramParam{{Name: "sample", Selector: "severity > 85"}},
+		}, false},
+		{"date histogram with invalid selector", &v1.EventStatisticsParams{
+			SeverityHistograms: []v1.SeverityHistogramParam{{Name: "sample", Selector: "sévérité > 85"}},
+		}, true},
+	}
+
+	for _, tt := range tests {
+		RunAllModes(t, fmt.Sprintf("Test statistics errors/validation: %s", tt.name), func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+			createEvents(t, clusterInfo)
+
+			r, e := b.Statistics(ctx, clusterInfo, tt.params)
+
+			if tt.expectError {
+				require.Error(t, e)
+				logrus.Warn(e.Error())
+				// Make sure the error is not found by ES while performing the aggregation query
+				require.NotContains(t, e.Error(), "elastic")
+				require.Nil(t, r)
+			} else {
+				require.NoError(t, e)
+				require.NotNil(t, r)
+			}
+		})
+	}
+
+	RunAllModes(t, "Test Terms Aggregation (with sub-aggregation)", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		createEvents(t, clusterInfo)
+
+		params := &v1.EventStatisticsParams{}
+		params.LogSelectionParams = v1.LogSelectionParams{
+			Selector: "NOT dismissed = true",
+		}
+
+		// We can aggregate the severity for each unique event name
+		params.FieldValues = &v1.FieldValuesParam{
+			NameValues: &v1.FieldValueParam{
+				Count:           true,
+				GroupBySeverity: true,
+			},
+		}
+
+		r, e := b.Statistics(ctx, clusterInfo, params)
+		require.NoError(t, e)
+
+		bytes, e := json.Marshal(r)
+		require.NoError(t, e)
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.name"), []string{
+			gjson.Parse(`{"value":"WAF Event","count":2,"by_severity":[{"value":90,"count":1},{"value":100,"count":1}]}`).String(),
+			gjson.Parse(`{"value":"Proc File Access","count":1,"by_severity":[{"value":100,"count":1}]}`).String(),
+		})
+	})
+
+	RunAllModes(t, "Test Date Histogram Aggregation (1 per day)", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		createEvents(t, clusterInfo)
+
+		params := &v1.EventStatisticsParams{}
+		params.LogSelectionParams = v1.LogSelectionParams{
+			Selector: "NOT dismissed = true",
+		}
+
+		params.SeverityHistograms = []v1.SeverityHistogramParam{
+			{
+				Name: "severity_over_time",
+			},
+		}
+
+		r, e := b.Statistics(ctx, clusterInfo, params)
+		require.NoError(t, e)
+
+		bytes, e := json.Marshal(r)
+		require.NoError(t, e)
+
+		// We get 2 buckets as our data spans over 2 days
+		require.Len(t, gjson.Get(string(bytes), "severity_histograms").Array(), 1)
+		require.Len(t, gjson.Get(string(bytes), "severity_histograms.severity_over_time").Array(), 2)
+
+		require.Equal(t, time.Date(2024, 2, 20, 0, 0, 0, 0, time.UTC).UnixMilli(), gjson.Get(string(bytes), "severity_histograms.severity_over_time.0.time").Int())
+		require.Equal(t, int64(2), gjson.Get(string(bytes), "severity_histograms.severity_over_time.0.value").Int())
+
+		require.Equal(t, time.Date(2024, 2, 21, 0, 0, 0, 0, time.UTC).UnixMilli(), gjson.Get(string(bytes), "severity_histograms.severity_over_time.1.time").Int())
+		require.Equal(t, int64(1), gjson.Get(string(bytes), "severity_histograms.severity_over_time.1.value").Int())
+	})
+
+	RunAllModes(t, "Test Statistics with stacked severity date histograms and event values by severity", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		createEvents(t, clusterInfo)
+
+		params := &v1.EventStatisticsParams{}
+		params.LogSelectionParams = v1.LogSelectionParams{
+			Selector: "NOT dismissed = true",
+		}
+
+		params.FieldValues = &v1.FieldValuesParam{
+			TypeValues: &v1.FieldValueParam{
+				Count:           true,
+				GroupBySeverity: true,
+			},
+			NameValues: &v1.FieldValueParam{
+				Count: true,
+			},
+		}
+
+		params.SeverityHistograms = []v1.SeverityHistogramParam{
+			{
+				Name:     "critical_severity",
+				Selector: "severity > 90",
+			},
+			{
+				Name:     "low_medium_high_severity",
+				Selector: "severity > 0 AND severity <= 90",
+			},
+		}
+
+		r, e := b.Statistics(ctx, clusterInfo, params)
+		require.NoError(t, e)
+
+		bytes, e := json.Marshal(r)
+		require.NoError(t, e)
+
+		// Our test data has 2 critical events on first day and 1 non-critical on second day.
+		// We get 2 severity_histograms, each containing 1 bucket but not for the same day...
+		require.Len(t, gjson.Get(string(bytes), "severity_histograms").Map(), 2)
+		require.Len(t, gjson.Get(string(bytes), "severity_histograms.critical_severity").Array(), 1)
+		require.Len(t, gjson.Get(string(bytes), "severity_histograms.low_medium_high_severity").Array(), 1)
+
+		require.Equal(t, time.Date(2024, 2, 20, 0, 0, 0, 0, time.UTC).UnixMilli(), gjson.Get(string(bytes), "severity_histograms.critical_severity.0.time").Int())
+		require.Equal(t, int64(2), gjson.Get(string(bytes), "severity_histograms.critical_severity.0.value").Int())
+
+		require.Equal(t, time.Date(2024, 2, 21, 0, 0, 0, 0, time.UTC).UnixMilli(), gjson.Get(string(bytes), "severity_histograms.low_medium_high_severity.0.time").Int())
+		require.Equal(t, int64(1), gjson.Get(string(bytes), "severity_histograms.low_medium_high_severity.0.value").Int())
+
+		// Check that we also got the events name values...
+		require.Equal(t, "WAF Event", gjson.Get(string(bytes), "field_values.name.0.value").String())
+		// We have 2 WAF Events
+		require.Equal(t, int64(2), gjson.Get(string(bytes), "field_values.name.0.count").Int())
+
+		// ... and types aggregated by severity values
+		// One of them has a severity of 90
+		require.Equal(t, int64(90), gjson.Get(string(bytes), "field_values.type.0.by_severity.0.value").Int())
+		require.Equal(t, int64(1), gjson.Get(string(bytes), "field_values.type.0.by_severity.0.count").Int())
+		// One of them has a severity of 100
+		require.Equal(t, int64(100), gjson.Get(string(bytes), "field_values.type.0.by_severity.1.value").Int())
+		require.Equal(t, int64(1), gjson.Get(string(bytes), "field_values.type.0.by_severity.1.count").Int())
+	})
 }
 
 func TestPagination(t *testing.T) {

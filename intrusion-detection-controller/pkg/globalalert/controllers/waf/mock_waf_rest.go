@@ -118,3 +118,7 @@ func (f *mockEvents) Delete(ctx context.Context, events []v1.Event) (*v1.BulkRes
 
 	return &v1.BulkResponse{}, nil
 }
+
+func (f *mockEvents) Statistics(ctx context.Context, params v1.EventStatisticsParams) (*v1.EventStatistics, error) {
+	return &v1.EventStatistics{}, nil
+}

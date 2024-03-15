@@ -48,7 +48,7 @@ type RequestParams interface {
 		v1.WAFLogParams | v1.WAFLogAggregationParams |
 		v1.ReportDataParams | v1.SnapshotParams | v1.BenchmarksParams |
 		v1.RuntimeReportParams | v1.IPSetThreatFeedParams |
-		v1.DomainNameSetThreatFeedParams
+		v1.DomainNameSetThreatFeedParams | v1.EventStatisticsParams
 }
 
 // BulkRequestParams is the collection of request parameters types

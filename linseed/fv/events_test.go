@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	goJson "encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -151,6 +152,78 @@ func TestFV_Events(t *testing.T) {
 		resp, err = cli.Events(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 0)
+	})
+
+	RunEventsTest(t, "should support events statistics", func(t *testing.T, idx bapi.Index) {
+		// Create some events
+		events := []v1.Event{
+			{
+				Time:        v1.NewEventTimestamp(time.Date(2024, 3, 12, 10, 32, 55, 0, time.UTC).Unix()),
+				Description: "A rather uneventful evening",
+				Origin:      "TODO",
+				Severity:    1,
+				Type:        "TODO",
+			},
+			{
+				Time:            v1.NewEventTimestamp(time.Date(2024, 3, 12, 10, 33, 24, 0, time.UTC).Unix()),
+				Description:     "A suspicious DNS query",
+				Origin:          "TODO",
+				Severity:        80,
+				Type:            "suspicious_dns_query",
+				SourceName:      "my-source-name-123",
+				SourceNamespace: "my-app-namespace",
+			},
+			{
+				Time:            v1.NewEventTimestamp(time.Date(2024, 3, 12, 10, 35, 51, 0, time.UTC).Unix()),
+				Description:     "A NOT so suspicious DNS query",
+				Origin:          "TODO",
+				Severity:        70,
+				Type:            "suspicious_dns_query",
+				SourceName:      "my-source-name-456",
+				SourceNamespace: "my-app-namespace",
+			},
+		}
+		bulk, err := cli.Events(cluster).Create(ctx, events)
+		require.NoError(t, err)
+		require.Equal(t, bulk.Succeeded, 3, "create events did not succeed")
+
+		// Refresh elasticsearch so that results appear.
+		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+
+		// Keep it simple and trust the ut :)
+		params := v1.EventStatisticsParams{
+			FieldValues:        &v1.FieldValuesParam{TypeValues: &v1.FieldValueParam{Count: true}},
+			SeverityHistograms: []v1.SeverityHistogramParam{{Name: "somewhat-severe", Selector: "severity > 50"}},
+		}
+		resp, err := cli.Events(cluster).Statistics(ctx, params)
+		require.NoError(t, err)
+
+		// Check that we get 2 values for type
+		formattedJson, e := goJson.MarshalIndent(resp, "", "  ")
+		require.NoError(t, e)
+
+		require.Equal(t, fmt.Sprintf(`{
+  "field_values": {
+    "type": [
+      {
+        "value": "suspicious_dns_query",
+        "count": 2
+      },
+      {
+        "value": "TODO",
+        "count": 1
+      }
+    ]
+  },
+  "severity_histograms": {
+    "somewhat-severe": [
+      {
+        "time": %d,
+        "value": 2
+      }
+    ]
+  }
+}`, time.Date(2024, 3, 12, 0, 0, 0, 0, time.UTC).UnixMilli()), string(formattedJson))
 	})
 
 	RunEventsTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {

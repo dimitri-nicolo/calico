@@ -22,6 +22,110 @@ type TimestampOrDate struct {
 	timeVal *time.Time
 }
 
+// EventStatistics capture the result of event statistics requests.
+// It contains the values that are requested by EventStatisticsParams.
+// Event statistics are designed to be modular to enable a client (e.g. UI)
+// to either query everything it needs in one request (and render a full page
+// of statistics with the result) or use multiple smaller requests
+// (one per widget/table to display).
+// Smaller requests can also be used in different use cases (e.g. populate list
+// of distinct values for a filter).
+type EventStatistics struct {
+	FieldValues        *FieldValues                 `json:"field_values,omitempty"`
+	SeverityHistograms map[string][]HistogramBucket `json:"severity_histograms,omitempty"`
+}
+
+// EventStatisticsParams is used to define required statistics for a request.
+// For an ES backend, this would correspond to various aggregations parameters/queries.
+type EventStatisticsParams struct {
+	// EventParams inherits all the normal events selection parameters.
+	// However Sort by time is not supported for statistics.
+	// Used to specify the subset of events we want to consider when computing statistics.
+	EventParams `json:",inline"`
+
+	// FieldValues defines the event fields we want to compute field values statistics for.
+	FieldValues *FieldValuesParam `json:"field_values,omitempty"`
+
+	// SeverityHistograms defines parameters of the severity histograms we want to compute (name and selector for severity range).
+	SeverityHistograms []SeverityHistogramParam `json:"severity_histograms,omitempty"`
+}
+
+// FieldValuesParam contains optional values we want to compute FieldValues for.
+// These parameters are captured in FieldValueParam.
+type FieldValuesParam struct {
+	TypeValues            *FieldValueParam `json:"type,omitempty"`
+	NameValues            *FieldValueParam `json:"name,omitempty"`
+	SeverityValues        *FieldValueParam `json:"severity,omitempty"`
+	SourceNamespaceValues *FieldValueParam `json:"source_namespace,omitempty"`
+	DestNamespaceValues   *FieldValueParam `json:"dest_namespace,omitempty"`
+	SourceNameValues      *FieldValueParam `json:"source_name,omitempty"`
+	DestNameValues        *FieldValueParam `json:"dest_name,omitempty"`
+	AttackVectorValues    *FieldValueParam `json:"attack_vector,omitempty"`
+	MitreTacticValues     *FieldValueParam `json:"mitre_tactic,omitempty"`
+	MitreIDsValues        *FieldValueParam `json:"mitre_ids,omitempty"`
+}
+
+// FieldValueParam described what processing/aggregation we want to perform for a given field.
+// If Count is true, we will list the number of distinct values and count the number of matching events.
+// GroupBySeverity is true, The count will be broken down per distinct severity values.
+type FieldValueParam struct {
+	Count           bool `json:"count,omitempty"`
+	GroupBySeverity bool `json:"group_by_severity,omitempty"`
+}
+
+// FieldValues contains results of processing/aggregation that was defined by FieldValuesParam
+// For each field, we provide a list of FieldValue.
+type FieldValues struct {
+	TypeValues            []FieldValue    `json:"type,omitempty"`
+	NameValues            []FieldValue    `json:"name,omitempty"`
+	SeverityValues        []SeverityValue `json:"severity,omitempty"`
+	SourceNamespaceValues []FieldValue    `json:"source_namespace,omitempty"`
+	DestNamespaceValues   []FieldValue    `json:"dest_namespace,omitempty"`
+	SourceNameValues      []FieldValue    `json:"source_name,omitempty"`
+	DestNameValues        []FieldValue    `json:"dest_name,omitempty"`
+	AttackVectorValues    []FieldValue    `json:"attack_vector,omitempty"`
+	MitreTacticValues     []FieldValue    `json:"mitre_tactic,omitempty"`
+	MitreIDsValues        []FieldValue    `json:"mitre_ids,omitempty"`
+}
+
+// FieldValue captures a distinct unique value for a given field (in Value) and the number of
+// matching events (in Count). If requested, BySeverity contains a list of SeverityValue(s).
+type FieldValue struct {
+	Value      string          `json:"value"`
+	Count      int64           `json:"count"`
+	BySeverity []SeverityValue `json:"by_severity,omitempty"`
+}
+
+// SeverityValue captures a distinct unique severity value for a subset of events (in Value) and the number of
+// matching events (in Count).
+type SeverityValue struct {
+	Value int   `json:"value"`
+	Count int64 `json:"count"`
+}
+
+// SeverityHistogramParams define the required severity histograms we want to include in the statistics.
+// This is typically used to compute a stacked-histogram of number of events per day
+// grouped by severity range (e.g. critical, high, low/medium) where each range would be
+// one histogram, defined by a SeverityHistogramParam.
+type SeverityHistogramParam struct {
+	// Name of the SeverityHistogramParam being computed (e.g. "high-severity").
+	// Each SeverityHistogramParam will result in []HistogramBucket.
+	Name string `json:"name"`
+	// Selector is an optional parameter used to define a selector that's combined with overall
+	// LogSelectionParams.Selector value (logical AND) in order to specify a subset of events
+	// that should be considered when computing the desired DateHistogram as part of the statistics request.
+	// A typical example would be "severity > 0 AND severity <= 70" in order to isolate the range
+	// required for a SeverityHistogram that will be part of a stacked-histogram with other severity ranges.
+	Selector string `json:"selector,omitempty"`
+}
+
+// HistogramBucket represents the data for a single bar of a SeverityHistogram.
+// Time capture the date as a unix timestamp in milliseconds and Value the number of matching events for that day.
+type HistogramBucket struct {
+	Time  float64 `json:"time"`
+	Value int64   `json:"value"`
+}
+
 // ISO8601Format is the format Anomaly Detection
 // alerts use for field "Time". Example: 2023-04-28T19:38:14+00:00
 // Anomaly detection makes use of `isoformat` method available in python libraries.

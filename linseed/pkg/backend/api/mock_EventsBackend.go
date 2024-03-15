@@ -119,6 +119,31 @@ func (_m *MockEventsBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.
 	return r0, r1
 }
 
+func (_m *MockEventsBackend) Statistics(_a0 context.Context, _a1 ClusterInfo, _a2 *v1.EventStatisticsParams) (*v1.EventStatistics, error) {
+	ret := _m.Called(_a0, _a1, _a2)
+
+	var r0 *v1.EventStatistics
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.EventStatisticsParams) (*v1.EventStatistics, error)); ok {
+		return rf(_a0, _a1, _a2)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, *v1.EventStatisticsParams) *v1.EventStatistics); ok {
+		r0 = rf(_a0, _a1, _a2)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1.EventStatistics)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, *v1.EventStatisticsParams) error); ok {
+		r1 = rf(_a0, _a1, _a2)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 type mockConstructorTestingTNewMockEventsBackend interface {
 	mock.TestingT
 	Cleanup(func())

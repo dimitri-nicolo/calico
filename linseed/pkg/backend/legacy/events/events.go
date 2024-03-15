@@ -4,10 +4,13 @@ package events
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
+	"github.com/tidwall/gjson"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
@@ -16,9 +19,48 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/logtools"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
+
+const (
+	typeField        = "type"
+	name             = "name"
+	severity         = "severity"
+	source_namespace = "source_namespace"
+	dest_namespace   = "dest_namespace"
+	source_name      = "source_name"
+	dest_name        = "dest_name"
+	attack_vector    = "attack_vector"
+	mitre_tactic     = "mitre_tactic"
+	mitre_ids        = "mitre_ids"
+)
+
+var (
+	normalizedFields []string
+)
+
+func init() {
+	var mappings struct {
+		Properties map[string]struct {
+			Type       string `json:"type"`
+			Normalizer string `json:"normalizer"`
+		} `json:"properties"`
+	}
+	err := json.Unmarshal([]byte(templates.EventsMappings), &mappings)
+	if err != nil {
+		panic(err)
+	}
+
+	for field, fieldProperties := range mappings.Properties {
+		if fieldProperties.Type == "keyword" {
+			if fieldProperties.Normalizer != "" {
+				normalizedFields = append(normalizedFields, field)
+			}
+		}
+	}
+}
 
 type eventsBackend struct {
 	client               *elastic.Client
@@ -319,4 +361,296 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 		Errors:    v1.GetBulkErrors(resp),
 		Deleted:   del,
 	}, nil
+}
+
+func (b *eventsBackend) Statistics(ctx context.Context, i api.ClusterInfo, opts *v1.EventStatisticsParams) (*v1.EventStatistics, error) {
+	// We cannot sort by time for statistics.
+	// This does not really make sense anyway.
+	// TODO: Do we want to tighten up the types used?
+	if len(opts.EventParams.GetSortBy()) != 0 {
+		for _, s := range opts.GetSortBy() {
+			if s.Field == "time" {
+				return nil, errors.New("sort_by time not supported for events statistics")
+			}
+		}
+	}
+
+	for i, h := range opts.SeverityHistograms {
+		if h.Name == "" {
+			return nil, fmt.Errorf("Missing name for severity_histogram #%d", i)
+		}
+	}
+	stats := v1.EventStatistics{}
+
+	err := b.computeFieldValues(ctx, i, opts, &stats)
+	if err != nil {
+		return nil, err
+	}
+
+	err = b.computeDateHistograms(ctx, i, opts, &stats)
+	if err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
+}
+
+func (b *eventsBackend) computeFieldValues(ctx context.Context, i api.ClusterInfo, opts *v1.EventStatisticsParams, stats *v1.EventStatistics) error {
+	if opts.FieldValues == nil {
+		return nil
+	}
+
+	stats.FieldValues = &v1.FieldValues{}
+
+	// Get the base query.
+	search, err := b.getStatisticsSearch(i, &opts.EventParams)
+	if err != nil {
+		return err
+	}
+
+	fieldsToProcess := []struct {
+		field  string
+		param  *v1.FieldValueParam
+		values *[]v1.FieldValue
+	}{
+		{typeField, opts.FieldValues.TypeValues, &stats.FieldValues.TypeValues},
+		{name, opts.FieldValues.NameValues, &stats.FieldValues.NameValues},
+		{severity, opts.FieldValues.SeverityValues, nil}, // Severity is a special case that's handled differently
+		{source_namespace, opts.FieldValues.SourceNamespaceValues, &stats.FieldValues.SourceNamespaceValues},
+		{dest_namespace, opts.FieldValues.DestNamespaceValues, &stats.FieldValues.DestNamespaceValues},
+		{source_name, opts.FieldValues.SourceNameValues, &stats.FieldValues.SourceNameValues},
+		{dest_name, opts.FieldValues.DestNameValues, &stats.FieldValues.DestNameValues},
+		{attack_vector, opts.FieldValues.AttackVectorValues, &stats.FieldValues.AttackVectorValues},
+		{mitre_tactic, opts.FieldValues.MitreTacticValues, &stats.FieldValues.MitreTacticValues},
+		{mitre_ids, opts.FieldValues.MitreIDsValues, &stats.FieldValues.MitreIDsValues},
+	}
+
+	// Add terms aggregations required by opts.FieldValues to the search request,
+	// with a nested terms aggregation if specified by field.AggregateBy.
+	for _, f := range fieldsToProcess {
+		if f.param != nil && f.param.Count {
+			termsAgg := elastic.NewTermsAggregation().Field(f.field)
+			if f.field != severity && f.param.GroupBySeverity {
+				termsAgg.SubAggregation(severity, elastic.NewTermsAggregation().Field(severity))
+			}
+			search = search.Aggregation(f.field, termsAgg)
+		}
+	}
+
+	// Do the search.
+	results, err := search.Do(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Update stats with search results.
+	for _, f := range fieldsToProcess {
+		if f.param != nil && f.field == severity {
+			err = b.updateSeverityValues(results.Aggregations, &stats.FieldValues.SeverityValues)
+		} else {
+			err = b.updateFieldValues(ctx, i, results.Aggregations, f.field, f.param, f.values)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *eventsBackend) getStatisticsSearch(i bapi.ClusterInfo, opts *v1.EventParams) (*elastic.SearchService, error) {
+	if i.Cluster == "" {
+		return nil, fmt.Errorf("no cluster ID on request")
+	}
+
+	q, err := logtools.BuildQuery(b.queryHelper, i, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the query.
+	query := b.client.Search().
+		Size(opts.GetMaxPageSize()).
+		Query(q)
+
+	// Configure pagination options
+	query, _, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	if err != nil {
+		return nil, err
+	}
+
+	// Configure sorting.
+	if len(opts.GetSortBy()) != 0 {
+		for _, s := range opts.GetSortBy() {
+			query.Sort(s.Field, !s.Descending)
+		}
+	}
+	// We do not default to sorting by time, as the mapping for the time field
+	// does not work well with aggregations. This is not supported for events.
+
+	return query, nil
+}
+
+func (b *eventsBackend) updateFieldValues(ctx context.Context, i api.ClusterInfo, aggs elastic.Aggregations, field string, param *v1.FieldValueParam, fieldValues *[]v1.FieldValue) error {
+	if param != nil {
+		bucket, found := aggs.Terms(field)
+		if !found {
+			return fmt.Errorf("Could not find terms results for %s", field)
+		}
+
+		for _, item := range bucket.Buckets {
+			stringValue, ok := item.Key.(string)
+			if !ok {
+				return fmt.Errorf("Could not parse %v as a string", item.Key)
+			}
+			fieldValue := v1.FieldValue{Value: stringValue, Count: item.DocCount}
+
+			if param.GroupBySeverity {
+				if item.Aggregations == nil {
+					return fmt.Errorf("Could not find terms results for %s.severity", field)
+				}
+
+				err := b.updateSeverityValues(item.Aggregations, &fieldValue.BySeverity)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Aggregated name values are normalized to lower case...
+			// From: https://www.elastic.co/guide/en/elasticsearch/reference/master/normalizer.html
+			// "Also, the fact that keywords are converted prior to indexing also means that aggregations return normalized values"
+			// Potential solution: https://stackoverflow.com/a/73216052/1412348
+			// Instead, will query a sample value and use that, so that we don't have to update the index mappings.
+			for _, normalizedFieldName := range normalizedFields {
+				if field == normalizedFieldName {
+					normalizedValue := fieldValue.Value
+					sampleValue, err := b.getOriginalValue(ctx, i, field, normalizedValue)
+					if err != nil {
+						return err
+					}
+					fieldValue.Value = sampleValue
+				}
+			}
+
+			*fieldValues = append(*fieldValues, fieldValue)
+		}
+	}
+	return nil
+}
+
+func (b *eventsBackend) updateSeverityValues(aggs elastic.Aggregations, fieldValues *[]v1.SeverityValue) error {
+	bucket, found := aggs.Terms(severity)
+	if !found {
+		return fmt.Errorf("Could not find terms results for %s", severity)
+	}
+
+	for _, item := range bucket.Buckets {
+		// Numbers in JSON are parsed as float64
+		value, ok := item.Key.(float64)
+		if !ok {
+			return fmt.Errorf("Could not parse %v as an float64", item.Key)
+		}
+		// severity is an int does not have fractional part
+		fieldValue := v1.SeverityValue{Value: int(value), Count: item.DocCount}
+
+		*fieldValues = append(*fieldValues, fieldValue)
+	}
+
+	return nil
+}
+
+func (b *eventsBackend) getOriginalValue(ctx context.Context, i api.ClusterInfo, fieldName string, normalizedValue string) (string, error) {
+	// Mitre IDs are stored in an array so a different logic would be required.
+	// We know how to capitalize them so let's save a query.
+	if fieldName == mitre_ids {
+		return strings.ToUpper(normalizedValue), nil
+	}
+
+	params := v1.EventParams{
+		QueryParams: v1.QueryParams{
+			MaxPageSize: 1,
+		},
+		LogSelectionParams: v1.LogSelectionParams{
+			Selector: fmt.Sprintf("%s = '%s'", fieldName, normalizedValue),
+		},
+	}
+	search, err := b.getStatisticsSearch(i, &params)
+	if err != nil {
+		return "", err
+	}
+
+	// Do the search.
+	results, err := search.Do(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	if len(results.Hits.Hits) != 1 {
+		return "", fmt.Errorf("Expecting exactly 1 event but got %d", len(results.Hits.Hits))
+	}
+
+	h := results.Hits.Hits[0]
+	originalValue := gjson.Get(string(h.Source), fieldName).String()
+
+	return originalValue, nil
+}
+
+func (b *eventsBackend) computeDateHistograms(ctx context.Context, i api.ClusterInfo, opts *v1.EventStatisticsParams, stats *v1.EventStatistics) error {
+	stats.SeverityHistograms = make(map[string][]v1.HistogramBucket)
+
+	for _, histogram := range opts.SeverityHistograms {
+		// Get the base query.
+		histParams := opts.EventParams
+		if len(histogram.Selector) > 0 {
+			if len(opts.EventParams.Selector) == 0 {
+				histParams.Selector = histogram.Selector
+			} else {
+				histParams.Selector = fmt.Sprintf("(%s) AND (%s)", opts.EventParams.Selector, histogram.Selector)
+			}
+		}
+
+		// We need one query per histogram.
+		histSearch, err := b.getStatisticsSearch(i, &histParams)
+		if err != nil {
+			return err
+		}
+
+		termsAgg := elastic.NewDateHistogramAggregation().
+			Field("time").
+			CalendarInterval("1d")
+
+		src, err := termsAgg.Source()
+		if err != nil {
+			return err
+		}
+		bytes, err := json.Marshal(src)
+		if err != nil {
+			return err
+		}
+
+		histSearch = histSearch.Aggregation(histogram.Name, logtools.RawAggregation{RawMessage: bytes})
+
+		// Do the search.
+		results, err := histSearch.Do(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Update stats with results for dateHistogram.
+		items, found := results.Aggregations.DateHistogram(histogram.Name)
+		if !found {
+			return fmt.Errorf("Could not find terms results for %s", histogram.Name)
+		}
+
+		values := []v1.HistogramBucket{}
+		for _, b := range items.Buckets {
+			dhb := v1.HistogramBucket{Time: b.Key, Value: b.DocCount}
+
+			values = append(values, dhb)
+		}
+
+		stats.SeverityHistograms[histogram.Name] = values
+	}
+
+	return nil
 }

@@ -104,6 +104,9 @@ func (f *FakeEventsProvider) UpdateDismissFlag(context.Context, []lapi.Event) (*
 func (f *FakeEventsProvider) Delete(context.Context, []lapi.Event) (*lapi.BulkResponse, error) {
 	return nil, nil
 }
+func (f *FakeEventsProvider) Statistics(context.Context, lapi.EventStatisticsParams) (*lapi.EventStatistics, error) {
+	return nil, nil
+}
 
 var _ = Describe("Exceptions middleware tests", func() {
 
