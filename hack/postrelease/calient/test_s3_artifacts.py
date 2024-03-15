@@ -64,6 +64,8 @@ def test_manifests_uploaded(s3_validator, local_manifests):
     for manifest_skip_file in variables.AWS_MANIFESTS_SKIP_FILES:
         if manifest_skip_file in s3_manifests:
             s3_manifests.remove(manifest_skip_file)
+        if manifest_skip_file in local_manifests:
+            local_manifests.remove(manifest_skip_file)
 
     assert sorted(s3_manifests) == sorted(local_manifests)
 
