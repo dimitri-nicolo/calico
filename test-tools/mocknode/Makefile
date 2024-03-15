@@ -1,7 +1,6 @@
 include ../../metadata.mk
 
 PACKAGE_NAME?=github.com/projectcalico/calico/test-tools/mocknode
-SEMAPHORE_PROJECT_ID=""
 
 IMAGE_NAME  ?=mock-node
 BUILD_IMAGES          ?=$(IMAGE_NAME)

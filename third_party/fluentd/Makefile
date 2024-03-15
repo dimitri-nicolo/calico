@@ -11,9 +11,6 @@ SHELL := powershell.exe
 .SHELLFLAGS := -NoProfile -Command
 endif
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_FLUENTD_DOCKER_PROJECT_ID)
-
 # If this is a windows release we're not building the images and they will all be "cut" together
 ifdef WINDOWS_RELEASE
 FLUENTD_IMAGE=fluentd-windows
@@ -43,6 +40,8 @@ $(error Unknown WINDOWS_BUILD_VERSION)
 endif
 
 ARCHES ?=windows-$(WINDOWS_VERSION)
+
+DEV_REGISTRIES = gcr.io/unique-caldron-775/cnx/tigera
 else
 FLUENTD_IMAGE ?= fluentd
 ARCHES        ?= amd64 arm64
@@ -78,20 +77,8 @@ bin/eks-log-forwarder-startup-$(ARCH): $(EKS_SRC_FILES)
 
 bin/eks-log-forwarder-startup.exe: $(EKS_SRC_FILES)
 	@echo "Building eks init-container executable for windows"
-	mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
-		docker run --rm --net=host --init \
-			$(EXTRA_DOCKER_ARGS) \
-			-e GOARCH=amd64 \
-			-e GOCACHE=/go-cache \
-			-e GOOS=windows \
-			-e GOPATH=/go \
-			-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-			-e OS=windows \
-			-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
-			-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-			-w /go/src/$(PACKAGE_NAME) \
-			$(CALICO_BUILD) \
-				sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
+	$(DOCKER_GO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) CGO_ENABLED=0 GOARCH=amd64 GOOS=windows OS=windows go build -C eks -o $@ -v -ldflags "$(EKS_VERSION_FLAGS) -s -w"'
 
 clean:
 	rm -rf eks/bin Makefile.common*
