@@ -740,6 +740,17 @@ blocks:
       commands:
         - cd node
     jobs:
+<<<<<<< HEAD
+=======
+      - name: Build image
+        matrix:
+          - env_var: ARCH
+            values:
+              - ppc64le
+              - s390x
+        commands:
+          - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
+>>>>>>> 7a12ff949f
       - name: Build Windows archive
         commands:
           - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
