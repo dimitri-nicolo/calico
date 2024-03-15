@@ -65,13 +65,9 @@ sub-image-%:
 .PHONY: image
 image: $(HONEYPOD_CONTROLLER_IMAGE)
 
-.PHONY: snort2-image
-snort2-image:
-	$(MAKE) -C ../third_party/snort2 image ARCH=$(ARCH)
-
 $(HONEYPOD_CONTROLLER_IMAGE): $(HONEYPOD_CONTROLLER_IMAGE_CREATED)
-$(HONEYPOD_CONTROLLER_IMAGE_CREATED): Dockerfile.$(ARCH) bin/controller-$(ARCH) snort2-image
-	docker buildx build --load --platform=linux/$(ARCH) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
+$(HONEYPOD_CONTROLLER_IMAGE_CREATED): Dockerfile.$(ARCH) bin/controller-$(ARCH)
+	$(DOCKER_BUILD) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

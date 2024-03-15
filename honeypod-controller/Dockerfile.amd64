@@ -1,6 +1,6 @@
 # Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
 
-FROM tigera/snort2:latest-amd64 AS snort
+FROM gcr.io/unique-caldron-775/cnx/tigera/third-party/snort:2.9.20 AS snort
 
 FROM scratch as source
 

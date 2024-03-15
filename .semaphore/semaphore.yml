@@ -907,11 +907,73 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: deep-packet-inspection
+- name: Publish tigera/snort3 images
   run:
-    when: "false or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-2
+        os_image: ubuntu2004
+    env_vars:
+      - name: DEV_REGISTRIES
+        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+    jobs:
+      - name: Linux amd64
+        commands:
+          - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
+- name: Publish tigera/snort3 images - native arm64 runner
+  run:
+    when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    env_vars:
+      - name: DEV_REGISTRIES
+        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+    jobs:
+      - name: Linux arm64
+        commands:
+          - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
+- name: Publish tigera/snort3 multi-arch manifests
+  run:
+    when: "false or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Publish tigera/snort3 images
+    - Publish tigera/snort3 images - native arm64 runner
+  task:
+    env_vars:
+      - name: DEV_REGISTRIES
+        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+    jobs:
+      - name: Linux multi-arch manifests
+        commands:
+          - make -C third_party/snort3 push-manifest CONFIRM=true
+- name: deep-packet-inspection
+  run:
+    when: "false or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/third_party/snort3', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Publish tigera/snort3 multi-arch manifests
   task:
     prologue:
       commands:
@@ -1017,11 +1079,29 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: honeypod-controller
+- name: Publish tigera/snort2 images
   run:
-    when: "false or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
+  task:
+    env_vars:
+      - name: DEV_REGISTRIES
+        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+    jobs:
+      - name: Linux amd64
+        commands:
+          - make -C third_party/snort2 cd push-manifests-with-tag ARCHES=amd64 CONFIRM=true
+- name: honeypod-controller
+  run:
+    when: "false or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/', '/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Publish tigera/snort2 images
   task:
     prologue:
       commands:

@@ -2,8 +2,8 @@
 
 FROM rockylinux:8 AS snort
 
-ARG SNORT3_VERSION=3.1.81.0
 ARG DAQ_VERSION=3.0.14
+ARG SNORT3_VERSION
 
 RUN dnf upgrade -y && dnf install -y \
     autoconf \

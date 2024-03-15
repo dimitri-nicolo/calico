@@ -50,7 +50,7 @@ endif
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
-DEEP_PACKET_INSPECTION_CONTAINER_CREATED=.deep-packet-inspection.created-$(ARCH)
+DEEP_PACKET_INSPECTION_IMAGE_CREATED=.deep-packet-inspection.created-$(ARCH)
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES)
@@ -64,13 +64,9 @@ sub-image-%:
 .PHONY: image
 image: $(DEEP_PACKET_INSPECTION_IMAGE)
 
-.PHONY: snort3-image
-snort3-image:
-	$(MAKE) -C ../third_party/snort3 image ARCH=$(ARCH)
-
-$(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
-$(DEEP_PACKET_INSPECTION_CONTAINER_CREATED): Dockerfile bin/deep-packet-inspection-$(ARCH) snort3-image
-	docker buildx build --load --platform=linux/$(ARCH) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_IMAGE_CREATED)
+$(DEEP_PACKET_INSPECTION_IMAGE_CREATED): Dockerfile bin/deep-packet-inspection-$(ARCH)
+	$(DOCKER_BUILD) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -80,7 +76,7 @@ clean:
 		report/*.xml \
 		config/
 	find . -name '*.coverprofile' -type f -delete
-	rm -f $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
+	rm -f $(DEEP_PACKET_INSPECTION_IMAGE_CREATED)
 	-docker image rm -f $$(docker images $(DEEP_PACKET_INSPECTION_IMAGE) -a -q)
 
 ###############################################################################
