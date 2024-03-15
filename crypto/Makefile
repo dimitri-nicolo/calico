@@ -19,7 +19,7 @@ fv: setup-fv bin/fips-test-build
 	sed -i '1,4d;19d' tmp/nmap.log
 	docker rm -f fips-test-build
 	# If the ciphers are as expected, we get exit code 0.
-	diff -u --strip-trailing-cr fv/expected-nmap.log  tmp/nmap.log
+	diff -u --strip-trailing-cr fv/expected-nmap.log tmp/nmap.log
 
 bin/fips-test-build:
 	$(call build_cgo_boring_binary, $(PACKAGE_NAME)/fv/main, $@)
