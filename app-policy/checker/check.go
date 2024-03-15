@@ -54,7 +54,7 @@ var (
 	rlog = logutils.NewRateLimitedLogger()
 )
 
-func lookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []*proto.WorkloadEndpoint, err error) {
+func LookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []*proto.WorkloadEndpoint, err error) {
 	log.Debugf("extracting endpoints from request %s", req.String())
 
 	// Extract source and destination IP addresses if possible:
@@ -138,7 +138,7 @@ func ipToEndpointKeys(store *policystore.PolicyStore, addr ip.Addr) []proto.Work
 }
 
 func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest) status.Status {
-	src, dst, err := lookupEndpointsFromRequest(store, req)
+	src, dst, err := LookupEndpointsFromRequest(store, req)
 	if err != nil {
 		return status.Status{Code: INTERNAL, Message: fmt.Sprintf("endpoint lookup error: %v", err)}
 	}

@@ -17,7 +17,7 @@ __defaults = {
     "AWS_PROFILE": "helm",
     "TIGERA_PUBLIC_BUCKET": "tigera-public",
     "SELINUX_SPECFILE_PATH": "../../../selinux/calico-selinux.spec",
-    "CALICO_IMAGES_SKIP": "tigera/license-agent tigera/honeypod-controller",
+    "CALICO_IMAGES_SKIP": "",
     "MANIFESTS_PATH": "../../../manifests"
 }
 

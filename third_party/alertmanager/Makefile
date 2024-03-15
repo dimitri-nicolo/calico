@@ -35,20 +35,14 @@ assets: $(ALERTMANAGER_DOWNLOADED)
 	cd alertmanager && $(MAKE) assets apiv2
 
 bin/alertmanager-$(ARCH): assets
-	$(DOCKER_RUN) \
-		-e CGO_ENABLED=0 \
-		$(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			cd alertmanager && \
-				go build -buildvcs=false -o ../bin/alertmanager-$(ARCH) -v -tags=$(TAGS) -ldflags="$(LD_FLAGS) -s -w" cmd/alertmanager/main.go'
+			CGO_ENABLED=0 go build -C alertmanager -buildvcs=false -o ../$@ -v -tags=$(TAGS) -ldflags="$(LD_FLAGS) -s -w" cmd/alertmanager/main.go'
 
 bin/amtool-$(ARCH): assets
-	$(DOCKER_RUN) \
-		-e CGO_ENABLED=0 \
-		$(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			cd alertmanager && \
-				go build -buildvcs=false -o ../bin/amtool-$(ARCH) -v -tags=$(TAGS) -ldflags="$(LD_FLAGS)-s -w" cmd/amtool/main.go'
+			CGO_ENABLED=0 go build -C alertmanager -buildvcs=false -o ../$@ -v -tags=$(TAGS) -ldflags="$(LD_FLAGS)-s -w" cmd/amtool/main.go'
 
 .PHONY: clean
 clean:

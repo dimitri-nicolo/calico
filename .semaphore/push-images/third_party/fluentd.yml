@@ -1,0 +1,116 @@
+version: v1.0
+name: Publish third-party fluentd images
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+
+execution_time_limit:
+  hours: 2
+
+global_job_config:
+  env_vars:
+    - name: DEV_REGISTRIES
+      value: gcr.io/unique-caldron-775/cnx/tigera
+  secrets:
+    - name: docker-hub
+    - name: google-service-account-for-gcr
+    - name: private-repo
+  prologue:
+    commands:
+      # Correct permissions since they are too open by default:
+      - chmod 0600 ~/.keys/*
+      # Add the key to the ssh agent:
+      - ssh-add ~/.keys/*
+      - checkout
+      # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
+      # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given
+      # how much we churn docker containers during the build.  Disable it.
+      - sudo systemctl stop docker
+      - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
+      - sudo systemctl start docker
+      # Free up space on the build machine.
+      - sudo rm -rf ~/{.kerl,.kiex,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,phantomjs*}
+      # Semaphore is doing shallow clone on a commit without tags.
+      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
+      - retry git fetch --unshallow
+      - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+      - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+      - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
+
+blocks:
+  - name: Publish fluentd images
+    dependencies: []
+    skip:
+      when: "branch !~ '.+'"
+    task:
+      jobs:
+        - name: Linux amd64
+          commands:
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd cd ARCHES=amd64 CONFIRM=true; fi
+  - name: Publish fluentd images - native arm64 runner
+    dependencies: []
+    skip:
+      when: "branch !~ '.+'"
+    task:
+      agent:
+        machine:
+          type: s1-aws-arm64-2
+      jobs:
+        - name: Linux arm64
+          commands:
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd cd ARCHES=arm64 CONFIRM=true; fi
+  - name: Publish fluentd multi-arch manifests
+    dependencies:
+      - Publish fluentd images
+      - "Publish fluentd images - native arm64 runner"
+    skip:
+      when: "branch !~ '.+'"
+    task:
+      jobs:
+        - name: Linux multi-arch manifests
+          commands:
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd push-manifests-with-tag CONFIRM=true; fi
+
+  - name: Publish Windows images
+    dependencies: []
+    skip:
+      when: "branch !~ '.+'"
+    task:
+      secrets:
+        - name: banzai-secrets
+      prologue:
+        commands:
+          # Login to docker in order to pull images.
+          - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
+          # Clone the process repo and provision Windows instances.
+          - pushd .
+          - git clone git@github.com:tigera/process.git ~/process
+          - cd ~/process/testing/windows-instances
+          - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh
+          # Save windows-instances terraform.
+          - tar cvzf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
+          - artifact push job --expire-in 2w ~/windows-tf.tar.gz
+          - popd
+          - cd third_party/fluentd
+      epilogue:
+        always:
+          commands:
+            - cd ~/process/testing/windows-instances
+            - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
+      jobs:
+        - name: Run CD
+          commands:
+            - export PROCESS_REPO=~/process/testing/windows-instances
+            - export REPO_ROOT=~/${SEMAPHORE_GIT_DIR}
+            - CONFIRM=true .semaphore/windows-cd.sh
+  - name: Publish Windows manifests
+    dependencies:
+      - Publish Windows images
+    skip:
+      when: "branch !~ '.+'"
+    task:
+      jobs:
+        - name: Publish Windows manifests
+          commands:
+            - CONFIRM=true WINDOWS_RELEASE=true make -C third_party/fluentd push-windows-manifest

@@ -180,7 +180,9 @@
   task:
     prologue:
       commands:
-        - cd felix
+        - cd $HOME
+        - tar -czf calico-private.tar.gz calico-private
+        - cd calico-private/felix
         - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
         - export ZONE=us-east4-c

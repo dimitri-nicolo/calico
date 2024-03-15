@@ -139,6 +139,10 @@ promotions:
     pipeline_file: push-images/third_party/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push third-party fluentd images
+    pipeline_file: push-images/third_party/fluentd.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push third-party prometheus-operator images
     pipeline_file: push-images/third_party/prometheus-operator.yml
     auto_promote:

@@ -68,7 +68,6 @@
     elasticsearch:
       image: tigera/elasticsearch
       version: master
-      fips-image: true
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
@@ -108,7 +107,6 @@
     tigera-cni:
       image: tigera/cni
       version: master
-      fips-image: true
     tigera-cni-windows:
       image: tigera/cni-windows
       version: master

@@ -1,0 +1,34 @@
+- name: fluentd
+  run:
+    when: "${FORCE_RUN} or change_in(['/third_party/fluentd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    prologue:
+      commands:
+        - cd third_party/fluentd
+    jobs:
+      - name: fluentd tests
+        commands:
+          - ../../.semaphore/run-and-monitor ci.log make ci
+
+- name: fluentd - native arm64 runner
+  run:
+    when: "${FORCE_RUN} or change_in(['/third_party/fluentd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - fluentd
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    prologue:
+      commands:
+        - cd third_party/fluentd
+    jobs:
+      - name: Build image
+        commands:
+          - ../../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64

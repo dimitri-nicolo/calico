@@ -155,6 +155,10 @@ promotions:
     pipeline_file: ../third_party/envoy/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut third-party Fluentd Release
+    pipeline_file: ../third_party/fluentd/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut third-party Prometheus Operator Release
     pipeline_file: ../third_party/prometheus-operator/.semaphore/test-cut-release.yml
     auto_promote:

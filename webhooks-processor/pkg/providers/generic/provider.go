@@ -37,6 +37,11 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 	if _, urlPresent := config["url"]; !urlPresent {
 		return errors.New("url field is not present in webhook configuration")
 	}
+	if _, hasHeaders := config["headers"]; hasHeaders {
+		if _, err := helpers.ProcessHeaders(config["headers"]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -57,9 +62,12 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 
 		headers := make(map[string]string)
 		if rawHeaders, ok := config["headers"]; ok {
-			headers = helpers.ProcessHeaders(rawHeaders)
+			if headers, err = helpers.ProcessHeaders(rawHeaders); err != nil {
+				// this is just defensive coding, we should never get here because the validation happens first:
+				return helpers.NewNoRetryError(err)
+			}
 		}
-		if _, contentTypePresent := headers["Content-Type"]; !contentTypePresent {
+		if _, hasContentType := headers["Content-Type"]; !hasContentType {
 			headers["Content-Type"] = "application/json"
 		}
 		for header, value := range headers {

@@ -32,8 +32,9 @@ import (
 )
 
 var (
-	OK   = newResponseWithCode(code.Code_OK, "OK")
-	DENY = newResponseWithCode(code.Code_PERMISSION_DENIED, "Forbidden")
+	OK       = newResponseWithCode(code.Code_OK, "OK")
+	DENY     = newResponseWithCode(code.Code_PERMISSION_DENIED, "Forbidden")
+	INTERNAL = newResponseWithCode(code.Code_INTERNAL, "Internal Server Error")
 )
 
 func newResponseWithCode(code code.Code, message string) *envoyauthz.CheckResponse {
@@ -88,6 +89,19 @@ func (w *Server) Name() string {
 func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{"attributes": checkReq.Attributes}).Debug("check request received")
+	}
+
+	if st != nil {
+		src, dst, _ := checker.LookupEndpointsFromRequest(st, checkReq)
+		// this logic is only triggered if:
+		// - dikastes is connected to policysync
+		// - has source information, most likely running in daemonset mode
+		// - has no destination information, most likely running in daemonset mode
+		// in this case, we allow traffic to continue to its destination hop/next processing leg.
+		if len(src) > 0 && len(dst) == 0 {
+			log.Debugf("allowing traffic to continue to its destination hop/next processing leg. (req: %s)", checkReq.String())
+			return OK, nil
+		}
 	}
 
 	attrs := checkReq.Attributes
