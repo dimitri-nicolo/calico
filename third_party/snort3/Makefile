@@ -10,6 +10,12 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort3
 SNORT3_IMAGE ?= snort3
 BUILD_IMAGES ?= $(SNORT3_IMAGE)
 
+SNORT3_VERSION ?= 3.1.81.0
+
+# required for ci/cd
+BRANCH_NAME = $(SNORT3_VERSION)
+LATEST_IMAGE_TAG = $(SNORT3_VERSION)
+
 ###############################################################################
 # Include lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -33,11 +39,17 @@ image: $(SNORT3_IMAGE)
 
 $(SNORT3_IMAGE): $(SNORT3_IMAGE_CREATED)
 $(SNORT3_IMAGE_CREATED): Dockerfile snort3-community.rules
-	$(DOCKER_BUILD) -t $(SNORT3_IMAGE):latest-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	$(DOCKER_BUILD) --build-arg SNORT3_VERSION=$(SNORT3_VERSION) -t $(SNORT3_IMAGE):$(SNORT3_VERSION)-$(ARCH) -f Dockerfile .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(SNORT3_VERSION)
 	touch $@
 
 .PHONY: clean
 clean:
 	rm -f $(SNORT3_IMAGE_CREATED)
 	-docker image rm -f $$(docker images $(SNORT3_IMAGE) -a -q)
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: cd
+cd: image-all cd-common

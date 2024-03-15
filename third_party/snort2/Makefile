@@ -9,8 +9,14 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort2
 #############################################
 SNORT2_IMAGE ?= snort2
 BUILD_IMAGES ?= $(SNORT2_IMAGE)
+# Snort 2 rpm package is x86_64 only from the vendor.
+ARCHES = amd64
 
-SNORT_VERSION ?= 2.9.20
+SNORT2_VERSION ?= 2.9.20
+
+# required for ci/cd
+BRANCH_NAME = $(SNORT2_VERSION)
+LATEST_IMAGE_TAG = $(SNORT2_VERSION)
 
 ###############################################################################
 # Include lib.Makefile
@@ -35,11 +41,17 @@ image: $(SNORT2_IMAGE)
 
 $(SNORT2_IMAGE): $(SNORT2_IMAGE_CREATED)
 $(SNORT2_IMAGE_CREATED): Dockerfile community.rules
-	$(DOCKER_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) -t $(SNORT2_IMAGE):latest-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	$(DOCKER_BUILD) --build-arg SNORT2_VERSION=$(SNORT2_VERSION) -t $(SNORT2_IMAGE):$(SNORT2_VERSION)-$(ARCH) -f Dockerfile .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(SNORT2_VERSION)
 	touch $@
 
 .PHONY: clean
 clean:
 	rm -f $(SNORT2_IMAGE_CREATED)
 	-docker image rm -f $$(docker images $(SNORT2_IMAGE) -a -q)
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: cd
+cd: image-all cd-common
