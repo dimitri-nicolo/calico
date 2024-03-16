@@ -13,6 +13,7 @@ BUILD_IMAGES ?= $(SNORT3_IMAGE)
 SNORT3_VERSION ?= 3.1.81.0
 
 # required for ci/cd
+DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
 BRANCH_NAME = $(SNORT3_VERSION)
 LATEST_IMAGE_TAG = $(SNORT3_VERSION)
 
@@ -53,3 +54,7 @@ clean:
 ###############################################################################
 .PHONY: cd
 cd: image-all cd-common
+
+.PHONY: push-manifest
+push-manifest:
+	$(MAKE) push-manifests IMAGETAG=$(SNORT3_VERSION)	

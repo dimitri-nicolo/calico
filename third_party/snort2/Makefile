@@ -15,6 +15,7 @@ ARCHES = amd64
 SNORT2_VERSION ?= 2.9.20
 
 # required for ci/cd
+DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
 BRANCH_NAME = $(SNORT2_VERSION)
 LATEST_IMAGE_TAG = $(SNORT2_VERSION)
 
@@ -55,3 +56,7 @@ clean:
 ###############################################################################
 .PHONY: cd
 cd: image-all cd-common
+
+.PHONY: push-manifest
+push-manifest:
+	$(MAKE) push-manifests IMAGETAG=$(SNORT2_VERSION)	

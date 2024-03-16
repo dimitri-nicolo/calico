@@ -1,6 +1,6 @@
 - name: Publish tigera/snort3 images
   run:
-    when: "${FORCE_RUN} or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
@@ -8,9 +8,6 @@
       machine:
         type: e1-standard-2
         os_image: ubuntu2004
-    env_vars:
-      - name: DEV_REGISTRIES
-        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
     secrets:
       - name: google-service-account-for-gcr
     prologue:
@@ -22,16 +19,13 @@
           - make -C third_party/snort3 cd ARCHES=amd64 CONFIRM=true
 - name: Publish tigera/snort3 images - native arm64 runner
   run:
-    when: "${FORCE_RUN} or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
     agent:
       machine:
         type: s1-aws-arm64-2
-    env_vars:
-      - name: DEV_REGISTRIES
-        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
     secrets:
       - name: google-service-account-for-gcr
     prologue:
@@ -43,14 +37,11 @@
           - make -C third_party/snort3 cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/snort3 multi-arch manifests
   run:
-    when: "${FORCE_RUN} or change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Publish tigera/snort3 images
     - Publish tigera/snort3 images - native arm64 runner
   task:
-    env_vars:
-      - name: DEV_REGISTRIES
-        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
     secrets:
       - name: google-service-account-for-gcr
     prologue:
@@ -66,8 +57,11 @@
   dependencies:
     - Publish tigera/snort3 multi-arch manifests
   task:
+    secrets:
+      - name: google-service-account-for-gcr
     prologue:
       commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd deep-packet-inspection
     jobs:
       - name: deep-packet-inspection tests
