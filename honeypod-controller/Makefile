@@ -9,7 +9,7 @@ HONEYPOD_CONTROLLER_IMAGE ?=honeypod-controller
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
 # Snort 2 rpm package is x86_64 only from the vendor. As this is an experimental
 # component and we have plans to remove it, limit honeypod controller to amd64 only.
-ARCH                      =amd64
+ARCHES                    =amd64
 
 # Linker flags for building Honeypod Controller.
 #
@@ -67,7 +67,7 @@ image: $(HONEYPOD_CONTROLLER_IMAGE)
 
 $(HONEYPOD_CONTROLLER_IMAGE): $(HONEYPOD_CONTROLLER_IMAGE_CREATED)
 $(HONEYPOD_CONTROLLER_IMAGE_CREATED): Dockerfile.$(ARCH) bin/controller-$(ARCH)
-	$(DOCKER_BUILD) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
+	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

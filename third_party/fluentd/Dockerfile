@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM registry.access.redhat.com/ubi9/ubi as builder
+ARG UBI9_IMAGE
+
+FROM ${UBI9_IMAGE} as builder
 
 RUN dnf upgrade -y && dnf install -y \
        gcc \

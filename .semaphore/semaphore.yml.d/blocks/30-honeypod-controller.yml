@@ -1,12 +1,9 @@
 - name: Publish tigera/snort2 images
   run:
-    when: "${FORCE_RUN} or change_in(['/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "change_in(['/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
-    env_vars:
-      - name: DEV_REGISTRIES
-        value: gcr.io/unique-caldron-775/cnx/tigera/third-party
     secrets:
       - name: google-service-account-for-gcr
     prologue:
@@ -15,15 +12,18 @@
     jobs:
       - name: Linux amd64
         commands:
-          - make -C third_party/snort2 cd push-manifests-with-tag ARCHES=amd64 CONFIRM=true
+          - make -C third_party/snort2 cd push-manifest ARCHES=amd64 CONFIRM=true
 - name: honeypod-controller
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/', '/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Publish tigera/snort2 images
   task:
+    secrets:
+      - name: google-service-account-for-gcr
     prologue:
       commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd honeypod-controller
     jobs:
       - name: honeypod-controller tests
