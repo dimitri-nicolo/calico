@@ -19,14 +19,14 @@
 # located at github.com/tigera/process/testing/windows-instances.
 set -ex
 
-SSH_ARGS="-i ${PROCESS_REPO}/tf/master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
-
 # Build eks log forwarder binaries on the Semaphore VM.
-make bin/eks-log-forwarder-startup.exe
+if [[ "$BASE" != "true" ]]; then
+  make bin/eks-log-forwarder-startup.exe
+fi
 
 # Tar up repo so we can send it to the Windows instances where we will build the docker image.
-cd "${REPO_ROOT}"
-tar --exclude='.go-pkg-cache' --exclude='.go-build-cache' -cf calico-private.tar .
+cd "$HOME"
+tar --exclude='.go-pkg-cache' --exclude='.go-build-cache' -czf "$HOME/calico-private.tar.gz" calico-private
 
 GCR_SECRET=$(cat ~/secrets/banzai-google-service-account.json | base64 -w0)
 GCR_LOGIN="[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String('${GCR_SECRET}')) | docker login -u _json_key --password-stdin https://gcr.io"
@@ -36,15 +36,22 @@ GCR_LOGIN="[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64S
 # - Login to gcr.io
 # - Tell git to ignore permission differences between Linux and Windows systems
 # - Build and push images
-CMD="powershell -Command \"7z x c:\\calico-private.tar -oc:\\calico-private; cd c:\\calico-private; ${GCR_LOGIN}; git config core.filemode false; make -C third_party/fluentd cd BRANCH_NAME=${BRANCH_NAME} CONFIRM=${CONFIRM} PUSH_MANIFEST_IMAGES=""\""
+CMD="powershell -Command \"tar xzf c:\\calico-private.tar.gz -C c:\\; cd c:\\calico-private; ${GCR_LOGIN}; git config core.filemode false;"
+if [[ "$BASE" == "true" ]]; then
+  CMD="${CMD} make -C third_party/fluentd/base cd CONFIRM=${CONFIRM} SEMAPHORE_GIT_REF_TYPE=${SEMAPHORE_GIT_REF_TYPE}"
+else
+  CMD="${CMD} make -C third_party/fluentd cd BRANCH_NAME=${BRANCH_NAME} CONFIRM=${CONFIRM} SEMAPHORE_GIT_REF_TYPE=${SEMAPHORE_GIT_REF_TYPE}"
+fi
 
 # Loop over all host IPs. hosts.txt is created by the Windows host creation
 # script and each host IP, one per line.
+SSH_ARGS="-i ${PROCESS_REPO}/tf/master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+
 while read -r host; do
   LOG_FILE=~/log-${host}.txt
 
   # Copy over the calico-private tarball.
-  scp -vr ${SSH_ARGS} calico-private.tar "Administrator@${host}:/" </dev/null
+  scp -vr ${SSH_ARGS} "$HOME/calico-private.tar.gz" "Administrator@${host}:/" </dev/null
 
   # Kick off cmd in the background, saving the individual logs.
   ssh ${SSH_ARGS} "Administrator@${host}" "${CMD}" </dev/null | tee "${LOG_FILE}" &
