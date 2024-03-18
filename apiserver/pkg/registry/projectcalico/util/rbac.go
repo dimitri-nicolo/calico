@@ -4,10 +4,12 @@ package util
 import (
 	"context"
 	"fmt"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/labels"
+
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
-	"k8s.io/apimachinery/pkg/labels"
-	"strings"
 
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/selection"
