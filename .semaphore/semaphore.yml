@@ -774,7 +774,9 @@ blocks:
   task:
     prologue:
       commands:
-        - cd node
+        - cd $HOME
+        - tar -czf calico-private.tar.gz calico-private
+        - cd calico-private/node
         - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
         - export ZONE=us-east4-c
