@@ -36,22 +36,22 @@ for batch in "${batches[@]}"; do
   log_files+=( $log_file )
   case $batch in
     k8s-test)
-      cmd="make --directory=calico/${REPO_NAME} k8s-test"
+      cmd="make --directory=calico-private/${REPO_NAME} k8s-test"
       ;;
     dual-tor)
-      cmd="make --directory=calico/${REPO_NAME} dual-tor-test"
+      cmd="make --directory=calico-private/${REPO_NAME} dual-tor-test"
       ;;
     enet)
-      cmd="make --directory=calico/${REPO_NAME} external-network-test"
+      cmd="make --directory=calico-private/${REPO_NAME} external-network-test"
       ;;
     egw-none)
-      cmd="K8ST_TO_RUN=\"-A egress_ip_no_overlay\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-no-overlay.xml make --directory=calico/${REPO_NAME} egress-ip-test"
+      cmd="K8ST_TO_RUN=\"-A egress_ip_no_overlay\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-no-overlay.xml make --directory=calico-private/${REPO_NAME} egress-ip-test"
       ;;
     egw-ipip)
-      cmd="K8ST_TO_RUN=\"-A egress_ip_ipip\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-ipip.xml make --directory=calico/${REPO_NAME} egress-ip-test"
+      cmd="K8ST_TO_RUN=\"-A egress_ip_ipip\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-ipip.xml make --directory=calico-private/${REPO_NAME} egress-ip-test"
       ;;
     egw-vxlan)
-      cmd="K8ST_TO_RUN=\"-A egress_ip_vxlan\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-vxlan.xml make --directory=calico/${REPO_NAME} egress-ip-test"
+      cmd="K8ST_TO_RUN=\"-A egress_ip_vxlan\" K8ST_REPORT_FILENAME=node-k8s-egress-ip-vxlan.xml make --directory=calico-private/${REPO_NAME} egress-ip-test"
       ;;
     *)
       echo "invalid batch name" && exit 1
