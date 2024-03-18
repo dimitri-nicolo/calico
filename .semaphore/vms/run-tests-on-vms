@@ -118,7 +118,7 @@ echo
 echo "===== Retrieving report files ====="
 for batch in "${batches[@]}"; do
   vm_name="$vm_name_prefix$batch"
-  $my_dir/scp-from-test-vm ${zone} ${vm_name} /home/ubuntu/calico/node/report/* $repo_dir/report/
+  $my_dir/scp-from-test-vm ${zone} ${vm_name} /home/ubuntu/calico-private/node/report/* $repo_dir/report/
 done
 echo
 
