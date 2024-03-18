@@ -43488,6 +43488,8 @@ rules:
       - tigerastatuses
       - tigerastatuses/finalizers
       - tigerastatuses/status
+      - tlspassthroughroutes
+      - tlsterminatedroutes
     verbs:
       - get
       - list
@@ -43499,6 +43501,15 @@ rules:
       - operator.tigera.io
     resources:
       - tigerastatuses
+    verbs:
+      - create
+      - delete
+  # In addition to the above, the operator creates and deletes TLSPassThroughRoutes and TLSTerminatedRoute resources.
+  - apiGroups:
+      - operator.tigera.io
+    resources:
+      - tlspassthroughroutes
+      - tlsterminatedroutes
     verbs:
       - create
       - delete
