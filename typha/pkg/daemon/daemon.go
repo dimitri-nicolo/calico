@@ -30,8 +30,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/bgpsyncer"
@@ -41,8 +39,10 @@ import (
 	remotecluster "github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/remotecluster"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/tunnelipsyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator/clients"
 	"github.com/projectcalico/calico/typha/pkg/buildinfo"
@@ -440,9 +440,20 @@ func (t *TyphaDaemon) Start(cxt context.Context) {
 	}
 	log.Info("Started the datastore Syncer/cache layer/server.")
 
+	if t.ConfigParams.DebugPort != 0 {
+		debugserver.StartDebugPprofServer(t.ConfigParams.DebugHost, t.ConfigParams.DebugPort)
+	}
 	if t.ConfigParams.PrometheusMetricsEnabled {
 		log.Info("Prometheus metrics enabled.  Starting server.")
-		go servePrometheusMetrics(t.ConfigParams)
+		t.configurePrometheusMetrics()
+		go security.ServePrometheusMetricsForever(
+			prometheus.DefaultGatherer,
+			t.ConfigParams.PrometheusMetricsHost,
+			t.ConfigParams.PrometheusMetricsPort,
+			t.ConfigParams.PrometheusMetricsCertFile,
+			t.ConfigParams.PrometheusMetricsKeyFile,
+			t.ConfigParams.PrometheusMetricsCAFile,
+		)
 	}
 
 	if t.ConfigParams.HealthEnabled {
@@ -451,6 +462,21 @@ func (t *TyphaDaemon) Start(cxt context.Context) {
 			"port": t.ConfigParams.HealthPort,
 		}).Info("Health enabled.  Starting server.")
 		t.healthAggregator.ServeHTTP(t.ConfigParams.HealthEnabled, t.ConfigParams.HealthHost, t.ConfigParams.HealthPort)
+	}
+}
+
+func (t *TyphaDaemon) configurePrometheusMetrics() {
+	if t.ConfigParams.PrometheusGoMetricsEnabled && t.ConfigParams.PrometheusProcessMetricsEnabled {
+		log.Info("Including Golang & Process metrics")
+	} else {
+		if !t.ConfigParams.PrometheusGoMetricsEnabled {
+			log.Info("Discarding Golang metrics")
+			prometheus.Unregister(collectors.NewGoCollector())
+		}
+		if !t.ConfigParams.PrometheusProcessMetricsEnabled {
+			log.Info("Discarding process metrics")
+			prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+		}
 	}
 }
 
@@ -569,38 +595,5 @@ func dumpHeapMemoryProfile(configParams *config.Config) {
 			}
 			logCxt.Info("Finished writing memory profile")
 		}
-	}
-}
-
-// TODO Typha: Share with Felix.
-func servePrometheusMetrics(configParams *config.Config) {
-	for {
-		log.WithFields(log.Fields{
-			"host": configParams.PrometheusMetricsHost,
-			"port": configParams.PrometheusMetricsPort,
-		}).Info("Starting prometheus metrics endpoint")
-		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
-			log.Info("Including Golang & Process metrics")
-		} else {
-			if !configParams.PrometheusGoMetricsEnabled {
-				log.Info("Discarding Golang metrics")
-				prometheus.Unregister(collectors.NewGoCollector())
-			}
-			if !configParams.PrometheusProcessMetricsEnabled {
-				log.Info("Discarding process metrics")
-				prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-			}
-		}
-		err := security.ServePrometheusMetrics(
-			prometheus.DefaultGatherer,
-			configParams.PrometheusMetricsHost,
-			configParams.PrometheusMetricsPort,
-			configParams.PrometheusMetricsCertFile,
-			configParams.PrometheusMetricsKeyFile,
-			configParams.PrometheusMetricsCAFile,
-		)
-		log.WithError(err).Error(
-			"Prometheus metrics endpoint failed, trying to restart it...")
-		time.Sleep(1 * time.Second)
 	}
 }

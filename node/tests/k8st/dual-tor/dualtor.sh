@@ -4,7 +4,7 @@
 TEST_DIR=./tests/k8st
 
 # kubectl binary.
-: ${kubectl:=./kubectl}
+: ${kubectl:=../hack/test/kind/kubectl}
 
 # kind binary.
 : ${KIND:=dist/kind}

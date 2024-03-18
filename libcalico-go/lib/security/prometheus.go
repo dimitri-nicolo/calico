@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 )
@@ -43,7 +45,16 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int,
 		}
 		err = srv.ListenAndServeTLS(certFile, keyFile)
 	} else {
-		err = http.ListenAndServe(fmt.Sprintf("[%v]:%v", host, port), handler)
+		err = http.ListenAndServe(fmt.Sprintf("[%v]:%v", host, port), mux)
 	}
 	return
+}
+
+func ServePrometheusMetricsForever(gatherer prometheus.Gatherer, host string, port int, certFile, keyFile, caFile string) {
+	for {
+		err := ServePrometheusMetrics(gatherer, host, port, certFile, keyFile, caFile)
+		logrus.WithError(err).Error(
+			"Prometheus metrics endpoint failed, trying to restart it...")
+		time.Sleep(1 * time.Second)
+	}
 }

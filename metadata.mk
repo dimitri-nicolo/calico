@@ -9,15 +9,15 @@ ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
 
 # Version of Kubernetes to use for tests, bitnami/kubectl, and kubectl binary release in
 # compliance benchmarker, confd, and kube-controllers.
-K8S_VERSION=v1.27.10
+K8S_VERSION=v1.27.11
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
 ELASTIC_VERSION=7.17.18
 ETCD_VERSION=v3.5.6
-# FIXME upgrading to kindest/node newer than v1.24.7 causes Node/kind-cluster and sig-network conformance
-# tests to timeout or fail.
+HELM_VERSION=v3.11.3
 KINDEST_NODE_VERSION=v1.24.7
+KIND_VERSION=v0.14.0
 PROTOC_VER=v0.1
 UBI8_VERSION=8.9
 UBI9_VERSION=9.3

@@ -18,23 +18,19 @@ import (
 	"fmt"
 	"os/exec"
 	"sync"
-	"time"
-
-	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
-
 	"github.com/projectcalico/calico/felix/config"
 	windataplane "github.com/projectcalico/calico/felix/dataplane/windows"
 	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
-	"github.com/projectcalico/calico/libcalico-go/lib/security"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -81,36 +77,17 @@ func SupportsBPF() error {
 	return fmt.Errorf("BPF dataplane is not supported on Windows")
 }
 
-func ServePrometheusMetrics(configParams *config.Config) {
-	for {
-		log.WithFields(log.Fields{
-			"host": configParams.PrometheusMetricsHost,
-			"port": configParams.PrometheusMetricsPort,
-		}).Info("Starting prometheus metrics endpoint")
-		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
-			log.Info("Including Golang, and Process metrics")
-		} else {
-			if !configParams.PrometheusGoMetricsEnabled {
-				log.Info("Discarding Golang metrics")
-				prometheus.Unregister(collectors.NewGoCollector())
-			}
-			if !configParams.PrometheusProcessMetricsEnabled {
-				log.Info("Discarding process metrics")
-				prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-			}
+func ConfigurePrometheusMetrics(configParams *config.Config) {
+	if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
+		log.Info("Including Golang, and Process metrics")
+	} else {
+		if !configParams.PrometheusGoMetricsEnabled {
+			log.Info("Discarding Golang metrics")
+			prometheus.Unregister(collectors.NewGoCollector())
 		}
-
-		err := security.ServePrometheusMetrics(
-			prometheus.DefaultGatherer,
-			"",
-			configParams.PrometheusMetricsPort,
-			configParams.PrometheusMetricsCertFile,
-			configParams.PrometheusMetricsKeyFile,
-			configParams.PrometheusMetricsCAFile,
-		)
-
-		log.WithError(err).Error(
-			"Prometheus metrics endpoint failed, trying to restart it...")
-		time.Sleep(1 * time.Second)
+		if !configParams.PrometheusProcessMetricsEnabled {
+			log.Info("Discarding process metrics")
+			prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+		}
 	}
 }
