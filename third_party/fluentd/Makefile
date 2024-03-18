@@ -98,10 +98,10 @@ image:
 
 build-image-%:
 ifeq ($(OS),Windows_NT)
-	docker build --pull -t $(FLUENTD_IMAGE):latest-$* -f Dockerfile.windows .
+	docker build --pull --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(FLUENTD_IMAGE):latest-$* -f Dockerfile.windows .
 else
 	$(MAKE) build
-	$(DOCKER_BUILD) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
+	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(FLUENTD_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 endif
 

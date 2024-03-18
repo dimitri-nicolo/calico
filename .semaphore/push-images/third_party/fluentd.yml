@@ -45,25 +45,12 @@ blocks:
       when: "branch !~ '.+'"
     task:
       jobs:
-        - name: Linux amd64
+        - name: Linux multi-arch
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd cd ARCHES=amd64 CONFIRM=true; fi
-  - name: Publish fluentd images - native arm64 runner
-    dependencies: []
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      agent:
-        machine:
-          type: s1-aws-arm64-2
-      jobs:
-        - name: Linux arm64
-          commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd cd ARCHES=arm64 CONFIRM=true; fi
+            - make -C third_party/fluentd cd CONFIRM=true
   - name: Publish fluentd multi-arch manifests
     dependencies:
       - Publish fluentd images
-      - "Publish fluentd images - native arm64 runner"
     skip:
       when: "branch !~ '.+'"
     task:
@@ -102,15 +89,14 @@ blocks:
         - name: Run CD
           commands:
             - export PROCESS_REPO=~/process/testing/windows-instances
-            - export REPO_ROOT=~/${SEMAPHORE_GIT_DIR}
             - CONFIRM=true .semaphore/windows-cd.sh
-  - name: Publish Windows manifests
+  - name: Publish Windows multi-arch manifests
     dependencies:
       - Publish Windows images
     skip:
       when: "branch !~ '.+'"
     task:
       jobs:
-        - name: Publish Windows manifests
+        - name: Windows multi-arch manifests
           commands:
             - CONFIRM=true WINDOWS_RELEASE=true make -C third_party/fluentd push-windows-manifest

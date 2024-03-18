@@ -53,7 +53,8 @@ clean:
 # CI/CD
 ###############################################################################
 .PHONY: cd
-cd: image-all cd-common
+cd: image-all var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
+	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(LATEST_IMAGE_TAG) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 .PHONY: push-manifest
 push-manifest:

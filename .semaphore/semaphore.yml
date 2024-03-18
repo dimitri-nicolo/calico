@@ -915,10 +915,6 @@ blocks:
   dependencies:
     - Prerequisites
   task:
-    agent:
-      machine:
-        type: e1-standard-2
-        os_image: ubuntu2004
     secrets:
       - name: google-service-account-for-gcr
     prologue:

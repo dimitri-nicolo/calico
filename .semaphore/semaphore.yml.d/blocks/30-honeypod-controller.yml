@@ -13,6 +13,7 @@
       - name: Linux amd64
         commands:
           - make -C third_party/snort2 cd push-manifest ARCHES=amd64 CONFIRM=true
+
 - name: honeypod-controller
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/', '/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
