@@ -1404,6 +1404,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config.MaxIPSetSize,
 				rules.IPSetIDAllTunnelNets))
 			dp.RegisterManager(newPolicyManager(rawTableV6, mangleTableV6, filterTableV6, ruleRenderer, 6))
+		} else {
+			dp.RegisterManager(newRawEgressPolicyManager(rawTableV6, ruleRenderer, 6, ipSetsV6.SetFilter))
 		}
 
 		dp.RegisterManager(newEndpointManager(
@@ -2212,11 +2214,9 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
 		}})
-		if t.IPVersion == 4 {
-			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
-				Action: iptables.JumpAction{Target: rules.ChainRawOutput},
-			}})
-		}
+		t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
+			Action: iptables.JumpAction{Target: rules.ChainRawOutput},
+		}})
 	}
 
 	if d.config.BPFExtToServiceConnmark != 0 {
