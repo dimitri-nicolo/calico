@@ -7,15 +7,15 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort3
 #############################################
 # Env vars related to packaging and releasing
 #############################################
-SNORT3_IMAGE ?= snort3
+SNORT3_IMAGE ?= snort
 BUILD_IMAGES ?= $(SNORT3_IMAGE)
 
 SNORT3_VERSION ?= 3.1.81.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
-BRANCH_NAME = $(SNORT3_VERSION)
-LATEST_IMAGE_TAG = $(SNORT3_VERSION)
+BRANCH_NAME = v$(SNORT3_VERSION)
+LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
 ###############################################################################
 # Include lib.Makefile
@@ -40,8 +40,8 @@ image: $(SNORT3_IMAGE)
 
 $(SNORT3_IMAGE): $(SNORT3_IMAGE_CREATED)
 $(SNORT3_IMAGE_CREATED): Dockerfile snort3-community.rules
-	$(DOCKER_BUILD) --build-arg SNORT3_VERSION=$(SNORT3_VERSION) -t $(SNORT3_IMAGE):$(SNORT3_VERSION)-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(SNORT3_VERSION)
+	$(DOCKER_BUILD) --build-arg SNORT3_VERSION=$(SNORT3_VERSION) -t $(SNORT3_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) -f Dockerfile .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
 
 .PHONY: clean
@@ -57,4 +57,4 @@ cd: image-all cd-common
 
 .PHONY: push-manifest
 push-manifest:
-	$(MAKE) push-manifests IMAGETAG=$(SNORT3_VERSION)	
+	$(MAKE) push-manifests IMAGETAG=$(LATEST_IMAGE_TAG)
