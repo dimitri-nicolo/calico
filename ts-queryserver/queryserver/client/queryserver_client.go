@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
@@ -67,7 +68,7 @@ func NewQueryServerClient(cfg *QueryServerConfig) (*queryServerClient, error) {
 }
 
 func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *querycacheclient.QueryEndpointsReqBody,
-	clusterId string) (*http.Response, error) {
+	clusterId string) (*querycacheclient.QueryEndpointsResp, error) {
 	reqBodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
 		log.WithError(err).Info("failed to json.marshal QueryEndpointsReqBody: ", err)
@@ -103,9 +104,23 @@ func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *que
 
 	resp, err := q.client.Do(req)
 	if err != nil {
-		log.WithError(err).Info("failed to send request: ", err)
+		log.WithError(err).Info("failed to execute queryserver request: ", err)
 		return nil, err
 	}
 
-	return resp, err
+	// read response from queryserver endpoints call
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("call to read response body from queryserver failed.")
+		return nil, errors.New("failed to read response from queryserver")
+	}
+
+	qsResp := querycacheclient.QueryEndpointsResp{}
+	err = json.Unmarshal(respBytes, &qsResp)
+	if err != nil {
+		log.WithError(err).Error("unmarshaling endpointsRespBody failed.")
+		return nil, err
+	}
+
+	return &qsResp, err
 }

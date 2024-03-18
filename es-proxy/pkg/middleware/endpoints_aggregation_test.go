@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"time"
 
@@ -9,24 +10,47 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmaapi "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 )
 
+// The user authentication review mock struct implementing the authentication review interface.
+type userAuthorizationReviewMock struct {
+	verbs []libcalicov3.AuthorizedResourceVerbs
+	err   error
+}
+
+// PerformReviewForElasticLogs wraps a mocked version of the authorization review method
+// PerformReviewForElasticLogs.
+func (a userAuthorizationReviewMock) PerformReview(
+	ctx context.Context, cluster string,
+) ([]libcalicov3.AuthorizedResourceVerbs, error) {
+	return a.verbs, a.err
+}
+
 var _ = Describe("", func() {
-	var req *http.Request
+	var (
+		req *http.Request
+		ctx context.Context
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+	})
 
 	It("test buildQueryServerEndpointKeyString result", func() {
-		result := buildQueryServerEndpointKeyString("host", "ns", "name", "nameaggr")
-		Expect(result).To(Equal(".*ns/host-k8s-name"))
+		result := buildQueryServerEndpointKeyString("ns", "name", "nameaggr")
+		Expect(result).To(Equal(".*ns/.*-name"))
 
-		result = buildQueryServerEndpointKeyString("host", "ns", "-", "nameaggr")
-		Expect(result).To(Equal(".*ns/host-k8s-nameaggr"))
+		result = buildQueryServerEndpointKeyString("ns", "-", "nameaggr")
+		Expect(result).To(Equal(".*ns/.*-nameaggr"))
 	})
 
 	Context("test validateEndpointsAggregationRequest", func() {
@@ -58,31 +82,19 @@ var _ = Describe("", func() {
 			Entry("should set ClusterName to default if it neither provided in the request body nor header", "", "", "cluster"),
 		)
 
-		var (
-			allow     = lapi.FlowActionAllow
-			deny      = lapi.FlowActionDeny
-			name      = "policyA"
-			namespace = "nsA"
-			tier      = "tierA"
-		)
-
-		DescribeTable("validate PolicyMatch",
-			func(pm *lapi.PolicyMatch, endpointList []string, expectErr bool, errMsg string) {
+		DescribeTable("validate ShowDeniedEndpoints",
+			func(filterDeniedEndpoints bool, endpointList []string, expectErr bool, errMsg string) {
 
 				epReq := EndpointsAggregationRequest{
-					ClusterName:       "",
-					QueryEndpointsReq: client.QueryEndpointsReqBody{},
-					PolicyMatch:       nil,
-					TimeRange:         nil,
-					Timeout:           nil,
+					ClusterName: "",
+					TimeRange:   nil,
+					Timeout:     nil,
 				}
 
-				epReq.PolicyMatch = pm
+				epReq.ShowDeniedEndpoints = filterDeniedEndpoints
 
 				if len(endpointList) > 0 {
-					epReq.QueryEndpointsReq = client.QueryEndpointsReqBody{
-						EndpointsList: endpointList,
-					}
+					epReq.EndpointsList = endpointList
 				}
 
 				reqBodyBytes, err := json.Marshal(epReq)
@@ -101,22 +113,14 @@ var _ = Describe("", func() {
 				}
 
 			},
-			Entry("pass validation when both policy_match and endpointlist is nil / empty",
-				nil, []string{}, false, nil),
+			Entry("pass validation when both ShowDeniedEndpoints and endpointlist are not set",
+				false, []string{}, false, nil),
 			Entry("pass validation when only endpointlist is provided ",
-				nil, []string{"endpoint1"}, false, nil),
-			Entry("fail validation when both policy_match and endpointlist is provided",
-				&lapi.PolicyMatch{Action: &allow}, []string{"endpoint1"}, true, "both policyMatch and endpointList can not be provided in the same request"),
-			Entry("fail validation when policy_match action is not \"deny\"",
-				&lapi.PolicyMatch{Action: &allow}, []string{}, true, "policy_match action can only be set to \"deny\""),
-			Entry("pass validation when policy_match action is \"deny\"",
-				&lapi.PolicyMatch{Action: &deny}, []string{}, false, nil),
-			Entry("fail validation when polict_match.Name is set",
-				&lapi.PolicyMatch{Name: &name, Action: &deny}, []string{}, true, "policy_match values provided are not supported for this api"),
-			Entry("fail validation when policy_match.NameSpace is set",
-				&lapi.PolicyMatch{Namespace: &namespace, Action: &deny}, []string{}, true, "policy_match values provided are not supported for this api"),
-			Entry("fail validation when policy_match.Tier is set",
-				&lapi.PolicyMatch{Tier: tier, Action: &deny}, []string{}, true, "policy_match values provided are not supported for this api"),
+				false, []string{"endpoint1"}, false, nil),
+			Entry("fail validation when both ShowDeniedEndpoints and endpointlist are provided",
+				true, []string{"endpoint1"}, true, "both ShowDeniedEndpoints and endpointList can not be provided in the same request"),
+			Entry("pass validation when ShowDeniedEndpoints is set to true",
+				true, []string{}, false, nil),
 		)
 
 		DescribeTable("validate TimeOut",
@@ -182,19 +186,82 @@ var _ = Describe("", func() {
 		)
 	})
 
-	It("test extractEndpointsFromFlowLogs", func() {
-		fl := lapi.FlowLog{
-			SourceName:      "src12345",
-			SourceNameAggr:  "src*",
-			SourceNamespace: "namespace_from",
-			DestName:        "dst12345",
-			DestNameAggr:    "dst*",
-			DestNamespace:   "namespace_to",
-		}
-		src, dst := extractEndpointsFromFlowLogs(fl)
+	Context("test getQueryServerRequestParams", func() {
+		DescribeTable("validate getQueryServerRequestParams result",
+			func(endpoints []string, showDeniedEndpoint bool, expectedList []string) {
+				params := EndpointsAggregationRequest{
+					ShowDeniedEndpoints: showDeniedEndpoint,
+				}
 
-		Expect(src).To(ContainSubstring(fl.SourceName))
-		Expect(dst).To(ContainSubstring(fl.DestName))
+				queryEndpointsRespBody := getQueryServerRequestParams(&params, endpoints)
 
+				Expect(queryEndpointsRespBody.EndpointsList).To(Equal(expectedList))
+
+			},
+			Entry("should not add endpoints list when endpoints map is nil", nil, false, nil),
+			Entry("should add endpoints list when endpoints list is empty", []string{}, true, []string{}),
+			Entry("should add endpoints list when endpoints map has values", []string{"pod1", "pod2", "pod10", "pod20"},
+				true,
+				[]string{"pod1", "pod2", "pod10", "pod20"}),
+		)
+	})
+
+	Context("test buildFlowLogParamsForDeniedTrafficSearch", func() {
+		It("policyMatch action=deny should be added to params when calling linseed", func() {
+			req := &EndpointsAggregationRequest{}
+			ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+			defer cancel()
+			authReview := userAuthorizationReviewMock{
+				verbs: []libcalicov3.AuthorizedResourceVerbs{},
+				err:   nil,
+			}
+			pageNumber := 2
+			pageSize := 1
+
+			flParams, err := buildFlowLogParamsForDeniedTrafficSearch(ctx, authReview, req, pageNumber, pageSize)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(flParams.PolicyMatches).ToNot(BeNil())
+			Expect(flParams.PolicyMatches).To(HaveLen(1))
+			Expect(*flParams.PolicyMatches[0].Action).To(Equal(lapi.FlowActionDeny))
+
+		})
+	})
+
+	Context("test updateResults", func() {
+		var (
+			endpointsRespBody querycacheclient.QueryEndpointsResp
+			deniedEndpoints   []string
+		)
+		BeforeEach(func() {
+			deniedEndpoints = []string{".*ns1/.*-ep1", ".*ns2/.*-ep10"}
+
+			endpointsRespBody = querycacheclient.QueryEndpointsResp{
+				Count: 5,
+				Items: []querycacheclient.Endpoint{
+					{Name: "ep1", Namespace: "ns1", Node: "node1", Pod: "ep1"},
+					{Name: "ep2", Namespace: "ns1", Node: "node2", Pod: "ep2"},
+					{Name: "ep10", Namespace: "ns2", Node: "node1", Pod: "ep10"},
+					{Name: "ep11", Namespace: "ns2", Node: "node1", Pod: "bp11"},
+					{Name: "ep10", Namespace: "ns3", Node: "node2", Pod: "ep10"},
+				},
+			}
+		})
+		It("should add hasDeniedTraffic: true for endpoints in the deniedEndponts map", func() {
+			endpointsResponse, err := updateResults(&endpointsRespBody, deniedEndpoints)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(endpointsResponse.Count).To(Equal(5))
+
+			for _, item := range endpointsResponse.Item {
+				if item.Namespace == "ns1" && item.Pod == "ep1" {
+					Expect(item.HasDeniedTraffic).To(BeTrue())
+				} else if item.Namespace == "ns2" && item.Pod == "ep10" {
+					Expect(item.HasDeniedTraffic).To(BeTrue())
+				} else {
+					Expect(item.HasDeniedTraffic).To(BeFalse())
+				}
+			}
+		})
 	})
 })

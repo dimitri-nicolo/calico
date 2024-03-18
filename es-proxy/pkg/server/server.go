@@ -214,11 +214,12 @@ func Start(cfg *Config) error {
 	sm.Handle("/endpoints/aggregation",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
-				middleware.EndpointsAggregationHandler(authz,
-					middleware.NewAuthorizationReview(k8sClientSetFactory),
-					qsConfig,
-					linseed,
-				))))
+				middleware.AuthorizeRequest(authz,
+					middleware.EndpointsAggregationHandler(
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						qsConfig,
+						linseed,
+					)))))
 	sm.Handle("/dnsLogs/aggregation",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,
