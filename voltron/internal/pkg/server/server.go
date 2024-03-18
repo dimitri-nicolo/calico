@@ -317,12 +317,13 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		}
 		managedCertificate := c.Certificate
 
-		c.RLock()
+		// Needs a lock for both reading and writing (if assignTunnel is called).
+		c.Lock()
 
 		// we call this function so that we can return and unlock on any failed
 		// check
 		func() {
-			defer c.RUnlock()
+			defer c.Unlock()
 
 			if len(managedCertificate) != 0 {
 				if err := validateCertificate(tunnelCert, managedCertificate); err != nil {
