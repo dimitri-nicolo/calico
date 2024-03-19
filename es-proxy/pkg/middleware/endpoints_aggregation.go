@@ -4,21 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	qsutils "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
 	queryserverclient "github.com/projectcalico/calico/ts-queryserver/queryserver/client"
 )
 
@@ -26,11 +26,11 @@ type EndpointsAggregationRequest struct {
 	// ClusterName defines the name of the cluster a connection will be performed on.
 	ClusterName string `json:"cluster"`
 
-	// QueryServer params
-	QueryEndpointsReq querycacheclient.QueryEndpointsReqBody `json:"query_filters" validate:"omitempty"`
+	// QueryServer params, inlined
+	querycacheclient.QueryEndpointsReqBody
 
-	// Policy properties
-	PolicyMatch *lapi.PolicyMatch `json:"policy_match" validate:"omitempty"`
+	// Enable filtering endpoints in denied traffic
+	ShowDeniedEndpoints bool `json:"showDeniedEndpoints,omitempty" validate:"omitempty"`
 
 	// Time range
 	TimeRange *lmav1.TimeRange `json:"time_range" validate:"omitempty"`
@@ -39,13 +39,30 @@ type EndpointsAggregationRequest struct {
 	Timeout *metav1.Duration `json:"timeout" validate:"omitempty"`
 }
 
+type EndpointsAggregationResponse struct {
+	Count int                  `json:"count"`
+	Item  []AggregatedEndpoint `json:"endpoints"`
+}
+
+type AggregatedEndpoint struct {
+	querycacheclient.Endpoint
+	HasDeniedTraffic bool `json:"hasDeniedTraffic"`
+}
+
 // EndpointsAggregationHandler is a handler for /endpoints/aggregation api
 //
-// returns a http handler function for filtering endpoints by a set of parameters including:
+// returns a http handler function for getting list of endpoints (and filtering them by a set of parameters including:
 // 1. network traffic (retrieved from flowlogs), and 2. static info (from endpoints, policies,
-// nodes, and labels which are retrieved from queryserver cache).
-func EndpointsAggregationHandler(authz auth.RBACAuthorizer, authreview AuthorizationReview,
-	qsConfig *queryserverclient.QueryServerConfig, lsclient client.Client) http.Handler {
+// nodes, and labels which are retrieved from queryserver cache))
+//
+// *note: this handler aggregates endpoints info with denied flowlogs - If timerange.from is provided from the client,
+// linseed will return denied flowlogs from the provided time until now (linseed) time. timerange.to is set to Now()
+// when linseed is processing the request and is different from when client is calling this api or when results are back
+// to the client. So in very rare cases, results might be missing denied flowlog information if it happens in the very
+// small timeframe between the call to linseed and response getting back to client. In this case, the api has to be called
+// again (maybe just refreshing a page from user's point of view).
+func EndpointsAggregationHandler(authreview AuthorizationReview, qsConfig *queryserverclient.QueryServerConfig,
+	lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Validate http method.
@@ -65,6 +82,7 @@ func EndpointsAggregationHandler(authz auth.RBACAuthorizer, authreview Authoriza
 		// Parse request body.
 		endpointsAggregationRequest, err := ParseBody[EndpointsAggregationRequest](w, r)
 		if err != nil {
+			logrus.WithError(err).Error("call to ParseBody failed.")
 			httputils.EncodeError(w, err)
 			return
 		}
@@ -72,6 +90,7 @@ func EndpointsAggregationHandler(authz auth.RBACAuthorizer, authreview Authoriza
 		// Validate parameters.
 		err = validateEndpointsAggregationRequest(r, endpointsAggregationRequest)
 		if err != nil {
+			logrus.WithError(err).Error("call to validateEndpointsAggregationRequest failed.")
 			httputils.EncodeError(w, err)
 			return
 		}
@@ -79,90 +98,109 @@ func EndpointsAggregationHandler(authz auth.RBACAuthorizer, authreview Authoriza
 		ctx, cancel := context.WithTimeout(r.Context(), endpointsAggregationRequest.Timeout.Duration)
 		defer cancel()
 
-		if endpointsAggregationRequest.PolicyMatch != nil {
-			// Check authorization for flowlogs
-			AuthorizeRequest(authz, endpointsFilteredByFlowLogsHandler(qsConfig, ctx, endpointsAggregationRequest, lsclient, authreview)).ServeHTTP(w, r)
-		} else {
-			queryserverEndpointsHandler(qsConfig, endpointsAggregationRequest, nil).ServeHTTP(w, r)
+		// filter deniedEndpoints based on flowlogs (via linseed)
+		deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregationRequest, lsclient, authreview)
+		if err != nil {
+			logrus.WithError(err).Error("call to getDeniedEndpointsFromLinseed failed.")
+			httputils.EncodeError(w, &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    "request to get deniedEndpoints from flowlogs has failed",
+				Err:    errors.New("fetching deniedEndpoints from flowlogs has failed"),
+			})
+			return
 		}
+
+		// Filter deniedEndpoints by other parameters (via queryserver)
+		qsEndpointsResp, err := getEndpointsFromQueryServer(w, qsConfig, endpointsAggregationRequest, deniedEndpoints)
+		if err != nil {
+			httputils.EncodeError(w, &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    "failed to get deniedEndpoints from queryserver",
+				Err:    errors.New("failed to get deniedEndpoints from queryserver"),
+			})
+			return
+		}
+
+		// Enrich deniedEndpoints results with denied traffic info
+		respBodyUpdated, err := updateResults(qsEndpointsResp, deniedEndpoints)
+		if err != nil {
+			httputils.EncodeError(w, &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    "failed to update deniedEndpoints with denied traffic info",
+				Err:    errors.New("failed to update deniedEndpoints with denied traffic info"),
+			})
+			return
+		}
+		httputils.Encode(w, respBodyUpdated)
 	})
 }
 
-// endpointsFilteredByFlowLogsHandlers is a handler for searching endpoints
+// getEndpointsFromQueryServer is a handler for queryserver endpoint search
 //
-// returns a http handler function that filters endpoints in two phases:
-// 1. filter endpoints based on flowlogs data,
-// 2. filter endpoints via queryserver based on non-network related search params.
-// this function is called when search parameters include network related critera.
-func endpointsFilteredByFlowLogsHandler(qsConfig *queryserverclient.QueryServerConfig, ctx context.Context,
-	params *EndpointsAggregationRequest, lsclient client.Client, authreview AuthorizationReview) http.Handler {
+// returns QueryEndpointsResp: list of endpoints from queryserver based on the search parameters provided.
+func getEndpointsFromQueryServer(w http.ResponseWriter, qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
+	deniedEndpoints []string) (*querycacheclient.QueryEndpointsResp, error) {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// filter endpoints based on flowlogs (via linseed)
-		var endpoints []string
-		if params.PolicyMatch != nil {
-			var err error
+	// build queryserver getEndpoints api params
+	qsReqParams := getQueryServerRequestParams(params, deniedEndpoints)
 
-			endpoints, err = getEndpointsFromLinseed(ctx, params, lsclient, authreview)
-			if err != nil {
-				httputils.EncodeError(w, &httputils.HttpStatusError{
-					Status: http.StatusInternalServerError,
-					Msg:    "request to get endpoints from flowlogs has failed",
-					Err:    errors.New("fetching endpoints from flowlogs has failed"),
-				})
-				return
+	// Create queryserverClient client.
+	queryserverClient, err := queryserverclient.NewQueryServerClient(qsConfig)
+	if err != nil {
+		logrus.WithError(err).Error("call to create NewQueryServerClient failed.")
+		return nil, err
+	}
+
+	// call to queryserver client to get deniedEndpoints
+	qsEndpointsResp, err := queryserverClient.SearchEndpoints(qsConfig, qsReqParams, params.ClusterName)
+	if err != nil {
+		logrus.WithError(err).Error("call to SearchEndpoints failed.")
+		return nil, err
+
+	}
+
+	return qsEndpointsResp, nil
+}
+
+// updateResults enriches list of endpoints with denied traffic information
+//
+// return EndpointsAggregationResponse
+func updateResults(endpointsResp *querycacheclient.QueryEndpointsResp,
+	deniedEndpoints []string) (*EndpointsAggregationResponse, error) {
+	epAggrList := []AggregatedEndpoint{}
+
+	var epPatterns *regexp.Regexp
+
+	if len(deniedEndpoints) > 0 {
+		var err error
+		epPatterns, err = qsutils.BuildSubstringRegexMatcher(deniedEndpoints)
+		if err != nil {
+			logrus.WithError(err).Error("call to BuildSubstringRegexMatcher failed.")
+			return nil, err
+		}
+	}
+
+	for _, item := range endpointsResp.Items {
+		epAggregate := AggregatedEndpoint{
+			Endpoint: item,
+		}
+
+		if epPatterns != nil {
+			epKey := buildQueryServerEndpointKeyString(item.Namespace, item.Pod, "")
+
+			if epPatterns.MatchString(epKey) {
+				epAggregate.HasDeniedTraffic = true
 			}
 		}
 
-		// Filter endpoints by other parameters (via queryserver)
-		queryserverEndpointsHandler(qsConfig, params, endpoints).ServeHTTP(w, r)
-	})
-}
+		epAggrList = append(epAggrList, epAggregate)
+	}
 
-// queryserverEndpointsHandler is a handler for queryserver endpoint search
-//
-// returns a http handler function that is calling queryserver to filter endpoints based on
-// the search parameters provided.
-func queryserverEndpointsHandler(qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
-	endpoints []string) http.Handler {
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Filter endpoints by other parameters (via queryserver)
-		qsReqParams := buildQueryServerRequestParams(endpoints, params)
-
-		// Create queryserverClient client.
-		queryserverClient, err := queryserverclient.NewQueryServerClient(qsConfig)
-		if err != nil {
-			logrus.WithError(err).Error("failed to create queryserver client")
-			httputils.EncodeError(w, &httputils.HttpStatusError{
-				Status: http.StatusInternalServerError,
-				Msg:    "something went wrong when creating queryserver client",
-				Err:    errors.New("failed to create queryserver client"),
-			})
-		}
-
-		// call to queryserver client to search endpoints
-		resp, err := queryserverClient.SearchEndpoints(qsConfig, qsReqParams, params.ClusterName)
-		if err != nil {
-			httputils.EncodeError(w, &httputils.HttpStatusError{
-				Status: http.StatusInternalServerError,
-				Msg:    "request to filter endpoints has failed",
-				Err:    errors.New("filtering endpoints failed"),
-			})
-		}
-
-		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-		w.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
-		_, err = io.Copy(w, resp.Body)
-		if err != nil {
-			httputils.EncodeError(w, &httputils.HttpStatusError{
-				Status: http.StatusInternalServerError,
-				Msg:    "error preparing the response",
-				Err:    errors.New("redirecting response from queryserver failed"),
-			})
-		}
-		resp.Body.Close()
-	})
+	epAggrResponse := EndpointsAggregationResponse{
+		Count: endpointsResp.Count,
+		Item:  epAggrList,
+	}
+	return &epAggrResponse, nil
 }
 
 // validateEndpointsAggregationRequest validates the request params for /endpoints/aggregation api
@@ -174,30 +212,13 @@ func validateEndpointsAggregationRequest(r *http.Request, endpointReq *Endpoints
 		endpointReq.ClusterName = MaybeParseClusterNameFromRequest(r)
 	}
 
-	if endpointReq.PolicyMatch != nil {
-		// validate policyMatch params and only allow action:"deny"
-		if endpointReq.PolicyMatch.Name != nil || endpointReq.PolicyMatch.Namespace != nil || len(endpointReq.PolicyMatch.Tier) > 0 {
+	if endpointReq.ShowDeniedEndpoints {
+		// validate queryserver params to not include endpoints list when ShowDeniedEndpoints is set to true
+		if endpointReq.EndpointsList != nil {
 			return &httputils.HttpStatusError{
 				Status: http.StatusBadRequest,
-				Msg:    "policy_match values provided are not supported for this api",
-				Err:    errors.New("unsupported parameters are set: \"policy_match\" includes \"name\", \"namespace\" and/or \"tier\""),
-			}
-		}
-
-		// validate queryserver params to not include endpoints list when policyMatch is provided
-		if endpointReq.QueryEndpointsReq.EndpointsList != nil {
-			return &httputils.HttpStatusError{
-				Status: http.StatusBadRequest,
-				Msg:    "both policyMatch and endpointList can not be provided in the same request",
-				Err:    errors.New("invalid combination of parameters are provided: \"policy_match\" and / or \"endpointsList\""),
-			}
-		}
-
-		if endpointReq.PolicyMatch.Action != nil && (*endpointReq.PolicyMatch.Action) != lapi.FlowActionDeny {
-			return &httputils.HttpStatusError{
-				Status: http.StatusBadRequest,
-				Msg:    "policy_match action can only be set to \"deny\"",
-				Err:    errors.New("invalid value set for parameter: \"policy_match\".\"action\""),
+				Msg:    "both ShowDeniedEndpoints and endpointList can not be provided in the same request",
+				Err:    errors.New("invalid combination of parameters are provided: \"ShowDeniedEndpoints\" and / or \"endpointsList\""),
 			}
 		}
 	}
@@ -223,10 +244,10 @@ func validateEndpointsAggregationRequest(r *http.Request, endpointReq *Endpoints
 	return nil
 }
 
-// buildFlowLogsParams prepares the parameters for flowlog search call to linseed
+// buildFlowLogParamsForDeniedTrafficSearch prepares the parameters for flowlog search call to linseed to get denied flowlogs.
 //
 // returns FlowLogParams to be passed to linseed client, and an error.
-func buildFlowLogParams(ctx context.Context, authReview AuthorizationReview, params *EndpointsAggregationRequest,
+func buildFlowLogParamsForDeniedTrafficSearch(ctx context.Context, authReview AuthorizationReview, params *EndpointsAggregationRequest,
 	pageNumber, pageSize int) (*lapi.FlowLogParams, error) {
 	fp := &lapi.FlowLogParams{}
 
@@ -234,15 +255,19 @@ func buildFlowLogParams(ctx context.Context, authReview AuthorizationReview, par
 		fp.SetTimeRange(params.TimeRange)
 	}
 
-	// set policy match params.
-	if params.PolicyMatch != nil {
-		fp.PolicyMatches = []lapi.PolicyMatch{*params.PolicyMatch}
+	// set policy match to filter denied flowlogs
+	action := lapi.FlowActionDeny
+	fp.PolicyMatches = []lapi.PolicyMatch{
+		{
+			Action: &action,
+		},
 	}
 
 	// Get the user's permissions. We'll pass these to Linseed to filter out logs that
 	// the user doens't have permission to view.
 	verbs, err := authReview.PerformReview(ctx, params.ClusterName)
 	if err != nil {
+		logrus.WithError(err).Error("call to authorization PerformReview failed.")
 		return nil, err
 	}
 	fp.SetPermissions(verbs)
@@ -260,23 +285,30 @@ func buildFlowLogParams(ctx context.Context, authReview AuthorizationReview, par
 	return fp, nil
 }
 
-// getEndpointsFromLinseed extracts list of endpoints from flowlogs.
+// getDeniedEndpointsFromLinseed extracts list of endpoints from denied flowlogs.
 //
-// It calls linseed.FlowLogs().List to search flowlogs
-// based on the provided parameters.
-// returns a 2-tupple:
-// 1. []string that includes all endpoints (src or dst) from flowlogs. Endpoint formatting in the string is compatible
-// with endpoints keys in datastore (used in queryserver).
+// It calls linseed.FlowLogs().List to fetch denied flowlogs.
+// returns:
+// 1. map[string][]string that includes extracted endpoints (src or dst) from denied flowlogs. Endpoint formatting is
+// compatible with endpoint keys in datastore (used in queryserver). The map contains endpoints key patterns for each namespace.
+//
+//	example : {
+//					"tigera-compliance": [".*tigera-compliance/.*-compliance--controller--6769fc95b4--gslxr"],
+//					"calico-system":  [".*calico-system/.*-csi--node--driver--kz6wx"],
+//					"tigera-elasticsearch": [".*tigera-elasticsearch/.*-tigera--linseed--558b55b7b8--n7ggg"]
+//	          }
+//
 // 2. error
-func getEndpointsFromLinseed(ctx context.Context, endpointsAggregationRequest *EndpointsAggregationRequest,
+func getDeniedEndpointsFromLinseed(ctx context.Context, endpointsAggregationRequest *EndpointsAggregationRequest,
 	lsclient client.Client, authreview AuthorizationReview) ([]string, error) {
 
-	endpoints := map[string]int{}
+	var endpoints []string
 	pageNumber := 0
 	pageSize := 1000
 	var afterKey map[string]interface{}
-	flowLogsParams, err := buildFlowLogParams(ctx, authreview, endpointsAggregationRequest, pageNumber, pageSize)
+	deniedFlowLogsParams, err := buildFlowLogParamsForDeniedTrafficSearch(ctx, authreview, endpointsAggregationRequest, pageNumber, pageSize)
 	if err != nil {
+		logrus.WithError(err).Error("call to buildFlowLogParamsForDeniedTrafficSearch failed.")
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
 			Msg:    "error preparing flowlog search parameters",
@@ -288,8 +320,9 @@ func getEndpointsFromLinseed(ctx context.Context, endpointsAggregationRequest *E
 	for pageNumber == 0 || afterKey != nil {
 		listFn := lsclient.FlowLogs(endpointsAggregationRequest.ClusterName).List
 
-		items, err := listFn(ctx, flowLogsParams)
+		items, err := listFn(ctx, deniedFlowLogsParams)
 		if err != nil {
+			logrus.WithError(err).Error("call to get flowLogs list from linseed failed.")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
 				Msg:    "error performing flowlog search",
@@ -298,29 +331,23 @@ func getEndpointsFromLinseed(ctx context.Context, endpointsAggregationRequest *E
 		}
 
 		for _, item := range items.Items {
-			// Add both src and dst as endpoints extracted from flowlogs
-			source, dest := extractEndpointsFromFlowLogs(item)
-			endpoints[source]++
-			endpoints[dest]++
+			if endpoints == nil {
+				endpoints = []string{}
+			}
+			// Extract endpoints from flowlog item: both src and dst.
+			sourcePattern := buildQueryServerEndpointKeyString(item.SourceNamespace, item.SourceName, item.SourceNameAggr)
+			endpoints = append(endpoints, sourcePattern)
+
+			destPattern := buildQueryServerEndpointKeyString(item.DestNamespace, item.DestName, item.DestNameAggr)
+			endpoints = append(endpoints, destPattern)
 		}
 		pageNumber++
 
-		// update flowlog params for next
 		afterKey = items.AfterKey
-		flowLogsParams.SetAfterKey(items.AfterKey)
+		deniedFlowLogsParams.SetAfterKey(items.AfterKey)
 	}
 
-	return maps.Keys(endpoints), nil
-}
-
-// extractEndpointsFromFlowLogs extracts source and destination endpoints from flowlogs
-//
-// return src and dst endpoints in the endpoints key format understandable by queryserver
-func extractEndpointsFromFlowLogs(item lapi.FlowLog) (string, string) {
-	source := buildQueryServerEndpointKeyString(item.Host, item.SourceNamespace, item.SourceName, item.SourceNameAggr)
-	dest := buildQueryServerEndpointKeyString(item.Host, item.DestNamespace, item.DestName, item.DestNameAggr)
-
-	return source, dest
+	return endpoints, nil
 }
 
 // buildQueryServerEndpointKeyString is building endpoints key in the format expected by queryserver.
@@ -330,26 +357,47 @@ func extractEndpointsFromFlowLogs(item lapi.FlowLog) (string, string) {
 // In this code, we create the following string that will be a match for the above endpoint:
 //
 //	.*tigera-fluentd/afra--bz--vaxb--kadm--ms-k8s-fluentd--node--*
-func buildQueryServerEndpointKeyString(host, ns, name, nameaggr string) string {
+func buildQueryServerEndpointKeyString(ns, name, nameaggr string) string {
 	if name == "-" {
-		return fmt.Sprintf(".*%s/%s-k8s-%s", ns,
-			strings.Replace(host, "-", "--", -1),
+		return fmt.Sprintf(".*%s/.*-%s",
+			ns,
 			strings.Replace(nameaggr, "-", "--", -1))
+
 	} else {
-		return fmt.Sprintf(".*%s/%s-k8s-%s", ns,
-			strings.Replace(host, "-", "--", -1),
+		return fmt.Sprintf(".*%s/.*-%s",
+			ns,
 			strings.Replace(name, "-", "--", -1))
+
 	}
 }
 
-// buildQueryServerRequestParams prepare the queryserver params
+// getQueryServerRequestParams prepare the queryserver params
 //
 // return *querycacheclient.QueryEndpointsReq
-func buildQueryServerRequestParams(endpoints []string, params *EndpointsAggregationRequest) *querycacheclient.QueryEndpointsReqBody {
-	qsReq := &params.QueryEndpointsReq
-	if endpoints != nil {
-		qsReq.EndpointsList = endpoints
+func getQueryServerRequestParams(params *EndpointsAggregationRequest, deniedEndpoints []string) *querycacheclient.QueryEndpointsReqBody {
+	// don't copy endpointsList initially from params.
+	qsReqParams := querycacheclient.QueryEndpointsReqBody{
+		Policy:              params.Policy,
+		RuleDirection:       params.RuleDirection,
+		RuleIndex:           params.RuleIndex,
+		RuleEntity:          params.RuleEntity,
+		RuleNegatedSelector: params.RuleNegatedSelector,
+		Selector:            params.Selector,
+		Endpoint:            params.Endpoint,
+		Unprotected:         params.Unprotected,
+		Node:                params.Node,
+		Unlabelled:          params.Unlabelled,
+		Page:                params.Page,
+		Sort:                params.Sort,
 	}
 
-	return qsReq
+	if params.ShowDeniedEndpoints {
+		if deniedEndpoints == nil {
+			qsReqParams.EndpointsList = []string{}
+		} else {
+			qsReqParams.EndpointsList = deniedEndpoints
+		}
+	}
+
+	return &qsReqParams
 }

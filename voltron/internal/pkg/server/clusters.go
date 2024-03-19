@@ -538,8 +538,8 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	proxy.ServeHTTP(w, r)
 }
 
+// assignTunnel may read and write state, so it must be called with c.Lock called.
 func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
-	// called with RLock held
 	if err := c.tunnelManager.SetTunnel(t); err != nil {
 		return err
 	}
