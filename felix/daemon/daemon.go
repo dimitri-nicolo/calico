@@ -722,7 +722,6 @@ configRetry:
 			configParams.FelixHostname,
 			configParams.OpenstackRegion,
 			fromDataplaneC,
-			dpConnector.InSync,
 			dpConnector.datastore,
 			delay,
 			delay*180,
@@ -1120,7 +1119,6 @@ type DataplaneConnector struct {
 	dataplane         dp.DataplaneDriver
 	datastore         bapi.Client
 	datastorev3       client.Interface
-	datastoreInSync   bool
 
 	firstStatusReportSent bool
 
@@ -1521,11 +1519,6 @@ func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 		switch msg := msg.(type) {
 		case *proto.InSync:
 			log.Info("Datastore now in sync.")
-			if !fc.datastoreInSync {
-				log.Info("Datastore in sync for first time, sending message to status reporter.")
-				fc.datastoreInSync = true
-				fc.InSync <- true
-			}
 		case *proto.ConfigUpdate:
 			fc.handleConfigUpdate(msg)
 		case *calc.DatastoreNotReady:
