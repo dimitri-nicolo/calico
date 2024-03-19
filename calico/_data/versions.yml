@@ -128,7 +128,6 @@
     key-cert-provisioner:
       image: tigera/key-cert-provisioner
       version: master
-      registry: quay.io
     elasticsearch-metrics:
       image: tigera/elasticsearch-metrics
       version: master
