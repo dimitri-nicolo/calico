@@ -18,8 +18,10 @@ package stagedglobalpolicy
 
 import (
 	"context"
-	"github.com/projectcalico/calico/apiserver/pkg/rbac"
+
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -51,6 +52,7 @@ import (
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils/cri"
 	"github.com/projectcalico/calico/cni-plugin/pkg/dataplane"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
+	"github.com/projectcalico/calico/cni-plugin/pkg/wait"
 )
 
 func podToInterface(pod *corev1.Pod, ifaceName string) (*k8sconversion.PodInterface, error) {
@@ -562,7 +564,8 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	// Pod resource. (In Enterprise) Felix also modifies the pod through a patch and setting this avoids patching the
 	// same fields as Felix so that we can't clobber Felix's updates.
 	ctxPatchCNI := k8sresources.ContextWithPatchMode(ctx, k8sresources.PatchModeCNI)
-	if _, err := utils.CreateOrUpdate(ctxPatchCNI, calicoClient, endpoint, podInterface.IsDefault); err != nil {
+	var endpointOut *libapi.WorkloadEndpoint
+	if endpointOut, err = utils.CreateOrUpdate(ctxPatchCNI, calicoClient, endpoint, podInterface.IsDefault); err != nil {
 		logger.WithError(err).Error("Error creating/updating endpoint in datastore.")
 		releaseIPAM()
 		return nil, err
@@ -580,6 +583,27 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 			Mac:     contVethMac,
 		},
 	)
+
+	// Conditionally wait for host-local Felix to program the policy for this WEP.
+	// Error if negative, ignore if 0.
+	if conf.PolicySetupTimeoutSeconds < 0 {
+		return nil, fmt.Errorf("invalid pod startup delay of %d", conf.PolicySetupTimeoutSeconds)
+	} else if conf.PolicySetupTimeoutSeconds > 0 {
+		if runtime.GOOS == "windows" {
+			logger.Warn("Config policy_setup_timeout_seconds is not supported on Windows. Ignoring...")
+		} else {
+			if conf.EndpointStatusDir == "" {
+				conf.EndpointStatusDir = "/var/run/calico/endpoint-status"
+			}
+			timeout := time.Duration(conf.PolicySetupTimeoutSeconds) * time.Second
+			// Must use endpointOut because we need the endpoint's Name field
+			// to be filled in.
+			err := wait.ForEndpointReadyWithTimeout(conf.EndpointStatusDir, endpointOut, timeout)
+			if err != nil {
+				logrus.WithError(err).Warn("Error waiting for endpoint to become ready. Unblocking pod creation...")
+			}
+		}
+	}
 
 	return result, nil
 }
