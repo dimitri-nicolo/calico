@@ -4,7 +4,6 @@ package storage
 
 import (
 	"context"
-	"time"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -24,7 +23,7 @@ func (m *MockSetQuerier) GetDomainNameSet(ctx context.Context, name string) (Dom
 	return m.Set, m.GetError
 }
 
-func (m *MockSetQuerier) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, maxLinseedTimeSkew time.Duration, feed *apiV3.GlobalThreatFeed) (Iterator[v1.FlowLog], string, error) {
+func (m *MockSetQuerier) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) (Iterator[v1.FlowLog], string, error) {
 	return m.IteratorFlow, "", m.QueryError
 }
 

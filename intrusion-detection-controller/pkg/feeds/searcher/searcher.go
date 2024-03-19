@@ -77,7 +77,7 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
 	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
 		log.Debug("Check if any flow logs have been generated with a suspicious IP")
-		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, d.geoDB, d.cachedEvents.maxTTL, getCachedFeedResponse.GlobalThreatFeed)
+		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, d.geoDB, getCachedFeedResponse.GlobalThreatFeed)
 		if err != nil {
 			log.WithError(err).Error("query failed")
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)

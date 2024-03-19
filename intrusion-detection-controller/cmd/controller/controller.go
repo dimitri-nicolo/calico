@@ -75,7 +75,7 @@ func main() {
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.IntVar(&healthzSockPort, "port", health.DefaultHealthzSockPort, "Healthz port")
-	flag.IntVar(&maxLinseedTimeSkew, "maxLinseedTimeSkew", DefaultMaxLinseedTimeSkew, "Max time for time skew with linseed")
+	flag.IntVar(&maxLinseedTimeSkew, "maxLinseedTimeSkew", DefaultMaxLinseedTimeSkew, "Max time for time skew with linseed in minutes")
 	// enable klog flags for API call logging (to stderr).
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
@@ -147,7 +147,7 @@ func main() {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
-	e := storage.NewService(linseedClient, client, "")
+	e := storage.NewService(linseedClient, client, "", time.Duration(maxLinseedTimeSkew))
 	e.Run(ctx)
 	defer e.Close()
 

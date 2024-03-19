@@ -37,7 +37,7 @@ type DomainNameSet interface {
 }
 
 type SuspiciousSet interface {
-	QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, maxSkewTime time.Duration, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error)
+	QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error)
 }
 
 type Events interface {

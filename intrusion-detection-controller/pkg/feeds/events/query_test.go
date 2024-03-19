@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	. "github.com/onsi/gomega"
 
@@ -118,7 +117,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	// Clearing event times as we can't accurately test it
 	for i, result := range results {
@@ -159,7 +158,7 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test"
-	_, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	_, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("test")))
 }
 
@@ -174,7 +173,7 @@ func TestSuspiciousIP_QueryFails(t *testing.T) {
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test"
-	_, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	_, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("query failed")))
 }
 
@@ -213,7 +212,7 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test"
-	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(results).To(HaveLen(2))
 	rec1, ok := results[0].Record.(v1.SuspiciousDomainEventRecord)
@@ -252,7 +251,7 @@ func TestSuspiciousDomain_IterationFails(t *testing.T) {
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test"
-	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("iteration failed")))
 	g.Expect(results).To(HaveLen(0))
 }
@@ -268,7 +267,7 @@ func TestSuspiciousDomain_GetFails(t *testing.T) {
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test"
-	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("get failed")))
 	g.Expect(results).To(HaveLen(0))
 }
@@ -289,7 +288,7 @@ func TestSuspiciousDomain_QueryFails(t *testing.T) {
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test"
-	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	results, _, _, err := uut.QuerySet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).To(Equal(errors.New("query failed")))
 	g.Expect(results).To(HaveLen(0))
 }

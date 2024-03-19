@@ -46,7 +46,7 @@ var _ = Describe("DomainName Thread Feeds UT", func() {
 		Expect(err).NotTo(HaveOccurred())
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		uut = storage.NewService(lsc, fakeClient, "cluster")
+		uut = storage.NewService(lsc, fakeClient, "cluster", time.Duration(1))
 		uut.Run(ctx)
 	})
 

@@ -47,7 +47,7 @@ func Test_GetIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -85,7 +85,7 @@ func Test_GetIPSetModified(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -164,7 +164,7 @@ func Test_QueryIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -173,7 +173,7 @@ func Test_QueryIPSet(t *testing.T) {
 	toBeUpdated.Name = "test"
 	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
-	itr, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, time.Duration(1), toBeUpdated)
+	itr, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, toBeUpdated)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	c := 0
@@ -237,7 +237,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -250,7 +250,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	toBeUpdated.SetAnnotations(map[string]string{IpSetHashKey: util.ComputeSha256Hash(cachedIpSet)})
 
-	itr, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, time.Duration(1), toBeUpdated)
+	itr, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, toBeUpdated)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	c := 0
@@ -292,13 +292,13 @@ func Test_QueryIPSet_Big(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
 	testFeed := &apiV3.GlobalThreatFeed{}
 	testFeed.Name = "test_big"
-	i, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, time.Duration(1), testFeed)
+	i, _, err := e.QueryIPSet(ctx, &geodb.MockGeoDB{}, testFeed)
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	itr := i.(*queryIterator[v1.FlowLog, v1.FlowLogParams])
@@ -326,7 +326,7 @@ func Test_ListSets(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -378,7 +378,7 @@ func Test_Put_Set(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -439,7 +439,7 @@ func Test_Delete_Set(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()

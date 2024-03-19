@@ -43,14 +43,16 @@ type Service struct {
 	clusterName                   string
 	forwarderConfigMappingCreated chan struct{}
 	cancel                        context.CancelFunc
+	maxLinseedTimeSkew            time.Duration
 }
 
-func NewService(lsClient client.Client, k8scli ctrlclient.WithWatch, clusterName string) *Service {
+func NewService(lsClient client.Client, k8scli ctrlclient.WithWatch, clusterName string, maxLinseedTimeSkew time.Duration) *Service {
 	return &Service{
 		lsClient:                      lsClient,
 		client:                        k8scli,
 		clusterName:                   clusterName,
 		forwarderConfigMappingCreated: make(chan struct{}),
+		maxLinseedTimeSkew:            maxLinseedTimeSkew,
 	}
 }
 
@@ -279,7 +281,7 @@ func (e *Service) DeleteDomainNameSet(ctx context.Context, m Meta) error {
 type SetQuerier interface {
 	// QueryIPSet queries the flow log by IPs specified in the feed's IPSet.
 	// It returns a queryIterator, the latest IPSet hash, and error if any happens during the querying
-	QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, maxLinseedTimeSkew time.Duration, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator[lsv1.FlowLog], newSetHash string, err error)
+	QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator[lsv1.FlowLog], newSetHash string, err error)
 	// QueryDomainNameSet queries the DNS log by domain names specified in the feed's DomainNameSet.
 	// It returns a queryIterator, the latest DomainNameSet hash, and error if any happens during the querying
 	QueryDomainNameSet(ctx context.Context, set DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (queryIterator Iterator[lsv1.DNSLog], newSetHash string, err error)
@@ -287,7 +289,7 @@ type SetQuerier interface {
 	GetDomainNameSet(ctx context.Context, name string) (DomainNameSetSpec, error)
 }
 
-func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, maxLinseedTimeSkew time.Duration, feed *apiV3.GlobalThreatFeed) (Iterator[lsv1.FlowLog], string, error) {
+func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) (Iterator[lsv1.FlowLog], string, error) {
 	ipset, err := e.GetIPSet(ctx, feed.Name)
 	if err != nil {
 		return nil, "", err
@@ -303,7 +305,7 @@ func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, maxLi
 
 	// Create the list pager for flow logs
 	var tr lmav1.TimeRange
-	tr.From = fromTimestamp.Add(-maxLinseedTimeSkew)
+	tr.From = fromTimestamp.Add(-e.maxLinseedTimeSkew)
 	tr.To = time.Now()
 	tr.Field = "generated_time"
 
