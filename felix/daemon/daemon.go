@@ -1105,7 +1105,6 @@ type DataplaneConnector struct {
 	dataplane            dp.DataplaneDriver
 	datastore            bapi.Client
 	datastorev3          client.Interface
-	statusReporter       *statusrep.EndpointStatusReporter
 	captureStatusWriter  *capture.StatusWriter
 	captureStatusUpdates chan *proto.PacketCaptureStatusUpdate
 
@@ -1114,11 +1113,6 @@ type DataplaneConnector struct {
 	statusUpdatesFromDataplane           chan interface{}
 	statusUpdatesFromDataplaneDispatcher *dispatcher.BlockingDispatcher[interface{}]
 	statusUpdatesFromDataplaneConsumers  []chan interface{}
-
-	failureReportChan chan<- string
-	dataplane         dp.DataplaneDriver
-	datastore         bapi.Client
-	datastorev3       client.Interface
 
 	firstStatusReportSent bool
 
