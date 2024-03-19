@@ -193,7 +193,7 @@ func main() {
 	}
 	defer g.Close()
 
-	maxLinseedTimeSkewiDuration := time.Duration(maxLinseedTimeSkew * int(time.Minute))
+	maxLinseedTimeSkewDuration := time.Duration(maxLinseedTimeSkew * int(time.Minute))
 
 	s := feedsWatcher.NewWatcher(
 		kubeClientSet.CoreV1().ConfigMaps(configMapNamespace),
@@ -205,7 +205,7 @@ func main() {
 		eip,
 		edn,
 		&http.Client{},
-		e, e, sIP, sDN, e, g, maxLinseedTimeSkewiDuration)
+		e, e, sIP, sDN, e, g, maxLinseedTimeSkewDuration)
 
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 
