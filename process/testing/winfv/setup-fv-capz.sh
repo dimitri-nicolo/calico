@@ -17,6 +17,12 @@ SEMAPHORE="${SEMAPHORE:="false"}"
 export RAND=$(tr -dc a-z0-9 </dev/urandom | head -c 4; echo)
 export WIN_NODE_COUNT=1
 
+function shutdown_cluster(){
+  make -C $CAPZ_LOCATION delete-cluster
+}
+
+trap shutdown_cluster EXIT
+
 function prepare_env(){
 # Set up capz variables
   if [[ $FV_TYPE != "cni-plugin" ]] && [[ $FV_TYPE != "calico-felix" ]]; then
@@ -150,10 +156,6 @@ function get_test_results(){
   if [[ $SEMAPHORE == "false" ]]; then
     cat $CALICO_HOME/process/testing/winfv/report/fv-test.log
   fi
-}
-
-function shutdown_cluster(){
-  make -C $CAPZ_LOCATION delete-cluster
 }
 
 prepare_env
