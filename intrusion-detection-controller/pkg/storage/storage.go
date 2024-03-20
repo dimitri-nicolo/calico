@@ -364,7 +364,7 @@ func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNa
 
 	// Create the list pager for flow logs
 	var tr lmav1.TimeRange
-	tr.From = fromTimestamp
+	tr.From = fromTimestamp.Add(-e.maxLinseedTimeSkew)
 	tr.To = time.Now()
 	tr.Field = "generated_time"
 
