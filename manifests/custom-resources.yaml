@@ -12,7 +12,6 @@ spec:
   # If specified, secrets must be created in the `tigera-operator` namespace.
   imagePullSecrets:
     - name: tigera-pull-secret
-
   # Optionally, a custom registry to use for pulling images.
   # registry: <my-registry>
 
@@ -25,11 +24,6 @@ apiVersion: operator.tigera.io/v1
 kind: Manager
 metadata:
   name: tigera-secure
-spec:
-  # Authentication configuration for accessing the Tigera manager.
-  # Default is to use token-based authentication.
-  auth:
-    type: Token
 
 ---
 
