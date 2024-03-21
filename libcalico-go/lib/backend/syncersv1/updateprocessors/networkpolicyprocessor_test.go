@@ -187,13 +187,13 @@ var (
 	tcp       = numorstring.ProtocolFromStringV1("tcp")
 	expected1 = []*model.KVPair{
 		{
-			Key: model.PolicyKey{Name: "default/knp.default.test.policy"},
+			Key: model.PolicyKey{Name: "default/knp.default.test.policy", Tier: "default"},
 			Value: &model.Policy{
 				Namespace:      "default",
 				Order:          &testDefaultPolicyOrder,
 				Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
 				Types:          []string{"egress"},
-				ApplyOnForward: true,
+				ApplyOnForward: false,
 				OutboundRules: []model.Rule{
 					{
 						Action:      "allow",
