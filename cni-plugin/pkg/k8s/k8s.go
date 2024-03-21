@@ -564,7 +564,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	// same fields as Felix so that we can't clobber Felix's updates.
 	ctxPatchCNI := k8sresources.ContextWithPatchMode(ctx, k8sresources.PatchModeCNI)
 	var endpointOut *libapi.WorkloadEndpoint
-	if endpointOut, err = utils.CreateOrUpdate(ctxPatchCNI, calicoClient, endpoint); err != nil {
+	if endpointOut, err = utils.CreateOrUpdate(ctxPatchCNI, calicoClient, endpoint, podInterface.IsDefault); err != nil {
 		logger.WithError(err).Error("Error creating/updating endpoint in datastore.")
 		releaseIPAM()
 		return nil, err
