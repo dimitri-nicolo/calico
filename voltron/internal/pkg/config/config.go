@@ -56,9 +56,9 @@ type Config struct {
 	K8sConfigPath string `split_words:"true"`
 
 	// K8sClientQPS => rest.Config.QPS
-	K8sClientQPS float32 `default:"0.0" split_words:"true"`
+	K8sClientQPS float32 `default:"100.0" split_words:"true"`
 	// K8sClientBurst => rest.Config.Burst
-	K8sClientBurst int `default:"0" split_words:"true"`
+	K8sClientBurst int `default:"1000" split_words:"true"`
 
 	KeepAliveEnable              bool   `default:"true" split_words:"true"`
 	KeepAliveInterval            int    `default:"100" split_words:"true"`
