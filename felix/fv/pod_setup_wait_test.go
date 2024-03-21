@@ -66,8 +66,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Pod setup status wait", []a
 			infra.DumpErrorData()
 		}
 		infra.Stop()
-		dummyWorkloads[0].Stop()
-		dummyWorkloads[1].Stop()
 	})
 
 	Describe("with the file-reporter writing endpoint status to '/tmp/endpoint-status'", func() {

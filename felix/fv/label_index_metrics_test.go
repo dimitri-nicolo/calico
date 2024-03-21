@@ -44,7 +44,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ label index metrics tests",
 	BeforeEach(func() {
 		infra = getInfra()
 		opts := infrastructure.DefaultTopologyOptions()
-		opts.EnableIPv6 = false
 		opts.ExtraEnvVars["FELIX_PROMETHEUSMETRICSENABLED"] = "true"
 		opts.ExtraEnvVars["FELIX_PROMETHEUSMETRICSHOST"] = "0.0.0.0"
 		tc, client = infrastructure.StartNNodeTopology(1, opts, infra)
