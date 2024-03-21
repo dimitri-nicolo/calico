@@ -129,7 +129,7 @@ func (w *watcher) processNextItem() bool {
 	}
 	defer w.Done(key)
 
-	log.Debugf("Received %v, and type: %s", key, reflect.TypeOf(w.resource.obj).String())
+	log.Debugf("Received '%v', and type: %s", key, reflect.TypeOf(w.resource.obj).String())
 	reqLogger := log.WithField("key", key)
 	reqLogger.Debug("Processing next item")
 

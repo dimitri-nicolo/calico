@@ -17,7 +17,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	controller "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
@@ -109,7 +108,6 @@ func (r *recommendationScopeReconciler) Reconcile(key types.NamespacedName) erro
 						r.clusterID,
 						r.clientSet.ProjectcalicoV3(),
 						r.linseed,
-						set.New[string](),
 						flows.NewRecommendationFlowLogQuery(r.ctx, r.linseed, r.clusterID),
 						cache,
 						scope,

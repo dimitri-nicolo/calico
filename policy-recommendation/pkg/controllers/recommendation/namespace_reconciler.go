@@ -11,8 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
@@ -56,84 +54,27 @@ func (r *namespaceReconciler) Reconcile(key types.NamespacedName) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
+	namespace := key.Name
+	r.clog.WithField("namespace", namespace).Debug("Reconciling namespace.")
+
 	// isDelete returns true if the namespace was deleted from the datastore.
-	isDelete := func(key types.NamespacedName) bool {
-		_, err := r.clientSet.CoreV1().Namespaces().Get(r.ctx, key.Name, metav1.GetOptions{})
+	isDelete := func(ns string) bool {
+		_, err := r.clientSet.CoreV1().Namespaces().Get(r.ctx, ns, metav1.GetOptions{})
 		if err != nil && kerrors.IsNotFound(err) {
+			r.clog.WithField("namespace", ns).Debug("Namespace not found or was deleted.")
 			return true
 		}
-
+		r.clog.WithField("namespace", ns).Debug("Namespace found.")
 		return false
 	}
 
-	if !isDelete(key) {
+	if !isDelete(namespace) {
 		// Add the namespace to the engine for processing. The engine holds a set of namespaces.
-		r.addNamespace(key.Name)
+		r.engine.AddNamespace(namespace)
 	} else {
 		// Remove the namespace from the engine processing items, and the cache.
-		r.removeNamespace(key.Name)
+		r.engine.RemoveNamespace(namespace)
 	}
 
 	return nil
-}
-
-// addNamespace adds a namespace for tracking, and adds it to the filtered namespaces for
-// processing, if it is selected by the recommendation selector.
-func (r *namespaceReconciler) addNamespace(namespace string) {
-	if !r.engine.Namespaces.Contains(namespace) {
-		// Keep track of every namespace.
-		r.engine.Namespaces.Add(namespace)
-		r.clog.WithField("namespace", namespace).Debug("Added namespace for tracking.")
-		// Only add a namespace for processing if it is selected by the recommendation selector.
-		selector := r.engine.GetScope().GetSelector()
-		if selector.String() == "" || selector.Evaluate(map[string]string{v3.LabelName: namespace}) {
-			if !r.engine.FilteredNamespaces.Contains(namespace) {
-				r.engine.FilteredNamespaces.Add(namespace)
-				r.clog.WithField("namespace", namespace).Info("Added namespace for processing.")
-			}
-		}
-	}
-}
-
-// removeNamespace removes items from further processing, and any reference of the namespace in the other policy
-// rules.
-func (r *namespaceReconciler) removeNamespace(namespace string) {
-	// Remove the namespace from the engine runnable items, and the cache.
-	r.engine.Namespaces.Discard(namespace)
-	if r.engine.FilteredNamespaces.Contains(namespace) {
-		r.engine.FilteredNamespaces.Discard(namespace)
-	}
-	if _, ok := r.cache.Get(namespace); ok {
-		r.cache.Delete(namespace)
-	}
-	r.clog.WithField("namespace", namespace).Debug("Removed namespace from further processing.")
-
-	// Remove every rule referencing the deleted namespace from the cache items.
-	for _, key := range r.cache.ListKeys() {
-		if val, ok := r.cache.Get(key); ok {
-			snp := val.(v3.StagedNetworkPolicy)
-			r.removeRulesReferencingDeletedNamespace(&snp, namespace)
-			r.cache.Set(key, snp)
-		}
-	}
-}
-
-// removeRulesReferencingDeletedNamespace removes every rule from the staged network policy referencing the passed in namespace.
-func (r *namespaceReconciler) removeRulesReferencingDeletedNamespace(snp *v3.StagedNetworkPolicy, namespace string) {
-	r.clog.Debugf("Remove all references to namespace: %s, from staged network policy: %s", namespace, snp.Name)
-	ingress := []v3.Rule{}
-	for i, rule := range snp.Spec.Ingress {
-		if rule.Source.NamespaceSelector != namespace {
-			ingress = append(ingress, snp.Spec.Ingress[i])
-		}
-	}
-	snp.Spec.Ingress = ingress
-
-	egress := []v3.Rule{}
-	for i, rule := range snp.Spec.Egress {
-		if rule.Destination.NamespaceSelector != namespace {
-			egress = append(egress, snp.Spec.Egress[i])
-		}
-	}
-	snp.Spec.Egress = egress
 }
