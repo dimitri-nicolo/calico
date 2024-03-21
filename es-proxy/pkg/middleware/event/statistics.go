@@ -7,8 +7,11 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 
@@ -16,7 +19,7 @@ import (
 )
 
 // EventStatisticsHandler handles event statistics requests.
-func EventStatisticsHandler(lsclient client.Client) http.Handler {
+func EventStatisticsHandler(k8sClient datastore.ClientSet, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse http request body into bulk request.
 		params, err := parseEventStatisticsRequest(w, r)
@@ -28,6 +31,21 @@ func EventStatisticsHandler(lsclient client.Client) http.Handler {
 		// create a context with timeout to ensure we don't block for too long.
 		ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
 		defer cancelWithTimeout()
+
+		if k8sClient == nil {
+			httputils.EncodeError(w, errors.New("k8sClient is nil"))
+			return
+		}
+
+		// For security event search requests, we need to modify the Elastic query
+		// to exclude events which match exceptions created by users.
+		eventExceptionList, err := k8sClient.AlertExceptions().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			logrus.WithError(err).Error("failed to list alert exceptions")
+			httputils.EncodeError(w, err)
+			return
+		}
+		params.Selector = search.UpdateSelectorWithAlertExceptions(eventExceptionList, params.Selector)
 
 		// Get cluster name
 		clusterName := middleware.MaybeParseClusterNameFromRequest(r)
