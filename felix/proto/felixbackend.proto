@@ -227,6 +227,8 @@ message FromDataplane {
     PacketCaptureStatusUpdate packet_capture_status_update = 10;
 
     EgressPodStatusUpdate egress_pod_status_update = 11;
+
+    DataplaneInSync dataplane_in_sync = 12;
   }
 }
 
@@ -554,6 +556,9 @@ message WireguardStatusUpdate {
 
   // The IP version of this update
   IPVersion ip_version = 2;
+}
+
+message DataplaneInSync {
 }
 
 message HostMetadataV4V6Update {

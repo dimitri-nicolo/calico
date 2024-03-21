@@ -356,6 +356,14 @@ type Config struct {
 	EndpointReportingEnabled   bool          `config:"bool;false"`
 	EndpointReportingDelaySecs time.Duration `config:"seconds;1"`
 
+	// EndpointStatusPathPrefix is the path to the directory
+	// where endpoint status will be written. Endpoint status
+	// file reporting is disabled if field is left empty.
+	//
+	// Chosen directory should match the directory used by the CNI for PodStartupDelay.
+	// [Default: ""]
+	EndpointStatusPathPrefix string `config:"file;;"`
+
 	IptablesMarkMask uint32 `config:"mark-bitmask;0xffff0000;non-zero,die-on-fail"`
 
 	DisableConntrackInvalidCheck bool `config:"bool;false"`
@@ -482,15 +490,16 @@ type Config struct {
 
 	ExternalNodesCIDRList []string `config:"cidr-list;;die-on-fail"`
 
-	DebugMemoryProfilePath          string        `config:"file;;"`
-	DebugCPUProfilePath             string        `config:"file;/tmp/felix-cpu-<timestamp>.pprof;"`
-	DebugDisableLogDropping         bool          `config:"bool;false"`
-	DebugSimulateCalcGraphHangAfter time.Duration `config:"seconds;0"`
-	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
-	DebugConsoleEnabled             bool          `config:"bool;false"`
-	DebugUseShortPollIntervals      bool          `config:"bool;false"`
-	DebugCloudWatchLogsFile         string        `config:"file;;"`
-	DebugWindowsPktMonStartArgs     string        `config:"string;"`
+	DebugMemoryProfilePath           string        `config:"file;;"`
+	DebugCPUProfilePath              string        `config:"file;/tmp/felix-cpu-<timestamp>.pprof;"`
+	DebugDisableLogDropping          bool          `config:"bool;false"`
+	DebugSimulateCalcGraphHangAfter  time.Duration `config:"seconds;0"`
+	DebugSimulateDataplaneHangAfter  time.Duration `config:"seconds;0"`
+	DebugSimulateDataplaneApplyDelay time.Duration `config:"seconds;0"`
+	DebugConsoleEnabled              bool          `config:"bool;false"`
+	DebugUseShortPollIntervals       bool          `config:"bool;false"`
+	DebugCloudWatchLogsFile          string        `config:"file;;"`
+	DebugWindowsPktMonStartArgs      string        `config:"string;"`
 
 	// IPSecMode controls which mode IPSec is operating on.
 	// Default value means IPSec is not enabled.
