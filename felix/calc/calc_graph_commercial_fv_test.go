@@ -11,6 +11,7 @@ import (
 
 	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -143,8 +144,10 @@ var localWlEpCaptureKey2 = WorkloadEndpointKey{
 }
 
 // local endpoint ids for captures
-var localWlEp1CaptureId = "orch/wl1-capture/ep1"
-var localWlEp2CaptureId = "orch/wl2-capture/ep2"
+var (
+	localWlEp1CaptureId = "orch/wl1-capture/ep1"
+	localWlEp2CaptureId = "orch/wl2-capture/ep2"
+)
 
 // packet capture that select two local endpoints
 var withCaptureSelectAll = withLocalEndpointsForCapture.withKVUpdates(
@@ -214,7 +217,8 @@ var withCaptureSelectTwice = withLocalEndpointsForCapture.withKVUpdates(
 		WorkloadId:     localWlEpCaptureKey1.WorkloadID,
 		OrchestratorId: localWlEpCaptureKey1.OrchestratorID,
 		EndpointId:     localWlEpCaptureKey1.EndpointID,
-	}},
+	},
+},
 	proto.PacketCaptureUpdate{
 		Id: &proto.PacketCaptureID{
 			Name:      CaptureAllValue.Name,
@@ -245,10 +249,12 @@ var commLocalEp1WithOneTierPolicy123 = commercialPolicyOrderState(
 	[3]float64{order10, order20, order30},
 	[3]string{"pol-1", "pol-2", "pol-3"},
 )
+
 var commLocalEp1WithOneTierPolicy321 = commercialPolicyOrderState(
 	[3]float64{order30, order20, order10},
 	[3]string{"pol-3", "pol-2", "pol-1"},
 )
+
 var commLocalEp1WithOneTierPolicyAlpha = commercialPolicyOrderState(
 	[3]float64{order10, order10, order10},
 	[3]string{"pol-1", "pol-2", "pol-3"},
@@ -313,6 +319,7 @@ var localEp1WithTiers123 = tierOrderState(
 	[3]float64{order10, order20, order30},
 	[3]string{"tier-1", "tier-2", "tier-3"},
 )
+
 var localEp1WithTiers321 = tierOrderState(
 	[3]float64{order30, order20, order10},
 	[3]string{"tier-3", "tier-2", "tier-1"},
@@ -324,10 +331,12 @@ var localEp1WithTiersAlpha = tierOrderState(
 	[3]float64{order10, order10, order10},
 	[3]string{"tier-1", "tier-2", "tier-3"},
 )
+
 var localEp1WithTiersAlpha2 = tierOrderState(
 	[3]float64{order20, order20, order20},
 	[3]string{"tier-1", "tier-2", "tier-3"},
 )
+
 var localEp1WithTiersAlpha3 = tierOrderState(
 	[3]float64{order20, order20, order10},
 	[3]string{"tier-3", "tier-1", "tier-2"},
@@ -394,6 +403,7 @@ var localEp1WithDefaultTiers = tierDisabledOrderState(
 	[3]string{"tier-1", "default", "allow-tigera"},
 	[3]bool{false, true, true},
 )
+
 var localEp1WithOverlappingDefaultTiers = tierDisabledOrderState(
 	[3]float64{order20, order20, order10},
 	[3]string{"tier-1", "allow-tigera", "default"},
@@ -412,8 +422,10 @@ func tierDisabledOrderState(tierOrders [3]float64, expectedOrder [3]string, tier
 	for n := range tierExists {
 		if tierExists[n] {
 			ti = append(ti,
-				mock.TierInfo{Name: expectedOrder[n],
-					IngressPolicyNames: []string{expectedOrder[n] + "-pol"}, EgressPolicyNames: []string{expectedOrder[n] + "-pol"}})
+				mock.TierInfo{
+					Name:               expectedOrder[n],
+					IngressPolicyNames: []string{expectedOrder[n] + "-pol"}, EgressPolicyNames: []string{expectedOrder[n] + "-pol"},
+				})
 			activeTiers++
 		}
 	}
@@ -635,8 +647,10 @@ var commRemoteWlEp1 = WorkloadEndpoint{
 	Name:       "cali1",
 	Mac:        mustParseMac("01:02:03:04:05:06"),
 	ProfileIDs: []string{"prof-1"},
-	IPv4Nets: []calinet.IPNet{mustParseNet("10.0.1.1/32"),
-		mustParseNet("10.0.1.2/32")},
+	IPv4Nets: []calinet.IPNet{
+		mustParseNet("10.0.1.1/32"),
+		mustParseNet("10.0.1.2/32"),
+	},
 }
 
 var commRemoteWlEp2 = WorkloadEndpoint{
@@ -760,6 +774,7 @@ var localWlEpKey3 = WorkloadEndpointKey{
 	WorkloadID:     "wl3",
 	EndpointID:     "ep3",
 }
+
 var localWlEp3 = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali3",
@@ -909,7 +924,8 @@ var remoteWlEp1NoIpv6 = WorkloadEndpoint{
 	Mac:   mustParseMac("01:02:03:04:05:06"),
 	IPv4Nets: []calinet.IPNet{
 		mustParseNet("10.1.0.1/32"),
-		mustParseNet("10.1.0.2/32")},
+		mustParseNet("10.1.0.2/32"),
+	},
 	Labels: map[string]string{
 		"id": "rem-ep-1",
 		"x":  "x",
@@ -923,10 +939,12 @@ var remoteWlEp1UpdatedLabels = WorkloadEndpoint{
 	Mac:   mustParseMac("01:02:03:04:05:06"),
 	IPv4Nets: []calinet.IPNet{
 		mustParseNet("10.1.0.1/32"),
-		mustParseNet("10.1.0.2/32")},
+		mustParseNet("10.1.0.2/32"),
+	},
 	IPv6Nets: []calinet.IPNet{
 		mustParseNet("fe80:fe11::1/128"),
-		mustParseNet("fe80:fe11::2/128")},
+		mustParseNet("fe80:fe11::2/128"),
+	},
 	Labels: map[string]string{
 		"id": "rem-ep-1",
 		"x":  "x",
@@ -941,10 +959,12 @@ var remoteWlEp3 = WorkloadEndpoint{
 	Mac:   mustParseMac("02:03:04:05:06:07"),
 	IPv4Nets: []calinet.IPNet{
 		mustParseNet("10.2.0.1/32"),
-		mustParseNet("10.2.0.2/32")},
+		mustParseNet("10.2.0.2/32"),
+	},
 	IPv6Nets: []calinet.IPNet{
 		mustParseNet("fe80:fe22::1/128"),
-		mustParseNet("fe80:fe22::2/128")},
+		mustParseNet("fe80:fe22::2/128"),
+	},
 	Labels: map[string]string{
 		"id": "rem-ep-2",
 		"x":  "x",
@@ -1044,24 +1064,29 @@ var commercialTests = []StateList{
 
 	// Tests of policy ordering.  Each state has one tier but we shuffle
 	// the order of the policies within it.
-	{commLocalEp1WithOneTierPolicy123,
+	{
+		commLocalEp1WithOneTierPolicy123,
 		commLocalEp1WithOneTierPolicy321,
-		commLocalEp1WithOneTierPolicyAlpha},
+		commLocalEp1WithOneTierPolicyAlpha,
+	},
 
 	// Test mutating the profile list of some endpoints.
 	{localEpsWithNonMatchingProfile, localEpsWithProfile},
 
 	// And tier ordering.
-	{localEp1WithTiers123,
+	{
+		localEp1WithTiers123,
 		localEp1WithTiers321,
 		localEp1WithTiersAlpha,
 		localEp1WithTiersAlpha2,
 		localEp1WithTiers321,
-		localEp1WithTiersAlpha3},
+		localEp1WithTiersAlpha3,
+	},
 
 	// String together some complex updates with profiles and policies
 	// coming and going.
-	{localEpsWithProfile,
+	{
+		localEpsWithProfile,
 		commLocalEp1WithOneTierPolicy123,
 		localEp1WithTiers321,
 		localEpsWithNonMatchingProfile,
@@ -1071,7 +1096,8 @@ var commercialTests = []StateList{
 		localEpsWithUpdatedProfileNegatedTags,
 		localEp1WithPolicyAndTier,
 		localEp1WithTiersAlpha2,
-		localEpsWithProfile},
+		localEpsWithProfile,
+	},
 
 	// Host endpoint tests.
 	{hostEp1WithPolicyAndTier, hostEp2WithPolicyAndTier},
@@ -1131,9 +1157,11 @@ var commercialTests = []StateList{
 	{localEp2WithNode, localEp2WithPolicy},
 
 	// Remote endpoint tests.
-	{remoteWlEp1WithPolicyAndTier,
+	{
+		remoteWlEp1WithPolicyAndTier,
 		localEpAndRemoteEpWithPolicyAndTier,
-		remoteEpsWithPolicyAndTier},
+		remoteEpsWithPolicyAndTier,
+	},
 
 	// DNS Policy unit tests.
 	{withDNSPolicy, withDNSPolicyNoDupe, withDNSPolicy2, withDNSPolicy3},
@@ -1262,6 +1290,7 @@ var commercialTests = []StateList{
 var _ = Describe("COMMERCIAL: Calculation graph state sequencing tests:", func() {
 	describeSyncTests(commercialTests, licenseTiersEnabled{})
 })
+
 var _ = Describe("COMMERCIAL: Async calculation graph state sequencing tests:", func() {
 	describeAsyncTests(commercialTests, licenseTiersEnabled{})
 })
@@ -1274,9 +1303,11 @@ var commercialTestsDisabledTiers = []StateList{
 	// other than "allow-tigera", "default", "sg-remote", "sg-local", "metadata.
 	{localEp1WithDefaultTiers, localEp1WithOverlappingDefaultTiers},
 }
+
 var _ = Describe("COMMERCIAL: Calculation graph state sequencing tests with tier feature disabled:", func() {
 	describeSyncTests(commercialTestsDisabledTiers, licenseTiersDisabled{})
 })
+
 var _ = Describe("COMMERCIAL: Async calculation graph state sequencing tests with tier feature disabled:", func() {
 	describeAsyncTests(commercialTestsDisabledTiers, licenseTiersDisabled{})
 })
@@ -1313,6 +1344,7 @@ var (
 	nsNoSelector = kapiv1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "egress",
+			UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 		},
 		Spec: kapiv1.NamespaceSpec{},
 	}
@@ -1323,6 +1355,7 @@ var (
 			Annotations: map[string]string{
 				"egress.projectcalico.org/selector": egressSelector,
 			},
+			UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 		},
 		Spec: kapiv1.NamespaceSpec{},
 	}
@@ -1335,6 +1368,7 @@ var (
 				"egress.projectcalico.org/namespaceSelector":   namespaceSelector,
 				"egress.projectcalico.org/selector":            egressSelector,
 			},
+			UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 		},
 		Spec: kapiv1.NamespaceSpec{},
 	}
@@ -1396,6 +1430,7 @@ var (
 	egressGatewayPolicyVal1 = &apiv3.EgressGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "egw-policy1",
+			UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 		},
 		Spec: apiv3.EgressGatewayPolicySpec{
 			Rules: []apiv3.EgressGatewayRule{
@@ -1428,6 +1463,7 @@ var (
 	egressGatewayPolicyVal2 = &apiv3.EgressGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "egw-policy1",
+			UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 		},
 		Spec: apiv3.EgressGatewayPolicySpec{
 			Rules: []apiv3.EgressGatewayRule{
@@ -2618,6 +2654,7 @@ var (
 				Value: &apiv3.Profile{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "egress",
+						UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 					},
 					Spec: apiv3.ProfileSpec{
 						EgressGateway: &apiv3.EgressGatewaySpec{
