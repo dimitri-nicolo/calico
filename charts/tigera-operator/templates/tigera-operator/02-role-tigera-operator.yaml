@@ -181,6 +181,7 @@ rules:
     - crd.projectcalico.org
     resources:
     - felixconfigurations
+    - ippools
     verbs:
     - create
     - patch
@@ -188,7 +189,7 @@ rules:
     - get
     - watch
   - apiGroups:
-    - crd.projectcalico.org
+    - projectcalico.org
     resources:
     - ippools
     verbs:
@@ -198,6 +199,7 @@ rules:
     - get
     - watch
     - update
+    - delete
   - apiGroups:
     - crd.projectcalico.org
     resources:
