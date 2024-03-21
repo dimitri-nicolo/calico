@@ -20,7 +20,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "group1.uisettings-1"
 	name2 := "group2.uisettings-2"
@@ -133,7 +132,7 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 
 		By("Updating the UISettings before it is created")
 		_, outError := c.UISettings().Update(ctx, &apiv3.UISettings{
-			ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-uiSettings"},
+			ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 			Spec:       spec1,
 		}, options.SetOptions{})
 		Expect(outError).To(HaveOccurred())

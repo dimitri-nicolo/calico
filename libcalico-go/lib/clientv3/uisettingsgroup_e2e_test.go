@@ -22,7 +22,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("UISettingsGroup tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "uisettingsgroup-1"
 	name2 := "uisettingsgroup-2"
@@ -45,7 +44,7 @@ var _ = testutils.E2eDatastoreDescribe("UISettingsGroup tests", testutils.Datast
 
 			By("Updating the UISettingsGroup before it is created")
 			_, outError := c.UISettingsGroups().Update(ctx, &apiv3.UISettingsGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-uiSettingsGroup"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -127,7 +126,7 @@ var _ = testutils.E2eDatastoreDescribe("UISettingsGroup tests", testutils.Datast
 
 			By("Attempting to update the UISettingsGroup without a Creation Timestamp")
 			res, outError = c.UISettingsGroups().Update(ctx, &apiv3.UISettingsGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-uiSettingsGroup"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

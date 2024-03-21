@@ -4,6 +4,7 @@ package clientv3_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -18,8 +19,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -43,7 +42,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 
 		By("Updating the DeepPacketInspection before it is created")
 		_, outError := c.DeepPacketInspections().Update(ctx, &apiv3.DeepPacketInspection{
-			ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-deepPacketInspection"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 			Spec:       spec1,
 		}, options.SetOptions{})
 		Expect(outError).To(HaveOccurred())
@@ -125,7 +124,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 
 		By("Attempting to update the DeepPacketInspection without a Creation Timestamp")
 		res, outError = c.DeepPacketInspections().Update(ctx, &apiv3.DeepPacketInspection{
-			ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", UID: "test-fail-deepPacketInspection"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", UID: uid},
 			Spec:       spec1,
 		}, options.SetOptions{})
 		Expect(outError).To(HaveOccurred())
@@ -334,7 +333,6 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 		_, outError = c.DeepPacketInspections().Get(ctx, namespace2, name2, options.GetOptions{})
 		Expect(outError).To(HaveOccurred())
 		Expect(outError.Error()).To(ContainSubstring("resource does not exist: DeepPacketInspection(" + namespace2 + "/" + name2 + ") with error:"))
-
 	},
 		Entry("Two fully populated DeepPacketInspectionSpec", name1, name2, spec1, spec2))
 
