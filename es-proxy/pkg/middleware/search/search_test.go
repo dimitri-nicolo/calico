@@ -51,16 +51,8 @@ var (
 
 	//go:embed testdata/event_search_request_from_manager.json
 	eventSearchRequestFromManager string
-	//go:embed testdata/event_search_request_from_manager_no_selector.json
-	eventSearchRequestFromManagerNoSelector string
 	//go:embed testdata/event_search_request.json
 	eventSearchRequest string
-	//go:embed testdata/event_search_request_no_selector.json
-	eventSearchRequestNoSelector string
-	//go:embed testdata/event_search_request_selector.json
-	eventSearchRequestSelector string
-	//go:embed testdata/event_search_request_selector_invalid.json
-	eventSearchRequestSelectorInvalid string
 	//go:embed testdata/event_search_response.json
 	eventSearchResponse string
 )
@@ -138,6 +130,49 @@ var _ = Describe("SearchElasticHits", func() {
 		Source lapi.FlowLog `json:"source"`
 	}
 
+	startTime := time.Now()
+	alertExceptions := v3.AlertExceptionList{
+		Items: []v3.AlertException{
+			// no expiry
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "alert-exception-no-expiry",
+					CreationTimestamp: metav1.Now(),
+				},
+				Spec: v3.AlertExceptionSpec{
+					Description: "AlertException no expiry",
+					Selector:    "origin = origin1",
+					StartTime:   metav1.Time{Time: startTime.Add(-time.Hour)},
+				},
+			},
+			// not expired
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "alert-exception-not-expired",
+					CreationTimestamp: metav1.Now(),
+				},
+				Spec: v3.AlertExceptionSpec{
+					Description: "AlertException not expired",
+					Selector:    "origin = origin2",
+					StartTime:   metav1.Time{Time: startTime.Add(-time.Hour)},
+					EndTime:     &metav1.Time{Time: startTime.Add(time.Hour)},
+				},
+			},
+			// expired
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "alert-exception-expired",
+					CreationTimestamp: metav1.Time{Time: metav1.Now().Add(-2 * time.Hour)}, // make this one expire
+				},
+				Spec: v3.AlertExceptionSpec{
+					Description: "AlertException expired",
+					Selector:    "origin = origin3",
+					StartTime:   metav1.Time{Time: startTime.Add(-2 * time.Hour)},
+					EndTime:     &metav1.Time{Time: startTime.Add(-time.Hour)},
+				},
+			},
+		},
+	}
 	BeforeEach(func() {
 		ctx = context.Background()
 
@@ -664,6 +699,93 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 	})
 
+	Context("UpdateSelectorWithAlertExceptions() function", func() {
+		It("should should update existing selector with alert exceptions selectors", func() {
+			updatedSelector := UpdateSelectorWithAlertExceptions(&alertExceptions, "NOT dismissed = true")
+			Expect(updatedSelector).To(Equal("(NOT dismissed = true) AND NOT (( origin = origin1 ) OR ( origin = origin2 ))"))
+		})
+
+		It("should should update empty selector with alert exceptions selectors", func() {
+			updatedSelector := UpdateSelectorWithAlertExceptions(&alertExceptions, "")
+			Expect(updatedSelector).To(Equal("NOT (( origin = origin1 ) OR ( origin = origin2 ))"))
+		})
+
+		It("should handle alert exceptions selector AND/OR conditions", func() {
+			alertExceptions := v3.AlertExceptionList{
+				Items: []v3.AlertException{
+					// AND
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "alert-exception-and",
+							CreationTimestamp: metav1.Now(),
+						},
+						Spec: v3.AlertExceptionSpec{
+							Description: "AlertException all AND",
+							Selector:    "origin = origin1 AND type = global_alert",
+						},
+					},
+					// OR
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "alert-exception-or",
+							CreationTimestamp: metav1.Now(),
+						},
+						Spec: v3.AlertExceptionSpec{
+							Description: "AlertException OR",
+							Selector:    "origin = origin2 OR type = honeypod",
+						},
+					},
+					// mixed AND / OR
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "alert-exception-and-or",
+							CreationTimestamp: metav1.Now(),
+						},
+						Spec: v3.AlertExceptionSpec{
+							Description: "AlertException AND OR",
+							Selector:    "origin = origin3 AND type = alert OR source_namespace = ns3",
+						},
+					},
+				},
+			}
+
+			updatedSelector := UpdateSelectorWithAlertExceptions(&alertExceptions, "NOT dismissed = true")
+			Expect(updatedSelector).To(Equal("(NOT dismissed = true) AND NOT (( origin = origin1 AND type = global_alert ) OR ( origin = origin2 OR type = honeypod ) OR ( origin = origin3 AND type = alert OR source_namespace = ns3 ))"))
+		})
+
+		It("should skip invalid alert exceptions selector", func() {
+
+			alertExceptions := v3.AlertExceptionList{
+				Items: []v3.AlertException{
+					// valid selector
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "alert-exception-valid-selector",
+							CreationTimestamp: metav1.Now(),
+						},
+						Spec: v3.AlertExceptionSpec{
+							Description: "AlertException valid selector",
+							Selector:    "origin = origin1",
+						},
+					},
+					// invalid selector
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:              "alert-exception-invalid-selector",
+							CreationTimestamp: metav1.Now(),
+						},
+						Spec: v3.AlertExceptionSpec{
+							Description: "AlertException invalid selector",
+							Selector:    "invalid selector",
+						},
+					},
+				},
+			}
+			updatedSelector := UpdateSelectorWithAlertExceptions(&alertExceptions, "NOT dismissed = true")
+			Expect(updatedSelector).To(Equal("(NOT dismissed = true) AND NOT ( origin = origin1 )"))
+		})
+	})
+
 	Context("/events/search request and response validation", func() {
 		BeforeEach(func() {
 			// Create a mock server to mimic linseed. We use a different one here from the root Describe
@@ -716,49 +838,8 @@ var _ = Describe("SearchElasticHits", func() {
 			setExpectedQuery([]byte(eventSearchRequest))
 
 			// create some alert exceptions
-			now := time.Now()
-			alertExceptions := []*v3.AlertException{
-				// no expiry
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-no-expiry",
-						CreationTimestamp: metav1.Now(),
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException no expiry",
-						Selector:    "origin = origin1",
-						StartTime:   metav1.Time{Time: now.Add(-time.Hour)},
-					},
-				},
-				// not expired
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-not-expired",
-						CreationTimestamp: metav1.Now(),
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException not expired",
-						Selector:    "origin = origin2",
-						StartTime:   metav1.Time{Time: now.Add(-time.Hour)},
-						EndTime:     &metav1.Time{Time: now.Add(time.Hour)},
-					},
-				},
-				// expired
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-expired",
-						CreationTimestamp: metav1.Time{Time: metav1.Now().Add(-2 * time.Hour)}, // make this one expire
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException expired",
-						Selector:    "origin = origin3",
-						StartTime:   metav1.Time{Time: now.Add(-2 * time.Hour)},
-						EndTime:     &metav1.Time{Time: now.Add(-time.Hour)},
-					},
-				},
-			}
-			for _, alertException := range alertExceptions {
-				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+			for _, alertException := range alertExceptions.Items {
+				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), &alertException, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			}
 
@@ -784,136 +865,6 @@ var _ = Describe("SearchElasticHits", func() {
 
 		It("should inject alert exceptions in search request with a selector", func() {
 			testAlertExceptionsInSearchRequests(eventSearchRequestFromManager, eventSearchRequest, eventSearchResponse)
-		})
-
-		It("should inject alert exceptions in search request without a selector", func() {
-			testAlertExceptionsInSearchRequests(eventSearchRequestFromManagerNoSelector, eventSearchRequestNoSelector, eventSearchResponse)
-		})
-
-		It("should handle alert exceptions selector AND/OR conditions", func() {
-			// set the search response.
-			setLinseedResponse([]byte(eventSearchResponse))
-			setExpectedQuery([]byte(eventSearchRequestSelector))
-
-			// create some alert exceptions
-			alertExceptions := []*v3.AlertException{
-				// AND
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-and",
-						CreationTimestamp: metav1.Now(),
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException all AND",
-						Selector:    "origin = origin1 AND type = global_alert",
-					},
-				},
-				// OR
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-or",
-						CreationTimestamp: metav1.Now(),
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException OR",
-						Selector:    "origin = origin2 OR type = honeypod",
-					},
-				},
-				// mixed AND / OR
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-and-or",
-						CreationTimestamp: metav1.Now(),
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException AND OR",
-						Selector:    "origin = origin3 AND type = alert OR source_namespace = ns3",
-					},
-				},
-			}
-			for _, alertException := range alertExceptions {
-				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
-			Expect(err).NotTo(HaveOccurred())
-
-			// validate responses
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
-			Expect(err).NotTo(HaveOccurred())
-
-			rr := httptest.NewRecorder()
-			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
-			handler.ServeHTTP(rr, req)
-
-			Expect(rr.Code).To(Equal(http.StatusOK))
-
-			var resp v1.SearchResponse
-			err = json.Unmarshal(rr.Body.Bytes(), &resp)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(resp.Hits).To(HaveLen(2))
-			Expect(resp.NumPages).To(Equal(1))
-			Expect(resp.TimedOut).To(BeFalse())
-			Expect(resp.TotalHits).To(Equal(2))
-		})
-
-		It("should skip invalid alert exceptions selector", func() {
-			setLinseedResponse([]byte(eventSearchResponse))
-			setExpectedQuery([]byte(eventSearchRequestSelectorInvalid))
-
-			// create some alert exceptions
-			alertExceptions := []*v3.AlertException{
-				// valid selector
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-valid-selector",
-						CreationTimestamp: metav1.Now(),
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException valid selector",
-						Selector:    "origin = origin1",
-					},
-				},
-				// invalid selector
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "alert-exception-invalid-selector",
-						CreationTimestamp: metav1.Now(),
-					},
-					Spec: v3.AlertExceptionSpec{
-						Description: "AlertException invalid selector",
-						Selector:    "invalid selector",
-					},
-				},
-			}
-			for _, alertException := range alertExceptions {
-				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			client, err := lsclient.NewClient("", rest.Config{URL: server.URL})
-			Expect(err).NotTo(HaveOccurred())
-
-			// validate responses
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
-			Expect(err).NotTo(HaveOccurred())
-
-			rr := httptest.NewRecorder()
-			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
-			handler.ServeHTTP(rr, req)
-
-			Expect(rr.Code).To(Equal(http.StatusOK))
-
-			var resp v1.SearchResponse
-			err = json.Unmarshal(rr.Body.Bytes(), &resp)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(resp.Hits).To(HaveLen(2))
-			Expect(resp.NumPages).To(Equal(1))
-			Expect(resp.TimedOut).To(BeFalse())
-			Expect(resp.TotalHits).To(Equal(2))
 		})
 
 		It("should return error when request is not GET or POST", func() {

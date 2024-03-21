@@ -9,6 +9,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsClient "github.com/projectcalico/calico/linseed/pkg/client"
@@ -17,6 +20,7 @@ import (
 )
 
 var securityEventsClient lsClient.EventsInterface
+var alertExceptionsClient clientv3.AlertExceptionInterface
 
 type LinseedCfg struct {
 	TenantId   string `envconfig:"LINSEED_TENANT_ID"`
@@ -28,6 +32,7 @@ type LinseedCfg struct {
 }
 
 func init() {
+	// Init linseed client
 	config := new(LinseedCfg)
 	envconfig.MustProcess("linseed", config)
 
@@ -48,10 +53,31 @@ func init() {
 	} else {
 		logrus.WithError(err).Fatal(("Linseed connection error"))
 	}
+
+	// Init calico client
+	calicoClient, err := clientv3.NewFromEnv()
+	if err != nil {
+		logrus.WithError(err).Fatal("Unable to initialize v3 client")
+	}
+
+	alertExceptionsClient = calicoClient.AlertExceptions()
 }
 
 func FetchSecurityEventsFunc(ctx context.Context, query *query.Query, fromStamp time.Time, toStamp time.Time) ([]lsApi.Event, error) {
-	logrus.WithField("query", query.String()).Info("Fetching security events from Linseed")
+	selector := query.String()
+
+	alertExceptions, err := alertExceptionsClient.List(ctx, options.ListOptions{})
+	if err != nil {
+		logrus.WithError(err).Error("Error occurred when listing AlertExceptions")
+		return []lsApi.Event{}, err
+	}
+
+	selector = search.UpdateSelectorWithAlertExceptions(alertExceptions, selector)
+
+	logrus.WithFields(logrus.Fields{
+		"query":    query,
+		"selector": selector,
+	}).Info("Fetching security events from Linseed")
 
 	queryParameters := lsApi.EventParams{
 		QueryParams: lsApi.QueryParams{
@@ -61,12 +87,12 @@ func FetchSecurityEventsFunc(ctx context.Context, query *query.Query, fromStamp 
 			},
 		},
 		LogSelectionParams: lsApi.LogSelectionParams{
-			Selector: query.String(),
+			Selector: selector,
 		},
 	}
 
 	if events, err := securityEventsClient.List(ctx, &queryParameters); err != nil {
-		logrus.WithError(err).Error("Linseed error occured when fetching events")
+		logrus.WithError(err).Error("Linseed error occurred when fetching events")
 		return []lsApi.Event{}, err
 	} else {
 		return events.Items, nil

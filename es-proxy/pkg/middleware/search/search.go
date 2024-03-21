@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
 package search
 
 import (
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -392,10 +393,18 @@ func searchEvents(
 			Err:    err,
 		}
 	}
+	params.Selector = UpdateSelectorWithAlertExceptions(eventExceptionList, params.Selector)
 
+	listFn := lsclient.Events(request.ClusterName).List
+	return searchLogs(ctx, listFn, params)
+}
+
+// UpdateSelectorWithAlertExceptions() updates originalSelector so that it excludes events
+// according to exception rules defined in alertExceptions.
+func UpdateSelectorWithAlertExceptions(alertExceptions *v3.AlertExceptionList, originalSelector string) string {
 	var selectors []string
 	now := &metav1.Time{Time: time.Now()}
-	for _, alertException := range eventExceptionList.Items {
+	for _, alertException := range alertExceptions.Items {
 		if alertException.Spec.StartTime.Before(now) {
 			if alertException.Spec.EndTime != nil && alertException.Spec.EndTime.Before(now) {
 				// skip expired alert exceptions
@@ -426,17 +435,15 @@ func searchEvents(
 			exceptionsSelector = fmt.Sprintf("NOT (( %s ))", strings.Join(selectors, " ) OR ( "))
 		}
 
-		if len(params.Selector) > 0 {
+		if len(originalSelector) > 0 {
 			// Combine exception selector with request selector
-			params.Selector = fmt.Sprintf("(%s) AND %s", params.Selector, exceptionsSelector)
+			return fmt.Sprintf("(%s) AND %s", originalSelector, exceptionsSelector)
 		} else {
 			// Use exception selector as request selector
-			params.Selector = exceptionsSelector
+			return exceptionsSelector
 		}
 	}
-
-	listFn := lsclient.Events(request.ClusterName).List
-	return searchLogs(ctx, listFn, params)
+	return originalSelector
 }
 
 type Hit[T any] struct {

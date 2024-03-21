@@ -269,7 +269,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					event.EventStatisticsHandler(linseed)))))
+					event.EventStatisticsHandler(k8sClientSet, linseed)))))
 
 	sm.Handle("/event-exceptions",
 		middleware.ClusterRequestToResource(eventsResourceName,
