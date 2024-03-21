@@ -1252,7 +1252,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.RulesConfig.IPIPEnabled {
 		log.Info("IPIP enabled, starting thread to keep tunnel configuration in sync.")
 		// Add a manager to keep the all-hosts IP set up to date.
-		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs)
+		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs, dp.config)
 		go dp.ipipManager.KeepIPIPDeviceInSync(config.IPIPMTU, config.RulesConfig.IPIPTunnelAddress, dataplaneFeatures.ChecksumOffloadBroken)
 		dp.RegisterManager(dp.ipipManager) // IPv4-only
 	} else {
@@ -1637,7 +1637,7 @@ func writeMTUFile(mtu int) error {
 	// Write the smallest MTU to disk so other components can rely on this calculation consistently.
 	filename := "/var/lib/calico/mtu"
 	log.Debugf("Writing %d to "+filename, mtu)
-	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0644); err != nil {
+	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0o644); err != nil {
 		log.WithError(err).Error("Unable to write to " + filename)
 		return err
 	}
