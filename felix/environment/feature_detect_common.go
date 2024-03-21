@@ -10,7 +10,7 @@ type Features struct {
 	RestoreSupportsLock bool
 	// ChecksumOffloadBroken is true for kernels that have broken checksum offload for packets with SNATted source
 	// ports. See https://github.com/projectcalico/calico/issues/3145.  On such kernels we disable checksum offload
-	// on our VXLAN device.
+	// on our VXLAN and IPIP device.
 	ChecksumOffloadBroken bool
 	// NFLogSize is true if --nflog-size is supported by the NFLOG action.
 	NFLogSize bool

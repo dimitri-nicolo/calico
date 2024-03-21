@@ -35,6 +35,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 )
@@ -276,14 +277,13 @@ func (c *customK8sResourceClient) Delete(ctx context.Context, k model.Key, revis
 
 	opts := &metav1.DeleteOptions{}
 	if uid != nil {
-		if c.k8sResourceType == uiSettingsType {
-			// The UID of the underlying CRD for UISettings is reversed (see ReverseUID,
-			// ConvertK8sResourceToCalicoResource and ConvertCalicoResourceToK8sResource for details).
-			ruid := ReverseUID(*uid)
-			opts.Preconditions = &metav1.Preconditions{UID: &ruid}
-		} else {
-			opts.Preconditions = &metav1.Preconditions{UID: uid}
+		// The UID in the v3 resources is a translation of the UID in the CR. Translate it
+		// before passing as a precondition.
+		uid, err := conversion.ConvertUID(*uid)
+		if err != nil {
+			return nil, err
 		}
+		opts.Preconditions = &metav1.Preconditions{UID: &uid}
 	}
 
 	// Delete the resource using the name.

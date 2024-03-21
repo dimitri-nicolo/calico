@@ -35,7 +35,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	calicoKubeControllerConfigName := "default"
 	esKubeControllerConfigName := "elasticsearch"
@@ -139,7 +138,7 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 			for _, configName := range configNames {
 				By("Updating the KubeControllersConfiguration before it is created")
 				_, outError := c.KubeControllersConfiguration().Update(ctx, &apiv3.KubeControllersConfiguration{
-					ObjectMeta: metav1.ObjectMeta{Name: configName, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-kubecontrollersconfig"},
+					ObjectMeta: metav1.ObjectMeta{Name: configName, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 					Spec:       spec1,
 				}, options.SetOptions{})
 				Expect(outError).To(HaveOccurred())
@@ -208,7 +207,7 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 
 				By("Attempting to update the KubeControllersConfiguration without a Creation Timestamp")
 				res, outError = c.KubeControllersConfiguration().Update(ctx, &apiv3.KubeControllersConfiguration{
-					ObjectMeta: metav1.ObjectMeta{Name: configName, ResourceVersion: "1234", UID: "test-fail-kubecontrollersconfig"},
+					ObjectMeta: metav1.ObjectMeta{Name: configName, ResourceVersion: "1234", UID: uid},
 					Spec:       spec1,
 				}, options.SetOptions{})
 				Expect(outError).To(HaveOccurred())
@@ -311,7 +310,6 @@ var _ = testutils.E2eDatastoreDescribe("KubeControllersConfiguration tests", tes
 			outList, outError := c.KubeControllersConfiguration().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(0))
-
 		},
 
 		// Test 1: Pass two fully populated KubeControllersConfigurationSpecs and expect the series of operations to succeed.
