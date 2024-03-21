@@ -28,6 +28,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -372,6 +373,12 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 				felix.Exec("ip", "a")
 			}
 		}
+
+		_, err := client.GlobalNetworkSets().Delete(utils.Ctx, "netset1", options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = client.GlobalNetworkSets().Delete(utils.Ctx, "netset2", options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
 
 		ep1_1.Stop()
 		for _, felix := range tc.Felixes {

@@ -1865,10 +1865,8 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 		r.WireguardIncomingMarkChain(),
 	}
 
-	if ipVersion == 4 {
-		chains = append(chains,
-			r.StaticRawOutputChain(tcdefs.MarkSeenBypass, nil))
-	}
+	chains = append(chains,
+		r.StaticRawOutputChain(tcdefs.MarkSeenBypass, nil))
 
 	return chains
 }
