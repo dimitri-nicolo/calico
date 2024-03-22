@@ -2,11 +2,11 @@ version: v1.0
 name: Publish third-party fluentd images
 agent:
   machine:
-    type: e1-standard-2
+    type: e1-standard-4
     os_image: ubuntu2004
 
 execution_time_limit:
-  hours: 2
+  minutes: 60
 
 global_job_config:
   env_vars:
@@ -47,7 +47,10 @@ blocks:
       jobs:
         - name: Linux multi-arch
           commands:
-            - make -C third_party/fluentd cd CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd cd CONFIRM=true; fi
+        - name: Windows amd64
+          commands:
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd release-windows CONFIRM=true; fi
   - name: Publish fluentd multi-arch manifests
     dependencies:
       - Publish fluentd images
@@ -58,45 +61,3 @@ blocks:
         - name: Linux multi-arch manifests
           commands:
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C third_party/fluentd push-manifests-with-tag CONFIRM=true; fi
-
-  - name: Publish Windows images
-    dependencies: []
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      secrets:
-        - name: banzai-secrets
-      prologue:
-        commands:
-          # Login to docker in order to pull images.
-          - docker login -u _json_key -p "$(cat ~/secrets/banzai-google-service-account.json)" https://gcr.io
-          # Clone the process repo and provision Windows instances.
-          - pushd .
-          - git clone git@github.com:tigera/process.git ~/process
-          - cd ~/process/testing/windows-instances
-          - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh
-          # Save windows-instances terraform.
-          - tar cvzf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
-          - artifact push job --expire-in 2w ~/windows-tf.tar.gz
-          - popd
-          - cd third_party/fluentd
-      epilogue:
-        always:
-          commands:
-            - cd ~/process/testing/windows-instances
-            - PREFIX=${SEMAPHORE_PROJECT_NAME}-${SEMAPHORE_WORKFLOW_ID} ./create-windows-instances.sh -u
-      jobs:
-        - name: Run CD
-          commands:
-            - export PROCESS_REPO=~/process/testing/windows-instances
-            - CONFIRM=true .semaphore/windows-cd.sh
-  - name: Publish Windows multi-arch manifests
-    dependencies:
-      - Publish Windows images
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      jobs:
-        - name: Windows multi-arch manifests
-          commands:
-            - CONFIRM=true WINDOWS_RELEASE=true make -C third_party/fluentd push-windows-manifest

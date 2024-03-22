@@ -13,8 +13,9 @@
 # limitations under the License.
 
 ARG THIRD_PARTY_REGISTRY
+ARG WINDOWS_LTSC_VERSION
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.16.3-windows
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.16.3-${WINDOWS_LTSC_VERSION}
 
 USER ContainerAdministrator
 
@@ -52,8 +53,8 @@ COPY rubyplugin/ /fluentd/plugins/
 # We are currently doing this because fluentd executed the http plugin from the standard library
 # instead the linseed plugin defined in rubyplugin folder
 # Upgrading to a newer ruby or fluentd will require a change to the commands below
-RUN powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby31\lib\ruby\gems\3.1.0\gems\fluentd-1.16.3-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb"
-RUN powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby\lib\ruby\gems\3.1.0\gems\fluentd-1.16.3-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb"
+COPY rubyplugin/out_http.rb /ruby31/lib/ruby/gems/3.1.0/gems/fluentd-1.16.3-x64-mingw-ucrt/lib/fluent/plugin/out_http.rb
+COPY rubyplugin/out_http.rb /ruby/lib/ruby/gems/3.1.0/gems/fluentd-1.16.3-x64-mingw-ucrt/lib/fluent/plugin/out_http.rb
 
 # Compliance reports logs needs a regex pattern because there will be
 # multiple logs (one per report type), e.g. compliance.network-access.reports.log
