@@ -24,6 +24,7 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -148,7 +149,6 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 			v1Key := model.PolicyKey{Tier: "default", Name: ns2 + "/all-sa-selector"}
 			Expect(kvps).To(Equal([]*model.KVPair{{Key: v1Key, Value: &policy, Revision: testRev}}))
 		})
-
 	})
 })
 
@@ -156,58 +156,64 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 //
 // np1 is a NetworkPolicy with a single Egress rule, which contains ports only,
 // and no selectors.
-var protocol = kapiv1.ProtocolTCP
-var port = intstr.FromInt(80)
-var np1 = networkingv1.NetworkPolicy{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "test.policy",
-		Namespace: "default",
-	},
-	Spec: networkingv1.NetworkPolicySpec{
-		PodSelector: metav1.LabelSelector{},
-		Egress: []networkingv1.NetworkPolicyEgressRule{
-			{
-				Ports: []networkingv1.NetworkPolicyPort{
+var (
+	protocol = kapiv1.ProtocolTCP
+	port     = intstr.FromInt(80)
+	np1      = networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test.policy",
+			Namespace: "default",
+			UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocol,
+							Port:     &port,
+						},
+					},
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+		},
+	}
+)
+
+// expected1 is the expected v1 KVPair representation of np1 from above.
+var (
+	tcp       = numorstring.ProtocolFromStringV1("tcp")
+	expected1 = []*model.KVPair{
+		{
+			Key: model.PolicyKey{Name: "default/knp.default.test.policy", Tier: "default"},
+			Value: &model.Policy{
+				Namespace:      "default",
+				Order:          &testDefaultPolicyOrder,
+				Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
+				Types:          []string{"egress"},
+				ApplyOnForward: false,
+				OutboundRules: []model.Rule{
 					{
-						Protocol: &protocol,
-						Port:     &port,
+						Action:      "allow",
+						Protocol:    &tcp,
+						SrcSelector: "",
+						DstSelector: "",
+						DstPorts:    []numorstring.Port{port80},
 					},
 				},
 			},
 		},
-		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-	},
-}
-
-// expected1 is the expected v1 KVPair representation of np1 from above.
-var tcp = numorstring.ProtocolFromStringV1("tcp")
-var expected1 = []*model.KVPair{
-	{
-		Key: model.PolicyKey{Tier: "default", Name: "default/knp.default.test.policy"},
-		Value: &model.Policy{
-			Namespace:      "default",
-			Order:          &testDefaultPolicyOrder,
-			Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
-			Types:          []string{"egress"},
-			ApplyOnForward: false,
-			OutboundRules: []model.Rule{
-				{
-					Action:      "allow",
-					Protocol:    &tcp,
-					SrcSelector: "",
-					DstSelector: "",
-					DstPorts:    []numorstring.Port{port80},
-				},
-			},
-		},
-	},
-}
+	}
+)
 
 // np2 is a NetworkPolicy with a single Ingress rule which allows from all namespaces.
 var np2 = networkingv1.NetworkPolicy{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "test.policy",
 		Namespace: "default",
+		UID:       types.UID("41cb1fde-57e7-42c1-a73b-0acaf38c7737"),
 	},
 	Spec: networkingv1.NetworkPolicySpec{
 		PodSelector: metav1.LabelSelector{},
@@ -223,6 +229,7 @@ var np2 = networkingv1.NetworkPolicy{
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 	},
 }
+
 var expected2 = []*model.KVPair{
 	{
 		Key: model.PolicyKey{
@@ -260,7 +267,7 @@ var np3 = networkingv1.NetworkPolicy{
 	Spec: networkingv1.NetworkPolicySpec{
 		PodSelector: metav1.LabelSelector{},
 		Egress: []networkingv1.NetworkPolicyEgressRule{
-			networkingv1.NetworkPolicyEgressRule{
+			{
 				To: []networkingv1.NetworkPolicyPeer{
 					{
 						PodSelector: &metav1.LabelSelector{
@@ -278,31 +285,33 @@ var np3 = networkingv1.NetworkPolicy{
 }
 
 // expected3 is the expected v1 KVPair representation of np3 from above.
-var originalSelector = "projectcalico.org/orchestrator == 'k8s' && sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
-var sgSelector = "sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
-var nsSelector = "projectcalico.org/namespace == 'default'"
-var expectedSelector = fmt.Sprintf("(%s) && (%s) || (%s)", nsSelector, originalSelector, sgSelector)
-var expected3 = []*model.KVPair{
-	&model.KVPair{
-		Key: model.PolicyKey{Tier: "default", Name: "default/knp.default.test.policy"},
-		Value: &model.Policy{
-			Namespace:      "default",
-			Order:          &testDefaultPolicyOrder,
-			Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
-			Types:          []string{"egress"},
-			ApplyOnForward: false,
-			OutboundRules: []model.Rule{
-				{
-					Action:      "allow",
-					SrcSelector: "",
-					// The selector includes the original namespaced selector, as well as one that allows traffic from the matchin security groups.
-					DstSelector:         expectedSelector,
-					OriginalDstSelector: originalSelector,
+var (
+	originalSelector = "projectcalico.org/orchestrator == 'k8s' && sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
+	sgSelector       = "sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
+	nsSelector       = "projectcalico.org/namespace == 'default'"
+	expectedSelector = fmt.Sprintf("(%s) && (%s) || (%s)", nsSelector, originalSelector, sgSelector)
+	expected3        = []*model.KVPair{
+		{
+			Key: model.PolicyKey{Tier: "default", Name: "default/knp.default.test.policy"},
+			Value: &model.Policy{
+				Namespace:      "default",
+				Order:          &testDefaultPolicyOrder,
+				Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
+				Types:          []string{"egress"},
+				ApplyOnForward: false,
+				OutboundRules: []model.Rule{
+					{
+						Action:      "allow",
+						SrcSelector: "",
+						// The selector includes the original namespaced selector, as well as one that allows traffic from the matchin security groups.
+						DstSelector:         expectedSelector,
+						OriginalDstSelector: originalSelector,
+					},
 				},
 			},
 		},
-	},
-}
+	}
+)
 
 var _ = Describe("Test the NetworkPolicy update processor + conversion", func() {
 	up := updateprocessors.NewNetworkPolicyUpdateProcessor()
@@ -329,7 +338,6 @@ var _ = Describe("Test the NetworkPolicy update processor + conversion", func() 
 })
 
 var _ = Describe("Test end-to-end pod and network policy processing", func() {
-
 	// Define processors to use in the test.
 	npProcessor := updateprocessors.NewNetworkPolicyUpdateProcessor()
 	wepProcessor := updateprocessors.NewWorkloadEndpointUpdateProcessor()
@@ -564,5 +572,4 @@ var _ = Describe("Test end-to-end pod and network policy processing", func() {
 		matches := s.Evaluate(wep.Labels)
 		Expect(matches).To(BeTrue(), fmt.Sprintf("%s does not match %+v", np.Selector, wep.Labels))
 	})
-
 })

@@ -100,7 +100,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 
 			By("Updating the GlobalReportType before it is created")
 			_, outError := c.GlobalReportTypes().Update(ctx, &apiv3.GlobalReportType{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-globalreport"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -180,7 +180,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 
 			By("Attempting to update the GlobalReportType without a Creation Timestamp")
 			res, outError = c.GlobalReportTypes().Update(ctx, &apiv3.GlobalReportType{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-globalreport"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

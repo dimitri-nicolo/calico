@@ -3,6 +3,7 @@
 package clientv3_test
 
 import (
+	"context"
 	"time"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -11,8 +12,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"context"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -25,7 +24,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "rcc-1"
 	name2 := "rcc-2"
@@ -34,7 +32,8 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 		EtcdConfig: apiv3.EtcdConfig{
 			EtcdEndpoints: "https://127.0.0.1:999",
 			EtcdUsername:  "user",
-			EtcdPassword:  "abc123"},
+			EtcdPassword:  "abc123",
+		},
 		SyncOptions: apiv3.RemoteClusterSyncOptions{
 			apiv3.OverlayRoutingModeDisabled,
 		},
@@ -71,7 +70,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 		func(name1, name2 string, spec1, spec2 apiv3.RemoteClusterConfigurationSpec) {
 			By("Updating the RemoteClusterConfig before it is created")
 			_, outError := c.RemoteClusterConfigurations().Update(ctx, &apiv3.RemoteClusterConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-rcc"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -150,7 +149,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 
 			By("Attempting to update the RemoteClusterConfiguration without a Creation Timestamp")
 			res, outError = c.RemoteClusterConfigurations().Update(ctx, &apiv3.RemoteClusterConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-bgppeer"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

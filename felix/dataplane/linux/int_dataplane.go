@@ -1250,8 +1250,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.RulesConfig.IPIPEnabled {
-		// Create and maintain the IPIP tunnel device
+		log.Info("IPIP enabled, starting thread to keep tunnel configuration in sync.")
+		// Add a manager to keep the all-hosts IP set up to date.
 		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs, dp.config)
+		go dp.ipipManager.KeepIPIPDeviceInSync(config.IPIPMTU, config.RulesConfig.IPIPTunnelAddress, dataplaneFeatures.ChecksumOffloadBroken)
+		dp.RegisterManager(dp.ipipManager) // IPv4-only
 	} else {
 		// Only clean up IPIP addresses if IPIP is implicitly disabled (no IPIP pools and not explicitly set in FelixConfig)
 		if config.RulesConfig.FelixConfigIPIPEnabled == nil {
@@ -1634,7 +1637,7 @@ func writeMTUFile(mtu int) error {
 	// Write the smallest MTU to disk so other components can rely on this calculation consistently.
 	filename := "/var/lib/calico/mtu"
 	log.Debugf("Writing %d to "+filename, mtu)
-	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0644); err != nil {
+	if err := os.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0o644); err != nil {
 		log.WithError(err).Error("Unable to write to " + filename)
 		return err
 	}
@@ -1941,8 +1944,7 @@ func (d *InternalDataplane) onIfaceInSync() {
 	d.ifaceUpdates <- &ifaceInSync{}
 }
 
-type ifaceInSync struct {
-}
+type ifaceInSync struct{}
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
 func (d *InternalDataplane) onIfaceStateChange(ifaceName string, state ifacemonitor.State, ifIndex int) {
@@ -2049,16 +2051,6 @@ func (d *InternalDataplane) doStaticDataplaneConfig() {
 		d.setUpIptablesBPF()
 	} else {
 		d.setUpIptablesNormal()
-	}
-
-	if d.config.RulesConfig.IPIPEnabled {
-		log.Info("IPIP enabled, starting thread to keep tunnel configuration in sync.")
-		go d.ipipManager.KeepIPIPDeviceInSync(
-			d.config.IPIPMTU,
-			d.config.RulesConfig.IPIPTunnelAddress,
-		)
-	} else {
-		log.Info("IPIP disabled. Not starting tunnel update thread.")
 	}
 }
 
@@ -3089,8 +3081,8 @@ func startBPFDataplaneComponents(ipFamily proto.IPVersion,
 	ipSetIDAllocator *idalloc.IDAllocator,
 	config Config,
 	ipSetsMgr *common.IPSetsManager,
-	dp *InternalDataplane) (*bpfconntrack.Scanner, egressIPSets) {
-
+	dp *InternalDataplane,
+) (*bpfconntrack.Scanner, egressIPSets) {
 	ipSetConfig := config.RulesConfig.IPSetConfigV4
 	ipSetEntry := bpfipsets.IPSetEntryFromBytes
 	ipSetProtoEntry := bpfipsets.ProtoIPSetMemberToBPFEntry

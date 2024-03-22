@@ -18,6 +18,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -32,6 +33,7 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -1395,6 +1397,49 @@ var _ = Describe("Test Pod conversion", func() {
 	)
 })
 
+var _ = Describe("Test UID conversion", func() {
+	It("should parse a UID to a Calico ID", func() {
+		By("Converting a UID")
+		original := types.UID("30316465-6365-4463-ad63-3564622d3638")
+		converted, err := ConvertUID(original)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(converted)).To(Equal("0c8c26a6-c6a6-44c6-adc6-ac2646b46c1c"))
+
+		By("Parsing it as a valid UID")
+		parsed, err := uuid.Parse(string(converted))
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Checking the version bits are correct")
+		Expect(parsed[6] >> 4).To(Equal(byte(0x4))) // Version 4
+
+		By("Converting it back")
+		convertedBack, err := ConvertUID(converted)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(convertedBack).To(Equal(original))
+	})
+
+	It("should error on an invalid UID", func() {
+		_, err := ConvertUID("not-a-uid")
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should always maintain the v4 version metadata bits, and convert back", func() {
+		for i := 0; i < 100000; i++ {
+			original := types.UID(uuid.New().String())
+			converted, err := ConvertUID(original)
+			Expect(err).NotTo(HaveOccurred())
+
+			parsed, err := uuid.Parse(string(converted))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(parsed[6] >> 4).To(Equal(byte(0x4))) // Version 4
+
+			convertedBack, err := ConvertUID(converted)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(convertedBack).To(Equal(original))
+		}
+	})
+})
+
 var _ = Describe("Test NetworkPolicy conversion", func() {
 	// Use a single instance of the Converter for these tests.
 	c := NewConverter()
@@ -1406,6 +1451,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1479,6 +1525,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1527,6 +1574,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1579,6 +1627,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1644,6 +1693,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1748,6 +1798,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1896,6 +1947,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1930,6 +1982,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testPolicy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -1974,6 +2027,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2044,6 +2098,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2121,6 +2176,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2207,6 +2263,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2239,6 +2296,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2289,6 +2347,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2335,6 +2394,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2382,6 +2442,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2438,6 +2499,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -2480,6 +2542,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2528,6 +2591,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2575,6 +2639,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2623,6 +2688,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2669,6 +2735,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2716,6 +2783,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2769,6 +2837,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2897,6 +2966,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -2970,6 +3040,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -3035,6 +3106,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -3068,6 +3140,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -3140,6 +3213,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -3225,6 +3299,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -3256,6 +3331,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -3297,6 +3373,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
 				Namespace: "default",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{},
@@ -3338,7 +3415,6 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 })
 
 var _ = Describe("Test Namespace conversion egress gateway", func() {
-
 	// Use a single instance of the Converter for these tests.
 	c := NewConverter()
 
@@ -3352,6 +3428,7 @@ var _ = Describe("Test Namespace conversion egress gateway", func() {
 					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
 					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3363,6 +3440,7 @@ var _ = Describe("Test Namespace conversion egress gateway", func() {
 					"egress.projectcalico.org/namespaceSelector": "black == 'white' ",
 					"egress.projectcalico.org/selector":          "red == \"green\"",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3402,6 +3480,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
 					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3448,6 +3527,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":            "red == 'green'",
 					"egress.projectcalico.org/egressGatewayPolicy": "egw-policy-red",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3484,6 +3564,7 @@ var _ = Describe("Test Namespace conversion", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "default",
 				Annotations: map[string]string{},
+				UID:         types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3514,6 +3595,7 @@ var _ = Describe("Test Namespace conversion", func() {
 				Annotations: map[string]string{
 					"net.beta.kubernetes.io/network-policy": "{\"ingress\": {\"isolation\": \"DefaultDeny\"}}",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3539,6 +3621,7 @@ var _ = Describe("Test Namespace conversion", func() {
 				Annotations: map[string]string{
 					"net.beta.kubernetes.io/network-policy": "invalidJSON",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3557,6 +3640,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/namespaceSelector": "black ~~ 'white'",
 					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3636,6 +3720,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "three",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "nodeA",
@@ -3665,6 +3750,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "1000000000000000000",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "nodeA",
@@ -3693,6 +3779,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "3",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3717,6 +3804,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "-3",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3741,6 +3829,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "three",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3765,6 +3854,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "1000000000000000000",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3780,6 +3870,23 @@ var _ = Describe("Test Namespace conversion", func() {
 		})
 	})
 
+	It("should generate a deterministic UID for a Namespace Profile", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		p, err := c.NamespaceToProfile(&ns)
+		Expect(err).NotTo(HaveOccurred())
+		p2, err := c.NamespaceToProfile(&ns)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p.UID).To(Equal(p2.UID))
+		Expect(p.UID).NotTo(Equal(ns.UID))
+	})
+
 	It("should handle a valid but not DefaultDeny annotation", func() {
 		ns := kapiv1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -3787,6 +3894,7 @@ var _ = Describe("Test Namespace conversion", func() {
 				Annotations: map[string]string{
 					"net.beta.kubernetes.io/network-policy": "{}",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3825,6 +3933,7 @@ var _ = Describe("Test ServiceAccount conversion", func() {
 					"roger": "rabbit",
 				},
 				Annotations: map[string]string{},
+				UID:         types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 		}
 
@@ -3847,12 +3956,29 @@ var _ = Describe("Test ServiceAccount conversion", func() {
 		Expect(labels["pcsa.roger"]).To(Equal("rabbit"))
 	})
 
+	It("should generate a deterministic UID for a ServiceAccount Profile", func() {
+		sa := kapiv1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "sa-test",
+				Namespace: "test",
+				UID:       types.UID("30316465-6365-4463-ad63-3564622d3638"),
+			},
+		}
+		p, err := c.ServiceAccountToProfile(&sa)
+		Expect(err).NotTo(HaveOccurred())
+		p2, err := c.ServiceAccountToProfile(&sa)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p.UID).To(Equal(p2.UID))
+		Expect(p.UID).NotTo(Equal(sa.UID))
+	})
+
 	It("should parse a ServiceAccount in Namespace to a Profile", func() {
 		sa := kapiv1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "sa-test",
 				Namespace:   "test",
 				Annotations: map[string]string{},
+				UID:         types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 		}
 
@@ -3867,6 +3993,7 @@ var _ = Describe("Test ServiceAccount conversion", func() {
 		sa := kapiv1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "sa-test",
+				UID:  types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 		}
 

@@ -4909,6 +4909,9 @@ func testEgressGatewayPolicyClient(client calicoclient.Interface, name string) e
 	if err != nil {
 		return fmt.Errorf("error getting object %s (%s)", egressGWPolicy.Name, err)
 	}
+	if egressGWPolicyNew.GetUID() == "" {
+		return fmt.Errorf("UID should be set after a get")
+	}
 
 	egressRuleInternet := v3.EgressGatewayRule{
 		Destination: &v3.EgressGatewayPolicyDestinationSpec{

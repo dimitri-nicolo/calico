@@ -15,14 +15,13 @@
 package clientv3_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"context"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -36,7 +35,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "externalnetwork-1"
 	name2 := "externalnetwork-2"
@@ -71,7 +69,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 		func(name1, name2 string) {
 			By("Updating the ExternalNetwork before it is created")
 			_, outError := c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-ExternalNetwork"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -150,7 +148,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 
 			By("Attempting to update the ExternalNetwork without a Creation Timestamp")
 			res, outError = c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-ExternalNetwork"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -561,5 +559,4 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with RouteTableRanges of FelixConfigurations"))
 		})
 	})
-
 })

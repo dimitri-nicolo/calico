@@ -34,7 +34,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name := "default"
 	spec1 := apiv3.LicenseKeySpec{
@@ -63,7 +62,7 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 		func(name string, spec1, spec2 apiv3.LicenseKeySpec) {
 			By("Updating the LicenseKey before it is created")
 			_, outError := c.LicenseKey().Update(ctx, &apiv3.LicenseKey{
-				ObjectMeta: metav1.ObjectMeta{Name: name, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-licensekey"},
+				ObjectMeta: metav1.ObjectMeta{Name: name, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -129,7 +128,7 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 
 			By("Attempting to update the LicenseKey without a Creation Timestamp")
 			res, outError = c.LicenseKey().Update(ctx, &apiv3.LicenseKey{
-				ObjectMeta: metav1.ObjectMeta{Name: name, ResourceVersion: "1234", UID: "test-fail-licensekey"},
+				ObjectMeta: metav1.ObjectMeta{Name: name, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -206,7 +205,6 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 			outList, outError = c.LicenseKey().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(0))
-
 		},
 
 		// Test 1: Pass two fully populated LicenseKeySpecs and expect the series of operations to succeed.

@@ -15,6 +15,7 @@
 package clientv3_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -23,8 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"context"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -38,7 +37,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("StagedGlobalNetworkPolicy tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	order1 := 99.999
 	order2 := 22.222
@@ -111,7 +109,7 @@ var _ = testutils.E2eDatastoreDescribe("StagedGlobalNetworkPolicy tests", testut
 
 			By("Updating the StagedGlobalNetworkPolicy before it is created")
 			_, outError := c.StagedGlobalNetworkPolicies().Update(ctx, &apiv3.StagedGlobalNetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-StagedGlobalNetworkPolicy"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -203,7 +201,7 @@ var _ = testutils.E2eDatastoreDescribe("StagedGlobalNetworkPolicy tests", testut
 
 			By("Attempting to update the StagedGlobalNetworkPolicy without a Creation Timestamp")
 			res, outError = c.StagedGlobalNetworkPolicies().Update(ctx, &apiv3.StagedGlobalNetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-StagedGlobalNetworkPolicy"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
