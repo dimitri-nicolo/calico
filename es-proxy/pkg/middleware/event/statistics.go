@@ -177,7 +177,7 @@ func EventStatisticsHandler(k8sClient datastore.ClientSet, lsclient client.Clien
 					return
 				}
 
-				esResp.FieldValues.NamespaceValues = mergeValues(esResp.FieldValues.NamespaceValues, destResp.FieldValues.DestNamespaceValues, isSameFieldValue, updateFieldValue)
+				esResp.FieldValues.NamespaceValues = mergeValues(esResp.FieldValues.NamespaceValues, destResp.FieldValues.DestNamespaceValues) //, isSameFieldValue, updateFieldValue)
 			}
 		}
 
@@ -245,48 +245,43 @@ func parseEventStatisticsRequest(w http.ResponseWriter, r *http.Request) (*v1.Ev
 // isSameFn and mergeFn are required to allow a generic implementation in golang.
 // isSameFn compares 2 field values and returns true if their Value property is equal.
 // mergeFn encapsulates the type-specific logic of how 2 file values should be merged.
-func mergeValues[T lapi.FieldValue | lapi.SeverityValue](l1, l2 []T, isSameFn func(v1, v2 T) bool, mergeFn func(existingItem, newItem T) T) []T {
-	// Use l1 as a base
+func mergeValues(l1, l2 []lapi.FieldValue) []lapi.FieldValue {
 	combinedList := l1
-	// For each value in l2
 	for _, currentItem := range l2 {
-		existingItemIndex := indexOf[T](combinedList, currentItem, isSameFn)
-		// If it already exists in l1
+		existingItemIndex := indexOf[lapi.FieldValue](combinedList, func(item lapi.FieldValue) bool { return item.Value == currentItem.Value })
 		if existingItemIndex != -1 {
-			// Merge the 2 values
-			combinedList[existingItemIndex] = mergeFn(combinedList[existingItemIndex], currentItem)
+			existingItem := combinedList[existingItemIndex]
+			existingItem.Count += currentItem.Count
+			existingItem.BySeverity = mergeSeverityValues(existingItem.BySeverity, currentItem.BySeverity)
+			combinedList[existingItemIndex] = existingItem
 		} else {
-			// If not add it to l1
 			combinedList = append(combinedList, currentItem)
 		}
 	}
 	return combinedList
 }
 
-func indexOf[T any](l []T, item T, is_same func(v1, v2 T) bool) int {
+func mergeSeverityValues(l1, l2 []lapi.SeverityValue) []lapi.SeverityValue {
+	combinedList := l1
+	for _, currentItem := range l2 {
+		newItem := currentItem
+		existingItemIndex := indexOf[lapi.SeverityValue](combinedList, func(item lapi.SeverityValue) bool { return item.Value == currentItem.Value })
+		if existingItemIndex != -1 {
+			newItem = combinedList[existingItemIndex]
+			newItem.Count += currentItem.Count
+			combinedList[existingItemIndex] = newItem
+		} else {
+			combinedList = append(combinedList, newItem)
+		}
+	}
+	return combinedList
+}
+
+func indexOf[T any](l []T, fn func(T) bool) int {
 	for i, v := range l {
-		if is_same(v, item) {
+		if fn(v) {
 			return i
 		}
 	}
 	return -1
-}
-
-func isSameFieldValue(v1, v2 lapi.FieldValue) bool {
-	return v1.Value == v2.Value
-}
-
-func areSameSeverityValues(v1, v2 lapi.SeverityValue) bool {
-	return v1.Value == v2.Value
-}
-
-func updateFieldValue(existingItem, newItem lapi.FieldValue) lapi.FieldValue {
-	existingItem.Count += newItem.Count
-	existingItem.BySeverity = mergeValues[lapi.SeverityValue](existingItem.BySeverity, newItem.BySeverity, areSameSeverityValues, updateSeverityValue)
-	return existingItem
-}
-
-func updateSeverityValue(existingItem, newItem lapi.SeverityValue) lapi.SeverityValue {
-	existingItem.Count += newItem.Count
-	return existingItem
 }
