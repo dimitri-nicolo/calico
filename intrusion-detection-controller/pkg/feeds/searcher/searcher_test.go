@@ -60,7 +60,7 @@ func TestCacheEvents(t *testing.T) {
 	cachedEvents := []v1.Event{e1, e2}
 
 	f := util.NewGlobalThreatFeedFromName("mock")
-	suspiciousIP := storage.MockSuspicious{
+	suspiciousIP := &storage.MockSuspicious{
 		Error:                nil,
 		LastSuccessfulSearch: time.Now(),
 		SetHash:              "",

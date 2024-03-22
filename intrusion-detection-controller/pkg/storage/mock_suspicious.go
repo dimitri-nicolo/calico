@@ -19,6 +19,6 @@ type MockSuspicious struct {
 	SetHash              string
 }
 
-func (m MockSuspicious) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
+func (m *MockSuspicious) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, feed *apiV3.GlobalThreatFeed) ([]v1.Event, time.Time, string, error) {
 	return m.Events, m.LastSuccessfulSearch, m.SetHash, m.Error
 }
