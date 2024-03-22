@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 )
 
@@ -51,5 +52,14 @@ var _ = Describe("Config test", func() {
 		Expect(cfg.OIDCAuthUsernamePrefix).To(Equal(usernamePrefix))
 		Expect(cfg.OIDCAuthGroupsPrefix).To(Equal(groupsPrefix))
 		Expect(cfg.OIDCAuthGroupsClaim).To(Equal(groupsClaim))
+	})
+
+	It("should pick up the defaults for client rate limiting", func() {
+		cfg := config.Config{}
+		err := envconfig.Process("VOLTRON", &cfg)
+		var qps float32 = 100.
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg.K8sClientQPS).To(Equal(qps))
+		Expect(cfg.K8sClientBurst).To(Equal(1000))
 	})
 })
