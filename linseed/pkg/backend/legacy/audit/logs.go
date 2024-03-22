@@ -374,6 +374,10 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.AuditLogParams
 		query.Filter(elastic.NewTermsQuery("level", values...))
 	}
 
+	if opts.ExcludeDryRuns {
+		query.MustNot(elastic.NewWildcardQuery("requestURI", "*dryRun*"))
+	}
+
 	return query, nil
 }
 

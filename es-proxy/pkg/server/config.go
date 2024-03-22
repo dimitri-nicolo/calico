@@ -41,6 +41,8 @@ type Config struct {
 	LinseedClientKey  string `envconfig:"LINSEED_CLIENT_KEY"`
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
+	ExcludeDryRuns bool `envconfig:"EXCLUDE_DRYRUNS" default:"true"`
+
 	// QueryServer Config
 	QueryServerEndpoint string `envconfig:"QUEYRSERVER_ENDPOINT" default:"https://tigera-api.tigera-system.svc:8080"`
 	QueryServerURL      string `envconfig:"QUERYSERVER_URL" default:"/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy"`

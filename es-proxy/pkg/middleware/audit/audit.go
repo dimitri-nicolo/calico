@@ -20,10 +20,10 @@ import (
 // Timeout for all requests to this API.
 const timeout = 20 * time.Second
 
-func NewHandler(lsclient client.Client) http.Handler {
+func NewHandler(lsclient client.Client, excludeDryRuns bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse the request.
-		params, cluster, err := parseRequest(w, r)
+		params, cluster, err := parseRequest(w, r, excludeDryRuns)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -43,7 +43,7 @@ func NewHandler(lsclient client.Client) http.Handler {
 	})
 }
 
-func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, string, error) {
+func parseRequest(w http.ResponseWriter, r *http.Request, excludeDryRuns bool) (*v1.AuditLogParams, string, error) {
 	if r.Method != http.MethodPost {
 		logrus.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
 		return nil, "", &httputils.HttpStatusError{
@@ -99,6 +99,8 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (*v1.AuditLogParams, s
 			Descending: true,
 		},
 	}
+
+	params.ExcludeDryRuns = excludeDryRuns
 
 	// Extract the cluster ID header.
 	cluster := middleware.MaybeParseClusterNameFromRequest(r)
