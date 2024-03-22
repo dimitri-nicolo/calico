@@ -1,5 +1,7 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Tigera, Inc. All rights reserved.
 package v1
+
+import lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 // BulkEventRequest contains the parameters to perform Elastic bulk operations.
 type BulkEventRequest struct {
@@ -69,4 +71,52 @@ type BulkEventErrorDetails struct {
 
 	// Reason for the failed operation.
 	Reason string `json:"reason" validate:"required"`
+}
+
+// EventStatisticsParams mirrors linseed's EventStatisticsParams.
+// It is redefined here to accommodate es-proxy logic for FieldValuesParam
+// to support additional Namespace and MitreTechnique field values.
+type EventStatisticsParams struct {
+	// EventParams inherits all the normal events selection parameters.
+	// However Sort by time is not supported for statistics.
+	// Used to specify the subset of events we want to consider when computing statistics.
+	lapi.EventParams `json:",inline"`
+
+	// FieldValues defines the event fields we want to compute field values statistics for.
+	FieldValues *FieldValuesParam `json:"field_values,omitempty"`
+
+	// SeverityHistograms defines parameters of the severity histograms we want to compute (name and selector for severity range).
+	SeverityHistograms []lapi.SeverityHistogramParam `json:"severity_histograms,omitempty"`
+}
+
+// FieldValuesParam mirrors linseed's FieldValuesParam.
+// It supports the Namespace and MitreTechnique field values.
+type FieldValuesParam struct {
+	lapi.FieldValuesParam `json:",inline"`
+	NamespaceValues       *lapi.FieldValueParam `json:"namespace,omitempty"`
+	MitreTechniqueValues  *lapi.FieldValueParam `json:"mitre_technique,omitempty"`
+}
+
+// EventStatistics mirrors linseed's EventStatistics.
+// It is redefined here to accommodate es-proxy logic for FieldValues
+// to support additional Namespace and MitreTechnique field values.
+type EventStatistics struct {
+	FieldValues        *FieldValues                      `json:"field_values,omitempty"`
+	SeverityHistograms map[string][]lapi.HistogramBucket `json:"severity_histograms,omitempty"`
+}
+
+// FieldValues mirrors linseed's FieldValues, with
+// additional Namespace and MitreTechnique field values.
+type FieldValues struct {
+	*lapi.FieldValues    `json:",inline"`
+	NamespaceValues      []lapi.FieldValue     `json:"namespace,omitempty"`
+	MitreTechniqueValues []MitreTechniqueValue `json:"mitre_technique,omitempty"`
+}
+
+// MitreTechniqueValue is similar to a FieldValue (Count) except that:
+// - The Value include the name of the MITRE technique instead of just its ID.
+// - The Url property captures the URL associated with the MITRE technique.
+type MitreTechniqueValue struct {
+	lapi.FieldValue `json:",inline"`
+	Url             string `json:"url"`
 }

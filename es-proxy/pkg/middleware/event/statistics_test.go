@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Tigera, Inc. All rights reserved.
 package event
 
 import (
@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/test/thirdpartymock"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -205,6 +206,116 @@ var _ = Describe("EventStatistics middleware tests", func() {
 			requestSelector := gjson.Get(string(requestBodyBytes), "selector").String()
 
 			Expect(requestSelector).To(Equal("(type = waf and not dismissed = true) AND NOT ( origin = origin1 )"))
+		})
+	})
+
+	Context("Elasticsearch /events/statistics namespace logic", func() {
+		It("should combine source_namespace and dest_namespace info", func() {
+			// Set up responses from Linseed.
+			lsclient.SetResults(
+				rest.MockResult{Body: lapi.EventStatistics{}}, //TODO: Eliminate
+				rest.MockResult{Body: lapi.EventStatistics{
+					FieldValues: &lapi.FieldValues{
+						SourceNamespaceValues: []lapi.FieldValue{
+							{Value: "default", Count: 16, BySeverity: []lapi.SeverityValue{
+								{Value: 100, Count: 16},
+							}},
+						},
+					},
+				}},
+				rest.MockResult{Body: lapi.EventStatistics{
+					FieldValues: &lapi.FieldValues{
+						DestNamespaceValues: []lapi.FieldValue{
+							{Value: "default", Count: 75867, BySeverity: []lapi.SeverityValue{
+								{Value: 80, Count: 75867},
+							}},
+						},
+					},
+				}},
+			)
+
+			// Setup request
+			req, err := http.NewRequest(http.MethodPost, "", strings.NewReader(`{
+				"field_values": {
+					"namespace": {"count": true}
+				}
+			}`))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventStatisticsHandler(fakeClientSet, lsclient)
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			// Check that response matches expectations
+			var resp v1.EventStatistics
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp).To(Equal(v1.EventStatistics{
+				FieldValues: &v1.FieldValues{
+					NamespaceValues: []lapi.FieldValue{
+						{Value: "default", Count: 75883, BySeverity: []lapi.SeverityValue{
+							{Value: 100, Count: 16},
+							{Value: 80, Count: 75867},
+						}},
+					},
+				},
+			}))
+		})
+	})
+
+	Context("Elasticsearch /events/statistics mitre_technique logic", func() {
+		It("should combine results of mitre_ids and info in mitre_techniques.json", func() {
+			// Set up responses from Linseed.
+			lsclient.SetResults(
+				rest.MockResult{Body: lapi.EventStatistics{
+					FieldValues: &lapi.FieldValues{
+						MitreIDsValues: []lapi.FieldValue{
+							{Value: "T1041", Count: 7, BySeverity: []lapi.SeverityValue{
+								{Value: 100, Count: 7},
+							}},
+						},
+					},
+				}},
+			)
+
+			// Setup request
+			req, err := http.NewRequest(http.MethodPost, "", strings.NewReader(`{
+				"field_values": {
+					"mitre_technique": {"count": true, "group_by_severity": true}
+				}
+			}`))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventStatisticsHandler(fakeClientSet, lsclient)
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			// Check that response matches expectations
+			var resp v1.EventStatistics
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp).To(Equal(v1.EventStatistics{
+				FieldValues: &v1.FieldValues{
+					MitreTechniqueValues: []v1.MitreTechniqueValue{
+						{
+							FieldValue: lapi.FieldValue{
+								Value: "T1041: Exfiltration Over C2 Channel",
+								Count: 7,
+								BySeverity: []lapi.SeverityValue{
+									{Value: 100, Count: 7},
+								},
+							},
+							Url: "https://attack.mitre.org/techniques/T1041",
+						},
+					},
+				},
+			}))
 		})
 	})
 })
