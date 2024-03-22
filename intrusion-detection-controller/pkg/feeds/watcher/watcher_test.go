@@ -39,7 +39,7 @@ func TestWatcher_processQueue(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	g.Expect(w).ShouldNot(BeNil())
 
@@ -175,7 +175,7 @@ func TestWatcher_startFeed_stopFeed_IPSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -230,7 +230,7 @@ func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -289,7 +289,7 @@ func TestWatcher_startFeed_defaultcontent(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -334,7 +334,7 @@ func TestWatcher_startFeed_NoPull_IPSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -376,7 +376,7 @@ func TestWatcher_startFeed_NoPullHTTP_IPSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -412,7 +412,7 @@ func TestWatcher_startFeed_NoPull_DomainNameSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -449,7 +449,7 @@ func TestWatcher_startFeed_NoPullHTTP_DomainNameSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -498,7 +498,7 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -545,7 +545,7 @@ func TestWatcher_startFeed_DomainNameSetWithGNS(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -565,7 +565,7 @@ func TestWatcher_stopFeed_notExists(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}, 1).(*watcher)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -605,7 +605,7 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -646,7 +646,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -711,7 +711,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -766,7 +766,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -827,7 +827,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -888,7 +888,7 @@ func TestWatcher_updateFeed_IPSetToDomainNameSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, mockSet, mockSet, &storage.MockSuspicious{}, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, mockSet, mockSet, &storage.MockSuspicious{}, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -960,7 +960,7 @@ func TestWatcher_restartPuller_IPSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -1012,7 +1012,7 @@ func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &storage.MockSuspicious{}, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -1068,7 +1068,7 @@ func TestWatcher_restartPuller_defaultcontent(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -1125,7 +1125,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -1182,7 +1182,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &storage.MockSuspicious{}, nil, &storage.MockEvents{}, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -1234,7 +1234,7 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 		GlobalThreatFeed: globalThreatFeed,
 	}
 
-	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}, 1).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -1250,7 +1250,7 @@ func TestWatcher_Ping(t *testing.T) {
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync.NewMockIPSetController()
 	edn := sync.NewMockDomainNameSetsController()
-	uut := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{})
+	uut := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}, 1)
 
 	ch := make(chan struct{})
 	defer func() {
@@ -1282,7 +1282,7 @@ func TestWatcher_PingFail(t *testing.T) {
 	gtf := &calico.MockGlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := sync.NewMockIPSetController()
-	uut := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{})
+	uut := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, nil, nil, nil, nil, nil, &geodb.MockGeoDB{}, 1)
 
 	err := uut.Ping(ctx)
 	g.Expect(err).Should(MatchError(context.DeadlineExceeded), "Ping times out")

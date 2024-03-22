@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2024 Tigera Inc. All rights reserved.
 
 package searcher
 
@@ -22,12 +22,14 @@ import (
 func TestDoIPSet(t *testing.T) {
 	expected := []v1.Event{
 		{
+			ID:         "1234",
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
 			DestName:   "dest",
 		},
 		{
+			ID:         "2345",
 			SourceIP:   util.Sptr("5.6.7.8"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
@@ -35,6 +37,47 @@ func TestDoIPSet(t *testing.T) {
 		},
 	}
 	runTest(t, true, expected, time.Now(), "", nil, -1)
+}
+
+// TestCacheEvents tests the caching of events is working
+func TestCacheEvents(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	e1 := v1.Event{
+		ID: "1234",
+	}
+
+	e2 := v1.Event{
+		ID: "2345",
+	}
+
+	e3 := v1.Event{
+		ID: "3456",
+	}
+
+	processEvents := []v1.Event{e1, e2, e3}
+
+	cachedEvents := []v1.Event{e1, e2}
+
+	f := util.NewGlobalThreatFeedFromName("mock")
+	suspiciousIP := &storage.MockSuspicious{
+		Error:                nil,
+		LastSuccessfulSearch: time.Now(),
+		SetHash:              "",
+	}
+	suspiciousIP.Events = append(suspiciousIP.Events, processEvents...)
+	eventsDB := &storage.MockEvents{ErrorIndex: -1, Events: []v1.Event{}}
+	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, time.Duration(5*time.Minute)).(*searcher)
+
+	for _, e := range cachedEvents {
+		uut.cachedEvents.Add(&e)
+	}
+	feedCacher := cacher.NewMockGlobalThreatFeedCache()
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+	uut.doSearch(ctx, feedCacher)
+
+	g.Expect(eventsDB.Events).Should(ConsistOf([]v1.Event{e3}), "1 Event should be in DB")
 }
 
 // TestDoIPSetNoResults tests the case where no results are returned
@@ -53,12 +96,14 @@ func TestDoIPSetSuspiciousIPFails(t *testing.T) {
 func TestDoIPSetEventsFails(t *testing.T) {
 	expected := []v1.Event{
 		{
+			ID:         "1234",
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
 			DestName:   "dest",
 		},
 		{
+			ID:         "2345",
 			SourceIP:   util.Sptr("5.6.7.8"),
 			SourceName: "source",
 			DestIP:     util.Sptr("2.3.4.5"),
@@ -82,7 +127,7 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []v1.Event,
 	}
 	suspiciousIP.Events = append(suspiciousIP.Events, expectedSecurityEvents...)
 	eventsDB := &storage.MockEvents{ErrorIndex: eventsErrorIdx, Events: []v1.Event{}}
-	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}).(*searcher)
+	uut := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, 1).(*searcher)
 	feedCacher := cacher.NewMockGlobalThreatFeedCache()
 
 	ctx, cancel := context.WithCancel(context.TODO())
@@ -118,7 +163,7 @@ func TestFlowSearcher_SetFeed(t *testing.T) {
 	f2 := util.NewGlobalThreatFeedFromName("swap")
 	suspiciousIP := &storage.MockSuspicious{}
 	eventsDB := &storage.MockEvents{}
-	searcher := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}).(*searcher)
+	searcher := NewSearcher(f, 0, suspiciousIP, eventsDB, &geodb.MockGeoDB{}, 1).(*searcher)
 
 	searcher.SetFeed(f2)
 	g.Expect(searcher.feed).Should(Equal(f2))

@@ -74,7 +74,7 @@ var _ = Describe("Event forwarder", func() {
 		}
 		lsc = lsclient.NewMockClient("", rest.MockResult{Body: data})
 
-		storageService = storage.NewService(lsc, fakeClient, "")
+		storageService = storage.NewService(lsc, fakeClient, "", time.Duration(1))
 		storageService.Run(ctx)
 
 		now = time.Now()
