@@ -909,11 +909,4 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(rr.Code).To(Equal(http.StatusBadRequest))
 		})
 	})
-
-	Context("Logic to update events selector to consider AlertExceptions", func() {
-
-		It("Should update selector with AlertExceptions data", func() {
-			// TODO
-		})
-	})
 })

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Tigera, Inc. All rights reserved.
 package event
 
 import (
@@ -55,43 +55,6 @@ var (
   }
 }`
 	emptyEventStatisticsResponse string = `{}`
-	eventNsRequest               string = `{
-		"field_values": {
-		  "namespace": {"count": true}
-		}
-	  }`
-
-	// responses from linseed to es-proxy
-	eventNsResponse string = `{
-  "field_values": {
-    "namespace": [
-      {
-        "value": "default",
-        "count": 75883
-      }
-    ]
-  }
-}`
-	eventSourceNsResponse string = `{
-		"field_values": {
-		  "source_namespace": [
-			{
-				"value": "default",
-				"count": 16
-			}
-		  ]
-		}
-	  }`
-	eventDestNsResponse string = `{
-		"field_values": {
-		  "dest_namespace": [
-			{
-				"value": "default",
-				"count": 75867
-			}
-		  ]
-		}
-	  }`
 )
 
 var _ = Describe("EventStatistics middleware tests", func() {
