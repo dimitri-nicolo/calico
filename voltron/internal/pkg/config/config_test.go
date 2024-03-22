@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 )
 
