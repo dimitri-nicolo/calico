@@ -28,7 +28,7 @@ const (
 func EventStatisticsHandler(k8sClient datastore.ClientSet, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// For the most part, this handler is a pass through to linseed.
-		// It takes in lapi.EventStatisticsParams as input and returns lapi.EventStatistics as result.
+		// It takes in EventStatisticsParams as input and returns EventStatistics as result.
 		// For most fields, linseed does the heavy lifting.
 		// In a few cases this frontend API adds some extra logic that neither belongs to linseed or the UI.
 		// Additional logic includes:
@@ -45,7 +45,7 @@ func EventStatisticsHandler(k8sClient datastore.ClientSet, lsclient client.Clien
 			return
 		}
 
-		// create a context with timeout to ensure we don't block for too long.
+		// Create a context with timeout to ensure we don't block for too long.
 		ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
 		defer cancelWithTimeout()
 
@@ -107,8 +107,8 @@ func EventStatisticsHandler(k8sClient datastore.ClientSet, lsclient client.Clien
 		// We have the params compatible with Linseed. In addition, we may have more data
 		// we need to process to deal with namespaces for example.
 		// If we do, we will need to setup multiple queries... If not stick with the one query.
+
 		// Perform statistics request
-		// esParams, err := parseEventStatisticsRequest[v1.EventStatisticsParams](w, r)
 		if esParams.FieldValues != nil {
 			if esParams.FieldValues.MitreTechniqueValues != nil {
 				// We know from previous logic that mitre_ids were requested in the linseed request.
