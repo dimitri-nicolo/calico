@@ -22,7 +22,6 @@ import (
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
@@ -121,7 +120,7 @@ var _ = Describe("RecommendationController", func() {
 
 		mockLinseedClient := lsclient.NewMockClient("")
 
-		namespaces := set.FromArray[string]([]string{"default"})
+		namespaces := []string{"default"}
 
 		mockClock := &MockClock{}
 
@@ -151,7 +150,6 @@ var _ = Describe("RecommendationController", func() {
 			"managed-cluster-1",
 			mockClientSet.ProjectcalicoV3(),
 			mockLinseedClient,
-			namespaces,
 			query,
 			cache,
 			&v3.PolicyRecommendationScope{
@@ -166,6 +164,10 @@ var _ = Describe("RecommendationController", func() {
 			},
 			mockClock,
 		)
+
+		for _, ns := range namespaces {
+			engine.AddNamespace(ns)
+		}
 
 		// Create a new instance of the networkPolicyReconciler
 		controller = &recommendationController{

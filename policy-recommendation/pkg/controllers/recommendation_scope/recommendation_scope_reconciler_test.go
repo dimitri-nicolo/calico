@@ -23,7 +23,6 @@ import (
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
@@ -82,7 +81,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 		mockLinseedClient := lsclient.NewMockClient("")
 
-		namespaces := set.FromArray[string]([]string{"default", "kube-system"})
+		namespaces := []string{"default", "kube-system"}
 
 		mockClock := &MockClock{}
 
@@ -141,7 +140,6 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 			"managed-cluster-1",
 			mockClientSet.ProjectcalicoV3(),
 			mockLinseedClient,
-			namespaces,
 			query,
 			cache,
 			&v3.PolicyRecommendationScope{
@@ -163,6 +161,10 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 			},
 			mockClock,
 		)
+
+		for _, ns := range namespaces {
+			engine.AddNamespace(ns)
+		}
 
 		mockCtrl = newMockRecommendationScopeController(engine)
 
@@ -191,8 +193,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 		Context("When the key name is PolicyRecommendationScopeName", func() {
 			Context("When the incoming scope is enabled and the existing reconciler engine is disabled", func() {
-				// threeSecondInterval is the interval for the recommendation scope.
-				const threeSecondInterval = 3 * time.Second
+				// thirtySecondInterval is the interval for the recommendation scope.
+				const thirtySecondInterval = 30 * time.Second
 
 				BeforeEach(func() {
 					mockNamespaced.Name = "default"
@@ -206,7 +208,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 							Name: "default",
 						},
 						Spec: v3.PolicyRecommendationScopeSpec{
-							Interval: &metav1.Duration{Duration: threeSecondInterval},
+							Interval: &metav1.Duration{Duration: thirtySecondInterval},
 							NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
 								RecStatus: v3.PolicyRecommendationScopeEnabled,
 							},
@@ -214,7 +216,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					}, metav1.CreateOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
-					expected := time.Duration(threeSecondInterval)
+					expected := time.Duration(thirtySecondInterval)
 
 					err = r.Reconcile(mockNamespaced)
 					Expect(err).To(BeNil())
@@ -230,8 +232,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 				})
 
 				It("should handle another update, the engine is enabled and the scope is still enabled", func() {
-					// nineSecondInterval is the interval for the recommendation scope.
-					const nineSecondInterval = 9 * time.Second
+					// ninetySecondInterval is the interval for the recommendation scope.
+					const ninetySecondInterval = 90 * time.Second
 
 					r.enabled = v3.PolicyRecommendationScopeDisabled
 					_, err := r.clientSet.ProjectcalicoV3().PolicyRecommendationScopes().Create(ctx, &v3.PolicyRecommendationScope{
@@ -239,7 +241,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 							Name: "default",
 						},
 						Spec: v3.PolicyRecommendationScopeSpec{
-							Interval: &metav1.Duration{Duration: threeSecondInterval},
+							Interval: &metav1.Duration{Duration: thirtySecondInterval},
 							NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
 								RecStatus: v3.PolicyRecommendationScopeEnabled,
 							},
@@ -247,7 +249,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					}, metav1.CreateOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
-					expected := time.Duration(threeSecondInterval)
+					expected := time.Duration(thirtySecondInterval)
 
 					err = r.Reconcile(mockNamespaced)
 					Expect(err).To(BeNil())
@@ -266,7 +268,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 							Name: "default",
 						},
 						Spec: v3.PolicyRecommendationScopeSpec{
-							Interval: &metav1.Duration{Duration: nineSecondInterval},
+							Interval: &metav1.Duration{Duration: ninetySecondInterval},
 							NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
 								RecStatus: v3.PolicyRecommendationScopeEnabled,
 							},
@@ -274,7 +276,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					}, metav1.UpdateOptions{})
 					Expect(err).NotTo(HaveOccurred())
 
-					expected = time.Duration(nineSecondInterval)
+					expected = time.Duration(ninetySecondInterval)
 
 					err = r.Reconcile(mockNamespaced)
 					Expect(err).To(BeNil())

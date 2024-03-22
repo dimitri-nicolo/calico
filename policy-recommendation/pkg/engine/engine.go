@@ -3,6 +3,7 @@ package engine
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -62,17 +63,20 @@ type recommendationScope struct {
 
 	// Metadata
 	uid types.UID
+
+	// Logger
+	clog *log.Entry
 }
 
 type RecommendationEngine struct {
 	// Cache for storing the recommendations (SNPs)
 	cache rcache.ResourceCache
 
-	// FilteredNamespaces are the namespaces that are selected for processing.
-	FilteredNamespaces set.Set[string]
-
 	// Namespaces are the namespaces that are present in the cluster.
-	Namespaces set.Set[string]
+	namespaces set.Set[string]
+
+	// filterNamespaces is the set of namespaces that were filtered in by the selector.
+	filteredNamespaces set.Set[string]
 
 	// Channel for receiving PolicyRecommendationScope updates
 	UpdateChannel chan v3.PolicyRecommendationScope
@@ -101,6 +105,9 @@ type RecommendationEngine struct {
 	// Query for querying flows logs
 	query flows.PolicyRecommendationQuery
 
+	// Lock
+	mutex sync.Mutex
+
 	// Logger
 	clog *log.Entry
 }
@@ -111,7 +118,6 @@ func NewRecommendationEngine(
 	clusterID string,
 	calico calicoclient.ProjectcalicoV3Interface,
 	linseedClient linseed.Client,
-	namespaces set.Set[string],
 	query flows.PolicyRecommendationQuery,
 	cache rcache.ResourceCache,
 	scope *v3.PolicyRecommendationScope,
@@ -130,30 +136,23 @@ func NewRecommendationEngine(
 	}
 
 	// Create a new scope with the default values.
-	parsedSelector, _ := libcselector.Parse(defaultSelector)
-	newScope := &recommendationScope{
-		initialLookback:           defaultLookback,            // 24h0m0s
-		interval:                  defaultInterval,            // 10m0s
-		stabilization:             defaultStabilizationPeriod, // 5m0s
-		selector:                  parsedSelector,             // Exclude Tigera and Kubernetes and Calico namespaces
-		passIntraNamespaceTraffic: false,                      // Allow intra-namespace traffic
-	}
-	// Update the scope with the values from the incoming PolicyRecommendationScope.
-	updateScope(logEntry, newScope, *scope)
+	sc := newRecommendationScope(logEntry)
+	sc.updateScope(*scope)
 
 	return &RecommendationEngine{
 		ctx:                ctx,
 		calico:             calico,
 		linseedClient:      linseedClient,
 		cache:              cache,
-		Namespaces:         namespaces,
-		FilteredNamespaces: set.New[string](),
+		filteredNamespaces: set.New[string](),
+		namespaces:         set.New[string](),
 		cluster:            clusterID,
-		scope:              newScope,
+		scope:              sc,
 		UpdateChannel:      make(chan v3.PolicyRecommendationScope),
 		clock:              clock,
 		clusterDomain:      clusterDomain,
 		query:              query,
+		mutex:              sync.Mutex{},
 		clog:               logEntry,
 	}
 }
@@ -162,8 +161,19 @@ func NewRecommendationEngine(
 // the engine scope with the latest PolicyRecommendationScopeSpec. It stops the engine when the
 // stopChan is closed.
 func (e *RecommendationEngine) Run(stopChan chan struct{}) {
-	ticker := time.NewTicker(e.scope.interval)
+	interval := defaultInterval
+	if e.scope != nil {
+		if e.scope.interval >= 30*time.Second {
+			interval = e.scope.interval
+		} else {
+			e.clog.Warnf("Invalid interval: %s, the interval must be greater than 30 seconds, using default interval: %s", e.scope.interval.String(), interval.String())
+		}
+	}
+
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
+	e.clog.Debugf("Starting new ticker with interval: %s", interval.String())
 
 	for {
 		select {
@@ -171,86 +181,47 @@ func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 			if !ok {
 				continue // Channel closed, exit the loop
 			}
-			interval := e.scope.interval
-			if ticker == nil {
-				// Start the ticker with the default interval.
-				ticker = time.NewTicker(interval)
-			}
-			selector := e.scope.selector.String()
 			e.clog.Debugf("[Consumer] Received scope update: %+v", update)
-			// Update the engine scope with the new PolicyRecommendationScopeSpec.
-			updateScope(e.clog, e.scope, update)
 
-			if interval != e.scope.interval {
+			e.mutex.Lock()
+
+			oldInterval := e.scope.interval
+			oldSelector := e.scope.selector.String()
+			// Update the engine scope with the new PolicyRecommendationScopeSpec.
+			e.scope.updateScope(update)
+
+			if oldInterval != e.scope.interval {
 				// The interval has changed, update the ticker with the new interval.
 				// Stop the previous ticker and start a new one with the updated interval.
 				ticker.Stop()
 				ticker.C = time.NewTicker(e.scope.interval).C
-				e.clog.Debugf("Updated ticker with new interval %s", e.scope.interval.String())
+				e.clog.Debugf("Updated ticker with new interval: %s", e.scope.interval.String())
 			}
 
-			if selector != e.scope.selector.String() {
-				// The namespace selector has changed, iterate over the tracked namespaces and update the
-				// FilteredNamespaces based on the new selector.
-				e.FilteredNamespaces = set.New[string]()
-				e.Namespaces.Iter(func(namespace string) error {
-					if e.scope.selector.String() == "" || e.scope.selector.Evaluate(map[string]string{v3.LabelName: namespace}) {
-						// The namespace is selected by the new selector, add it to the filteredNamespaces for
-						// processing.
-						if !e.FilteredNamespaces.Contains(namespace) {
-							e.clog.WithField("namespace", namespace).Info("Adding namespace for processing")
-							e.FilteredNamespaces.Add(namespace)
-						}
-					} else {
-						// The namespace is not selected by the new selector, remove it from the
-						// cache. This will subsequently remove it from the datastore.
-						if _, ok := e.cache.Get(namespace); ok {
-							e.cache.Delete(namespace)
-							e.clog.WithField("namespace", namespace).Info("Deleted namespace from cache")
-						}
-					}
-
-					return nil
-				})
+			if oldSelector != e.scope.selector.String() {
+				// The namespace selector has changed, update the filtered namespaces.
+				e.filterNamespaces(e.scope.selector.String())
 			}
+			e.mutex.Unlock()
 		case <-ticker.C:
-			e.clog.Debug("Running engine")
+			e.clog.Debug("Reconciliation interval is up, running engine")
 
 			if e.cache == nil {
 				e.clog.Warn("Cache is not set, avoiding engine run")
 				continue
 			}
+			if e.scope == nil {
+				e.clog.Warn("Scope is not set, avoiding engine run")
+				continue
+			}
 
-			// Iterate through the filtered namespaces and process the recommendations (SNPs). Add each
-			// new/updated recommendation to the cache for reconciliation with datastore.
-			e.FilteredNamespaces.Iter(func(namespace string) error {
-				e.clog.WithField("namespace", namespace).Debug("Processing")
-
-				var recommendation *v3.StagedNetworkPolicy
-				if item, found := e.cache.Get(namespace); found {
-					var ok bool
-					value, ok := item.(v3.StagedNetworkPolicy)
-					if !ok {
-						e.clog.Warnf("unexpected item in cache: %+v", item)
-						return nil
-					}
-					recommendation = &value
-				} else {
-					// Create a new recommendation for this namespace. The recommendation is a
-					// StagedNetworkPolicy. This will only be used if there are new rules to add. Otherwise,
-					// the recommendation will be discarded.
-					recommendation = calicores.NewStagedNetworkPolicy(
-						utils.GenerateRecommendationName(poltypes.PolicyRecommendationTierName, namespace, utils.SuffixGenerator),
-						namespace,
-						poltypes.PolicyRecommendationTierName,
-						e.scope.uid,
-					)
-				}
-
-				if e.update(recommendation) {
+			e.clog.Debugf("Iterating through namespaces, using selector: %s", e.scope.selector.String())
+			e.filteredNamespaces.Iter(func(namespace string) error {
+				rec := e.getRecommendation(namespace)
+				if rec != nil && e.update(rec) {
 					// The recommendation contains new rules, or status metadata has been updated so add to
 					// cache for syncing. This will trigger an update in the datastore.
-					e.cache.Set(namespace, *recommendation)
+					e.cache.Set(namespace, *rec)
 					e.clog.WithField("namespace", namespace).Debug("Updated cache item")
 				}
 
@@ -263,9 +234,99 @@ func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 	}
 }
 
+// AddNamespace adds the namespace for tracking, and if the filter is true, adds it to the
+// filtered namespaces.
+func (e *RecommendationEngine) AddNamespace(ns string) {
+	if !e.namespaces.Contains(ns) {
+		e.namespaces.Add(ns)
+		e.clog.WithField("namespace", ns).Debug("Namespace not found in namespaces set")
+	}
+
+	if !e.filteredNamespaces.Contains(ns) && (e.scope.selector.String() == "" || e.scope.selector.Evaluate(map[string]string{v3.LabelName: ns})) {
+		e.filteredNamespaces.Add(ns)
+		e.clog.WithField("namespace", ns).Debug("Added namespace to filtered namespaces")
+	}
+}
+
 // GetScope returns the engine scope.
 func (e *RecommendationEngine) GetScope() *recommendationScope {
 	return e.scope
+}
+
+// GetNamespaces returns the set of namespaces.
+func (e *RecommendationEngine) GetNamespaces() set.Set[string] {
+	return e.namespaces
+}
+
+// GetFilteredNamespaces returns the set of filtered namespaces.
+func (e *RecommendationEngine) GetFilteredNamespaces() set.Set[string] {
+	return e.filteredNamespaces
+}
+
+// RemoveNamespace removes the namespace from the tracked namespace, the filtered namespaces and the
+// cache.
+func (e *RecommendationEngine) RemoveNamespace(ns string) {
+	if e.namespaces.Contains(ns) {
+		e.namespaces.Discard(ns)
+	}
+	if e.filteredNamespaces.Contains(ns) {
+		e.filteredNamespaces.Discard(ns)
+	}
+	if _, ok := e.cache.Get(ns); ok {
+		e.cache.Delete(ns)
+	}
+
+	// Remove every rule referencing the deleted namespace from the cache items.
+	for _, key := range e.cache.ListKeys() {
+		if val, ok := e.cache.Get(key); ok {
+			snp := val.(v3.StagedNetworkPolicy)
+			e.removeRulesReferencingDeletedNamespace(&snp, ns)
+			e.cache.Set(key, snp)
+		}
+	}
+}
+
+// filterNamespaces filters the namespaces based on the selector.
+func (e *RecommendationEngine) filterNamespaces(selector string) {
+	parsedSelector, _ := libcselector.Parse(selector)
+	e.filteredNamespaces = set.New[string]() // Reset the filtered namespaces set.
+
+	e.namespaces.Iter(func(ns string) error {
+		_, exists := e.cache.Get(ns)
+		if parsedSelector.String() == "" || parsedSelector.Evaluate(map[string]string{v3.LabelName: ns}) {
+			e.filteredNamespaces.Add(ns)
+		} else if exists {
+			// The namespace is not selected by the new selector, remove it from the
+			// cache. This will subsequently remove it from the datastore.
+			e.cache.Delete(ns)
+			e.clog.WithField("namespace", ns).Info("Deleted namespace from cache")
+		}
+		return nil
+	})
+}
+
+// getRecommendation returns the recommendation for the namespace. If the recommendation does not
+// exist in the cache, it will create a new one.
+func (e *RecommendationEngine) getRecommendation(ns string) *v3.StagedNetworkPolicy {
+	if item, found := e.cache.Get(ns); found {
+		if recommendation, ok := item.(v3.StagedNetworkPolicy); ok {
+			return &recommendation
+		}
+		e.clog.Warnf("unexpected item in cache: %+v", item)
+		return nil
+	}
+
+	// Create a new recommendation for this namespace. The recommendation is a StagedNetworkPolicy.
+	// This will only be used if there are new rules to add. Otherwise, the recommendation will be
+	// discarded.
+	recommendation := calicores.NewStagedNetworkPolicy(
+		utils.GenerateRecommendationName(poltypes.PolicyRecommendationTierName, ns, utils.SuffixGenerator),
+		ns,
+		poltypes.PolicyRecommendationTierName,
+		e.scope.uid,
+	)
+
+	return recommendation
 }
 
 // update processes the flows logs into new rules and adds them to the recommendation. Returns true
@@ -336,43 +397,89 @@ func (e *RecommendationEngine) getLookback(snp v3.StagedNetworkPolicy) time.Dura
 	return lookback
 }
 
+// removeRulesReferencingDeletedNamespace removes every rule from the staged network policy
+// referencing the passed in namespace.
+func (e *RecommendationEngine) removeRulesReferencingDeletedNamespace(snp *v3.StagedNetworkPolicy, namespace string) {
+	e.clog.Debugf("Remove all references to namespace: %s, from staged network policy: %s", namespace, snp.Name)
+	ingress := []v3.Rule{}
+	for i, rule := range snp.Spec.Ingress {
+		if rule.Source.NamespaceSelector != namespace {
+			ingress = append(ingress, snp.Spec.Ingress[i])
+		}
+	}
+	snp.Spec.Ingress = ingress
+
+	egress := []v3.Rule{}
+	for i, rule := range snp.Spec.Egress {
+		if rule.Destination.NamespaceSelector != namespace {
+			egress = append(egress, snp.Spec.Egress[i])
+		}
+	}
+	snp.Spec.Egress = egress
+}
+
+// recommendationScope
+
+func newRecommendationScope(lg *log.Entry) *recommendationScope {
+	parsedSelector, _ := libcselector.Parse(defaultSelector)
+	return &recommendationScope{
+		initialLookback:           defaultLookback,
+		interval:                  defaultInterval,
+		stabilization:             defaultStabilizationPeriod,
+		selector:                  parsedSelector,
+		passIntraNamespaceTraffic: false,
+		uid:                       "",
+		clog:                      lg,
+	}
+}
+
 // updateScope updates the engine scope with the new PolicyRecommendationScopeSpec.
-func updateScope(clog *log.Entry, scope *recommendationScope, update v3.PolicyRecommendationScope) {
-	if update.Spec.Interval != nil && scope.interval != update.Spec.Interval.Duration {
-		scope.interval = update.Spec.Interval.Duration
-		clog.Infof("[Consumer] Setting new interval to: %s", scope.interval.String())
-	}
-
-	if update.Spec.InitialLookback != nil && scope.initialLookback != update.Spec.InitialLookback.Duration {
-		scope.initialLookback = update.Spec.InitialLookback.Duration
-		clog.Infof("[Consumer] Setting new initial lookback to: %s", scope.initialLookback.String())
-	}
-
-	if update.Spec.StabilizationPeriod != nil && scope.stabilization != update.Spec.StabilizationPeriod.Duration {
-		scope.stabilization = update.Spec.StabilizationPeriod.Duration
-		clog.Infof("[Consumer] Setting new stabilization to: %s", scope.stabilization.String())
-	}
-
-	if scope.passIntraNamespaceTraffic != update.Spec.NamespaceSpec.IntraNamespacePassThroughTraffic {
-		scope.passIntraNamespaceTraffic = update.Spec.NamespaceSpec.IntraNamespacePassThroughTraffic
-		clog.Infof("[Consumer] Setting passIntraNamespaceTraffic to: %t", scope.passIntraNamespaceTraffic)
-	}
-
-	if update.Spec.NamespaceSpec.Selector != "" && scope.selector.String() != update.Spec.NamespaceSpec.Selector {
-		parsedSelector, err := libcselector.Parse(update.Spec.NamespaceSpec.Selector)
-		if err != nil {
-			clog.WithError(err).Errorf("failed to parse selector: %s", update.Spec.NamespaceSpec.Selector)
+func (sc *recommendationScope) updateScope(new v3.PolicyRecommendationScope) {
+	if new.Spec.Interval != nil && sc.interval != new.Spec.Interval.Duration {
+		if new.Spec.Interval.Duration < 30*time.Second {
+			sc.clog.Warnf("Invalid interval: %s, the interval must be greater than 30 seconds", new.Spec.Interval.Duration.String())
 		} else {
-			if scope.selector.String() != parsedSelector.String() {
-				scope.selector = parsedSelector
-				clog.Infof("[Consumer] Setting new namespace selector to: %s", parsedSelector.String())
-			}
+			sc.interval = new.Spec.Interval.Duration
+			sc.clog.Infof("[Consumer] Setting new interval to: %s", sc.interval.String())
 		}
 	}
 
-	if update.UID != scope.uid {
-		scope.uid = update.UID
-		clog.Infof("[Consumer] Setting recommendation owner UID to: %s", scope.uid)
+	if new.Spec.InitialLookback != nil && sc.initialLookback != new.Spec.InitialLookback.Duration {
+		if new.Spec.InitialLookback.Duration < sc.interval {
+			sc.clog.Warnf("Invalid initial lookback: %s, the initial lookback must be greater than the interval: %s", new.Spec.InitialLookback.Duration.String(), sc.interval.String())
+		} else {
+			sc.initialLookback = new.Spec.InitialLookback.Duration
+			sc.clog.Infof("[Consumer] Setting new initial lookback to: %s", sc.initialLookback.String())
+		}
+	}
+
+	if new.Spec.StabilizationPeriod != nil && sc.stabilization != new.Spec.StabilizationPeriod.Duration {
+		if new.Spec.StabilizationPeriod.Duration < sc.interval {
+			sc.clog.Warnf("Invalid stabilization period: %s, the stabilization period must be greater than the interval: %s", new.Spec.StabilizationPeriod.Duration.String(), sc.interval.String())
+		} else {
+			sc.stabilization = new.Spec.StabilizationPeriod.Duration
+			sc.clog.Infof("[Consumer] Setting new stabilization to: %s", sc.stabilization.String())
+		}
+	}
+
+	if sc.passIntraNamespaceTraffic != new.Spec.NamespaceSpec.IntraNamespacePassThroughTraffic {
+		sc.passIntraNamespaceTraffic = new.Spec.NamespaceSpec.IntraNamespacePassThroughTraffic
+		sc.clog.Infof("[Consumer] Setting passIntraNamespaceTraffic to: %t", sc.passIntraNamespaceTraffic)
+	}
+
+	parsedSelector, err := libcselector.Parse(new.Spec.NamespaceSpec.Selector)
+	if err != nil {
+		sc.clog.WithError(err).Warningf("failed to parse selector: %s, setting to default", new.Spec.NamespaceSpec.Selector)
+		parsedSelector, _ = libcselector.Parse(defaultSelector)
+	}
+	if sc.selector == nil || sc.selector.String() != parsedSelector.String() {
+		sc.selector = parsedSelector
+		sc.clog.Infof("[Consumer] Setting new namespace selector to: %s", parsedSelector.String())
+	}
+
+	if new.UID != sc.uid {
+		sc.uid = new.UID
+		sc.clog.Infof("[Consumer] Setting recommendation owner UID to: %s", sc.uid)
 	}
 }
 
