@@ -3,6 +3,7 @@ package query
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http/httptest"
@@ -189,4 +190,42 @@ var _ = Describe("Queryserver query tests", func() {
 
 	})
 
+	Context("tests parseEndpointsBody", func() {
+		It("should set EndpointsList to empty string if empty string is set in the request", func() {
+			reqBody := client.QueryEndpointsReqBody{
+				EndpointsList: []string{},
+			}
+
+			reqBodyBytes, err := json.Marshal(reqBody)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			req, err := parseEndpointsBody(reqBodyBytes)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(req.EndpointsList).NotTo(BeNil())
+			Expect(req.EndpointsList).To(HaveLen(0))
+
+		})
+		It("should set EndpointsList to nil string if nil is set in the request", func() {
+			reqBody := client.QueryEndpointsReqBody{
+				EndpointsList: nil,
+			}
+
+			reqBodyBytes, err := json.Marshal(reqBody)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			req, err := parseEndpointsBody(reqBodyBytes)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(req.EndpointsList).To(BeNil())
+		})
+		It("should set EndpointsList to nil string when it is not set at all", func() {
+			reqBody := client.QueryEndpointsReqBody{}
+
+			reqBodyBytes, err := json.Marshal(reqBody)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			req, err := parseEndpointsBody(reqBodyBytes)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(req.EndpointsList).To(BeNil())
+		})
+	})
 })
