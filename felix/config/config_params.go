@@ -396,6 +396,7 @@ type Config struct {
 	PrometheusReporterKeyFile  string `config:"file(must-exist);"`
 	PrometheusReporterCAFile   string `config:"file(must-exist);"`
 
+	SyslogReporterEnabled       bool          `config:"bool;false"`
 	SyslogReporterNetwork       string        `config:"string;"`
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`

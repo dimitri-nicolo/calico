@@ -614,7 +614,16 @@ type FelixConfigurationSpec struct {
 	// DNS cache.
 	BPFExcludeCIDRsFromNAT *[]string `json:"bpfExcludeCIDRsFromNAT,omitempty" validate:"omitempty,cidrs"`
 
+	// SyslogReporterEnabled turns on the feature to write logs to Syslog. Please note that this can incur significant
+	// disk space usage when running felix on non-cluster hosts.
+	SyslogReporterEnabled *bool `json:"syslogReporterEnabled,omitempty" validate:"omitempty"`
+	// SyslogReporterNetwork is the network to dial to when writing to Syslog. Known networks are "tcp", "tcp4"
+	// (IPv4-only), "tcp6" (IPv6-only), "udp", "udp4" (IPv4-only), "udp6" (IPv6-only), "ip", "ip4" (IPv4-only), "ip6"
+	// (IPv6-only), "unix", "unixgram" and "unixpacket". For more, see: https://pkg.go.dev/net#Dial
 	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
+	// SyslogReporterAddress is the address to dial to when writing to Syslog. For TCP and UDP networks, the address has
+	// the form "host:port". The host must be a literal IP address, or a host name that can be resolved to IP addresses.
+	// The port must be a literal port number or a service name. For more, see: https://pkg.go.dev/net#Dial
 	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`
 
 	// IPSecMode controls which mode IPSec is operating on.

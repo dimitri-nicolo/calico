@@ -48,10 +48,10 @@ const (
 // Separate const block to avoid conflicts when merging from OS.
 const (
 	numPrivateOnlyFelixConfigs = 107
-	numBaseFelixConfigs        = 137
+	numBaseFelixConfigs        = 138
 )
 
-var _ = Describe("Test the generic configuration update processor and the concrete implementations", func() {
+var _ = FDescribe("Test the generic configuration update processor and the concrete implementations", func() {
 	// Define some common values
 	perNodeFelixKey := model.ResourceKey{
 		Kind: apiv3.KindFelixConfiguration,

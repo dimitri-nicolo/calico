@@ -2816,6 +2816,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			copy(*out, *in)
 		}
 	}
+	if in.SyslogReporterEnabled != nil {
+		in, out := &in.SyslogReporterEnabled, &out.SyslogReporterEnabled
+		*out = new(bool)
+		**out = **in
+	}
 	if in.IPSecAllowUnsecuredTraffic != nil {
 		in, out := &in.IPSecAllowUnsecuredTraffic, &out.IPSecAllowUnsecuredTraffic
 		*out = new(bool)
