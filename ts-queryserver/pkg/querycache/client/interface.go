@@ -134,7 +134,7 @@ type QueryEndpointsReqBody struct {
 	Unprotected         bool     `json:"unprotected,omitempty" validate:"omitempty"`
 
 	// Filters
-	EndpointsList []string `json:"endpointsList,omitempty" validate:"omitempty"` // we need to identify when this field is passed as empty list or is not passed
+	EndpointsList []string `json:"endpointsList"` // we need to identify when this field is passed as empty list or is not passed
 	Node          string   `json:"node,omitempty" validate:"omitempty"`
 	Unlabelled    bool     `json:"unlabelled,omitempty"  validate:"omitempty"`
 	Page          *Page    `json:"page,omitempty" validate:"omitempty"`
