@@ -285,7 +285,7 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(auditLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					audit.NewHandler(linseed)))))
+					audit.NewHandler(linseed, cfg.ExcludeDryRuns)))))
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
