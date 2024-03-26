@@ -3,11 +3,15 @@
 package main
 
 import (
+	"bytes"
 	"crypto/x509"
 	_ "embed"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -27,8 +31,6 @@ var (
 	dnsDashboard string
 	//go:embed data/kubernetes-api-dashboard.json
 	k8sApiDashboard string
-	//go:embed data/siem-index.json
-	siemIndex string
 	//go:embed data/l7-dashboard.json
 	l7Dashboard string
 )
@@ -74,40 +76,81 @@ func main() {
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "k8sApiDashboard", k8sApiDashboard)
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "l7Dashboard", l7Dashboard)
 
-	configURL := fmt.Sprintf("%sapi/saved_objects/config/7.6.2", kibanaURL)
-	postDashboard(client, configURL, cfg.ElasticUsername, cfg.ElasticPassword, "siemIndex", siemIndex)
+	importURL := fmt.Sprintf("%sapi/saved_objects/_import", kibanaURL)
+	uploadDashboardNDJSON(client, importURL, cfg.ElasticUsername, cfg.ElasticPassword, "flowlog-dashboard", "/etc/dashboards/flowlog-dashboard.ndjson")
 }
 
-func postDashboard(client *http.Client, url, username, password, dashboardName, dashboard string) {
-	log.Infof("POST %v %v", url, dashboardName)
-	req, err := http.NewRequest("POST", url, strings.NewReader(dashboard))
-	if err != nil {
-		log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
-	}
-	req.SetBasicAuth(username, password)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("kbn-xsrf", "reporting")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
-	}
-	if resp.StatusCode == http.StatusConflict {
-		req, err = http.NewRequest("PUT", url, strings.NewReader(dashboard))
+// uploadDashboardNDJSON uploads an NDJSON file and posts it as a multipart upload.
+func uploadDashboardNDJSON(client *http.Client, url, username, password, dashboardName, dashboard string) {
+	log.Infof("Creating dashboard %s...", dashboardName)
+	err := performRequest(client, func() *http.Request {
+		file, err := os.Open(dashboard)
+		defer file.Close()
 		if err != nil {
-			log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
+			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+		}
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+		if err != nil {
+			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+		}
+		_, err = io.Copy(part, file)
+		writer.Close()
+		if err != nil {
+			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+		}
+		req, err := http.NewRequest(http.MethodPost, url, body)
+		req.SetBasicAuth(username, password)
+		req.Header.Add("Content-Type", writer.FormDataContentType())
+		req.Header.Add("kbn-xsrf", "reporting")
+		return req
+	})
+	if err != nil {
+		log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+	}
+}
+
+// postDashboard makes a performRequest request with a JSON body to create objects in Kibana.
+func postDashboard(client *http.Client, url, username, password, dashboardName, dashboard string) {
+	log.Infof("Creating dashboard %s...", dashboardName)
+	err := performRequest(client, func() *http.Request {
+		req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(dashboard))
+		if err != nil {
+			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
 		}
 		req.SetBasicAuth(username, password)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Add("kbn-xsrf", "reporting")
-		log.Infof("Resource exists, PUT %v %v", url, dashboardName)
+		return req
+	})
+	if err != nil {
+		log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+	}
+}
+
+// performRequest makes a POST request to Kibana. If a 409 error occurs, it will retry once.
+func performRequest(client *http.Client, requestFn func() *http.Request) error {
+	resp, err := client.Do(requestFn())
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode == http.StatusConflict {
+		log.Info("Conflict, trying again")
+		req := requestFn()
+		req.Method = http.MethodPut
 		resp, err = client.Do(req)
 		if err != nil {
-			log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
+			return err
 		}
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		log.Panicf("unable to setup dashboard %s, status=%v", dashboardName, resp.Status)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("unable to setup dashboard. Status code: %d , body: %s", resp.StatusCode, body)
 	}
 	log.Info(resp.Status)
+	return nil
 }
