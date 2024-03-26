@@ -48,13 +48,6 @@ COPY output_match/ /fluentd/etc/output_match/
 COPY outputs/ /fluentd/etc/outputs/
 COPY inputs/ /fluentd/etc/inputs/
 COPY filters/ /fluentd/etc/filters/
-COPY rubyplugin/ /fluentd/plugins/
-
-# We are currently doing this because fluentd executed the http plugin from the standard library
-# instead the linseed plugin defined in rubyplugin folder
-# Upgrading to a newer ruby or fluentd will require a change to the commands below
-COPY rubyplugin/out_http.rb /ruby31/lib/ruby/gems/3.1.0/gems/fluentd-1.16.3-x64-mingw-ucrt/lib/fluent/plugin/out_http.rb
-COPY rubyplugin/out_http.rb /ruby/lib/ruby/gems/3.1.0/gems/fluentd-1.16.3-x64-mingw-ucrt/lib/fluent/plugin/out_http.rb
 
 # Compliance reports logs needs a regex pattern because there will be
 # multiple logs (one per report type), e.g. compliance.network-access.reports.log

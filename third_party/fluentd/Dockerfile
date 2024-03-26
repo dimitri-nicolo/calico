@@ -129,7 +129,6 @@ COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY inputs/ /fluentd/etc/inputs/
 COPY output_match/ /fluentd/etc/output_match/
 COPY outputs/ /fluentd/etc/outputs/
-COPY rubyplugin/ /fluentd/plugins/
 
 FROM scratch
 
