@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+# Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,41 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM quay.io/tigera/fluentd-base:v1.15.3-windows
+ARG THIRD_PARTY_REGISTRY
+ARG WINDOWS_LTSC_VERSION
+
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.16.3-${WINDOWS_LTSC_VERSION}
 
 USER ContainerAdministrator
 
 # The ROOT_DIR is set for Windows only.
 ENV ROOT_DIR=c:
-
-# - Add symlink to ruby install path.
-#   - The ruby version gets updated occasionally so using a symlink
-#     keeps us from needing to update the fluentd probes in the operator.
-# - Install required gems and other packages.
-RUN mklink /D c:\ruby c:\ruby31 \
-&& setx /m path "c:\ruby\bin;%path%;" \
-&& gem install \
-        bundler:2.4.7 \
-        cgi:0.3.6 \
-        elasticsearch-api:7.17.8 \
-        elasticsearch-transport:7.17.8 \
-        elasticsearch-xpack:7.17.8 \
-        elasticsearch:7.17.8 \
-        fluent-plugin-cloudwatch-logs:0.8.0 \
-        fluent-plugin-elasticsearch:5.2.4 \
-        fluent-plugin-prometheus:2.0.0 \
-        fluent-plugin-s3:1.3.0 \
-        fluent-plugin-splunk-hec:1.3.1 \
-        fluent-plugin-sumologic_output:1.6.1 \
-        # to reduce windows build effort, psych is pinned at v4.
-        # bundled libyaml is removed in v5.0.0 (see https://github.com/ruby/psych/pull/541)
-        psych:4.0.6 \
-        rdoc:6.4.0 \
- && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
- && gem sources --clear-all \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\plugins" \
- && c:\ruby\msys64\usr\bin\bash.exe -lc "curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe"
 
 # On Windows, the destination format for COPY must use forward slashes.
 COPY elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
@@ -70,18 +44,10 @@ ENV DISABLE_ES_L7_LOG=true
 ENV DISABLE_ES_BGP_LOG=true
 ENV DISABLE_ES_RUNTIME_LOG=true
 
-COPY output_match /fluentd/etc/output_match
-COPY outputs /fluentd/etc/outputs
-COPY inputs /fluentd/etc/inputs
-COPY filters /fluentd/etc/filters
-COPY rubyplugin /fluentd/plugins
-
-# We are currently doing this because fluentd executed the http plugin from the standard library
-# instead the linseed plugin defined in rubyplugin folder
-# Upgrading to a newer ruby or fluentd will require a change to the commands below
-RUN powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby31\lib\ruby\gems\3.1.0\gems\fluentd-1.15.3-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb"
-RUN powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby\lib\ruby\gems\3.1.0\gems\fluentd-1.15.3-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb"
-
+COPY output_match/ /fluentd/etc/output_match/
+COPY outputs/ /fluentd/etc/outputs/
+COPY inputs/ /fluentd/etc/inputs/
+COPY filters/ /fluentd/etc/filters/
 
 # Compliance reports logs needs a regex pattern because there will be
 # multiple logs (one per report type), e.g. compliance.network-access.reports.log
@@ -149,17 +115,6 @@ COPY sumo-environment.sh /bin/
 COPY sumo-config.sh /bin/
 COPY ee_entrypoint.sh /bin/
 COPY eks/bin/eks-log-forwarder-startup.exe /bin/
-
-RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_dns" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_tsee_audit" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_kube_audit" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_compliance_reports" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_bgp" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_ids_events" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_l7" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_runtime" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_waf"
 
 EXPOSE 24284
 
