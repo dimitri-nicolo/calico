@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package middleware
 
 import (
@@ -10,20 +12,22 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaapi "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // The user authentication review mock struct implementing the authentication review interface.
 type userAuthorizationReviewMock struct {
-	verbs []libcalicov3.AuthorizedResourceVerbs
+	verbs []v3.AuthorizedResourceVerbs
 	err   error
 }
 
@@ -31,7 +35,7 @@ type userAuthorizationReviewMock struct {
 // PerformReviewForElasticLogs.
 func (a userAuthorizationReviewMock) PerformReview(
 	ctx context.Context, cluster string,
-) ([]libcalicov3.AuthorizedResourceVerbs, error) {
+) ([]v3.AuthorizedResourceVerbs, error) {
 	return a.verbs, a.err
 }
 
@@ -212,7 +216,7 @@ var _ = Describe("", func() {
 			ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 			defer cancel()
 			authReview := userAuthorizationReviewMock{
-				verbs: []libcalicov3.AuthorizedResourceVerbs{},
+				verbs: []v3.AuthorizedResourceVerbs{},
 				err:   nil,
 			}
 			pageNumber := 2
@@ -264,4 +268,60 @@ var _ = Describe("", func() {
 			}
 		})
 	})
+
+	Context("test getDeniedEndpointsFromLinseed", func() {
+
+		endpointsAggregatedReq := &EndpointsAggregationRequest{
+			ClusterName: "cluster",
+		}
+
+		authReview := userAuthorizationReviewMock{
+			verbs: []v3.AuthorizedResourceVerbs{},
+			err:   nil,
+		}
+		It("get deniedendpoints when there are denied flowlogs", func() {
+			results := []rest.MockResult{
+				{
+					Body: lapi.List[lapi.FlowLog]{
+						Items:     []lapi.FlowLog{},
+						AfterKey:  nil,
+						TotalHits: 0,
+					},
+				},
+			}
+			lsc := client.NewMockClient("", results...)
+
+			deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregatedReq, lsc, authReview)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(deniedEndpoints).To(HaveLen(0))
+		})
+		It("return empty slice when there is no denied flowlogs", func() {
+			results := []rest.MockResult{
+				{
+					Body: lapi.List[lapi.FlowLog]{
+						Items: []lapi.FlowLog{
+							{
+								SourceName:      "-",
+								SourceNameAggr:  "ep-src-*",
+								SourceNamespace: "ns-src",
+								DestName:        "-",
+								DestNameAggr:    "ep-dst-*",
+								DestNamespace:   "ns-dst",
+								Action:          "deny",
+							},
+						},
+						AfterKey:  nil,
+						TotalHits: 1,
+					},
+				},
+			}
+			lsc := client.NewMockClient("", results...)
+
+			deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregatedReq, lsc, authReview)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(deniedEndpoints).To(HaveLen(2))
+
+		})
+	})
+
 })

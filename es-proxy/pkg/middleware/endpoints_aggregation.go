@@ -111,7 +111,7 @@ func EndpointsAggregationHandler(authreview AuthorizationReview, qsConfig *query
 		}
 
 		// Filter deniedEndpoints by other parameters (via queryserver)
-		qsEndpointsResp, err := getEndpointsFromQueryServer(w, qsConfig, endpointsAggregationRequest, deniedEndpoints)
+		qsEndpointsResp, err := getEndpointsFromQueryServer(qsConfig, endpointsAggregationRequest, deniedEndpoints)
 		if err != nil {
 			httputils.EncodeError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
@@ -138,7 +138,7 @@ func EndpointsAggregationHandler(authreview AuthorizationReview, qsConfig *query
 // getEndpointsFromQueryServer is a handler for queryserver endpoint search
 //
 // returns QueryEndpointsResp: list of endpoints from queryserver based on the search parameters provided.
-func getEndpointsFromQueryServer(w http.ResponseWriter, qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
+func getEndpointsFromQueryServer(qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
 	deniedEndpoints []string) (*querycacheclient.QueryEndpointsResp, error) {
 
 	// build queryserver getEndpoints api params
