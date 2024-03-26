@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -127,7 +128,6 @@ func selectorByteToK8sSelector(s Selector) *metav1.LabelSelector {
 				Key:      fmt.Sprintf("label%d", i+1),
 				Operator: metav1.LabelSelectorOpExists,
 			})
-
 		}
 	}
 	return sel
@@ -183,6 +183,9 @@ func getObjectMeta(r apiv3.ResourceID, labels Label) metav1.ObjectMeta {
 		Name:      r.Name,
 		Namespace: r.Namespace,
 		Labels:    labelByteToLabels(labels),
+		// Use a hard-coded UID here, since parsing / conversion logic expects
+		// this to be non-nil.
+		UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 	}
 }
 

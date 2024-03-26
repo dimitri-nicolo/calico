@@ -26,7 +26,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "capture-1"
 	name2 := "capture-2"
@@ -74,7 +73,7 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 
 			By("Updating the PacketCapture before it is created")
 			_, outError := c.PacketCaptures().Update(ctx, &apiv3.PacketCapture{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-packetCapture"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -156,7 +155,7 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 
 			By("Attempting to update the PacketCapture without a Creation Timestamp")
 			res, outError = c.PacketCaptures().Update(ctx, &apiv3.PacketCapture{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", UID: "test-fail-packetCapture"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -222,7 +221,7 @@ var _ = testutils.E2eDatastoreDescribe("PacketCapture tests", testutils.Datastor
 			))
 
 			By("Setting status1 on resource")
-			var capturingState = apiv3.PacketCaptureStateCapturing
+			capturingState := apiv3.PacketCaptureStateCapturing
 			status1 := apiv3.PacketCaptureStatus{
 				Files: []apiv3.PacketCaptureFile{
 					{

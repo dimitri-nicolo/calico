@@ -22,7 +22,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "cluster-1"
 	name2 := "cluster-2"
@@ -43,7 +42,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// ----------------------------------------------------------------------------------------------------
 			By("Updating the ManagedCluster before it is created")
 			_, outError := c.ManagedClusters().Update(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-managedcluster"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -66,7 +65,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			//fmt.Println("vakumar-res1 eq %s")
+			// fmt.Println("vakumar-res1 eq %s")
 			Expect(res1).To(MatchResource(apiv3.KindManagedCluster, clusterNamespace, name1, spec1))
 
 			// Track the version of the original data for name1.
@@ -135,7 +134,7 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			// ----------------------------------------------------------------------------------------------------
 			By("Attempting to update the ManagedCluster without a Creation Timestamp")
 			res, outError = c.ManagedClusters().Update(ctx, &apiv3.ManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace, ResourceVersion: "1234", UID: "test-fail-managedcluster"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, Namespace: clusterNamespace, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -251,7 +250,6 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("Invalid name for managed cluster"))
-
 		})
 
 		It("should not create a managed cluster with a populated installation manifest", func() {
@@ -465,5 +463,4 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			testWatcher4.Stop()
 		})
 	})
-
 })
