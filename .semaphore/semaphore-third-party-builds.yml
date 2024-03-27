@@ -48,6 +48,13 @@ global_job_config:
       - cd "$REPO_DIR"
       - .semaphore/publish-artifacts
 blocks:
+- name: Prerequisites
+  dependencies: []
+  task:
+    jobs:
+      - name: Pre-flight checks
+        commands:
+          - make ci-preflight-checks
 - name: Publish tigera/snort3 images
   run:
     when: "change_in(['/third_party/snort3'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
