@@ -1,1 +1,3 @@
+base/.fluentd-base.created-*
+dist/
 test/tmp/
