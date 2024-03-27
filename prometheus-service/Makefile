@@ -75,6 +75,8 @@ $(PROMETHEUS_SERVICE_CONTAINER_CREATED): Dockerfile bin/prometheus-service-$(ARC
 clean:
 	rm -rf bin
 	-docker image rm -f $$(docker images $(PROMETHEUS_SERVICE_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(PROMETHEUS_SERVICE_TEST_CONTAINER_NAME) -a -q)
+	rm -rf fv/tls.*
 
 ##########################################################################
 # Testing
@@ -94,14 +96,23 @@ ut: report-dir
 .PHONY: fv
 fv: image report-dir run-prometheus-service-proxy fv/fv.test
 		cd fv && ./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
-		docker rm -f ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} || true
+		$(MAKE) clean
 
 fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.
 	$(DOCKER_RUN)	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
-	
-run-prometheus-service-proxy:
+
+
+create-tls:
+	$(DOCKER_RUN)	$(CALICO_BUILD) sh -c "cd fv && openssl req -nodes -x509 -sha256 -newkey rsa:4096 \
+                                                  -keyout tls.key \
+                                                  -out tls.crt \
+                                                  -days 356 \
+                                                  -subj '/C=CA/ST=BC/L=Burnaby/O=Tigera/OU=Eng/CN=localhost'  \
+                                                  -addext 'subjectAltName = DNS:localhost' && chmod 644 tls.*"
+
+run-prometheus-service-proxy: create-tls
 	docker rm -f ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} || true
 	${DOCKER_RUN} \
 		--detach \
@@ -112,7 +123,7 @@ run-prometheus-service-proxy:
 		-e AUTHENTICATION_ENABLED=false \
 		--name ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} \
 		tigera/${PROMETHEUS_SERVICE_IMAGE}:latest
-		
+
 	until $$(curl --insecure https://localhost:8090 2> /dev/null); do \
 		echo "Waiting for Prometheus Service to come up..."; \
 		sleep 3; \
