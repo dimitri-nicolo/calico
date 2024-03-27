@@ -13,9 +13,9 @@ global_job_config:
   secrets:
     - name: docker-hub
     - name: marvin-github-ssh-private-key
-    - name: tigera-dev-ci-pull-credentials
     - name: marvin-aws-config
     - name: marvin-aws-credentials
+    - name: tigera-dev-ci-pull-credentials
   prologue:
     commands:
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin

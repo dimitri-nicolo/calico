@@ -13,8 +13,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -101,7 +99,7 @@ var _ = Describe("RecommendationEngine", func() {
 			var err error
 			var snps *v3.StagedNetworkPolicyList
 			for i := 0; i < ret; i++ {
-				snps, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(v1.NamespaceAll).List(ctx, metav1.ListOptions{
+				snps, err = mockClientSet.ProjectcalicoV3().StagedNetworkPolicies(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
 					LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
 				})
 				if err == nil {
@@ -148,8 +146,8 @@ var _ = Describe("RecommendationEngine", func() {
 		cache.Set("openshift-namespace", v3.StagedNetworkPolicy{})
 
 		engine = &RecommendationEngine{
-			Namespaces:         set.FromArray[string]([]string{"test-namespace", "tigera-namespace", "openshift-namespace"}),
-			FilteredNamespaces: set.New[string](),
+			namespaces:         set.FromArray[string]([]string{"test-namespace", "tigera-namespace", "openshift-namespace"}),
+			filteredNamespaces: set.FromArray[string]([]string{}),
 			cache:              cache,
 			scope: &recommendationScope{
 				interval:                  1 * time.Minute,
@@ -158,6 +156,7 @@ var _ = Describe("RecommendationEngine", func() {
 				selector:                  parsedSelector,
 				passIntraNamespaceTraffic: false,
 				uid:                       "rrf2w-2343f-2342f-00000",
+				clog:                      logEntry,
 			},
 			UpdateChannel: make(chan v3.PolicyRecommendationScope),
 			clock:         mockClock,
@@ -176,15 +175,15 @@ var _ = Describe("RecommendationEngine", func() {
 
 			// Simulate an update to the UpdateChannel
 			update := v3.PolicyRecommendationScope{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					UID: "rrf2w-2343f-2342f-11111",
 				},
 				Spec: v3.PolicyRecommendationScopeSpec{
-					Interval: &v1.Duration{Duration: 2 * time.Second},
-					InitialLookback: &v1.Duration{
+					Interval: &metav1.Duration{Duration: 30 * time.Second},
+					InitialLookback: &metav1.Duration{
 						Duration: 2 * time.Minute,
 					},
-					StabilizationPeriod: &v1.Duration{
+					StabilizationPeriod: &metav1.Duration{
 						Duration: 2 * time.Minute,
 					},
 					NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
@@ -200,15 +199,15 @@ var _ = Describe("RecommendationEngine", func() {
 
 			// Wait for the engine to process the update
 			Eventually(func() bool {
-				return engine.scope.interval == 2*time.Second && engine.scope.initialLookback == 2*time.Minute &&
+				return engine.scope.interval == 30*time.Second && engine.scope.initialLookback == 2*time.Minute &&
 					engine.scope.stabilization == 2*time.Minute && engine.scope.selector.String() == newParsedSelector.String() &&
 					engine.scope.passIntraNamespaceTraffic == true && engine.scope.uid == "rrf2w-2343f-2342f-11111"
 			}, 2*time.Second, 100*time.Millisecond).Should(BeTrue())
 
-			logEntry.Infof("Filtered namespaces: %s", engine.FilteredNamespaces)
+			logEntry.Infof("Filtered namespaces: %s", engine.filteredNamespaces)
 			Eventually(func() bool {
-				return engine.FilteredNamespaces.Contains("test-namespace") && !engine.FilteredNamespaces.Contains("openshift-namespace") &&
-					!engine.FilteredNamespaces.Contains("tiger-namespace")
+				return engine.filteredNamespaces.Contains("test-namespace") && !engine.filteredNamespaces.Contains("openshift-namespace") &&
+					!engine.filteredNamespaces.Contains("tiger-namespace")
 			}, 2*time.Second, 100*time.Millisecond).Should(BeTrue())
 
 			Eventually(func() bool {
@@ -244,7 +243,7 @@ var _ = Describe("RecommendationEngine", func() {
 				Spec: v3.StagedNetworkPolicySpec{
 					StagedAction: v3.StagedActionLearn,
 				},
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-policy",
 					Namespace: "test-namespace",
 				},
@@ -262,7 +261,7 @@ var _ = Describe("RecommendationEngine", func() {
 				Spec: v3.StagedNetworkPolicySpec{
 					StagedAction: v3.StagedActionLearn,
 				},
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:        "test-policy",
 					Namespace:   "test-namespace",
 					Annotations: map[string]string{},
@@ -296,7 +295,7 @@ var _ = Describe("RecommendationEngine", func() {
 					},
 					Types: []v3.PolicyType{v3.PolicyTypeEgress},
 				},
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-policy",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
@@ -317,7 +316,7 @@ var _ = Describe("RecommendationEngine", func() {
 
 		It("should return twice the engine-run interval if LastUpdatedKey annotation is present", func() {
 			snp := v3.StagedNetworkPolicy{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						calicores.LastUpdatedKey: "2022-01-01T00:00:00Z",
 					},
@@ -326,6 +325,68 @@ var _ = Describe("RecommendationEngine", func() {
 			lookback := engine.getLookback(snp)
 			expectedLookback := engine.scope.interval * 2
 			Expect(lookback).To(Equal(expectedLookback))
+		})
+	})
+
+	Context("removeRulesReferencingDeletedNamespace", func() {
+		var (
+			engine    *RecommendationEngine
+			snp       *v3.StagedNetworkPolicy
+			namespace string
+		)
+
+		BeforeEach(func() {
+			engine = &RecommendationEngine{
+				clog: log.WithField("test", "test"),
+			}
+			snp = &v3.StagedNetworkPolicy{
+				Spec: v3.StagedNetworkPolicySpec{
+					Ingress: []v3.Rule{
+						{
+							Source: v3.EntityRule{
+								NamespaceSelector: "namespace1",
+							},
+						},
+						{
+							Source: v3.EntityRule{
+								NamespaceSelector: "namespace2",
+							},
+						},
+					},
+					Egress: []v3.Rule{
+						{
+							Destination: v3.EntityRule{
+								NamespaceSelector: "namespace1",
+							},
+						},
+						{
+							Destination: v3.EntityRule{
+								NamespaceSelector: "namespace2",
+							},
+						},
+					},
+				},
+			}
+			namespace = "namespace1"
+		})
+
+		It("should remove rules referencing the deleted namespace", func() {
+			engine.removeRulesReferencingDeletedNamespace(snp, namespace)
+
+			Expect(snp.Spec.Ingress).To(HaveLen(1))
+			Expect(snp.Spec.Ingress[0].Source.NamespaceSelector).To(Equal("namespace2"))
+
+			Expect(snp.Spec.Egress).To(HaveLen(1))
+			Expect(snp.Spec.Egress[0].Destination.NamespaceSelector).To(Equal("namespace2"))
+		})
+
+		It("should not remove any rules if the namespace is not referenced", func() {
+			namespace = "namespace3"
+
+			engine.removeRulesReferencingDeletedNamespace(snp, namespace)
+
+			Expect(snp.Spec.Ingress).To(HaveLen(2))
+			Expect(snp.Spec.Egress).To(HaveLen(2))
 		})
 	})
 })

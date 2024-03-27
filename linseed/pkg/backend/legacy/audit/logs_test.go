@@ -519,6 +519,16 @@ func TestAuditLogFiltering(t *testing.T) {
 			ExpectLog1: false,
 			ExpectLog2: true,
 		},
+		{
+			Name: "should exclude dryRun records",
+			Params: v1.AuditLogParams{
+				Type:           v1.AuditLogTypeEE,
+				ExcludeDryRuns: true,
+			},
+			AllTime:    true,
+			ExpectLog1: true,
+			ExpectLog2: false,
+		},
 	}
 
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
@@ -609,7 +619,7 @@ func TestAuditLogFiltering(t *testing.T) {
 						AuditID:    types.UID("audit-log-two"),
 						Stage:      kaudit.StageRequestReceived,
 						Level:      kaudit.LevelRequest,
-						RequestURI: "/apis/v3/projectcalico.org",
+						RequestURI: "/apis/v3/projectcalico.org?dryRun=All",
 						Verb:       string(v1.Get),
 						User: authnv1.UserInfo{
 							Username: "oates",

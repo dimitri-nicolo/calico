@@ -1,0 +1,55 @@
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
+FROM rockylinux:8 AS snort
+
+ARG DAQ_VERSION=3.0.14
+ARG SNORT3_VERSION
+
+RUN dnf upgrade -y && dnf install -y \
+    autoconf \
+    automake \
+    bison \
+    cmake \
+    epel-release \
+    flex \
+    gcc \
+    gcc-c++ \
+    libtool \
+    pkg-config
+
+RUN dnf --enablerepo=powertools install -y \
+    hwloc-devel \
+    libdnet-devel \
+    libnetfilter_queue-devel \
+    libnfnetlink-devel \
+    libpcap-devel \
+    libuuid-devel \
+    luajit-devel \
+    openssl-devel \
+    pcre-devel \
+    xz-devel \
+    zlib-devel
+
+RUN mkdir /build
+WORKDIR /build
+
+# Install snort DAQ (Data Acquisition library)
+RUN curl -sfL https://github.com/snort3/libdaq/archive/refs/tags/v${DAQ_VERSION}.tar.gz | tar xz -C /build && \
+    cd /build/libdaq-${DAQ_VERSION}/ && \
+    ./bootstrap && ./configure --prefix=/usr --libdir=/usr/lib64 && \
+    make -j4 && make install
+
+# Build and Install Snort 3
+RUN curl -sfL https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSION}.tar.gz | tar xz -C /build && \
+    cd /build/snort3-${SNORT3_VERSION}/ && \
+    ./configure_cmake.sh --prefix=/usr --build-type=Release --disable-gdb --disable-docs && \
+    cd build && \
+    make -j4 && make install
+
+# dry-run the snort config to check for errors
+RUN snort -V && snort -c /usr/etc/snort/snort.lua -T
+
+# Create Snorts Log directory
+RUN mkdir /var/log/snort /var/log/snort-alerts
+
+COPY snort3-community.rules /usr/etc/snort/snort3-community.rules

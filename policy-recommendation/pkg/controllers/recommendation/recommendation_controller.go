@@ -162,7 +162,6 @@ func (c *recommendationController) Run(stopChan chan struct{}) {
 	// Start the Kubernetes reconciler cache to fix up any differences between the required and
 	// configured data.
 	c.cache.Run(synchingInterval.String())
-	defer c.cache.GetQueue().ShutDown()
 
 	// Start a number of worker threads to read from the queue.
 	for i := 0; i < c.numberOfWorkers; i++ {
@@ -173,6 +172,7 @@ func (c *recommendationController) Run(stopChan chan struct{}) {
 
 	<-stopChan
 
+	c.cache.GetQueue().ShutDown()
 	// Clear the cache
 	for _, key := range c.cache.ListKeys() {
 		c.cache.Delete(key)
@@ -382,32 +382,25 @@ func (c *recommendationController) setCacheItem(namespace string, snp *v3.Staged
 // warmupCacheAndEngine warms up the cache with the existing recommendations in the datastore. Adds
 // the namespaces to the engine for processing.
 func (c *recommendationController) warmupCacheAndEngine() {
-	// Initialize cache with datastore values.
 	snps, err := c.clientSet.ProjectcalicoV3().StagedNetworkPolicies(v1.NamespaceAll).List(c.ctx, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", v3.LabelTier, rectypes.PolicyRecommendationTierName),
 	})
 	if err != nil {
 		c.clog.WithError(err).Error("unexpected error querying staged network policies")
 	}
-	// Add the staged network policies to the cache, and to the engine namespaces for processing.
+	// Add the staged network policies to the cache.
 	for _, snp := range snps.Items {
 		c.clog.WithField("key", snp.Namespace).WithField("name", snp.Name).Info("Load recommendation into cache and setup the namespace for processing")
 		c.cache.Set(snp.Namespace, snp)
 	}
 
-	// Add the namespaces to the engine for processing.
+	// Add the namespaces tracking.
 	namespaces, err := c.clientSet.CoreV1().Namespaces().List(c.ctx, metav1.ListOptions{})
 	if err != nil {
 		c.clog.WithError(err).Error("unexpected error querying namespaces")
 	}
 	for _, ns := range namespaces.Items {
-		c.engine.Namespaces.Add(ns.Name)
-		selector := c.engine.GetScope().GetSelector()
-		if selector.String() == "" || selector.Evaluate(map[string]string{v3.LabelName: ns.Name}) {
-			// Add the namespace to the engine for processing, if the recommendation selector
-			// evaluates to true or the selector is empty.
-			c.clog.WithField("namespace", ns.Name).Info("Adding namespace for recommendation processing")
-			c.engine.FilteredNamespaces.Add(ns.Name)
-		}
+		c.engine.AddNamespace(ns.Name)
+		c.clog.WithField("namespace", ns.Name).Debug("Added namespace for tracking")
 	}
 }

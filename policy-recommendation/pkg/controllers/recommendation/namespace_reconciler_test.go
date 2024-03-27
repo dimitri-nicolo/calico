@@ -23,7 +23,6 @@ import (
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
@@ -116,7 +115,7 @@ var _ = Describe("NamespaceReconciler", func() {
 
 		mockLinseedClient := lsclient.NewMockClient("")
 
-		namespaces := set.FromArray[string]([]string{"default"})
+		namespaces := []string{"default"}
 
 		mockClock := &MockClock{}
 
@@ -146,7 +145,6 @@ var _ = Describe("NamespaceReconciler", func() {
 			"managed-cluster-1",
 			mockClientSet.ProjectcalicoV3(),
 			mockLinseedClient,
-			namespaces,
 			query,
 			cache,
 			&v3.PolicyRecommendationScope{
@@ -165,6 +163,10 @@ var _ = Describe("NamespaceReconciler", func() {
 			},
 			mockClock,
 		)
+
+		for _, ns := range namespaces {
+			engine.AddNamespace(ns)
+		}
 
 		// Create a new namespaceReconciler instance with the fake clientSet
 		r = &namespaceReconciler{
@@ -192,8 +194,8 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			err = r.Reconcile(key)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(r.engine.Namespaces.Contains(key.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key.Name)).To(BeTrue())
+			Expect(r.engine.GetNamespaces().Contains(key.Name)).To(BeTrue())
+			Expect(r.engine.GetFilteredNamespaces().Contains(key.Name)).To(BeTrue())
 		})
 
 		It("should not add the namespace to the engine for processing if the selector is not validated", func() {
@@ -211,8 +213,8 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			err = r.Reconcile(key)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(r.engine.Namespaces.Contains(key.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key.Name)).To(BeFalse())
+			Expect(r.engine.GetNamespaces().Contains(key.Name)).To(BeTrue())
+			Expect(r.engine.GetFilteredNamespaces().Contains(key.Name)).To(BeFalse())
 		})
 
 		It("should add multiple namespaces to the engine for processing if the selector is validated", func() {
@@ -246,10 +248,11 @@ var _ = Describe("NamespaceReconciler", func() {
 			err = r.Reconcile(key2)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(r.engine.Namespaces.Contains(key1.Name)).To(BeTrue())
-			Expect(r.engine.Namespaces.Contains(key2.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key1.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key2.Name)).To(BeTrue())
+			Expect(r.engine.GetNamespaces().Contains(key1.Name)).To(BeTrue())
+			Expect(r.engine.GetNamespaces().Contains(key2.Name)).To(BeTrue())
+
+			Expect(r.engine.GetFilteredNamespaces().Contains(key1.Name)).To(BeTrue())
+			Expect(r.engine.GetFilteredNamespaces().Contains(key2.Name)).To(BeTrue())
 		})
 
 		It("should keep track of every namespace even if the selector is not validated, but not add it to the filtered items for processing", func() {
@@ -271,8 +274,7 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			err = r.Reconcile(key)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(r.engine.Namespaces.Contains(key.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key.Name)).To(BeFalse())
+			Expect(r.engine.GetNamespaces().Contains(key.Name)).To(BeTrue())
 
 			// Try to create a namespace with a name starting with "kube-".
 			_, err = mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
@@ -289,8 +291,8 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			err = r.Reconcile(key)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(r.engine.Namespaces.Contains(key.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key.Name)).To(BeFalse())
+			Expect(r.engine.GetNamespaces().Contains(key.Name)).To(BeTrue())
+			Expect(r.engine.GetFilteredNamespaces().Contains(key.Name)).To(BeFalse())
 
 			// Try to create a namespace with a name starting with "tigera-".
 			_, err = mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
@@ -307,8 +309,8 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			err = r.Reconcile(key)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(r.engine.Namespaces.Contains(key.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key.Name)).To(BeFalse())
+			Expect(r.engine.GetNamespaces().Contains(key.Name)).To(BeTrue())
+			Expect(r.engine.GetFilteredNamespaces().Contains(key.Name)).To(BeFalse())
 
 			// Try to create a namespace with a name starting with "openshift-".
 			_, err = mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
@@ -325,8 +327,8 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			err = r.Reconcile(key)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(r.engine.Namespaces.Contains(key.Name)).To(BeTrue())
-			Expect(r.engine.FilteredNamespaces.Contains(key.Name)).To(BeFalse())
+			Expect(r.engine.GetNamespaces().Contains(key.Name)).To(BeTrue())
+			Expect(r.engine.GetFilteredNamespaces().Contains(key.Name)).To(BeFalse())
 		})
 	})
 
@@ -342,8 +344,8 @@ var _ = Describe("NamespaceReconciler", func() {
 		})
 
 		It("should remove namespaces from the engine's processing items and the cache", func() {
-			r.engine.Namespaces.Add("test-keep-namespace")
-			r.engine.FilteredNamespaces.Add("test-keep-namespace")
+			r.engine.GetNamespaces().Add("test-keep-namespace")
+			r.engine.GetFilteredNamespaces().Add("test-keep-namespace")
 			r.cache.Set("test-keep-namespace", v3.StagedNetworkPolicy{})
 			_, err := mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -354,12 +356,12 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			// Add two namespaces to delete, and attempt to do so concurrently. test-delete-namespace has
 			// already been added to the store in BeforeEach.
-			r.engine.Namespaces.Add("test-delete-namespace")
-			r.engine.FilteredNamespaces.Add("test-delete-namespace")
+			r.engine.GetNamespaces().Add("test-delete-namespace")
+			r.engine.GetFilteredNamespaces().Add("test-delete-namespace")
 			r.cache.Set("test-delete-namespace", v3.StagedNetworkPolicy{})
 
-			r.engine.Namespaces.Add("test-delete-namespace2")
-			r.engine.FilteredNamespaces.Add("test-delete-namespace2")
+			r.engine.GetNamespaces().Add("test-delete-namespace2")
+			r.engine.GetFilteredNamespaces().Add("test-delete-namespace2")
 			r.cache.Set("test-delete-namespace2", v3.StagedNetworkPolicy{})
 			_, err = mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -390,21 +392,21 @@ var _ = Describe("NamespaceReconciler", func() {
 
 			Eventually(func() bool {
 				v, ok := r.cache.Get("test-keep-namespace")
-				if ok && v != nil && r.engine.Namespaces.Contains("test-keep-namespace") && r.engine.FilteredNamespaces.Contains("test-keep-namespace") {
+				if ok && v != nil && r.engine.GetNamespaces().Contains("test-keep-namespace") && r.engine.GetFilteredNamespaces().Contains("test-keep-namespace") {
 					return true
 				}
 				return false
 			}).Should(BeTrue())
 			Eventually(func() bool {
 				_, ok := r.cache.Get("test-delete-namespace")
-				if !ok && !r.engine.Namespaces.Contains("test-delete-namespace") && !r.engine.FilteredNamespaces.Contains("test-delete-namespace") {
+				if !ok && !r.engine.GetNamespaces().Contains("test-delete-namespace") && !r.engine.GetFilteredNamespaces().Contains("test-delete-namespace") {
 					return true
 				}
 				return false
 			}).Should(BeTrue())
 			Eventually(func() bool {
 				_, ok := r.cache.Get("test-delete-namespace2")
-				if !ok && !r.engine.Namespaces.Contains("test-delete-namespace2") && !r.engine.FilteredNamespaces.Contains("test-delete-namespace2") {
+				if !ok && !r.engine.GetNamespaces().Contains("test-delete-namespace2") && !r.engine.GetFilteredNamespaces().Contains("test-delete-namespace2") {
 					return true
 				}
 				return false
@@ -412,8 +414,7 @@ var _ = Describe("NamespaceReconciler", func() {
 		})
 
 		It("should handle concurrent additions and deletions of namespaces to/from the engine's processing items and the cache", func() {
-			r.engine.Namespaces.Add("test-remove-namespace")
-			r.engine.FilteredNamespaces.Add("test-remove-namespace")
+			r.engine.GetNamespaces().Add("test-remove-namespace")
 			r.cache.Set("test-remove-namespace", v3.StagedNetworkPolicy{})
 			_, err := mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -449,7 +450,7 @@ var _ = Describe("NamespaceReconciler", func() {
 			Eventually(func() bool {
 				v, ok := r.cache.Get("test-remove-namespace")
 				if ok && v != nil {
-					if !r.engine.Namespaces.Contains("test-remove-namespace") && !r.engine.FilteredNamespaces.Contains("test-remove-namespace") {
+					if !r.engine.GetNamespaces().Contains("test-remove-namespace") && !r.engine.GetFilteredNamespaces().Contains("test-remove-namespace") {
 						return true
 					}
 				}
@@ -457,7 +458,7 @@ var _ = Describe("NamespaceReconciler", func() {
 			}).Should(BeFalse())
 			Eventually(
 				func() bool {
-					return r.engine.Namespaces.Contains("test-new-namespace") && r.engine.FilteredNamespaces.Contains("test-new-namespace")
+					return r.engine.GetNamespaces().Contains("test-new-namespace") && r.engine.GetFilteredNamespaces().Contains("test-new-namespace")
 				}, 10*time.Second).Should(BeTrue())
 		})
 
@@ -499,8 +500,7 @@ var _ = Describe("NamespaceReconciler", func() {
 				},
 			})
 
-			r.engine.Namespaces.Add("test-delete-namespace")
-			r.engine.FilteredNamespaces.Add("test-delete-namespace")
+			r.engine.GetNamespaces().Add("test-delete-namespace")
 			r.cache.Set("test-delete-namespace", v3.StagedNetworkPolicy{})
 
 			err := mockClientSet.CoreV1().Namespaces().Delete(context.TODO(), "test-delete-namespace", metav1.DeleteOptions{})
@@ -514,8 +514,7 @@ var _ = Describe("NamespaceReconciler", func() {
 			err = r.Reconcile(key)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(r.cache.Get(key.Name)).To(BeNil())
-			Expect(r.engine.Namespaces.Contains(key.Name)).To(BeFalse())
-			Expect(r.engine.FilteredNamespaces.Contains(key.Name)).To(BeFalse())
+			Expect(r.engine.GetNamespaces().Contains(key.Name)).To(BeFalse())
 
 			// Check that the recommendation was updated.
 			item, ok := r.cache.Get("test-namespace")

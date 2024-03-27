@@ -9,9 +9,7 @@ HONEYPOD_CONTROLLER_IMAGE ?=honeypod-controller
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
 # Snort 2 rpm package is x86_64 only from the vendor. As this is an experimental
 # component and we have plans to remove it, limit honeypod controller to amd64 only.
-ARCH                      =amd64
-
-SNORT_VERSION             ?=2.9.20
+ARCHES                    =amd64
 
 # Linker flags for building Honeypod Controller.
 #
@@ -56,7 +54,7 @@ endif
 ###############################################################################
 # Building the images
 ###############################################################################
-HONEYPOD_CONTROLLER_CONTAINER_CREATED=.honeypod-controller.created-$(ARCH)
+HONEYPOD_CONTROLLER_IMAGE_CREATED=.honeypod-controller.created-$(ARCH)
 
 # Build the images for the target architecture
 .PHONY: image-all
@@ -67,9 +65,9 @@ sub-image-%:
 .PHONY: image
 image: $(HONEYPOD_CONTROLLER_IMAGE)
 
-$(HONEYPOD_CONTROLLER_IMAGE): $(HONEYPOD_CONTROLLER_CONTAINER_CREATED)
-$(HONEYPOD_CONTROLLER_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/controller-$(ARCH)
-	$(DOCKER_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) .
+$(HONEYPOD_CONTROLLER_IMAGE): $(HONEYPOD_CONTROLLER_IMAGE_CREATED)
+$(HONEYPOD_CONTROLLER_IMAGE_CREATED): Dockerfile.$(ARCH) bin/controller-$(ARCH)
+	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -79,7 +77,7 @@ clean:
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
-	rm -f $(HONEYPOD_CONTROLLER_CONTAINER_CREATED)
+	rm -f $(HONEYPOD_CONTROLLER_IMAGE_CREATED)
 	-docker image rm -f $$(docker images $(HONEYPOD_CONTROLLER_IMAGE) -a -q)
 
 ###############################################################################

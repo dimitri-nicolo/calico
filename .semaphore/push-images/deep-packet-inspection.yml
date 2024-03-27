@@ -2,7 +2,7 @@ version: v1.0
 name: Publish deep-packet-inspection images
 agent:
   machine:
-    type: e1-standard-4
+    type: e1-standard-2
     os_image: ubuntu2004
 
 execution_time_limit:
@@ -40,25 +40,12 @@ blocks:
       when: "branch !~ '.+'"
     task:
       jobs:
-        - name: Linux amd64
+        - name: Linux multi-arch
           commands:
-            - make -C deep-packet-inspection cd ARCHES=amd64 CONFIRM=true
-  - name: Publish deep-packet-inspection images - native arm64 runner
-    dependencies: []
-    skip:
-      when: "branch !~ '.+'"
-    task:
-      agent:
-        machine:
-          type: s1-aws-arm64-2
-      jobs:
-        - name: Linux arm64
-          commands:
-            - make -C deep-packet-inspection cd ARCHES=arm64 CONFIRM=true
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C deep-packet-inspection cd CONFIRM=true; fi
   - name: Publish deep-packet-inspection multi-arch manifests
     dependencies:
       - Publish deep-packet-inspection images
-      - "Publish deep-packet-inspection images - native arm64 runner"
     skip:
       when: "branch !~ '.+'"
     task:

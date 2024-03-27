@@ -27648,8 +27648,10 @@ spec:
                                     name:
                                       description: 'Name is an enum which identifies
                                         the csi-node-driver DaemonSet container by
-                                        name. Supported values are: csi-node-driver'
+                                        name. Supported values are: calico-csi, csi-node-driver-registrar.'
                                       enum:
+                                      - calico-csi
+                                      - csi-node-driver-registrar
                                       - csi-node-driver
                                       type: string
                                     resources:
@@ -37214,8 +37216,11 @@ spec:
                                         name:
                                           description: 'Name is an enum which identifies
                                             the csi-node-driver DaemonSet container
-                                            by name. Supported values are: csi-node-driver'
+                                            by name. Supported values are: calico-csi,
+                                            csi-node-driver-registrar.'
                                           enum:
+                                          - calico-csi
+                                          - csi-node-driver-registrar
                                           - csi-node-driver
                                           type: string
                                         resources:
@@ -43844,7 +43849,7 @@ rules:
     - get
     - watch
   - apiGroups:
-    - crd.projectcalico.org
+    - projectcalico.org
     resources:
 <<<<<<< HEAD
     - ippools
@@ -43855,6 +43860,7 @@ rules:
     - get
     - watch
     - update
+    - delete
   - apiGroups:
     - crd.projectcalico.org
     resources:

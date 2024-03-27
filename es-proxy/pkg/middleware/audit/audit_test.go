@@ -57,6 +57,7 @@ var negativePagetRequest = `
   "response_codes": [200, 201]
 }
 `
+
 var paginatedAuditRequest = `
 {
   "page": 1,
@@ -71,6 +72,7 @@ var paginatedAuditRequest = `
   "response_codes": [200, 201]
 }
 `
+
 var missingLogType = `
 {
   "page": 0,
@@ -161,10 +163,11 @@ func TestNewHandler(t *testing.T) {
 							Namespace: "calico-system",
 						},
 					},
-					Verbs:         []lapi.Verb{"create", "delete", "patch", "update"},
-					Stages:        []kaudit.Stage{kaudit.StageResponseComplete},
-					Levels:        []kaudit.Level{kaudit.LevelRequestResponse},
-					ResponseCodes: []int32{200, 201},
+					Verbs:          []lapi.Verb{"create", "delete", "patch", "update"},
+					Stages:         []kaudit.Stage{kaudit.StageResponseComplete},
+					Levels:         []kaudit.Level{kaudit.LevelRequestResponse},
+					ResponseCodes:  []int32{200, 201},
+					ExcludeDryRuns: true,
 				},
 			},
 			expectedStatus: http.StatusOK,
@@ -208,10 +211,11 @@ func TestNewHandler(t *testing.T) {
 							Namespace: "calico-system",
 						},
 					},
-					Verbs:         []lapi.Verb{"create", "delete", "patch", "update"},
-					Stages:        []kaudit.Stage{kaudit.StageResponseComplete},
-					Levels:        []kaudit.Level{kaudit.LevelRequestResponse},
-					ResponseCodes: []int32{200, 201},
+					Verbs:          []lapi.Verb{"create", "delete", "patch", "update"},
+					Stages:         []kaudit.Stage{kaudit.StageResponseComplete},
+					Levels:         []kaudit.Level{kaudit.LevelRequestResponse},
+					ResponseCodes:  []int32{200, 201},
+					ExcludeDryRuns: true,
 				},
 			},
 			input:          auditRequest,
@@ -260,10 +264,11 @@ func TestNewHandler(t *testing.T) {
 							Namespace: "calico-system",
 						},
 					},
-					Verbs:         []lapi.Verb{"create", "delete", "patch", "update"},
-					Stages:        []kaudit.Stage{kaudit.StageResponseComplete},
-					Levels:        []kaudit.Level{kaudit.LevelRequestResponse},
-					ResponseCodes: []int32{200, 201},
+					Verbs:          []lapi.Verb{"create", "delete", "patch", "update"},
+					Stages:         []kaudit.Stage{kaudit.StageResponseComplete},
+					Levels:         []kaudit.Level{kaudit.LevelRequestResponse},
+					ResponseCodes:  []int32{200, 201},
+					ExcludeDryRuns: true,
 				},
 			},
 			input:          paginatedAuditRequest,
@@ -288,7 +293,7 @@ func TestNewHandler(t *testing.T) {
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
-			handler := NewHandler(lsc)
+			handler := NewHandler(lsc, true)
 			handler.ServeHTTP(rr, req)
 
 			require.Equal(t, rr.Code, tt.expectedStatus)
@@ -303,7 +308,6 @@ func TestNewHandler(t *testing.T) {
 				}
 				require.EqualValues(t, tt.backendRequests, auditLogParams)
 			}
-
 		})
 	}
 }

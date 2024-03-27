@@ -189,6 +189,18 @@ rules:
     - get
     - watch
   - apiGroups:
+    - projectcalico.org
+    resources:
+    - ippools
+    verbs:
+    - create
+    - patch
+    - list
+    - get
+    - watch
+    - update
+    - delete
+  - apiGroups:
     - crd.projectcalico.org
     resources:
     - kubecontrollersconfigurations
@@ -206,19 +218,7 @@ rules:
     - get
     - list
     - watch
-  - apiGroups:
-    - projectcalico.org
-    resources:
-    - ippools
-    verbs:
-    - create
-    - update
-    - delete
-    - patch
-    - get
-    - list
-    - watch
-  - apiGroups:
+   - apiGroups:
     - projectcalico.org
     resources:
     - ipamconfigurations
