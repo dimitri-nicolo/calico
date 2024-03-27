@@ -67,6 +67,9 @@ type AuditLogParams struct {
 
 	// Match on level.
 	Levels []auditv1.Level `json:"levels"`
+
+	// Exclude DryRun records.
+	ExcludeDryRuns bool
 }
 
 func (a *AuditLogParams) SetSelector(s string) {
