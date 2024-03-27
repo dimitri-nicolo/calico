@@ -3452,6 +3452,7 @@ var _ = Describe("Test Namespace conversion egress gateway", func() {
 					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
 					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3463,6 +3464,7 @@ var _ = Describe("Test Namespace conversion egress gateway", func() {
 					"egress.projectcalico.org/namespaceSelector": "black == 'white' ",
 					"egress.projectcalico.org/selector":          "red == \"green\"",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3549,6 +3551,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":            "red == 'green'",
 					"egress.projectcalico.org/egressGatewayPolicy": "egw-policy-red",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3678,6 +3681,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/namespaceSelector": "black ~~ 'white'",
 					"egress.projectcalico.org/selector":          "red == 'green'",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3757,6 +3761,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "three",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "nodeA",
@@ -3786,6 +3791,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "1000000000000000000",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "nodeA",
@@ -3814,6 +3820,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "3",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3838,6 +3845,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "-3",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3862,6 +3870,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "three",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
@@ -3886,6 +3895,7 @@ var _ = Describe("Test Namespace conversion", func() {
 					"egress.projectcalico.org/selector":          "red == 'green'",
 					"egress.projectcalico.org/maxNextHops":       "1000000000000000000",
 				},
+				UID: types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.NamespaceSpec{},
 		}
