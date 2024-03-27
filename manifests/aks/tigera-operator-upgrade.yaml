@@ -44161,7 +44161,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: tigera-operator
-          image: quay.io/tigera/operator:master
+          image: quay.io/tigera/operator:release-v1.34
           imagePullPolicy: IfNotPresent
           command:
             - operator
@@ -44234,5 +44234,5 @@ spec:
       serviceAccountName: tigera-operator
       containers:
       - name: cleanup-job
-        image: quay.io/tigera/operator:master
+        image: quay.io/tigera/operator:release-v1.34
         args: ["-pre-delete"]

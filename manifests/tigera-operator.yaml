@@ -43851,7 +43851,6 @@ rules:
   - apiGroups:
     - projectcalico.org
     resources:
-<<<<<<< HEAD
     - ippools
     verbs:
     - create
@@ -43864,8 +43863,6 @@ rules:
   - apiGroups:
     - crd.projectcalico.org
     resources:
-=======
->>>>>>> eb7fe1b40c
     - kubecontrollersconfigurations
     - bgpconfigurations
     - externalnetworks
@@ -43878,18 +43875,6 @@ rules:
     resources:
     - ipamconfigurations
     verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - projectcalico.org
-    resources:
-    - ippools
-    verbs:
-    - create
-    - update
-    - delete
-    - patch
     - get
     - list
     - watch
