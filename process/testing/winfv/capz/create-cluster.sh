@@ -1,6 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2022 Tigera, Inc. All rights reserved.
-# Copyright 2020 The Kubernetes Authors.
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +40,7 @@ set -o pipefail
 export AZURE_CONTROL_PLANE_MACHINE_TYPE
 export AZURE_NODE_MACHINE_TYPE
 
-# Number of Linux node is same as number of Windows nodes
+# Number of Linux worker nodes is the same as number of Windows worker nodes
 : ${WIN_NODE_COUNT:=2}
 TOTAL_NODES=$((WIN_NODE_COUNT*2+1))
 SEMAPHORE="${SEMAPHORE:="false"}"
@@ -140,9 +139,9 @@ retry_command 300 "${KCAPZ} taint nodes --selector=!node-role.kubernetes.io/cont
 
 echo "Done creating cluster"
 
-ID0=`${KCAPZ} get node -o wide | grep win-p-win000000 | awk '{print $6}' | awk -F '.' '{print $4}'`
-echo "ID0: $ID0"
-if [[ ${WIN_NODE_COUNT} -gt 1 ]]; then
-  ID1=`${KCAPZ} get node -o wide | grep win-p-win000001 | awk '{print $6}' | awk -F '.' '{print $4}'`
-  echo "ID1:$ID1"
-fi
+WIN_NODES=$(${KCAPZ} get nodes -o wide -l kubernetes.io/os=windows --no-headers | awk '{print $6}' | awk -F '.' '{print $4}' | sort)
+i=0
+for n in ${WIN_NODES}
+do
+  echo "ID$i: $n"; i=$(expr $i + 1)
+done

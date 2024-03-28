@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2022 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -141,5 +141,5 @@ for iter in {1..5};do
 done;
 
 echo "Wait for kube-proxy to be ready on Windows nodes..."
-timeout --foreground 300 bash -c "while ! ${KCAPZ} wait pod -l k8s-app=kube-proxy-windows --for=condition=Ready -n kube-system --timeout=600s; do sleep 5; done"
+timeout --foreground 900 bash -c "while ! ${KCAPZ} wait pod -l k8s-app=kube-proxy-windows --for=condition=Ready -n kube-system --timeout=900s; do sleep 5; done"
 echo "kube-proxy is ready on Windows nodes"

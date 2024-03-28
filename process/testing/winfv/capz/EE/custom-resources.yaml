@@ -12,7 +12,6 @@ spec:
   # If specified, secrets must be created in the `tigera-operator` namespace.
   imagePullSecrets:
     - name: tigera-pull-secret
-
   # Optionally, a custom registry to use for pulling images.
   # registry: <my-registry>
 
@@ -93,3 +92,9 @@ metadata:
 
 ---
 
+# This section installs and configures Calico Enterprise policy recommendation functionality.
+# For more information, see: https://docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.PolicyRecommendation
+apiVersion: operator.tigera.io/v1
+kind: PolicyRecommendation
+metadata:
+  name: tigera-secure

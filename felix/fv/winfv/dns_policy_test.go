@@ -66,15 +66,9 @@ var _ = Describe("Windows DNS policy test", func() {
 
 	Context("Check DNS policy", func() {
 		BeforeEach(func() {
-			rootDir := "c:\\CalicoWindows"
-			flowLogDir := "c:\\TigeraCalico\\flowlogs"
-			dnsCacheFile := "c:\\TigeraCalico\\felix-dns-cache.txt"
-
-			if isRunningHPC() {
-				path, _, err := winutils.Powershell("$path = Get-Item env:DNS_CACHE_FILE; Write-host $path.value")
-				Expect(err).NotTo(HaveOccurred())
-				dnsCacheFile = strings.TrimSpace(path)
-			}
+			rootDir := winutils.GetHostPath("c:\\CalicoWindows")
+			flowLogDir := winutils.GetHostPath("c:\\TigeraCalico\\flowlogs")
+			dnsCacheFile := winutils.GetHostPath("c:\\TigeraCalico\\felix-dns-cache.txt")
 
 			fv, err = NewWinFV(rootDir,
 				flowLogDir,
@@ -89,9 +83,7 @@ var _ = Describe("Windows DNS policy test", func() {
 			err := fv.AddConfigItems(config)
 			Expect(err).NotTo(HaveOccurred())
 
-			if !isRunningHPC() {
-				fv.RestartFelix()
-			}
+			fv.RestartFelix()
 
 			porterIP = testutils.InfraPodIP("porter", "demo")
 			Expect(porterIP).NotTo(BeEmpty())
@@ -177,7 +169,7 @@ var _ = Describe("Windows DNS policy test", func() {
 
 	Context("Check cleanup of the resources", func() {
 		BeforeEach(func() {
-			if isRunningHPC() {
+			if IsRunningHPC() {
 				Skip("Skip when using Host Process Container")
 			}
 			testutils.Powershell("Stop-Service -Name CalicoFelix")
@@ -222,14 +214,4 @@ func getEndpointInfo(target string) string {
 	output := testutils.Powershell(cmd)
 	log.Printf("-----\n%s\n-----", output)
 	return output
-}
-
-// HPC env variable is set by the Windows FV tests (run-fv-full.ps1) runner during infra set up
-func isRunningHPC() bool {
-	output, _, _ := winutils.Powershell("$hpc = Get-Item -Path env:HPC; Write-Host $hpc.value")
-	if strings.TrimSpace(output) == "true" {
-		return true
-	} else {
-		return false
-	}
 }
