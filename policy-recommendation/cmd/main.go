@@ -7,10 +7,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"k8s.io/apiserver/pkg/authentication/user"
+
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apiserver/pkg/authentication/user"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -50,14 +51,6 @@ func main() {
 	clientFactory := lmak8s.NewClientSetFactory(config.MultiClusterForwardingCA,
 		config.MultiClusterForwardingEndpoint,
 	)
-	if config.TenantNamespace != "" {
-		impersonationInfo := user.DefaultInfo{
-			Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
-			Groups: []string{},
-		}
-		clientFactory = clientFactory.Impersonate(&impersonationInfo)
-	}
-
 	restConfig := clientFactory.NewRestConfigForApplication(lmak8s.DefaultCluster)
 	scheme := runtime.NewScheme()
 	if err = v3.AddToScheme(scheme); err != nil {
@@ -128,6 +121,17 @@ func main() {
 
 	// Create the managed cluster controller. Each managed cluster will have its own
 	// PolicyRecommendationScope and Recommendation controllers.
+	if config.TenantNamespace != "" {
+		// We need to set the impersonation before passing the clientFactory to the managed cluster
+		// controller in order to make sure we use this service account when calling managed cluster
+		// in a multi-tenant setup. Inside a multi-tenant management setup, we want to be able to use
+		// the tenant's service account when querying the management cluster
+		impersonationInfo := user.DefaultInfo{
+			Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
+			Groups: []string{},
+		}
+		clientFactory = clientFactory.Impersonate(&impersonationInfo)
+	}
 	mctrl, err := mscontroller.NewManagedClusterController(ctx, client, clientFactory, clientSet, linseedClient, config.TenantNamespace)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create ManagedCluster controller")
