@@ -42,6 +42,7 @@ clean:
 	$(MAKE) -C typha clean
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
+	rm -rf _release_archive
 
 ci-preflight-checks:
 	$(MAKE) check-dockerfiles

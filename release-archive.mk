@@ -46,8 +46,9 @@ MANIFEST_SRC:=$(TOPLEVEL_DIR)/manifests
 
 publish-release-archive: release-archive
 	@aws --profile $(AWS_PROFILE) s3 cp $(RELEASE_DIR).tgz s3://tigera-public/ee/archives/ --acl public-read
+	@aws --profile $(AWS_PROFILE) s3 cp $(RELEASE_DIR_K8S_MANIFESTS)/ s3://tigera-public/ee/$(CALICO_VER)/manifests --acl public-read --recursive
 
-release-archive: $(RELEASE_DIR) $(RELEASE_DIR).tgz
+release-archive: $(RELEASE_DIR) $(RELEASE_DIR).tgz $(RELEASE_DIR_K8S_MANIFESTS)/manifests.tar.gz
 
 $(RELEASE_DIR)/private-registry.md:
 	$(info *** Generating private-registry.md with Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), Key Cert Provisioner $(KSP_VER))
@@ -93,3 +94,7 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 	  xargs -I FILE sh -c \
 	    'mkdir -p $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;\
 	    cp $(MANIFEST_SRC)/FILE $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;'
+
+$(RELEASE_DIR_K8S_MANIFESTS)/manifests.tar.gz: $(RELEASE_DIR_K8S_MANIFESTS)
+	@tar -czf $(OUTPUT_DIR)/manifests.tar.gz $(RELEASE_DIR_K8S_MANIFESTS)
+	mv $(OUTPUT_DIR)/manifests.tar.gz $(RELEASE_DIR_K8S_MANIFESTS)/

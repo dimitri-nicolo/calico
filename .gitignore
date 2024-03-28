@@ -29,7 +29,7 @@ _release_archive
 private-registry.md
 builder.coverprofile
 hack/release/ghr
-manifests/ocp.tgz
+manifests/*.*gz
 
 # Created by local kind cluster
 hack/test/kind/kind
