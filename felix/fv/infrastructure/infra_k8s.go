@@ -573,6 +573,7 @@ func (kds *K8sDatastoreInfra) CleanUp() {
 		cleanupAllStagedNetworkPolicies,
 		cleanupAllTiers,
 		cleanupAllHostEndpoints,
+		cleanupAllNetworkSets,
 		cleanupAllFelixConfigurations,
 		cleanupAllServices,
 		cleanupAllRemoteClusterConfigs,
@@ -1181,6 +1182,23 @@ func cleanupAllTiers(clientset *kubernetes.Clientset, client client.Interface) {
 		}
 	}
 	log.Info("Cleaned up Tiers")
+}
+
+func cleanupAllNetworkSets(clientset *kubernetes.Clientset, client client.Interface) {
+	log.Info("Cleaning up network sets")
+	ctx := context.Background()
+	ns, err := client.NetworkSets().List(ctx, options.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+	log.WithField("count", len(ns.Items)).Info("networksets present")
+	for _, n := range ns.Items {
+		_, err = client.HostEndpoints().Delete(ctx, n.Name, options.DeleteOptions{})
+		if err != nil {
+			panic(err)
+		}
+	}
+	log.Info("Cleaned up host networksets")
 }
 
 func cleanupAllHostEndpoints(clientset *kubernetes.Clientset, client client.Interface) {

@@ -23,7 +23,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "alert-exception-1"
 	name2 := "alert-exception-2"
@@ -49,7 +48,7 @@ var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.Datasto
 
 			By("Updating the AlertException before it is created")
 			_, outError := c.AlertExceptions().Update(ctx, &apiv3.AlertException{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-alert"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -128,7 +127,7 @@ var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.Datasto
 
 			By("Attempting to update the AlertException without a Creation Timestamp")
 			res, outError = c.AlertExceptions().Update(ctx, &apiv3.AlertException{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-alert"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

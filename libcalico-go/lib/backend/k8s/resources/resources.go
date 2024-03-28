@@ -15,14 +15,11 @@
 package resources
 
 import (
-	"strings"
-
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 )
@@ -47,8 +44,10 @@ type ResourceList interface {
 
 // Function signature for conversion function to convert a K8s resource to a
 // KVPair equivalent.
-type ConvertK8sResourceToKVPair func(Resource) (*model.KVPair, error)
-type ConvertK8sResourceToKVPairs func(Resource) ([]*model.KVPair, error)
+type (
+	ConvertK8sResourceToKVPair  func(Resource) (*model.KVPair, error)
+	ConvertK8sResourceToKVPairs func(Resource) ([]*model.KVPair, error)
+)
 
 // ConvertK8sResourceOneToOneAdapter converts a ConvertK8sResourceToKVPair function to a ConvertK8sResourceToKVPairs function
 func ConvertK8sResourceOneToOneAdapter(oneToOne ConvertK8sResourceToKVPair) ConvertK8sResourceToKVPairs {
@@ -134,7 +133,7 @@ func ConvertCalicoResourceToK8sResource(resIn Resource) (Resource, error) {
 	rom := resIn.GetObjectMeta()
 
 	// Make sure to remove data that is passed to Kubernetes so it is not duplicated in
-	// the annotations.
+	// the metadata annotation.
 	romCopy := &metav1.ObjectMeta{}
 	rom.(*metav1.ObjectMeta).DeepCopyInto(romCopy)
 	romCopy.Name = ""
@@ -142,6 +141,7 @@ func ConvertCalicoResourceToK8sResource(resIn Resource) (Resource, error) {
 	romCopy.ResourceVersion = ""
 	romCopy.Labels = nil
 	romCopy.Annotations = nil
+	romCopy.UID = ""
 
 	// Marshal the data and store the json representation in the annotations.
 	metadataBytes, err := json.Marshal(romCopy)
@@ -163,12 +163,12 @@ func ConvertCalicoResourceToK8sResource(resIn Resource) (Resource, error) {
 	meta.ResourceVersion = rom.GetResourceVersion()
 	meta.Labels = rom.GetLabels()
 
-	// Reverse the UID for UISettings to ensure garbage collection works correctly.
-	switch resIn.(type) {
-	case *v3.UISettings:
-		meta.UID = ReverseUID(rom.GetUID())
-	default:
-		meta.UID = rom.GetUID()
+	if rom.GetUID() != "" {
+		uid, err := conversion.ConvertUID(rom.GetUID())
+		if err != nil {
+			return nil, err
+		}
+		meta.UID = uid
 	}
 
 	resOut := resIn.DeepCopyObject().(Resource)
@@ -184,6 +184,18 @@ func ConvertCalicoResourceToK8sResource(resIn Resource) (Resource, error) {
 func ConvertK8sResourceToCalicoResource(res Resource) error {
 	rom := res.GetObjectMeta()
 	annotations := rom.GetAnnotations()
+
+	if rom.GetUID() != "" {
+		// We NEVER want to use the UID from the underlying CR so that we can guarantee uniqueness.
+		// So, always generate a new one deterministically so that the UID is correct even
+		// if there is no metadata annotation present.
+		uid, err := conversion.ConvertUID(rom.GetUID())
+		if err != nil {
+			return err
+		}
+		rom.SetUID(uid)
+	}
+
 	if len(annotations) == 0 {
 		// Make no changes if there are no annotations to read Calico Metadata out of.
 		return nil
@@ -213,14 +225,7 @@ func ConvertK8sResourceToCalicoResource(res Resource) error {
 	meta.Labels = rom.GetLabels()
 	meta.Annotations = annotations
 
-	// Reverse the UID for UISettings to ensure garbage collection works correctly.
-	switch res.(type) {
-	case *v3.UISettings:
-		meta.UID = ReverseUID(rom.GetUID())
-	default:
-		meta.UID = rom.GetUID()
-	}
-
+	meta.UID = rom.GetUID()
 	// If no creation timestamp was stored in the metadata annotation, use the one from the CR.
 	// The timestamp is normally set in the clientv3 code. However, for objects that bypass
 	// the v3 client (e.g., IPAM), we won't have generated a creation timestamp and the field
@@ -241,27 +246,4 @@ func ConvertK8sResourceToCalicoResource(res Resource) error {
 	meta.DeepCopyInto(rom.(*metav1.ObjectMeta))
 
 	return nil
-}
-
-// ReverseUID reverses the segments of a UID to create another UID.
-//
-// We use this to map between the CRD and v3 resource types. It is not possible to use the same UID as this breaks
-// garbage collection of the v3 resource types. We need to be able to deterministically map between the v3 and CRD
-// UID and this seems like a reasonable approach. We could potentially store in the annotation (so both CRD and v3
-// have this annotation and we switch annotation w/ the metadata UID) - however that doesn't work for deletes where
-// the metadata is unavailable, but a UID may have been supplied to handle atomicity.
-func ReverseUID(uid types.UID) types.UID {
-	parts := strings.Split(string(uid), "-")
-	for ii := range parts {
-		parts[ii] = ReverseString(parts[ii])
-	}
-	return types.UID(strings.Join(parts, "-"))
-}
-
-func ReverseString(s string) string {
-	r := []rune(s)
-	for ii, jj := 0, len(r)-1; ii < len(r)/2; ii, jj = ii+1, jj-1 {
-		r[ii], r[jj] = r[jj], r[ii]
-	}
-	return string(r)
 }

@@ -37,7 +37,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "threatfeed-1"
 	name2 := "threatfeed-2"
@@ -125,7 +124,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 
 			By("Updating the GlobalThreatFeed before it is created")
 			_, outError := c.GlobalThreatFeeds().Update(ctx, &apiv3.GlobalThreatFeed{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-threatFeed"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -234,7 +233,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 
 			By("Attempting to update the GlobalThreatFeed without a Creation Timestamp")
 			res, outError = c.GlobalThreatFeeds().Update(ctx, &apiv3.GlobalThreatFeed{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-threatFeed"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

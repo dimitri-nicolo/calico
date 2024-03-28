@@ -72,4 +72,9 @@ struct cali_stats_globals {
 	__be16 if_ns;
 };
 
+struct cali_xdp_preamble_globals {
+	struct cali_xdp_globals v4;
+	struct cali_xdp_globals v6;
+};
+
 #endif /* __CALI_GLOBALS_H__ */

@@ -15,6 +15,7 @@
 package clientv3_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -25,8 +26,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
-	"context"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -49,7 +48,6 @@ var (
 )
 
 var _ = testutils.E2eDatastoreDescribe("StagedKubernetesNetworkPolicy tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	namespace1 := "namespace-1"
 	namespace2 := "namespace-2"
@@ -186,12 +184,11 @@ var _ = testutils.E2eDatastoreDescribe("StagedKubernetesNetworkPolicy tests", te
 
 	DescribeTable("StagedKubernetesNetworkPolicy e2e CRUD tests",
 		func(tier, namespace1, namespace2, name1, name2 string, spec1, spec2 apiv3.StagedKubernetesNetworkPolicySpec, types1, types2 []networkingv1.PolicyType) {
-
 			By("Updating the StagedKubernetesNetworkPolicy before it is created")
 			rv := "1234"
 
 			_, outError := c.StagedKubernetesNetworkPolicies().Update(ctx, &apiv3.StagedKubernetesNetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, CreationTimestamp: metav1.Now(), UID: "test-fail-networkpolicy"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -281,7 +278,7 @@ var _ = testutils.E2eDatastoreDescribe("StagedKubernetesNetworkPolicy tests", te
 
 			By("Attempting to update the StagedKubernetesNetworkPolicy without a Creation Timestamp")
 			res, outError = c.StagedKubernetesNetworkPolicies().Update(ctx, &apiv3.StagedKubernetesNetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, UID: "test-fail-networkpolicy"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

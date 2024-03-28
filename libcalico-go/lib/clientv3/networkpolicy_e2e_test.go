@@ -15,6 +15,7 @@
 package clientv3_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -23,8 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
-	"context"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -38,6 +37,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
+// UID to use in tests, since our code expects valid UIDs.
+const uid = "41cb1fde-57e7-42c1-a73b-0acaf38c7737"
+
 func tieredNetworkPolicyName(ns, p, t string) string {
 	name, _ := names.BackendTieredPolicyName(p, t)
 	return ns + "/" + name
@@ -48,7 +50,6 @@ func tieredPolicyName(p, t string) string {
 }
 
 var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	order1 := 99.999
 	order2 := 22.222
@@ -117,7 +118,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			By("Updating the NetworkPolicy before it is created")
 			rv := "1234"
 			_, outError := c.NetworkPolicies().Update(ctx, &apiv3.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, CreationTimestamp: metav1.Now(), UID: "test-fail-networkpolicy"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -207,7 +208,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 
 			By("Attempting to update the NetworkPolicy without a Creation Timestamp")
 			res, outError = c.NetworkPolicies().Update(ctx, &apiv3.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, UID: "test-fail-networkpolicy"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: rv, UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

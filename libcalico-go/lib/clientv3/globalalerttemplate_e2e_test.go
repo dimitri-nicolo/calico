@@ -35,7 +35,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("GlobalAlertTemplate tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	name1 := "alert-1"
 	name2 := "alert-2"
@@ -63,7 +62,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalAlertTemplate tests", testutils.Da
 
 			By("Updating the GlobalAlertTemplate before it is created")
 			_, outError := c.GlobalAlertTemplates().Update(ctx, &apiv3.GlobalAlertTemplate{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-alert"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -143,7 +142,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalAlertTemplate tests", testutils.Da
 
 			By("Attempting to update the GlobalAlertTemplate without a Creation Timestamp")
 			res, outError = c.GlobalAlertTemplates().Update(ctx, &apiv3.GlobalAlertTemplate{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-alert"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

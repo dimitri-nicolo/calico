@@ -78,7 +78,7 @@ var _ = testutils.E2eDatastoreDescribe("PolicyRecommendationScope tests", testut
 
 			By("Updating the PolicyRecommendationScope before it is created")
 			_, outError := c.PolicyRecommendationScopes().Update(ctx, &apiv3.PolicyRecommendationScope{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-policyrecscope"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
@@ -160,7 +160,7 @@ var _ = testutils.E2eDatastoreDescribe("PolicyRecommendationScope tests", testut
 
 			By("Attempting to update the PolicyRecommendationScope without a Creation Timestamp")
 			res, outError = c.PolicyRecommendationScopes().Update(ctx, &apiv3.PolicyRecommendationScope{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-policyrecscope"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: uid},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
