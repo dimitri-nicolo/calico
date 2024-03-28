@@ -19,6 +19,19 @@ metadata:
   namespace: tigera-prometheus
 
 ---
+# Apply an empty image pull secret (e30K={}), as MKE does not allow deployments referring non-existing pull-secrets. As
+# soon as the tigera-operator comes up, it will replace this secret with the contents of the pull secret from the
+# operator namespace.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tigera-pull-secret
+  namespace: tigera-prometheus
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: e30K
+
+---
 # Source: tigera-prometheus-operator/templates/04-deployment-prometheus-operator.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -40,6 +53,8 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
+      imagePullSecrets:
+        - name: tigera-pull-secret
       containers:
       - name: calico-prometheus-operator
         image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:master
