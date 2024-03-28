@@ -1,6 +1,6 @@
 - name: Publish tigera/snort2 images
   run:
-    when: "change_in(['/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   task:
