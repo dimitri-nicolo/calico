@@ -78,6 +78,7 @@ import (
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	logutilslc "github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -356,14 +357,15 @@ type bpfEndpointManager struct {
 
 	// CaliEnt features below
 
-	enableTcpStats   bool
-	lookupsCache     *calc.LookupsCache
-	actionOnDrop     string
-	egIPEnabled      bool
-	egwVxlanPort     uint16
-	v4               *bpfEndpointManagerDataplane
-	v6               *bpfEndpointManagerDataplane
-	healthAggregator *health.HealthAggregator
+	enableTcpStats       bool
+	lookupsCache         *calc.LookupsCache
+	actionOnDrop         string
+	egIPEnabled          bool
+	egwVxlanPort         uint16
+	v4                   *bpfEndpointManagerDataplane
+	v6                   *bpfEndpointManagerDataplane
+	healthAggregator     *health.HealthAggregator
+	updateRateLimitedLog *logutilslc.RateLimitedLogger
 }
 
 type bpfEndpointManagerDataplane struct {
@@ -534,6 +536,11 @@ func newBPFEndpointManager(
 			Detail: "Not yet synced.",
 		})
 	}
+
+	m.updateRateLimitedLog = logutilslc.NewRateLimitedLogger(
+		logutilslc.OptInterval(30*time.Second),
+		logutilslc.OptBurst(10),
+	)
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
 	// _only_ implemented by XDP, so we _should_ fall back to XDPGeneric if necessary in order
@@ -1591,6 +1598,10 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 		}
 		m.reportHealth(true, "")
 	} else {
+		m.dirtyIfaceNames.Iter(func(iface string) error {
+			m.updateRateLimitedLog.WithField("name", iface).Debug("Interface remains dirty.")
+			return nil
+		})
 		m.reportHealth(false, "Failed to configure some interfaces.")
 	}
 
