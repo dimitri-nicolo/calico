@@ -5,6 +5,7 @@ FROM scratch as source
 ARG TARGETARCH
 
 COPY bin/intrusion-detection-job-installer-${TARGETARCH} /usr/bin/intrusion-detection-job-installer
+COPY cmd/install/data/flowlog-dashboard.ndjson /etc/dashboards/flowlog-dashboard.ndjson
 
 FROM calico/base
 
