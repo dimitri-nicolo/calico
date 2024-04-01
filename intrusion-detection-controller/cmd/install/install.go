@@ -85,7 +85,12 @@ func uploadDashboardNDJSON(client *http.Client, url, username, password, dashboa
 	log.Infof("Creating dashboard %s...", dashboardName)
 	err := performRequest(client, func() *http.Request {
 		file, err := os.Open(dashboard)
-		defer file.Close()
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+			}
+		}(file)
 		if err != nil {
 			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
 		}
@@ -101,6 +106,9 @@ func uploadDashboardNDJSON(client *http.Client, url, username, password, dashboa
 			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
 		}
 		req, err := http.NewRequest(http.MethodPost, url, body)
+		if err != nil {
+			log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+		}
 		req.SetBasicAuth(username, password)
 		req.Header.Add("Content-Type", writer.FormDataContentType())
 		req.Header.Add("kbn-xsrf", "reporting")
