@@ -266,9 +266,11 @@ release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERS
 ifdef CONFIRM
 	aws --profile helm s3 cp bin/calicoctl-linux-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
 	aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
+	aws --profile helm s3 cp bin/calicoctl-darwin-arm64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-arm64 --acl public-read
 	aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
 else
 	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-linux-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
 	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-darwin-arm64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-arm64 --acl public-read
 	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
 endif
