@@ -3,10 +3,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+
+	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/caimeo/iniflags"
 	log "github.com/sirupsen/logrus"
@@ -57,6 +61,7 @@ func main() {
 	restConfig := datastore.MustGetConfig()
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.MultiClusterForwardingCA,
 		cfg.MultiClusterForwardingEndpoint)
+
 	// Set up tls certs
 	altIPs := []net.IP{net.ParseIP("127.0.0.1")}
 	if err := tls.GenerateSelfSignedCertsIfNeeded("localhost", nil, altIPs, *certPath, *keyPath); err != nil {
@@ -109,6 +114,18 @@ func main() {
 	linseed, err := client.NewClient(cfg.TenantID, config, rest.WithTokenPath(cfg.LinseedToken))
 	if err != nil {
 		log.WithError(err).Fatal("failed to create linseed client")
+	}
+
+	if cfg.TenantNamespace != "" {
+		complianceServerUser := user.DefaultInfo{
+			Name: "system:serviceaccount:tigera-compliance:tigera-compliance-server",
+			Groups: []string{
+				k8sserviceaccount.AllServiceAccountsGroup,
+				"system:authenticated",
+				fmt.Sprintf("%s%s", k8sserviceaccount.ServiceAccountGroupPrefix, "tigera-compliance"),
+			},
+		}
+		k8sClientFactory = k8sClientFactory.Impersonate(&complianceServerUser)
 	}
 
 	// Create a factory for producing ComplianceStores scoped to a particular cluster.
