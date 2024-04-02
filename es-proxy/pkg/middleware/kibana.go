@@ -42,7 +42,9 @@ func NewKibanaLoginHandler(
 	kibanaCli kibana.Client,
 	oidcAuthEnabled bool,
 	oidcAuthIssuer string, esLicense ElasticsearchLicenseType) http.Handler {
-	elasticsearchUsernamePrefix := os.Getenv("CLUSTER_NAME")
+	// A tenant more or less represents a billing account. We want to prefix the users with the tenant, so that
+	// we don't get overlapping usernames in elasticsearch.
+	elasticsearchUsernamePrefix := os.Getenv("TENANT_ID")
 	if elasticsearchUsernamePrefix != "" {
 		elasticsearchUsernamePrefix = strings.TrimSuffix(elasticsearchUsernamePrefix, "-") + "-"
 	}

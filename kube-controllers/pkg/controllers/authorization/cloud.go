@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
 
