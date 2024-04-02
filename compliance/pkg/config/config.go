@@ -45,7 +45,8 @@ type Config struct {
 	LinseedToken      string `envconfig:"LINSEED_TOKEN" default:"/var/run/secrets/kubernetes.io/serviceaccount/token"`
 
 	// Tenant configuration for Calico Cloud.
-	TenantID string `envconfig:"TENANT_ID"`
+	TenantID        string `envconfig:"TENANT_ID"`
+	TenantNamespace string `envconfig:"TENANT_NAMESPACE"`
 
 	// Controller specific data.
 	Namespace                  string        `envconfig:"TIGERA_COMPLIANCE_JOB_NAMESPACE" default:"calico-monitoring"`
