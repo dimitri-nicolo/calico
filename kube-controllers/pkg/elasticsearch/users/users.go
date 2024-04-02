@@ -408,7 +408,6 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		ElasticsearchUserNameOperator: {
 			Username: formatName(ElasticsearchUserNameOperator, clusterName, true, true),
 			FullName: SystemUserFullName,
-			FullName: SystemUserFullName,
 			Roles: []elasticsearch.Role{{
 				Name: formatName(ElasticsearchUserNameOperator, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
