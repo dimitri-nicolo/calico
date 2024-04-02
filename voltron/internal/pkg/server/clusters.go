@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/lma/pkg/logutils"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
@@ -31,7 +33,6 @@ import (
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
-	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
@@ -171,7 +172,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 			Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc, cs.innerProxy).Handler(),
 			TLSConfig:   cs.tlsConfig,
 			ReadTimeout: DefaultReadTimeout,
-			ErrorLog:    log.New(utils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"server": "innerServer"})), "", log.LstdFlags),
+			ErrorLog:    log.New(logutils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"server": "innerServer"})), "", log.LstdFlags),
 		}
 
 		inboundProxy, err := vtls.NewProxy(
@@ -551,7 +552,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 	c.outboundTLSProxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,
 		FlushInterval: -1,
-		ErrorLog:      log.New(utils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"proxy": "outbound"})), "", log.LstdFlags),
+		ErrorLog:      log.New(logutils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"proxy": "outbound"})), "", log.LstdFlags),
 		Transport: &http2.Transport{
 			DialTLS:         c.DialTLS2,
 			TLSClientConfig: outboundTLSConfig,

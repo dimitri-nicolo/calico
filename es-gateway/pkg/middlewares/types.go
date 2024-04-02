@@ -14,6 +14,7 @@ const (
 	TypeAuth
 	TypeSwap
 	TypeContentType
+	TypeMultiTenant
 )
 
 type HandlerMap map[Type]mux.MiddlewareFunc
@@ -23,6 +24,14 @@ func GetHandlerMap(cache cache.SecretsCache) HandlerMap {
 		TypeLog:         logRequestHandler,
 		TypeAuth:        NewAuthMiddleware(cache),
 		TypeSwap:        NewSwapElasticCredMiddlware(cache),
+		TypeContentType: RejectUnacceptableContentTypeHandler,
+	}
+}
+
+func GetKibanaProxyHandlerMap() HandlerMap {
+	return HandlerMap{
+		TypeLog:         logRequestHandler,
+		TypeMultiTenant: EnforceKibanaTenancy,
 		TypeContentType: RejectUnacceptableContentTypeHandler,
 	}
 }

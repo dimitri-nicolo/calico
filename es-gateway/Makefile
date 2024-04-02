@@ -57,7 +57,7 @@ $(ES_GATEWAY_CONTAINER_CREATED): Dockerfile bin/es-gateway-$(ARCH)
 	touch $@
 
 .PHONY: clean
-clean:
+clean: stop-elastic
 	rm -rf bin
 	rm -f $(ES_GATEWAY_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(ES_GATEWAY_IMAGE) -a -q)
@@ -77,6 +77,18 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 ut:
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) pkg/*'
 
+# We pre-build the test binary so that we can run it outside a container and allow it
+# to interact with docker.
+build-tests: $(shell find ./fv -type f -name '*.go' -print)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
+
+WHAT=.
+fv: clean image run-elastic fv-fast
+fv-fast: build-tests
+	 cd fv && ./fv.test -test.run $(WHAT)
+
+st:
+	echo "ST tests not available"
 ###############################################################################
 # CI/CD
 ###############################################################################
@@ -85,7 +97,7 @@ ut:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks image ut
+ci: clean static-checks image test
 
 ## Deploys images to registry
 cd: image-all cd-common

@@ -2,9 +2,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
+	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
 
@@ -21,7 +25,8 @@ import (
 )
 
 var (
-	versionFlag = flag.Bool("version", false, "Print version information")
+	versionFlag     = flag.Bool("version", false, "Print version information")
+	kibanaProxyFlag = flag.Bool("run-as-kibana-proxy", false, "Run as Kibana proxy")
 
 	// Configuration object for ES Gateway server.
 	cfg *config.Config
@@ -57,44 +62,55 @@ func init() {
 
 	log.Infof("Starting %s with %s", config.EnvConfigPrefix, printCfg)
 
-	if len(cfg.ElasticCatchAllRoute) > 0 {
-		// Catch-all route should ...
-		elasticCatchAllRoute = &proxy.Route{
-			Name:                          "es-catch-all",
-			Path:                          cfg.ElasticCatchAllRoute,
-			IsPathPrefix:                  true,       // ... always be a prefix route.
-			HTTPMethods:                   []string{}, // ... not filter on HTTP methods.
-			RequireAuth:                   true,
-			RejectUnacceptableContentType: true,
+	if !*kibanaProxyFlag {
+		if len(cfg.ElasticCatchAllRoute) > 0 {
+			// Catch-all route should ...
+			elasticCatchAllRoute = &proxy.Route{
+				Name:                          "es-catch-all",
+				Path:                          cfg.ElasticCatchAllRoute,
+				IsPathPrefix:                  true,       // ... always be a prefix route.
+				HTTPMethods:                   []string{}, // ... not filter on HTTP methods.
+				RequireAuth:                   true,
+				RejectUnacceptableContentType: true,
+			}
 		}
-	}
 
-	if len(cfg.KibanaCatchAllRoute) > 0 {
-		// Catch-all route should ...
-		kibanaCatchAllRoute = &proxy.Route{
-			Name:         "kb-catch-all",
-			Path:         cfg.KibanaCatchAllRoute,
-			IsPathPrefix: true,       // ... always be a prefix route.
-			HTTPMethods:  []string{}, // ... not filter on HTTP methods.
-			RequireAuth:  false,
+		if len(cfg.KibanaCatchAllRoute) > 0 {
+			// Catch-all route should ...
+			kibanaCatchAllRoute = &proxy.Route{
+				Name:         "kb-catch-all",
+				Path:         cfg.KibanaCatchAllRoute,
+				IsPathPrefix: true,       // ... always be a prefix route.
+				HTTPMethods:  []string{}, // ... not filter on HTTP methods.
+				RequireAuth:  false,
+			}
 		}
-	}
 
-	if len(cfg.ElasticUsername) == 0 || len(cfg.ElasticPassword) == 0 {
-		log.Fatal("Elastic credentials cannot be empty")
+		if len(cfg.KibanaEndpoint) == 0 {
+			log.Fatal("Kibana endpoint cannot be empty")
+		}
+
+		if len(cfg.ElasticUsername) == 0 || len(cfg.ElasticPassword) == 0 {
+			log.Fatal("Elastic credentials cannot be empty")
+		}
 	}
 
 	if len(cfg.ElasticEndpoint) == 0 {
 		log.Fatal("Elastic endpoint cannot be empty")
 	}
-
-	if len(cfg.KibanaEndpoint) == 0 {
-		log.Fatal("Kibana endpoint cannot be empty")
-	}
 }
 
 // Start up HTTPS server for ES Gateway.
 func main() {
+
+	if *kibanaProxyFlag {
+		runKibanaProxy()
+	} else {
+		runESGateway()
+	}
+}
+
+func runESGateway() {
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 
 	// Create Kibana target that will be used to configure all routing to Kibana target.
@@ -161,8 +177,18 @@ func main() {
 		log.WithError(err).Fatal("failed to configure Kibana client for ES Gateway.")
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	// -----------------------------------------------------------------------------------------------------
+	// Load all k8s secrets required for authN and credential swapping and keep it in sync.
+	// -----------------------------------------------------------------------------------------------------
+	secretCache, err := cache.NewSecretCache(ctx, k8sClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	opts := []server.Option{
 		server.WithAddr(addr),
+		server.WithCancelableContext(ctx, cancel),
 		server.WithESTarget(esTarget),
 		server.WithKibanaTarget(kibanaTarget),
 		server.WithInternalTLSFiles(cfg.HTTPSCert, cfg.HTTPSKey),
@@ -170,6 +196,8 @@ func main() {
 		server.WithKibanaClient(kbClient),
 		server.WithK8sClient(k8sClient),
 		server.WithAdminUser(cfg.ElasticUsername, cfg.ElasticPassword),
+		server.WithSecretCache(secretCache),
+		server.WithMiddlewareMap(middlewares.GetHandlerMap(secretCache)),
 	}
 
 	var collector metrics.Collector
@@ -203,4 +231,47 @@ func main() {
 
 	log.Infof("ES Gateway listening for HTTPS requests at %s", addr)
 	log.Fatal(srv.ListenAndServeHTTPS())
+}
+
+func runKibanaProxy() {
+	kibanaProxyAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.KibanaProxyPort)
+	kibanaProxyRoutes := proxy.Routes{
+		proxy.Route{
+			Name:        "kb-all",
+			Path:        "/",
+			HTTPMethods: []string{"POST", "PUT", "DELETE", "GET", "OPTIONS", "PATCH"},
+		},
+	}
+	kibanaProxyCatchAllRoute := &proxy.Route{
+		Name:         "kb-catch-all",
+		Path:         cfg.KibanaCatchAllRoute,
+		IsPathPrefix: true,       // ... always be a prefix route.
+		HTTPMethods:  []string{}, // ... not filter on HTTP methods.
+		RequireAuth:  false,
+	}
+	// Create Kibana Proxy target that will be used to configure all routing to Elasticsearch.
+	kibanaProxyTarget, err := proxy.CreateTarget(
+		kibanaProxyCatchAllRoute,
+		kibanaProxyRoutes,
+		cfg.ElasticEndpoint,
+		cfg.ElasticCABundlePath,
+		cfg.ElasticClientCertPath,
+		cfg.ElasticClientKeyPath,
+		cfg.EnableElasticMutualTLS,
+		false,
+	)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create Kibana Proxy target.")
+	}
+	kibanaProxyOpts := []server.Option{
+		server.WithAddr(kibanaProxyAddr),
+		server.WithKibanaTarget(kibanaProxyTarget),
+		server.WithMiddlewareMap(middlewares.GetKibanaProxyHandlerMap()),
+	}
+	kibanaProxy, err := server.New(kibanaProxyOpts...)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create Kibana Proxy.")
+	}
+	log.Infof("Kibana Proxy listening for HTTPS requests at %s", kibanaProxyAddr)
+	log.Fatal(kibanaProxy.ListenAndServeHTTP())
 }

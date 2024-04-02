@@ -2,8 +2,13 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"os"
+
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
+
+	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
 
@@ -80,8 +85,11 @@ func WithInternalTLSFiles(certFile, keyFile string) Option {
 // This certificate chain is used for TLS connections for all external client requests.
 func WithInternalCreds(certBytes []byte, keyBytes []byte) Option {
 	return func(s *Server) error {
-		var err error
-		s.internalCert, err = tls.X509KeyPair(certBytes, keyBytes)
+		cert, err := tls.X509KeyPair(certBytes, keyBytes)
+		if err != nil {
+			return err
+		}
+		s.internalCert = &cert
 		return err
 	}
 }
@@ -120,6 +128,29 @@ func WithAdminUser(u, p string) Option {
 	return func(s *Server) error {
 		s.adminESUsername = u
 		s.adminESPassword = p
+		return nil
+	}
+}
+
+// WithMiddlewareMap sets the middlewares to be applied to routes.
+func WithMiddlewareMap(middlewareMap middlewares.HandlerMap) Option {
+	return func(s *Server) error {
+		s.middlewareMap = middlewareMap
+		return nil
+	}
+}
+
+func WithSecretCache(secretCache cache.SecretsCache) Option {
+	return func(s *Server) error {
+		s.cache = secretCache
+		return nil
+	}
+}
+
+func WithCancelableContext(ctx context.Context, cancel context.CancelFunc) Option {
+	return func(s *Server) error {
+		s.ctx = ctx
+		s.cancel = cancel
 		return nil
 	}
 }

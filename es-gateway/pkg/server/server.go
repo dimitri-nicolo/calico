@@ -34,9 +34,9 @@ type Server struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	http         *http.Server    // Server to accept incoming ES/Kibana requests
-	addr         string          // Address for server to listen on
-	internalCert tls.Certificate // Certificate chain used for all external requests
+	http         *http.Server     // Server to accept incoming ES/Kibana requests
+	addr         string           // Address for server to listen on
+	internalCert *tls.Certificate // Certificate chain used for all external requests
 
 	esTarget     *proxy.Target // Proxy target for Elasticsearch API
 	kibanaTarget *proxy.Target // Proxy target for Kibana API
@@ -51,6 +51,8 @@ type Server struct {
 
 	cache     cache.SecretsCache // Used to store secrets related authN and credential swapping
 	collector metrics.Collector  // Used to collect prometheus metrics.
+
+	middlewareMap mid.HandlerMap
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -58,7 +60,6 @@ type Server struct {
 func New(opts ...Option) (*Server, error) {
 	var err error
 	srv := &Server{}
-	srv.ctx, srv.cancel = context.WithCancel(context.Background())
 
 	// -----------------------------------------------------------------------------------------------------
 	// Parse server options
@@ -69,47 +70,53 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	cfg := calicotls.NewTLSConfig()
-	cfg.Certificates = append(cfg.Certificates, srv.internalCert)
+	if srv.ctx == nil {
+		// Use a default context if one was not provided
+		srv.ctx, srv.cancel = context.WithCancel(context.Background())
+	}
 
-	// -----------------------------------------------------------------------------------------------------
-	// Load all k8s secrets required for authN and credential swapping and keep it in sync.
-	// -----------------------------------------------------------------------------------------------------
-	srv.cache, err = cache.NewSecretCache(srv.ctx, srv.k8sClient)
-	if err != nil {
-		return nil, err
+	cfg := calicotls.NewTLSConfig()
+	if srv.internalCert != nil {
+		cfg.Certificates = append(cfg.Certificates, *srv.internalCert)
 	}
 
 	// -----------------------------------------------------------------------------------------------------
 	// Set up all routing for ES Gateway server (using Gorilla Mux).
 	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
-	middlewares := mid.GetHandlerMap(srv.cache)
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
-	healthHandler := health.GetHealthHandler(srv.k8sClient)
-	router.HandleFunc("/health", healthHandler).Name("health")
-	healthCheckES := health.GetESHealthHandler(srv.esClient)
-	router.HandleFunc("/es-health", healthCheckES).Name("es-health")
-	healthCheckKB := health.GetKBHealthHandler(srv.kbClient)
-	router.HandleFunc("/kb-health", healthCheckKB).Name("kb-health")
-
-	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
-	kibanaHandler, err := handlers.GetProxyHandler(srv.kibanaTarget, nil)
-	if err != nil {
-		return nil, err
+	if srv.k8sClient != nil {
+		healthHandler := health.GetHealthHandler(srv.k8sClient)
+		router.HandleFunc("/health", healthHandler).Name("health")
 	}
-	// The below path prefix syntax provides us a wildcard to specify that kibanaHandler will handle all
-	// requests with a path that begins with the given path prefix.
-	err = addRoutes(
-		router,
-		srv.kibanaTarget.Routes,
-		srv.kibanaTarget.CatchAllRoute,
-		middlewares,
-		kibanaHandler,
-	)
-	if err != nil {
-		return nil, err
+	if srv.esClient != nil {
+		healthCheckES := health.GetESHealthHandler(srv.esClient)
+		router.HandleFunc("/es-health", healthCheckES).Name("es-health")
+	}
+	if srv.kbClient != nil {
+		healthCheckKB := health.GetKBHealthHandler(srv.kbClient)
+		router.HandleFunc("/kb-health", healthCheckKB).Name("kb-health")
+	}
+
+	if srv.kibanaTarget != nil {
+		// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
+		kibanaHandler, err := handlers.GetProxyHandler(srv.kibanaTarget, nil)
+		if err != nil {
+			return nil, err
+		}
+		// The below path prefix syntax provides us a wildcard to specify that kibanaHandler will handle all
+		// requests with a path that begins with the given path prefix.
+		err = addRoutes(
+			router,
+			srv.kibanaTarget.Routes,
+			srv.kibanaTarget.CatchAllRoute,
+			srv.middlewareMap,
+			kibanaHandler,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if srv.dummyRoutes != nil && len(srv.dummyRoutes) > 0 {
@@ -126,25 +133,27 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
-	// these routes do not have a universally common path prefix.
-	esHandler, err := handlers.GetProxyHandler(srv.esTarget, handlers.ElasticModifyResponseFunc(srv.collector))
-	if err != nil {
-		return nil, err
-	}
-	err = addRoutes(
-		router,
-		srv.esTarget.Routes,
-		srv.esTarget.CatchAllRoute,
-		middlewares,
-		esHandler,
-	)
-	if err != nil {
-		return nil, err
+	if srv.esTarget != nil {
+		// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
+		// these routes do not have a universally common path prefix.
+		esHandler, err := handlers.GetProxyHandler(srv.esTarget, handlers.ElasticModifyResponseFunc(srv.collector))
+		if err != nil {
+			return nil, err
+		}
+		err = addRoutes(
+			router,
+			srv.esTarget.Routes,
+			srv.esTarget.CatchAllRoute,
+			srv.middlewareMap,
+			esHandler,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Add common middlewares to the router.
-	router.Use(middlewares[mid.TypeLog])
+	router.Use(srv.middlewareMap[mid.TypeLog])
 
 	// -----------------------------------------------------------------------------------------------------
 	// Return configured ES Gateway server.
@@ -162,6 +171,11 @@ func New(opts ...Option) (*Server, error) {
 // ListenAndServeHTTPS starts listening and serving HTTPS requests
 func (s *Server) ListenAndServeHTTPS() error {
 	return s.http.ListenAndServeTLS("", "")
+}
+
+// ListenAndServeHTTP starts listening and serving HTTP requests
+func (s *Server) ListenAndServeHTTP() error {
+	return s.http.ListenAndServe()
 }
 
 // addRoutes sets up the given Routes for the provided mux.Router.

@@ -1,6 +1,6 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-package utils
+package logutils
 
 import (
 	"io"

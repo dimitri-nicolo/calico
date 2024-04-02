@@ -5,17 +5,34 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
 
+	"github.com/projectcalico/calico/lma/pkg/logutils"
+
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
 )
+
+type loggerRoundTripper struct {
+	defaultTransport http.RoundTripper
+}
+
+func (t *loggerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	b, err := httputil.DumpRequestOut(req, false)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Tracef(string(b))
+
+	return t.defaultTransport.RoundTrip(req)
+}
 
 // GetProxyHandler generates an HTTP proxy handler based on the given Target.
 func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) error) (http.HandlerFunc, error) {
@@ -35,7 +52,7 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 	}
 
 	if t.Transport != nil {
-		p.Transport = t.Transport
+		p.Transport = &loggerRoundTripper{defaultTransport: t.Transport}
 	} else if t.Dest.Scheme == "https" {
 		tlsCfg := calicotls.NewTLSConfig()
 
@@ -46,11 +63,11 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 				return nil, errors.Errorf("failed to create target handler for path %s: ca bundle was empty", t.Dest)
 			}
 
-			log.Debugf("Detected secure transport for %s. Will pick up system cert pool", t.Dest)
+			logrus.Debugf("Detected secure transport for %s. Will pick up system cert pool", t.Dest)
 			var ca *x509.CertPool
 			ca, err := x509.SystemCertPool()
 			if err != nil {
-				log.WithError(err).Warn("failed to get system cert pool, creating a new one")
+				logrus.WithError(err).Warn("failed to get system cert pool, creating a new one")
 				ca = x509.NewCertPool()
 			}
 
@@ -71,15 +88,15 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 			}
 		}
 
-		p.Transport = &http.Transport{
+		p.Transport = &loggerRoundTripper{defaultTransport: &http.Transport{
 			TLSClientConfig: tlsCfg,
-		}
+		}}
 
-		// Use the modify response hook function to log the return value for response.
+		// Use the modify response hook function to logrus the return value for response.
 		// This is useful for troubleshooting and debugging.
 		p.ModifyResponse = modifyResponseFunc
 	}
-
+	p.ErrorLog = log.New(logutils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"proxy": "outbound"})), "", log.LstdFlags)
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(middlewares.ESUserKey)
 		// User could be nil if this is a path that does not require authentication.
@@ -88,11 +105,13 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 			// This should never happen (logical bug somewhere else in the code). But we'll
 			// leave this check here to help catch it.
 			if !ok {
-				log.Error("unable to authenticate user: ES user cannot be pulled from context (this is a logical bug)")
+				logrus.Error("unable to authenticate user: ES user cannot be pulled from context (this is a logical bug)")
 				http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
 				return
 			}
-			log.Debugf("Received request %s from %s (authenticated for user %s), will proxy to %s", r.RequestURI, r.RemoteAddr, user.Username, t.Dest)
+			logrus.Debugf("Received request %s from %s (authenticated for user %s), will proxy to %s", r.RequestURI, r.RemoteAddr, user.Username, t.Dest)
+		} else {
+			logrus.Debugf("Received request %s from %s, will proxy to %s", r.RequestURI, r.RemoteAddr, t.Dest)
 		}
 
 		p.ServeHTTP(w, r)

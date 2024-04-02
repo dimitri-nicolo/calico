@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/lma/pkg/logutils"
+
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 
 	"github.com/hashicorp/yamux"
@@ -155,7 +157,7 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 	config.AcceptBacklog = 1000
 	config.EnableKeepAlive = t.keepAliveEnable
 	config.KeepAliveInterval = t.keepAliveInterval
-	config.LogOutput = utils.NewLogrusWriter(logrus.WithField("component", "tunnel-yamux"))
+	config.LogOutput = logutils.NewLogrusWriter(logrus.WithField("component", "tunnel-yamux"))
 
 	if isServer {
 		mux, err = yamux.Server(&serverCloser{
