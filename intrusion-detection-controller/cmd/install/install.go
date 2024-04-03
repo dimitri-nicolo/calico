@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
 	"fmt"
@@ -16,7 +17,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/crypto/pkg/tls"
+	ctls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/config"
 )
 
@@ -54,14 +55,24 @@ func main() {
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := tls.NewTLSConfig()
+	tlsConfig := ctls.NewTLSConfig()
 	tlsConfig.RootCAs = caCertPool
+
+	// Determine whether mTLS is enabled for Kibana.
+	if cfg.KibanaMTLSEnabled {
+		clientCert, err := tls.LoadX509KeyPair(cfg.KibanaClientCert, cfg.KibanaClientKey)
+		if err != nil {
+			log.Fatalf("could not load client certificates for mtls. %v", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{clientCert}
+	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
 	}
+
 	var kibanaURL string
 	if cfg.KibanaSpaceID == "" {
 		kibanaURL = fmt.Sprintf("%s://%s:%s/tigera-kibana/", cfg.KibanaScheme, cfg.KibanaHost, cfg.KibanaPort)

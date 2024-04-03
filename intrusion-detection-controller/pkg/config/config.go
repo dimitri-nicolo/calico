@@ -41,11 +41,14 @@ func GetConfig() (*Config, error) {
 
 // DashboardInstallerConfig contains configuration specific to the Kibana dashboard installer.
 type DashboardInstallerConfig struct {
-	KibanaScheme  string `envconfig:"KIBANA_SCHEME" default:"https"`
-	KibanaHost    string `envconfig:"KIBANA_HOST"`
-	KibanaPort    string `envconfig:"KIBANA_PORT" default:"5601"`
-	KibanaCAPath  string `envconfig:"KB_CA_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
-	KibanaSpaceID string `envconfig:"KIBANA_SPACE_ID"`
+	KibanaScheme      string `envconfig:"KIBANA_SCHEME" default:"https"`
+	KibanaHost        string `envconfig:"KIBANA_HOST"`
+	KibanaPort        string `envconfig:"KIBANA_PORT" default:"5601"`
+	KibanaCAPath      string `envconfig:"KB_CA_CERT" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`
+	KibanaSpaceID     string `envconfig:"KIBANA_SPACE_ID"`
+	KibanaMTLSEnabled bool   `envconfig:"KIBANA_MTLS_ENABLED"`
+	KibanaClientKey   string `envconfig:"KIBANA_CLIENT_KEY"`
+	KibanaClientCert  string `envconfig:"KIBANA_CLIENT_CERT"`
 
 	ElasticUsername string `envconfig:"ELASTIC_USER"`
 	ElasticPassword string `envconfig:"ELASTIC_PASSWORD"`
