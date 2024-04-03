@@ -43775,30 +43775,41 @@ rules:
       - apiservers/finalizers
       - apiservers/status
       - applicationlayers
+      - applicationlayers/finalizers
       - applicationlayers/status
       - authentications
+      - authentications/finalizers
       - authentications/status
       - compliances
+      - compliances/finalizers
       - compliances/status
       - egressgateways
+      - egressgateways/finalizers
       - imagesets
       - installations
       - installations/finalizers
       - installations/status
       - intrusiondetections
+      - intrusiondetections/finalizers
       - intrusiondetections/status
       - logcollectors
+      - logcollectors/finalizers
       - logcollectors/status
       - logstorages
+      - logstorages/finalizers
       - logstorages/status
       - managementclusterconnections
+      - managementclusterconnections/finalizers
       - managementclusterconnections/status
       - managementclusters
       - managers
+      - managers/finalizers
       - managers/status
       - monitors
+      - monitors/finalizers
       - monitors/status
       - policyrecommendations
+      - policyrecommendations/finalizers
       - policyrecommendations/status
       - tigerastatuses
       - tigerastatuses/finalizers
