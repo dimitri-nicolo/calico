@@ -75,7 +75,6 @@ func releaseImages(version, operatorVersion, registry string, overrides []string
 		fmt.Sprintf("%ses-proxy:%s", registry, version),
 		fmt.Sprintf("%skibana:%s", registry, version),
 		fmt.Sprintf("%selasticsearch:%s", registry, version),
-		fmt.Sprintf("%scloud-controllers:%s", registry, version),
 		fmt.Sprintf("%sintrusion-detection-job-installer:%s", registry, version),
 		fmt.Sprintf("%ses-curator:%s", registry, version),
 		fmt.Sprintf("%sintrusion-detection-controller:%s", registry, version),
