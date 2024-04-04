@@ -1,6 +1,6 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-// This package is responsible for the communicating with elasticsearch, mainly transferring objects to requests to send
+// Package elasticsearch This package is responsible for the communicating with elasticsearch, mainly transferring objects to requests to send
 // to elasticsearch and parsing the responses from elasticsearch
 package elasticsearch
 
