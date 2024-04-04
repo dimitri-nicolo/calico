@@ -102,7 +102,7 @@ type PacketProcessor interface {
 }
 
 func New(
-	queueID uint16, queueLength uint32, dnrMark uint32,
+	queueID uint16, queueLength uint32, dnrMark uint32, markBitsToPreserve uint32,
 ) PacketProcessor {
 	options := []nfqueue.Option{
 		nfqueue.OptMaxQueueLength(queueLength),
@@ -119,6 +119,7 @@ func New(
 		nfqueue.OptPacketInNfQueueSummary(prometheusNfqueueQueuedLatency),
 		nfqueue.OptPacketHoldTimeSummary(prometheusPacketReleaseLatency),
 		nfqueue.OptVerdictRepeat(dnrMark),
+		nfqueue.OptMarkBitsToPreserve(markBitsToPreserve),
 	}
 
 	h := newHandler()

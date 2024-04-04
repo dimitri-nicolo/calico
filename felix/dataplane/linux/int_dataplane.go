@@ -738,10 +738,20 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket &&
 		config.RulesConfig.IptablesMarkDNSPolicy != 0x0 &&
 		!config.DisableDNSPolicyPacketProcessor {
+
+		// We use mark bits to track packets that go through IPVS; we must
+		// preserve those mark bits when we queue packets or the re-injected
+		// packet will be mishandled.  IptablesMarkEndpoint is essential, the
+		// others "make sense" to preserve but may not be needed.
+		markBitsToPreserve := config.RulesConfig.IptablesMarkEndpoint |
+			config.RulesConfig.IptablesMarkEgress |
+			uint32(config.Wireguard.FirewallMark)
+
 		packetProcessor := dnsdeniedpacket.New(
 			uint16(config.DNSPolicyNfqueueID),
 			uint32(config.DNSPolicyNfqueueSize),
 			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue,
+			markBitsToPreserve,
 		)
 		dp.dnsDeniedPacketProcessor = packetProcessor
 	}
