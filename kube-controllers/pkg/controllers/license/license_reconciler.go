@@ -1,27 +1,27 @@
-// Copyright (c) 2021-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package license
 
 import (
 	"context"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 type reconciler struct {
-	clusterName                 string
-	managedCalicoCLI            tigeraapi.Interface
-	managementCalicoCLI         tigeraapi.Interface
-	managedLicenseUIDVersion    string
-	managementLicenseUIDVersion string
+	clusterName               string
+	managedCalicoCLI          tigeraapi.Interface
+	managementCalicoCLI       tigeraapi.Interface
+	managedLicenseSpecHash    string
+	managementLicenseSpecHash string
 }
 
 func NewLicenseReconciler(managedCalicoCLI tigeraapi.Interface, managementCalicoCLI tigeraapi.Interface, clusterName string) *reconciler {
@@ -60,7 +60,11 @@ func (c *reconciler) reconcileManagedLicense() error {
 		logger.WithError(err).Error("Failed to read license for management cluster")
 		return err
 	}
-	managementUIDVersion := uidVersion(license)
+	managementLicenseHash, err := utils.GenerateTruncatedHash(license.Spec, 24)
+	if err != nil {
+		logger.WithError(err).Error("Failed to calculate license hash for management cluster")
+		return err
+	}
 
 	// Read and calculate hash for the default license rrom the managed clusters
 	managedLicense, err := c.managedCalicoCLI.ProjectcalicoV3().LicenseKeys().Get(context.Background(), resource.LicenseName, metav1.GetOptions{})
@@ -70,13 +74,17 @@ func (c *reconciler) reconcileManagedLicense() error {
 		return err
 	}
 
-	var managedUIDVersion string
+	var managedLicenseHash string
 	if managedLicense != nil {
-		managedUIDVersion = uidVersion(managedLicense)
+		managedLicenseHash, err = utils.GenerateTruncatedHash(managedLicense.Spec, 24)
+		if err != nil {
+			logger.WithError(err).Error("Failed to calculate license hash for managed cluster")
+			return err
+		}
 	}
 
 	// Designated management license has changed or the license from the managed cluster has changed
-	if managementUIDVersion != c.managementLicenseUIDVersion || managedUIDVersion != c.managedLicenseUIDVersion {
+	if managementLicenseHash != c.managementLicenseSpecHash || managedLicenseHash != c.managedLicenseSpecHash {
 		logger.Info("Copy license to managed cluster")
 		copy := resource.CopyLicenseKey(license)
 		copy.Name = resource.LicenseName
@@ -84,13 +92,9 @@ func (c *reconciler) reconcileManagedLicense() error {
 			logger.WithError(err).Error("Failed to write license to managed cluster")
 			return err
 		}
-		c.managementLicenseUIDVersion = managementUIDVersion
-		c.managedLicenseUIDVersion = managementUIDVersion
+		c.managementLicenseSpecHash = managementLicenseHash
+		c.managedLicenseSpecHash = managementLicenseHash
 	}
 
 	return nil
-}
-
-func uidVersion(license *v3.LicenseKey) string {
-	return fmt.Sprintf("%s-%s", license.UID, license.ResourceVersion)
 }
