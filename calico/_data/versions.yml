@@ -68,9 +68,6 @@
     elasticsearch:
       image: tigera/elasticsearch
       version: master
-    cloud-controllers:
-      image: tigera/cloud-controllers
-      version: master
     elastic-tsee-installer:
       image: tigera/intrusion-detection-job-installer
       version: master
