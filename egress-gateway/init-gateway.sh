@@ -12,9 +12,9 @@ trap 'echo "INT received, simply exiting..."; exit 0' INT
 trap 'echo "TERM received, simply exiting..."; exit 0' TERM
 trap 'echo "HUP received, simply exiting..."; exit 0' HUP
 
-if [ -z "$EGRESS_POD_IP" ]
+if [ -z "$EGRESS_POD_IPS" ]
 then
-    echo "EGRESS_POD_IP not defined."
+    echo "EGRESS_POD_IPS not defined."
     exit 1
 fi
 
@@ -30,9 +30,20 @@ then
     exit 1
 fi
 
-MAC=`echo $EGRESS_POD_IP | awk -F. '{printf "a2:2a:%02x:%02x:%02x:%02x", $1, $2, $3, $4}'`
+# EGRESS_POD_IPS contains the list of all addresses assigned to this egress gateway separated by comma.
+# As an example, the value could be either 192.168.0.1 or 2001::1111:1,192.168.0.1. The value should not
+# contain two IPv4, like 192.168.0.1,10.10.10.10, but if that happens (for whatever reason),
+# we should always use the first IPv4 address.
+IPV4=$(echo "$EGRESS_POD_IPS" | awk '{split($0,a,","); print a[1]}' | awk -F. 'NF == 4')
+if [ -z "$IPV4" ]
+then
+    IPV4=$(echo "$EGRESS_POD_IPS" | awk '{split($0,a,","); print a[2]}' | awk -F. 'NF == 4')
+fi
+echo "EGRESS_POD_IPS: $EGRESS_POD_IPS - Detected IPv4 address to use: $IPV4"
 
-echo Egress VXLAN VNI: $EGRESS_VXLAN_VNI  VXLAN PORT: $EGRESS_VXLAN_PORT VXLAN MAC: $MAC Pod IP: $EGRESS_POD_IP
+MAC=`echo $IPV4 | awk -F. '{printf "a2:2a:%02x:%02x:%02x:%02x", $1, $2, $3, $4}'`
+
+echo Egress VXLAN VNI: $EGRESS_VXLAN_VNI  VXLAN PORT: $EGRESS_VXLAN_PORT VXLAN MAC: $MAC
 
 echo Configure iptable rules
 
