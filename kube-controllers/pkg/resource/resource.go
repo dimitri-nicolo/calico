@@ -1,11 +1,6 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package resource
-
-import (
-	"crypto/sha1"
-	"fmt"
-)
 
 const (
 	ElasticsearchConfigMapName   = "tigera-secure-elasticsearch"
@@ -22,9 +17,3 @@ const (
 	CalicoNamespaceName          = "calico-system"
 	ActiveOperatorConfigMapName  = "active-operator"
 )
-
-func CreateHashFromObject(obj interface{}) (string, error) {
-	h := sha1.New()
-	_, err := h.Write([]byte(fmt.Sprintf("%q", obj)))
-	return fmt.Sprintf("%x", h.Sum(nil)), err
-}

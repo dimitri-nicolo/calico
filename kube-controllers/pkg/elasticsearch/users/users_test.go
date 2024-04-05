@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package users_test
 
@@ -20,6 +20,7 @@ var _ = Describe("ElasticseachUsers", func() {
 			expectedPrivateUsers = map[users.ElasticsearchUserName]elasticsearch.User{
 				"tigera-fluentd": {
 					Username: "tigera-fluentd-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{{
 						Name: "tigera-fluentd-managed-cluster-secure",
 						Definition: &elasticsearch.RoleDefinition{
@@ -33,6 +34,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-eks-log-forwarder": {
 					Username: "tigera-eks-log-forwarder-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{{
 						Name: "tigera-eks-log-forwarder-managed-cluster-secure",
 						Definition: &elasticsearch.RoleDefinition{
@@ -46,6 +48,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-ee-compliance-benchmarker": {
 					Username: "tigera-ee-compliance-benchmarker-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{{
 						Name: "tigera-ee-compliance-benchmarker-managed-cluster-secure",
 						Definition: &elasticsearch.RoleDefinition{
@@ -59,6 +62,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-ee-compliance-controller": {
 					Username: "tigera-ee-compliance-controller-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{{
 						Name: "tigera-ee-compliance-controller-managed-cluster-secure",
 						Definition: &elasticsearch.RoleDefinition{
@@ -72,6 +76,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-ee-compliance-reporter": {
 					Username: "tigera-ee-compliance-reporter-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{{
 						Name: "tigera-ee-compliance-reporter-managed-cluster-secure",
 						Definition: &elasticsearch.RoleDefinition{
@@ -103,6 +108,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-ee-compliance-snapshotter": {
 					Username: "tigera-ee-compliance-snapshotter-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{{
 						Name: "tigera-ee-compliance-snapshotter-managed-cluster-secure",
 						Definition: &elasticsearch.RoleDefinition{
@@ -116,6 +122,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-ee-intrusion-detection": {
 					Username: "tigera-ee-intrusion-detection-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{
 						{
 							Name: "tigera-ee-intrusion-detection-managed-cluster-secure",
@@ -145,6 +152,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-ee-performance-hotspots": {
 					Username: "tigera-ee-performance-hotspots-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{{
 						Name: "tigera-ee-performance-hotspots-managed-cluster-secure",
 						Definition: &elasticsearch.RoleDefinition{
@@ -172,6 +180,7 @@ var _ = Describe("ElasticseachUsers", func() {
 				},
 				"tigera-ee-policy-recommendation": {
 					Username: "tigera-ee-policy-recommendation-managed-cluster-secure",
+					FullName: "system:serviceaccount",
 					Roles: []elasticsearch.Role{
 						{
 							Name: "tigera-ee-policy-recommendation-managed-cluster-secure",
@@ -191,33 +200,43 @@ var _ = Describe("ElasticseachUsers", func() {
 			expectedPublicUsers = map[users.ElasticsearchUserName]elasticsearch.User{
 				"tigera-fluentd": {
 					Username: "tigera-fluentd-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-eks-log-forwarder": {
 					Username: "tigera-eks-log-forwarder-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-compliance-benchmarker": {
 					Username: "tigera-ee-compliance-benchmarker-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-compliance-controller": {
 					Username: "tigera-ee-compliance-controller-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-compliance-reporter": {
 					Username: "tigera-ee-compliance-reporter-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-compliance-snapshotter": {
 					Username: "tigera-ee-compliance-snapshotter-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-intrusion-detection": {
 					Username: "tigera-ee-intrusion-detection-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-ad-job": {
 					Username: "tigera-ee-ad-job-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-performance-hotspots": {
 					Username: "tigera-ee-performance-hotspots-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 				"tigera-ee-policy-recommendation": {
 					Username: "tigera-ee-policy-recommendation-managed-cluster",
+					FullName: "system:serviceaccount",
 				},
 			}
 		})
@@ -650,7 +669,6 @@ func testDecommissionedElasticsearchUsers(decommissionedUsers, expectedDecommiss
 		esUser, exists := decommissionedUsers[expectedName]
 		Expect(exists).Should(BeTrue())
 		Expect(esUser.Username).Should(Equal(expectedUser.Username))
-
 		Expect(len(esUser.Roles)).Should(Equal(len(expectedUser.Roles)))
 
 		for _, expectedRole := range expectedUser.Roles {
@@ -699,6 +717,7 @@ func testElasticsearchUsers(privateUsers, publicUsers, expectedprivateUsers, exp
 		esUser, exists := publicUsers[expectedName]
 		Expect(exists).Should(BeTrue())
 		Expect(esUser.Username).Should(Equal(expectedUser.Username))
+		Expect(esUser.FullName).Should(Equal(expectedUser.FullName))
 
 		Expect(len(esUser.Roles)).Should(Equal(len(expectedUser.Roles)))
 

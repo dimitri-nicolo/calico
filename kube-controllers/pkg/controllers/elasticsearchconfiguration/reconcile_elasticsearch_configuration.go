@@ -1,11 +1,9 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package elasticsearchconfiguration
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -25,12 +23,12 @@ import (
 )
 
 const (
-	// This value is used in calculateUserChangeHash() to force ES users to be considered 'stale' and re-created in case there
+	// EsUserCredentialsSchemaVersion is used in calculateUserChangeHash() to force ES users to be considered 'stale' and re-created in case there
 	// is version skew between the Managed and Management clusters. The value can be bumped anytime we change something about
 	// the way ES credentials work and need to re-create them.
 	EsUserCredentialsSchemaVersion = "2"
 
-	// Mark any secret containing credentials for ES gateway with this label key/value. This will allow ES gateway watch only the
+	// ESGatewaySelectorLabel marks any secret containing credentials for ES gateway with this label key/value. This will allow ES gateway watch only the
 	// releveant secrets it needs.
 	ESGatewaySelectorLabel      = "esgateway.tigera.io/secrets"
 	ESGatewaySelectorLabelValue = "credentials"
@@ -403,12 +401,7 @@ func (c *reconciler) cleanupDecommissionedElasticsearchUsers(reqLogger *log.Entr
 // Management cluster, as well as in the Elasticsearch namespace in the Management cluster. These public users are not actual Elasticsearch users.
 // They are used by ES Gateway to authenticate components attempting to communicate with Elasticsearch and to then swap in credentials for real Elasticsearch users.
 func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser elasticsearch.User, elasticsearchUser bool) error {
-	userPassword, err := randomPassword(16)
-	if err != nil {
-		return err
-	}
-	esUser.Password = userPassword
-
+	esUser.Password = utils.GeneratePassword(32)
 	changeHash, err := c.calculateUserChangeHash(esUser)
 	if err != nil {
 		return err
@@ -487,6 +480,7 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 			if err != nil {
 				return nil, nil, err
 			}
+			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Trace("public user comparison")
 			if secret.Labels[UserChangeHashLabel] == userHash {
 				delete(publicEsUsers, username)
 			}
@@ -504,17 +498,22 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 			if err != nil {
 				return nil, nil, err
 			}
+			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Trace("private user comparison")
 			if secret.Labels[UserChangeHashLabel] == userHash {
 				delete(privateEsUsers, username)
 			}
 		}
 	}
-
+	log.WithField("privateUsers", privateEsUsers).WithField("publicUsers", publicEsUsers).Trace("missing users")
 	return privateEsUsers, publicEsUsers, nil
 }
 
 func (c *reconciler) calculateUserChangeHash(user elasticsearch.User) (string, error) {
-	return resource.CreateHashFromObject([]interface{}{c.esHash, c.ownerReference, user.Roles, EsUserCredentialsSchemaVersion})
+	obj := []interface{}{c.esHash, c.ownerReference, user.FullName, EsUserCredentialsSchemaVersion}
+	for _, role := range user.Roles {
+		obj = append(obj, role.Name)
+	}
+	return utils.GenerateTruncatedHash(obj, 24)
 }
 
 func (c *reconciler) getOrInitializeESClient() (elasticsearch.Client, error) {
@@ -528,13 +527,6 @@ func (c *reconciler) getOrInitializeESClient() (elasticsearch.Client, error) {
 	}
 
 	return c.esCLI, nil
-}
-
-func randomPassword(length int) (string, error) {
-	byts := make([]byte, length)
-	_, err := rand.Read(byts)
-
-	return base64.URLEncoding.EncodeToString(byts), err
 }
 
 func writeUserSecret(name, namespace string, labels map[string]string, client kubernetes.Interface, data map[string][]byte) error {

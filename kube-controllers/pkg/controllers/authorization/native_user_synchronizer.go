@@ -1,21 +1,22 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package authorization
 
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
-
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	retryr "k8s.io/client-go/util/retry"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/userscache"
 	"github.com/projectcalico/calico/kube-controllers/pkg/rbaccache"
@@ -24,10 +25,11 @@ import (
 
 // nativeUserSynchronizer is an implementation of k8sRBACSynchronizer interface, to keep Elasticsearch native users up-to-date.
 type nativeUserSynchronizer struct {
-	roleCache rbaccache.ClusterRoleCache
-	userCache userscache.OIDCUserCache
-	k8sCLI    kubernetes.Interface
-	esCLI     elasticsearch.Client
+	roleCache    rbaccache.ClusterRoleCache
+	userCache    userscache.OIDCUserCache
+	k8sCLI       kubernetes.Interface
+	esCLI        elasticsearch.Client
+	esUserPrefix string
 }
 
 func newNativeUserSynchronizer(stop chan struct{}, esCLI elasticsearch.Client, k8sCLI kubernetes.Interface) k8sRBACSynchronizer {
@@ -74,11 +76,16 @@ func createNativeUserSynchronizer(roleCache rbaccache.ClusterRoleCache,
 	userCache userscache.OIDCUserCache,
 	k8sCLI kubernetes.Interface,
 	esCLI elasticsearch.Client) k8sRBACSynchronizer {
+	prefix := esUserPrefix
+	if prefix != "" {
+		prefix = strings.TrimSuffix(prefix, "-") + "-"
+	}
 	return &nativeUserSynchronizer{
-		roleCache: roleCache,
-		userCache: userCache,
-		k8sCLI:    k8sCLI,
-		esCLI:     esCLI,
+		roleCache:    roleCache,
+		userCache:    userCache,
+		k8sCLI:       k8sCLI,
+		esCLI:        esCLI,
+		esUserPrefix: prefix,
 	}
 }
 
@@ -213,7 +220,7 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 	var deleteEsUsers = make(map[string]elasticsearch.User)
 
 	for _, oidcSubjectID := range oidcUsersUpdated {
-		esUsername := fmt.Sprintf("%s-%s", nativeUserPrefix, oidcSubjectID)
+		esUsername := fmt.Sprintf("%s%s", n.esUserPrefix, oidcSubjectID)
 		// if oidcSubjectID is not in cache, add user to deleteEsUsers list
 		if !n.userCache.Exists(oidcSubjectID) {
 			deleteEsUsers[oidcSubjectID] = elasticsearch.User{Username: esUsername}
@@ -223,12 +230,9 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 		esUser := elasticsearch.User{Username: esUsername}
 
 		// Password is a mandatory field while creating new elasticsearch native user.
-		// If user does not exists in elasticsearch generate and set password, else update the user without changing the password.
+		// If user does not exist in elasticsearch generate and set password, else update the user without changing the password.
 		if exists, _ := n.esCLI.UserExists(esUsername); !exists {
-			esUser.Password, err = resource.CreateHashFromObject([]interface{}{time.Now(), oidcSubjectID})
-			if err != nil {
-				return err
-			}
+			esUser.Password = utils.GeneratePassword(32)
 		}
 
 		esUser.Roles = n.getEsRoleForOIDCSubjectID(oidcSubjectID)
@@ -248,16 +252,16 @@ func (n *nativeUserSynchronizer) synchronizeOIDCUsers(oidcUsersUpdated []string)
 		updateEsUsers[oidcSubjectID] = esUser
 	}
 
-	if len(updateEsUsers) != 0 {
-		for _, esUser := range updateEsUsers {
-			if err = n.esCLI.UpdateUser(esUser); err != nil {
-				return err
-			}
+	for _, esUser := range updateEsUsers {
+		log.WithField("esUser", esUser).Trace("Updating OIDC user.")
+		if err = n.esCLI.UpdateUser(esUser); err != nil {
+			return err
 		}
 	}
 
-	if len(deleteEsUsers) != 0 {
-		if err = n.deleteEsUsers(deleteEsUsers); err != nil {
+	for _, esUser := range deleteEsUsers {
+		log.WithField("esUser", esUser).Trace("Deleting OIDC user.")
+		if err = n.esCLI.DeleteUser(esUser); err != nil {
 			return err
 		}
 	}
@@ -294,13 +298,9 @@ func (n *nativeUserSynchronizer) setOIDCUsersPassword(ctx context.Context, updat
 	}
 	for subjectID, esUser := range updateEsUsers {
 		if "" != esUser.Password {
-			// New Elasticsearch user
 			secret.Data[subjectID] = []byte(esUser.Password)
 		} else if _, ok := secret.Data[subjectID]; !ok {
-			esUser.Password, err = resource.CreateHashFromObject([]interface{}{time.Now(), subjectID})
-			if err != nil {
-				return err
-			}
+			esUser.Password = utils.GeneratePassword(32)
 			if err := n.esCLI.SetUserPassword(esUser); err != nil {
 				return err
 			}

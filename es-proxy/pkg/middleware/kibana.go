@@ -1,4 +1,5 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package middleware
 
 import (
@@ -7,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -23,15 +26,15 @@ const (
 	dashboardURL = "/dashboard/overall-stats"
 
 	OIDCUsersElasticsearchCredentialsSecret = "tigera-oidc-users-elasticsearch-credentials"
-	ElasticsearchUsernamePrefix             = "tigera-k8s"
 )
 
 type kibanaLoginHandler struct {
-	k8sCli          datastore.ClientSet
-	kibanaCli       kibana.Client
-	oidcAuthEnabled bool
-	oidcAuthIssuer  string
-	esLicense       ElasticsearchLicenseType
+	k8sCli                      datastore.ClientSet
+	kibanaCli                   kibana.Client
+	oidcAuthEnabled             bool
+	oidcAuthIssuer              string
+	esLicense                   ElasticsearchLicenseType
+	elasticsearchUsernamePrefix string
 }
 
 func NewKibanaLoginHandler(
@@ -39,13 +42,19 @@ func NewKibanaLoginHandler(
 	kibanaCli kibana.Client,
 	oidcAuthEnabled bool,
 	oidcAuthIssuer string, esLicense ElasticsearchLicenseType) http.Handler {
-
+	// A tenant more or less represents a billing account. We want to prefix the users with the tenant, so that
+	// we don't get overlapping usernames in elasticsearch.
+	elasticsearchUsernamePrefix := os.Getenv("TENANT_ID")
+	if elasticsearchUsernamePrefix != "" {
+		elasticsearchUsernamePrefix = strings.TrimSuffix(elasticsearchUsernamePrefix, "-") + "-"
+	}
 	return &kibanaLoginHandler{
-		k8sCli:          k8sCli,
-		kibanaCli:       kibanaCli,
-		oidcAuthEnabled: oidcAuthEnabled,
-		oidcAuthIssuer:  oidcAuthIssuer,
-		esLicense:       esLicense,
+		k8sCli:                      k8sCli,
+		kibanaCli:                   kibanaCli,
+		oidcAuthEnabled:             oidcAuthEnabled,
+		oidcAuthIssuer:              oidcAuthIssuer,
+		esLicense:                   esLicense,
+		elasticsearchUsernamePrefix: elasticsearchUsernamePrefix,
 	}
 }
 
@@ -108,7 +117,7 @@ func (handler *kibanaLoginHandler) ServeHTTP(w http.ResponseWriter, req *http.Re
 			return
 		}
 		esPassword := string(pwdBytes)
-		esUsername := fmt.Sprintf("%s-%s", ElasticsearchUsernamePrefix, oidcUser.Base64EncodedSubjectID())
+		esUsername := fmt.Sprintf("%s%s", handler.elasticsearchUsernamePrefix, oidcUser.Base64EncodedSubjectID())
 
 		kibanaResponse, err := handler.kibanaCli.Login(fmt.Sprintf("%s://%s", req.URL.Scheme, req.URL.Host),
 			esUsername, esPassword)
