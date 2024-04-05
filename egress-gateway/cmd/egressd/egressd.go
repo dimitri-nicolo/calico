@@ -22,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/egress-gateway/httpprobe"
 	"github.com/projectcalico/calico/egress-gateway/icmpprobe"
 	"github.com/projectcalico/calico/egress-gateway/sync"
+	utilnet "github.com/projectcalico/calico/egress-gateway/util/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
@@ -31,7 +32,7 @@ var (
 	USAGE_FMT string = `Egress Daemon - L2 and L3 management daemon for Tigera egress gateways.
 
 Usage:
-  %[1]s start <gateway-ip> [options]
+  %[1]s start <gateway-ips> [options]
   %[1]s (-h | --help)
   %[1]s --version
 	
@@ -107,14 +108,14 @@ func main() {
 
 	// parse this gateway's IP from string
 	var ip net.IP
-	if argEgressPodIP, ok := args["<gateway-ip>"].(string); !ok {
-		exitWithErrorAndUsage(fmt.Errorf("invalid egress-gateway IP '%v'", args["<gateway-ip>"]))
+	if argEgressPodIPs, ok := args["<gateway-ips>"].(string); !ok {
+		exitWithErrorAndUsage(fmt.Errorf("invalid egress-gateway IPs '%v'", args["<gateway-ips>"]))
 	} else {
-		ip = net.ParseIP(argEgressPodIP)
+		ip = utilnet.ParseEgressPodIPs(argEgressPodIPs)
 		if ip == nil {
-			exitWithErrorAndUsage(fmt.Errorf("invalid egress-gateway IP '%v'", argEgressPodIP))
+			exitWithErrorAndUsage(fmt.Errorf("invalid egress-gateway IPs '%v'", argEgressPodIPs))
 		}
-		log.WithField("ip", ip).Info("Parsed IP address from argument.")
+		log.WithField("ipv4", ip).Info("Parsed IPv4 address from argument.")
 	}
 
 	var vni int

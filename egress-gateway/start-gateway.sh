@@ -11,9 +11,9 @@ trap 'echo "HUP received, simply exiting..."; exit 0' HUP
 
 : ${DAEMON_SOCKET_PATH:=/var/run/calico/nodeagent/socket}
 
-if [ -z "$EGRESS_POD_IP" ]
+if [ -z "$EGRESS_POD_IPS" ]
 then
-    echo "EGRESS_POD_IP not defined."
+    echo "EGRESS_POD_IPS not defined."
     exit 1
 fi
 
@@ -30,4 +30,4 @@ then
 fi
 
 echo Egress gateway starting...
-/egressd start $EGRESS_POD_IP --log-severity $LOG_SEVERITY --vni $EGRESS_VXLAN_VNI --socket-path $DAEMON_SOCKET_PATH
+/egressd start $EGRESS_POD_IPS --log-severity $LOG_SEVERITY --vni $EGRESS_VXLAN_VNI --socket-path $DAEMON_SOCKET_PATH

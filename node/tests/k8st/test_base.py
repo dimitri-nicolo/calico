@@ -296,10 +296,10 @@ spec:
   - name: egress-gateway-init
     image: docker.io/tigera/egress-gateway:latest-amd64
     env:
-    - name: EGRESS_POD_IP
+    - name: EGRESS_POD_IPS
       valueFrom:
         fieldRef:
-          fieldPath: status.podIP
+          fieldPath: status.podIPs
     - name: EGRESS_VXLAN_PORT
       value: "4790"
     - name: EGRESS_VXLAN_VNI
@@ -341,10 +341,10 @@ spec:
     - name: EGRESS_VXLAN_VNI
       value: "4097"
     # Use downward API to tell the pod its own IP address.
-    - name: EGRESS_POD_IP
+    - name: EGRESS_POD_IPS
       valueFrom:
         fieldRef:
-          fieldPath: status.podIP
+          fieldPath: status.podIPs
     imagePullPolicy: Never
     securityContext:
       capabilities:
