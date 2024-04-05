@@ -170,3 +170,9 @@ func OptPacketHoldTimeSummary(p prometheus.Summary) Option {
 		c.prometheusHoldTimeSummary = p
 	}
 }
+
+func OptMarkBitsToPreserve(bits uint32) Option {
+	return func(c *nfQueueConnector) {
+		c.markBitsToPreserve = bits
+	}
+}
