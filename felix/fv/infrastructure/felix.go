@@ -562,6 +562,12 @@ func (f *Felix) IPTablesChains(table string) map[string][]string {
 	return out
 }
 
+func (f *Felix) IPTablesChainsFn(table string) func() map[string][]string {
+	return func() map[string][]string {
+		return f.IPTablesChains(table)
+	}
+}
+
 func (f *Felix) PromMetric(name string) PrometheusMetric {
 	return PrometheusMetric{
 		f:    f,
