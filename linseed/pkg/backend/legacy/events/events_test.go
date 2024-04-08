@@ -738,6 +738,20 @@ func TestEventsStatistics(t *testing.T) {
 		{"date histogram with invalid selector", &v1.EventStatisticsParams{
 			SeverityHistograms: []v1.SeverityHistogramParam{{Name: "sample", Selector: "sévérité > 85"}},
 		}, true},
+		{"returns empty result when there are no matching events", &v1.EventStatisticsParams{
+			EventParams: v1.EventParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Date(2023, 1, 1, 10, 0, 0, 0, time.UTC),
+						To:   time.Date(2023, 2, 1, 10, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			FieldValues: &v1.FieldValuesParam{
+				SeverityValues: &v1.FieldValueParam{Count: true},
+				TypeValues:     &v1.FieldValueParam{Count: true},
+			},
+		}, false},
 	}
 
 	for _, tt := range tests {
@@ -787,6 +801,33 @@ func TestEventsStatistics(t *testing.T) {
 			gjson.Parse(`{"value":"WAF Event","count":2,"by_severity":[{"value":90,"count":1},{"value":100,"count":1}]}`).String(),
 			gjson.Parse(`{"value":"Proc File Access","count":1,"by_severity":[{"value":100,"count":1}]}`).String(),
 		})
+	})
+
+	RunAllModes(t, "Test Statistics with no events", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// No event added yet, index is most likely not created yet
+
+		params := &v1.EventStatisticsParams{}
+		params.LogSelectionParams = v1.LogSelectionParams{
+			Selector: "NOT dismissed = true",
+		}
+
+		// We can aggregate the severity for each unique event name
+		params.FieldValues = &v1.FieldValuesParam{
+			NameValues: &v1.FieldValueParam{
+				Count:           true,
+				GroupBySeverity: true,
+			},
+		}
+
+		r, e := b.Statistics(ctx, clusterInfo, params)
+		require.NoError(t, e)
+
+		bytes, e := json.Marshal(r)
+		require.NoError(t, e)
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.name"), []string{})
 	})
 
 	RunAllModes(t, "Test Date Histogram Aggregation (1 per day)", func(t *testing.T) {
