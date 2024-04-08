@@ -1,4 +1,18 @@
 #!/bin/bash
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # This script sets up a k8s cluster with one Linux node and one Windows node and run windows FV test.
 # Usage - OS Felix fv, following variables need to be set
 #         AZURE_SUBSCRIPTION_ID
@@ -8,14 +22,29 @@
 #         FV_TYPE
 #
 
+set -o errexit
+set -o nounset
+set -o pipefail
 
 GIT_VERSION=$(git describe --tags --dirty --long --always --abbrev=12)
 CALICO_HOME=$(cd $(dirname $0)/../../../; pwd)
 CAPZ_LOCATION=$CALICO_HOME/process/testing/winfv/capz
 KUBECONFIG=$CALICO_HOME/process/testing/winfv/capz/kubeconfig
+KUBECTL=$CAPZ_LOCATION/bin/kubectl
+KCAPZ="${KUBECTL} --kubeconfig=${KUBECONFIG}"
+REPORT_DIR=$CALICO_HOME/process/testing/winfv/report
+SSH_OUTPUT_FILE=$REPORT_DIR/ssh_output.log
 SEMAPHORE="${SEMAPHORE:="false"}"
 export RAND=$(tr -dc a-z0-9 </dev/urandom | head -c 4; echo)
 export WIN_NODE_COUNT=1
+
+function shutdown_cluster(){
+  make -C $CAPZ_LOCATION delete-cluster
+  # Clear trap
+  trap - EXIT
+}
+
+trap shutdown_cluster EXIT
 
 function prepare_env(){
 # Set up capz variables
@@ -29,15 +58,31 @@ function prepare_env(){
   fi
 
   . $CALICO_HOME/process/testing/winfv/capz/export-env.sh
+
+  mkdir -p $REPORT_DIR
 }
 
 function start_cluster(){
-  make -C $CAPZ_LOCATION create-cluster
-  make -C $CAPZ_LOCATION install-calico RELEASE_STREAM=master HASH_RELEASE=true PRODUCT=calient
+  # Use EXIT_CODE to bypass errexit and capture more information about a possible failure here
+  EXIT_CODE=0
+  make -C $CAPZ_LOCATION create-cluster || EXIT_CODE=$?
+  if [[ $EXIT_CODE -ne 0 ]]; then
+      echo "failed to create CAPZ cluster"
+      exit $EXIT_CODE
+  fi
+  # Use EXIT_CODE to bypass errexit and capture more information about a possible failure here
+  EXIT_CODE=0
+  make -C $CAPZ_LOCATION install-calico RELEASE_STREAM=master HASH_RELEASE=true PRODUCT=calient || EXIT_CODE=$?
+  if [[ $EXIT_CODE -ne 0 ]]; then
+      echo "failed to install Calico"
+      ${KCAPZ} describe tigerastatus
+      ${KCAPZ} get tigerastatus -o yaml
+      exit $EXIT_CODE
+  fi
   #Get Windows node ip
-  WIN_NODE=$(kubectl get nodes -o wide -l kubernetes.io/os=windows --no-headers --kubeconfig $KUBECONFIG | awk -v OFS='\t\t' '{print $6}')
+  WIN_NODE=$(${KCAPZ} get nodes -o wide -l kubernetes.io/os=windows --no-headers | awk -v OFS='\t\t' '{print $6}')
   export WIN_NODE_IP=${WIN_NODE: -1}
-  export LINUX_NODE=$(kubectl get nodes -l kubernetes.io/os=linux,'!node-role.kubernetes.io/control-plane' -o wide --no-headers --kubeconfig $KUBECONFIG | awk -v OFS='\t\t' '{print $6}')
+  export LINUX_NODE=$(${KCAPZ} get nodes -l kubernetes.io/os=linux,'!node-role.kubernetes.io/control-plane' -o wide --no-headers | awk -v OFS='\t\t' '{print $6}')
 }
 
 function upload_calico_images(){
@@ -45,8 +90,8 @@ function upload_calico_images(){
   $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/node/dist/windows/$CALICO_NODE_IMAGE c:\\calico-node-windows.tar
   $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/cni-plugin/dist/windows/$CALICO_CNI_IMAGE c:\\calico-cni-plugin-windows.tar
   #Imports calico-node-windows image from locally build image
-  $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'ctr --namespace k8s.io images import --base-name calico/node-windows c:\calico-node-windows.tar --all-platforms' > output
-  $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'ctr --namespace k8s.io images import --base-name calico/cni-windows c:\calico-cni-plugin-windows.tar --all-platforms' > output
+  $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'ctr --namespace k8s.io images import --base-name calico/node-windows c:\calico-node-windows.tar --all-platforms' >> $SSH_OUTPUT_FILE
+  $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'ctr --namespace k8s.io images import --base-name calico/cni-windows c:\calico-cni-plugin-windows.tar --all-platforms' >> $SSH_OUTPUT_FILE
 }
 
 function upload_fv(){
@@ -104,7 +149,7 @@ function wait_for_nodes(){
   #Wait for calico-node-windows daemon set to update
   sleep 30
   for i in `seq 1 30`; do
-    if [[ `kubectl get ds calico-node-windows -n calico-system --no-headers --kubeconfig $KUBECONFIG | awk -v OFS='\t\t' '{print $6}'` = "$WIN_NODE_COUNT" ]] ; then
+    if [[ `${KCAPZ} get ds calico-node-windows -n calico-system --no-headers | awk -v OFS='\t\t' '{print $6}'` = "$WIN_NODE_COUNT" ]] ; then
       echo "Calico Node Windows is ready"
       return
     fi
@@ -117,8 +162,8 @@ function wait_for_nodes(){
 
 function update_windows_node(){
   upload_calico_images
-  kubectl annotate ds -n calico-system calico-node-windows unsupported.operator.tigera.io/ignore="true" --kubeconfig $KUBECONFIG
-  kubectl patch ds -n calico-system calico-node-windows --patch-file $CALICO_HOME/process/testing/winfv/calico-node-windows.yaml  --kubeconfig $KUBECONFIG
+  ${KCAPZ} annotate ds -n calico-system calico-node-windows unsupported.operator.tigera.io/ignore="true"
+  ${KCAPZ} patch ds -n calico-system calico-node-windows --patch-file $CALICO_HOME/process/testing/winfv/calico-node-windows.yaml
 }
 
 function start_test_infra(){
@@ -126,7 +171,7 @@ function start_test_infra(){
 
   #Wait for porter pod to be running on windows node
   for i in `seq 1 30`; do
-   if [[ `kubectl -n demo get pods porter --no-headers -o custom-columns=NAMESPACE:metadata.namespace,POD:metadata.name,PodIP:status.podIP,READY-true:status.containerStatuses[*].ready --kubeconfig $KUBECONFIG | awk -v OFS='\t\t' '{print $4}'` = "true" ]] ; then
+   if [[ `${KCAPZ} -n demo get pods porter --no-headers -o custom-columns=NAMESPACE:metadata.namespace,POD:metadata.name,PodIP:status.podIP,READY-true:status.containerStatuses[*].ready | awk -v OFS='\t\t' '{print $4}'` = "true" ]] ; then
      echo "Porter is ready"
      return
    fi
@@ -139,16 +184,16 @@ function start_test_infra(){
 
 function run_windows_fv(){
   if [[ $FV_TYPE == "cni-plugin" ]]; then
-    $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-cni-fv.ps1' > output
+    $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-cni-fv.ps1' >> $SSH_OUTPUT_FILE
   elif [[ $FV_TYPE == "calico-felix" ]]; then
-    $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-felix-fv.ps1' > output
+    $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-felix-fv.ps1' >> $SSH_OUTPUT_FILE
   fi
 }
 
 function get_test_results(){
-  $CAPZ_LOCATION/scp-from-node.sh $WIN_NODE_IP c:\\k\\report $CALICO_HOME/process/testing/winfv/
+  $CAPZ_LOCATION/scp-from-node.sh $WIN_NODE_IP c:\\k\\report\\* $REPORT_DIR
   if [[ $SEMAPHORE == "false" ]]; then
-    cat $CALICO_HOME/process/testing/winfv/report/fv-test.log
+    cat $REPORT_DIR/fv-test.log
   fi
 }
 

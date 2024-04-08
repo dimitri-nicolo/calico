@@ -10,6 +10,7 @@ import (
 	"github.com/tigera/windows-networking/pkg/testutils"
 
 	"github.com/projectcalico/calico/felix/fv/metrics"
+	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 
 	log "github.com/sirupsen/logrus"
 
@@ -57,10 +58,10 @@ var _ = Describe("Windows flow logs test", func() {
 	)
 
 	BeforeEach(func() {
-		Skip("Temporarily skip failing flow log tests")
-		fv, err = NewWinFV("c:\\CalicoWindows",
-			"c:\\TigeraCalico\\flowlogs",
-			"c:\\TigeraCalico\\felix-dns-cache.txt")
+		Skip("Temporarily skip failing flow log tests on HPC")
+		fv, err = NewWinFV(winutils.GetHostPath("c:\\CalicoWindows"),
+			winutils.GetHostPath("c:\\TigeraCalico\\flowlogs"),
+			winutils.GetHostPath("c:\\TigeraCalico\\felix-dns-cache.txt"))
 		Expect(err).NotTo(HaveOccurred())
 
 		flowLogsReaders = []metrics.FlowLogReader{fv}

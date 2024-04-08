@@ -12,13 +12,6 @@ $Root="c:\\CalicoWindows"
 
 if ($Provisioner -eq "capz") {
     Set-Item -Path env:HPC -Value "true"
-    $containerIDs = ctr -n k8s.io c ls -q
-    for ($i=0; $i -lt $containerIDs.Length; $i++) {
-        $path = [IO.Path]::Combine('C:\', 'c', $containerIDs[$i], 'TigeraCalico', 'felix-dns-cache.txt')
-        if (Test-Path -Path $path) {
-            Set-Item -Path env:DNS_CACHE_FILE -Value $path
-        }
-    }
 }
 
 # Force powershell to run in 64-bit mode .

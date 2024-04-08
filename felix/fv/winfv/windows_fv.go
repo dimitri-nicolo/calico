@@ -68,12 +68,20 @@ func (f *WinFV) GetBackendType() CalicoBackEnd {
 }
 
 func (f *WinFV) Restart() {
+	if IsRunningHPC() {
+		log.Infof("Skip restarting Felix, running on HPC...")
+		return
+	}
 	log.Infof("Restarting Felix...")
 	testutils.Powershell(filepath.Join(f.rootDir, "restart-felix.ps1"))
 	log.Infof("Felix Restarted.")
 }
 
 func (f *WinFV) RestartFelix() {
+	if IsRunningHPC() {
+		log.Infof("Skip restarting Felix, running on HPC...")
+		return
+	}
 	log.Infof("Restarting Felix...")
 	testutils.Powershell(filepath.Join(f.rootDir, "restart-felix.ps1"))
 	log.Infof("Felix Restarted.")
@@ -150,4 +158,9 @@ func (f *WinFV) ReadDnsCacheFile() ([]JsonMappingV1, error) {
 		result = append(result, m)
 	}
 	return result, nil
+}
+
+// HPC env variable is set by the Windows FV tests (run-fv-full.ps1) runner during infra set up
+func IsRunningHPC() bool {
+	return os.Getenv("HPC") == "true"
 }
