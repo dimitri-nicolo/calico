@@ -14,14 +14,13 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/dns"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
@@ -841,28 +840,40 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 	var (
-		dnsserver *containers.Container
-		etcd      *containers.Container
-		tc        infrastructure.TopologyContainers
-		client    client.Interface
-		infra     infrastructure.DatastoreInfra
-		workload1 *workload.Workload
-		workload2 *workload.Workload
-		workloads []*workload.Workload
-		policy    *api.NetworkPolicy
+		dnsserver       *containers.Container
+		etcd            *containers.Container
+		tc              infrastructure.TopologyContainers
+		client          client.Interface
+		infra           infrastructure.DatastoreInfra
+		workload1       *workload.Workload
+		workload2       *workload.Workload
+		workload3       *workload.Workload
+		workloads       []*workload.Workload
+		policy          *api.NetworkPolicy
+		policyChainName string
+		cc              *connectivity.Checker
 	)
 
+	const (
+		workload1Name = "w1"
+		workload2Name = "w2"
+		workload3Name = "w3"
+		workload1IP   = "10.65.0.1"
+		workload2IP   = "10.65.0.2"
+		workload3IP   = "10.65.0.3"
+		serviceIP     = "10.96.0.123"
+	)
 	BeforeEach(func() {
 		var err error
 
 		opts := infrastructure.DefaultTopologyOptions()
 
-		workload1Name := "w1"
-		workload2Name := "w2"
-		workload1IP := "10.65.0.1"
-		workload2IP := "10.65.0.2"
+		cc = &connectivity.Checker{Protocol: "udp"}
 
-		dnsRecords := map[string][]dns.RecordIP{"foobar.com": {{TTL: 20, IP: workload2IP}}}
+		dnsRecords := map[string][]dns.RecordIP{
+			"foobar.com":  {{TTL: 20, IP: workload2IP}},
+			"bazbiff.com": {{TTL: 20, IP: serviceIP}},
+		}
 
 		dnsserver = dns.StartServer(dnsRecords)
 
@@ -880,6 +891,10 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		workload2 = workload.Run(tc.Felixes[0], workload2Name, "default", workload2IP, "8055", "udp")
 		workload2.ConfigureInInfra(infra)
 		workloads = append(workloads, workload2)
+
+		workload3 = workload.Run(tc.Felixes[0], workload3Name, "default", workload3IP, "8055", "udp")
+		workload3.ConfigureInInfra(infra)
+		workloads = append(workloads, workload3)
 
 		udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 
@@ -900,6 +915,15 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 				Destination: api.EntityRule{Domains: []string{"foobar.com"}},
 			},
 			{
+				Metadata: &api.RuleMetadata{
+					Annotations: map[string]string{
+						"rule-name": "allow-bazbiff",
+					},
+				},
+				Action:      api.Allow,
+				Destination: api.EntityRule{Domains: []string{"bazbiff.com"}},
+			},
+			{
 				Action:   api.Allow,
 				Protocol: &udp,
 				Destination: api.EntityRule{
@@ -907,8 +931,13 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 				},
 			},
 		}
-		_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+
+		policy, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
+		policyChainName = rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
+			Tier: "default",
+			Name: fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
+		})
 
 		// Allow workloads to connect out to the Internet.
 		tc.Felixes[0].Exec(
@@ -950,11 +979,108 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 	When("when the dns response isn't programmed before the packet reaches the dns policy rule", func() {
 		It("nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
-			policyChainName := rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
-				Tier: "default",
-				Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
-			})
+			waitForIptablesChain(tc.Felixes[0], policyChainName)
 
+			output, err := checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
+			Expect(err).ShouldNot(HaveOccurred(), output)
+
+			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
+			// being accepted.
+			nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
+				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
+			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
+
+			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
+			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
+
+			cc.ExpectNone(workload1, workload3)
+			cc.CheckConnectivity()
+		})
+
+		// Shared code for checking DNS policy interaction with IPVS/iptables NAT.
+		checkDNSPolicyDNATInteraction := func() {
+			waitForIptablesChain(tc.Felixes[0], policyChainName)
+
+			_, err := checkSingleShotDNSConnectivity(workload1, "bazbiff.com", dnsserver.IP)
+			Expect(err).Should(HaveOccurred(), "Unexpectedly had connectivity via DNS entry that maps to service IP")
+
+			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
+			// being dropped.
+			nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
+				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
+			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
+
+			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-bazbiff[^\n]*cali40d")
+			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(0))
+
+			// Now, to rule out a bug in our IPVS set-up, add the backing pod
+			// to the policy.
+			policy.Spec.Egress = append(policy.Spec.Egress, api.Rule{
+				Action: api.Allow,
+				Metadata: &api.RuleMetadata{
+					Annotations: map[string]string{
+						"rule-name": "allow-wl2",
+					},
+				},
+				Destination: api.EntityRule{
+					Selector: workload2.NameSelector(),
+				},
+			})
+			policy, err = client.NetworkPolicies().Update(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Wait for the new rule to show up so we know we're testing the
+			// right thing.
+			Eventually(func() string {
+				out, err := tc.Felixes[0].ExecOutput("iptables-save", "-c")
+				if err != nil {
+					return fmt.Sprintf("Error running iptables-save: %v", err)
+				}
+				return out
+			}).Should(ContainSubstring("allow-wl2"))
+
+			// Now, the packet should get through, but it should hit the
+			// new rule, not the old one.
+			output, err := checkSingleShotDNSConnectivity(workload1, "bazbiff.com", dnsserver.IP)
+			Expect(err).ShouldNot(HaveOccurred(), "Unexpectedly had no connectivity via DNS entry that maps to service IP:"+output)
+
+			// Check expected pod-to-pod connectivity.
+			cc.ExpectSome(workload1, workload2)
+			cc.ExpectNone(workload1, workload3)
+			cc.CheckConnectivity()
+		}
+
+		Describe("with an IPVS IP service behind DNS", func() {
+			// This scenario checks for an interaction between IPVS and DNS
+			// policy.  IPVS breaks the connection into two legs, one of
+			// which goes through the INPUT chain and one of which goes
+			// through the OUTPUT chain.  We use mark bits to track the
+			// packet through IPVS.  So, we need to make sure that, if
+			// we queue a packet that went through IPVS, we don't lose
+			// its mark bits.
+
+			BeforeEach(func() {
+				tc.Felixes[0].Exec("ip", "link", "add", "dev", kubeIPVSInterface, "type", "dummy")
+				tc.Felixes[0].Exec("ip", "link", "set", kubeIPVSInterface, "up")
+				tc.Felixes[0].Exec("ip", "addr", "add", "dev", kubeIPVSInterface, serviceIP)
+				// sudo ipvsadm -A -t 10.1.0.6:8085
+				// sudo ipvsadm -a -t 10.1.0.6:8085 -r 10.1.0.50 -m
+				tc.Felixes[0].Exec("ipvsadm", "-A", "-u", serviceIP+":8055")
+				tc.Felixes[0].Exec("ipvsadm", "-a", "-u", serviceIP+":8055", "-r", workload2IP, "-m")
+			})
+			It("the packet should not match DNS policy (due to the DNAT)", checkDNSPolicyDNATInteraction)
+		})
+
+		if !BPFMode() {
+			Describe("with an iptables NAT IP service behind DNS", func() {
+				BeforeEach(func() {
+					tc.Felixes[0].Exec("iptables", "-t", "nat", "-A", "PREROUTING", "-d", serviceIP, "-j", "DNAT", "--to-destination", workload2IP)
+				})
+				It("the packet should not match DNS policy (due to the DNAT)", checkDNSPolicyDNATInteraction)
+			})
+		}
+
+		It("nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
 			waitForIptablesChain(tc.Felixes[0], policyChainName)
 
 			output, err := checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
@@ -972,11 +1098,6 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 		When("the connection to nfqueue is terminated", func() {
 			It("restarts the connection and nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
-				policyChainName := rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
-					Tier: "default",
-					Name: fmt.Sprintf("%s/default.%s", policy.Namespace, policy.Name),
-				})
-
 				waitForIptablesChain(tc.Felixes[0], policyChainName)
 
 				output, err := tc.Felixes[0].RunDebugConsoleCommand("close-nfqueue-conn")
@@ -1004,14 +1125,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 // waitForIptablesChain waits for the chain to be programmed on the felix instance. It eventually times out if it waits
 // too long.
 func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
-	Eventually(func() int {
-		iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
-		Expect(err).ShouldNot(HaveOccurred())
-
-		re := regexp.MustCompile(fmt.Sprintf(`\-A %s`, chainName))
-		matches := re.FindStringSubmatch(iptablesSaveOutput)
-		return len(matches)
-	}, "10s", "1s").Should(BeNumerically(">", 0))
+	EventuallyWithOffset(1, felix.IPTablesChains("filter")).Should(HaveKey(chainName))
 }
 
 // checkSingleShotDNSConnectivity sends a single udp request to the domain name from the given workload on port 8055.

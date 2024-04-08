@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     iputils-arping \
     iputils-ping \
     iputils-tracepath \
+    ipvsadm \
     # Need arp
     net-tools \
     conntrack \

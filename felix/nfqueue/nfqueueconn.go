@@ -248,6 +248,7 @@ type nfQueueConnector struct {
 	holdTimeCheckInterval time.Duration
 	verdict               int
 	flags                 uint32
+	markBitsToPreserve    uint32
 	dnrMark               uint32
 	logger                *log.Entry
 	holdTimeCheckTicker   timeshim.Ticker
@@ -525,7 +526,11 @@ func (nfx *nfQueueConnection) packetHook(a gonfqueue.Attribute) int {
 		nfx.prometheusPacketsSeenCounter.Inc()
 	}
 
-	if a.Mark != nil && *a.Mark&nfx.dnrMark != 0x0 {
+	var mark uint32
+	if a.Mark != nil {
+		mark = *a.Mark
+	}
+	if mark&nfx.dnrMark != 0x0 {
 		nfx.rateLimitedErrLogger.Error(packetHasDoNotRepeatMarkMessage)
 		nfx.setVerdict(*a.PacketID, gonfqueue.NfDrop, failedToSetVerdictMessage)
 
@@ -547,8 +552,9 @@ func (nfx *nfQueueConnection) packetHook(a gonfqueue.Attribute) int {
 
 	// Create the internal packet data so that we can manage release of this packet.
 	data := &packetData{
-		holdTime: nfx.time.Now(),
-		packetID: *a.PacketID,
+		holdTime:           nfx.time.Now(),
+		packetID:           *a.PacketID,
+		markBitsToPreserve: mark & nfx.markBitsToPreserve,
 	}
 	nfx.logger.Debugf("Received packet %d at %s", data.packetID, data.holdTime)
 
@@ -776,7 +782,7 @@ func (nfx *nfQueueConnection) release() {
 				nfx.setVerdict(data.packetID, nfx.verdict, failedToSetVerdictMessage)
 			} else {
 				nfx.logger.Debugf("Sending release with mark for packet %d", data.packetID)
-				nfx.setVerdictWithMark(data.packetID, nfx.verdict, int(nfx.dnrMark), failedToSetVerdictWithMarkMessage)
+				nfx.setVerdictWithMark(data.packetID, nfx.verdict, int(nfx.dnrMark|data.markBitsToPreserve), failedToSetVerdictWithMarkMessage)
 			}
 
 			if nfx.prometheusHoldTimeSummary != nil {
@@ -851,6 +857,8 @@ type packetData struct {
 	// The packet ID. Note that this packet ID is only valid in conjunction with its corresponding NfQueue connection
 	// since new connections start the IDs again from 1.
 	packetID uint32
+
+	markBitsToPreserve uint32
 
 	// Release reason
 	reason ReleaseReason
