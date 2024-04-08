@@ -1320,12 +1320,19 @@ bin/helm: bin/.helm-updated-$(HELM_VERSION)
 helm-install-gcs-plugin:
 	bin/helm plugin install https://github.com/viglesiasce/helm-gcs.git
 
+publish-charts: publish-charts-gcs publish-charts-oci
 # Upload to Google tigera-helm-charts storage bucket.
-publish-charts:
+publish-charts-gcs:
 	bin/helm repo add tigera gs://tigera-helm-charts
 	for chart in ./bin/*.tgz; do \
 		bin/helm gcs push $$chart gs://tigera-helm-charts; \
 	done
+
+CHART_REPO?=oci://us-central1-docker.pkg.dev/unique-caldron-775/charts
+publish-charts-oci:
+	# publish charts to the new enterprise oci repo.
+	gcloud auth application-default print-access-token | helm registry login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+	find ./bin -maxdepth 1 -type f -name "*.tgz" -print0 | xargs -0 -I {} bin/helm push {} $(CHART_REPO)
 
 bin/yq:
 	mkdir -p bin
