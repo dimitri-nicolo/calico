@@ -1125,7 +1125,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 // waitForIptablesChain waits for the chain to be programmed on the felix instance. It eventually times out if it waits
 // too long.
 func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
-	EventuallyWithOffset(1, felix.IPTablesChains("filter")).Should(HaveKey(chainName))
+	EventuallyWithOffset(1, felix.IPTablesChainsFn("filter"), "10s", "1s").Should(HaveKey(chainName))
 }
 
 // checkSingleShotDNSConnectivity sends a single udp request to the domain name from the given workload on port 8055.
