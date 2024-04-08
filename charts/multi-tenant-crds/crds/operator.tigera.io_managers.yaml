@@ -36,28 +36,6 @@ spec:
             description: Specification of the desired state for the Calico Enterprise
               manager.
             properties:
-              auth:
-                description: Deprecated. Please use the Authentication CR for configuring
-                  authentication.
-                properties:
-                  authority:
-                    description: Authority configures the OAuth2/OIDC authority/issuer
-                      when using OAuth2 or OIDC login.
-                    type: string
-                  clientID:
-                    description: ClientId configures the OAuth2/OIDC client ID to
-                      use for OAuth2 or OIDC login.
-                    type: string
-                  type:
-                    description: 'Type configures the type of authentication used
-                      by the manager. Default: Token'
-                    enum:
-                    - Token
-                    - Basic
-                    - OIDC
-                    - OAuth
-                    type: string
-                type: object
               managerDeployment:
                 description: ManagerDeployment configures the Manager Deployment.
                 properties:
@@ -81,8 +59,10 @@ spec:
                                     Deployment container.
                                   properties:
                                     name:
-                                      description: Name is an enum which identifies
+                                      description: 'Name is an enum which identifies
                                         the Manager Deployment container by name.
+                                        Supported values are: tigera-voltron, tigera-manager,
+                                        tigera-es-proxy'
                                       enum:
                                       - tigera-voltron
                                       - tigera-manager
@@ -146,7 +126,8 @@ spec:
                                             If Requests is omitted for a container,
                                             it defaults to Limits if that is explicitly
                                             specified, otherwise to an implementation-defined
-                                            value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                            value. Requests cannot exceed Limits.
+                                            More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                                           type: object
                                       type: object
                                   required:
@@ -164,8 +145,11 @@ spec:
                                     Manager Deployment init container.
                                   properties:
                                     name:
-                                      description: Name is an enum which identifies
+                                      description: 'Name is an enum which identifies
                                         the Manager Deployment init container by name.
+                                        Supported values are: manager-tls-key-cert-provisioner,
+                                        internal-manager-tls-key-cert-provisioner,
+                                        tigera-voltron-linseed-tls-key-cert-provisioner'
                                       enum:
                                       - manager-tls-key-cert-provisioner
                                       - internal-manager-tls-key-cert-provisioner
@@ -231,7 +215,8 @@ spec:
                                             If Requests is omitted for a container,
                                             it defaults to Limits if that is explicitly
                                             specified, otherwise to an implementation-defined
-                                            value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                            value. Requests cannot exceed Limits.
+                                            More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                                           type: object
                                       type: object
                                   required:
@@ -246,28 +231,6 @@ spec:
           status:
             description: Most recently observed state for the Calico Enterprise manager.
             properties:
-              auth:
-                description: Deprecated. Please use the Authentication CR for configuring
-                  authentication.
-                properties:
-                  authority:
-                    description: Authority configures the OAuth2/OIDC authority/issuer
-                      when using OAuth2 or OIDC login.
-                    type: string
-                  clientID:
-                    description: ClientId configures the OAuth2/OIDC client ID to
-                      use for OAuth2 or OIDC login.
-                    type: string
-                  type:
-                    description: 'Type configures the type of authentication used
-                      by the manager. Default: Token'
-                    enum:
-                    - Token
-                    - Basic
-                    - OIDC
-                    - OAuth
-                    type: string
-                type: object
               conditions:
                 description: Conditions represents the latest observed set of conditions
                   for the component. A component may be one or more of Ready, Progressing,
