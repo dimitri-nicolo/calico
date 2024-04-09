@@ -47,7 +47,7 @@ func Test_GetIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -85,7 +85,7 @@ func Test_GetIPSetModified(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -164,7 +164,7 @@ func Test_QueryIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -237,7 +237,7 @@ func Test_QueryIPSet_SameIPSet(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -292,7 +292,7 @@ func Test_QueryIPSet_Big(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -326,7 +326,7 @@ func Test_ListSets(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
@@ -378,7 +378,7 @@ func Test_Put_Set(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -439,7 +439,7 @@ func Test_Delete_Set(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
 
-	e := NewService(lsc, fakeClient, "cluster")
+	e := NewService(lsc, fakeClient, "cluster", time.Duration(1))
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()

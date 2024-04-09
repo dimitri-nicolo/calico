@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -59,6 +60,7 @@ const (
 
 	DefaultConfigMapNamespace = TigeraIntrusionDetectionNamespace
 	DefaultSecretsNamespace   = TigeraIntrusionDetectionNamespace
+	DefaultMaxLinseedTimeSkew = 1 // minute
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -68,11 +70,12 @@ type backendClientAccessor interface {
 
 func main() {
 	var ver, debug bool
-	var healthzSockPort int
+	var healthzSockPort, maxLinseedTimeSkew int
 
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.IntVar(&healthzSockPort, "port", health.DefaultHealthzSockPort, "Healthz port")
+	flag.IntVar(&maxLinseedTimeSkew, "maxLinseedTimeSkew", DefaultMaxLinseedTimeSkew, "Max time for time skew with linseed in minutes")
 	// enable klog flags for API call logging (to stderr).
 	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
@@ -144,7 +147,7 @@ func main() {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
-	e := storage.NewService(linseedClient, client, "")
+	e := storage.NewService(linseedClient, client, "", time.Duration(maxLinseedTimeSkew))
 	e.Run(ctx)
 	defer e.Close()
 
@@ -190,6 +193,8 @@ func main() {
 	}
 	defer g.Close()
 
+	maxLinseedTimeSkewDuration := time.Duration(maxLinseedTimeSkew * int(time.Minute))
+
 	s := feedsWatcher.NewWatcher(
 		kubeClientSet.CoreV1().ConfigMaps(configMapNamespace),
 		rbac.RestrictedSecretsClient{
@@ -200,7 +205,7 @@ func main() {
 		eip,
 		edn,
 		&http.Client{},
-		e, e, sIP, sDN, e, g)
+		e, e, sIP, sDN, e, g, maxLinseedTimeSkewDuration)
 
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
 

@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019-2024 Tigera Inc. All rights reserved.
 
 package searcher
 
@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -31,13 +32,14 @@ type Searcher interface {
 }
 
 type searcher struct {
-	feed   *v3.GlobalThreatFeed
-	period time.Duration
-	q      storage.SuspiciousSet
-	events storage.Events
-	once   sync.Once
-	cancel context.CancelFunc
-	geoDB  geodb.GeoDatabase
+	feed         *v3.GlobalThreatFeed
+	period       time.Duration
+	q            storage.SuspiciousSet
+	events       storage.Events
+	once         sync.Once
+	cancel       context.CancelFunc
+	geoDB        geodb.GeoDatabase
+	cachedEvents *EventCache
 }
 
 func (d *searcher) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
@@ -69,6 +71,8 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 		return
 	}
 
+	d.cachedEvents.Purge()
+
 	// Ensure Global Threat Feed is Enabled before querying Linseed and sending event.
 	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
 	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
@@ -79,32 +83,40 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
 			return
 		}
-		clean := true
-		err = d.events.PutSecurityEventWithID(ctx, results)
+
+		newEvents := []v1.Event{}
+		for _, event := range results {
+			if !d.cachedEvents.Contains(&event) {
+				newEvents = append(newEvents, event)
+				d.cachedEvents.Add(&event)
+			}
+		}
+
+		err = d.events.PutSecurityEventWithID(ctx, newEvents)
 		if err != nil {
 			log.WithError(err).Error("failed to store events")
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
-			clean = false
+			return
 		}
 
-		if clean {
-			log.Debug("Update feed status")
-			updateFeedStatusAfterSuccessfulSearch(feedCacher, lastSuccessfulSearch)
-			log.Debug("Update feed after search")
-			updateFeedAfterSuccessfulSearch(feedCacher, setHash)
-		}
+		log.Debug("Update feed status")
+		updateFeedStatusAfterSuccessfulSearch(feedCacher, lastSuccessfulSearch)
+		log.Debug("Update feed after search")
+		updateFeedAfterSuccessfulSearch(feedCacher, setHash)
+
 	} else {
 		log.WithFields(log.Fields{"feedName": getCachedFeedResponse.GlobalThreatFeed.Name}).Debug("Feed is currently not enabled.")
 	}
 }
 
-func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events, geoDB geodb.GeoDatabase) Searcher {
+func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet storage.SuspiciousSet, events storage.Events, geoDB geodb.GeoDatabase, maxLinseedTimeSkew time.Duration) Searcher {
 	return &searcher{
-		feed:   feed.DeepCopy(),
-		period: period,
-		q:      suspiciousSet,
-		events: events,
-		geoDB:  geoDB,
+		feed:         feed.DeepCopy(),
+		period:       period,
+		q:            suspiciousSet,
+		events:       events,
+		geoDB:        geoDB,
+		cachedEvents: NewEventCache(maxLinseedTimeSkew),
 	}
 }
 
@@ -198,4 +210,51 @@ func updateAnnotation(globalThreatFeed *v3.GlobalThreatFeed, key, val string) {
 	annotations[key] = val
 	globalThreatFeed.SetAnnotations(annotations)
 	log.WithField("name", globalThreatFeed.Name).Debug("updated global threat feed annotation")
+}
+
+type cacheKey struct {
+	ID string
+}
+
+type EventCache struct {
+	cache  map[cacheKey]time.Time
+	maxTTL time.Duration
+}
+
+func NewEventCache(maxTTL time.Duration) *EventCache {
+	return &EventCache{
+		cache:  make(map[cacheKey]time.Time),
+		maxTTL: maxTTL,
+	}
+}
+
+// Contains checks if we've seen the event before
+func (c *EventCache) Contains(event *v1.Event) bool {
+	key := logKey(event)
+
+	_, ok := c.cache[key]
+	return ok
+}
+
+// Add adds an event's uniquely generated ID to the cache
+func (c *EventCache) Add(event *v1.Event) {
+	key := logKey(event)
+	c.cache[key] = time.Now()
+}
+
+// cull expiring entries
+func (c *EventCache) Purge() {
+	timeCutOff := time.Now().Add(-(c.maxTTL))
+	for k, ts := range c.cache {
+		if ts.Before(timeCutOff) {
+			// evict
+			delete(c.cache, k)
+		}
+	}
+}
+
+func logKey(v *v1.Event) cacheKey {
+	return cacheKey{
+		ID: v.ID,
+	}
 }

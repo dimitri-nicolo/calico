@@ -43,14 +43,16 @@ type Service struct {
 	clusterName                   string
 	forwarderConfigMappingCreated chan struct{}
 	cancel                        context.CancelFunc
+	maxLinseedTimeSkew            time.Duration
 }
 
-func NewService(lsClient client.Client, k8scli ctrlclient.WithWatch, clusterName string) *Service {
+func NewService(lsClient client.Client, k8scli ctrlclient.WithWatch, clusterName string, maxLinseedTimeSkew time.Duration) *Service {
 	return &Service{
 		lsClient:                      lsClient,
 		client:                        k8scli,
 		clusterName:                   clusterName,
 		forwarderConfigMappingCreated: make(chan struct{}),
+		maxLinseedTimeSkew:            maxLinseedTimeSkew,
 	}
 }
 
@@ -303,8 +305,9 @@ func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed 
 
 	// Create the list pager for flow logs
 	var tr lmav1.TimeRange
-	tr.From = fromTimestamp
+	tr.From = fromTimestamp.Add(-e.maxLinseedTimeSkew)
 	tr.To = time.Now()
+	tr.Field = "generated_time"
 
 	queryTerms := splitIPSet(ipset)
 	var queries []queryEntry[lsv1.FlowLog, lsv1.FlowLogParams]
@@ -361,8 +364,9 @@ func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNa
 
 	// Create the list pager for flow logs
 	var tr lmav1.TimeRange
-	tr.From = fromTimestamp
+	tr.From = fromTimestamp.Add(-e.maxLinseedTimeSkew)
 	tr.To = time.Now()
+	tr.Field = "generated_time"
 
 	var queries []queryEntry[lsv1.DNSLog, lsv1.DNSLogParams]
 	for _, t := range queryTerms {
