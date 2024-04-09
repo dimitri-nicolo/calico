@@ -106,6 +106,19 @@ var _ = Describe("Proxy", func() {
 			res := w.Result()
 			Expect(res.StatusCode).To(Equal(404))
 		})
+
+		It("should have the HSTS header set", func() {
+			r, err := http.NewRequest("GET", "http://host/path/", nil)
+			Expect(err).NotTo(HaveOccurred())
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, r)
+
+			res := w.Result()
+			Expect(res.StatusCode).To(Equal(200))
+			// Verify the response header contains the HSTS header
+			hstsHeader := res.Header.Get("Strict-Transport-Security")
+			Expect(hstsHeader).To(ContainSubstring("max-age=31536000; includeSubDomains"))
+		})
 	})
 
 	Describe("When having a catch all path", func() {
