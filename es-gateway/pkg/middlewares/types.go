@@ -28,10 +28,10 @@ func GetHandlerMap(cache cache.SecretsCache) HandlerMap {
 	}
 }
 
-func GetKibanaProxyHandlerMap() HandlerMap {
+func GetKibanaProxyHandlerMap(tenancy *KibanaTenancy) HandlerMap {
 	return HandlerMap{
 		TypeLog:         logRequestHandler,
-		TypeMultiTenant: EnforceKibanaTenancy,
+		TypeMultiTenant: tenancy.Enforce(),
 		TypeContentType: RejectUnacceptableContentTypeHandler,
 	}
 }

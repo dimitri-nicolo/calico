@@ -243,11 +243,11 @@ func runKibanaProxy() {
 		},
 	}
 	kibanaProxyCatchAllRoute := &proxy.Route{
-		Name:         "kb-catch-all",
-		Path:         cfg.KibanaCatchAllRoute,
-		IsPathPrefix: true,       // ... always be a prefix route.
-		HTTPMethods:  []string{}, // ... not filter on HTTP methods.
-		RequireAuth:  false,
+		Name:           "kb-catch-all",
+		Path:           cfg.KibanaCatchAllRoute,
+		IsPathPrefix:   true,       // ... always be a prefix route.
+		HTTPMethods:    []string{}, // ... not filter on HTTP methods.
+		EnforceTenancy: true,
 	}
 	// Create Kibana Proxy target that will be used to configure all routing to Elasticsearch.
 	kibanaProxyTarget, err := proxy.CreateTarget(
@@ -266,7 +266,7 @@ func runKibanaProxy() {
 	kibanaProxyOpts := []server.Option{
 		server.WithAddr(kibanaProxyAddr),
 		server.WithKibanaTarget(kibanaProxyTarget),
-		server.WithMiddlewareMap(middlewares.GetKibanaProxyHandlerMap()),
+		server.WithMiddlewareMap(middlewares.GetKibanaProxyHandlerMap(middlewares.NewKibanaTenancy(cfg.TenantID))),
 	}
 	kibanaProxy, err := server.New(kibanaProxyOpts...)
 	if err != nil {
