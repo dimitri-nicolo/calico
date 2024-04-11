@@ -48,7 +48,6 @@ import (
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sys/unix"
 
-	logutilslc "github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/felix/bpf"
 	bpfarp "github.com/projectcalico/calico/felix/bpf/arp"
 	"github.com/projectcalico/calico/felix/bpf/asm"
@@ -79,6 +78,7 @@ import (
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	logutilslc "github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -357,14 +357,14 @@ type bpfEndpointManager struct {
 
 	// CaliEnt features below
 
-	enableTcpStats   bool
-	lookupsCache     *calc.LookupsCache
-	actionOnDrop     string
-	egIPEnabled      bool
-	egwVxlanPort     uint16
-	v4               *bpfEndpointManagerDataplane
-	v6               *bpfEndpointManagerDataplane
-	healthAggregator *health.HealthAggregator
+	enableTcpStats       bool
+	lookupsCache         *calc.LookupsCache
+	actionOnDrop         string
+	egIPEnabled          bool
+	egwVxlanPort         uint16
+	v4                   *bpfEndpointManagerDataplane
+	v6                   *bpfEndpointManagerDataplane
+	healthAggregator     *health.HealthAggregator
 	updateRateLimitedLog *logutilslc.RateLimitedLogger
 }
 
