@@ -26,10 +26,10 @@ SRC_FILES = $(shell find pkg cmd -name '*.go') \
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
-LDFLAGS = -X $(PACKAGE_NAME)/pkg/config/version.BuildVersion=$(GIT_VERSION) \
-			-X $(PACKAGE_NAME)/pkg/config/version.BuildDate=$(DATE) \
-			-X $(PACKAGE_NAME)/pkg/config/version.GitDescription=$(GIT_DESCRIPTION) \
-			-X $(PACKAGE_NAME)/pkg/config/version.GitRevision=$(GIT_COMMIT)
+LDFLAGS = -X $(PACKAGE_NAME)/pkg/config.BuildVersion=$(GIT_VERSION) \
+			-X $(PACKAGE_NAME)/pkg/config.BuildDate=$(DATE) \
+			-X $(PACKAGE_NAME)/pkg/config.GitTag=$(GIT_DESCRIPTION) \
+			-X $(PACKAGE_NAME)/pkg/config.GitCommit=$(GIT_COMMIT)
 
 ###############################################################################
 # BUILD BINARY

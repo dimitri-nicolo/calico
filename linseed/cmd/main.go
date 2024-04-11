@@ -412,7 +412,7 @@ func run() {
 	}
 
 	// Register the /version endpoint without authorization.
-	authzHelper.Disable("GET", "/version")
+	authzHelper.DisableWithoutPrefix("GET", "/version")
 
 	// Start the server.
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
