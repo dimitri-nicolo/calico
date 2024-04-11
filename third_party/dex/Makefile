@@ -31,7 +31,7 @@ init-cmd: $(DEX_DOWNLOADED)
 $(DEX_DOWNLOADED):
 	mkdir -p cmd/dex
 	(cd cmd/dex && curl -sSfL --remote-name-all --retry 5 https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/cmd/dex/{config,main,serve,version}.go)
-	patch -p2 < patches/0001-cmd-changes.patch
+	patch -p3 < patches/0001-cmd-changes.patch
 	touch $@
 
 .PHONY: bin/dex-$(ARCH)
