@@ -48,6 +48,7 @@ import (
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sys/unix"
 
+	logutilslc "github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/felix/bpf"
 	bpfarp "github.com/projectcalico/calico/felix/bpf/arp"
 	"github.com/projectcalico/calico/felix/bpf/asm"
@@ -364,6 +365,7 @@ type bpfEndpointManager struct {
 	v4               *bpfEndpointManagerDataplane
 	v6               *bpfEndpointManagerDataplane
 	healthAggregator *health.HealthAggregator
+	updateRateLimitedLog *logutilslc.RateLimitedLogger
 }
 
 type bpfEndpointManagerDataplane struct {
@@ -534,6 +536,11 @@ func newBPFEndpointManager(
 			Detail: "Not yet synced.",
 		})
 	}
+
+	m.updateRateLimitedLog = logutilslc.NewRateLimitedLogger(
+		logutilslc.OptInterval(30*time.Second),
+		logutilslc.OptBurst(10),
+	)
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
 	// _only_ implemented by XDP, so we _should_ fall back to XDPGeneric if necessary in order
@@ -1591,6 +1598,10 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 		}
 		m.reportHealth(true, "")
 	} else {
+		m.dirtyIfaceNames.Iter(func(iface string) error {
+			m.updateRateLimitedLog.WithField("name", iface).Debug("Interface remains dirty.")
+			return nil
+		})
 		m.reportHealth(false, "Failed to configure some interfaces.")
 	}
 
