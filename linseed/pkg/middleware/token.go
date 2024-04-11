@@ -46,6 +46,14 @@ func (t *KubernetesAuthzTracker) Disable(v, u string) {
 	t.authMap[r] = nil
 }
 
+// Same as Disable but without the /api/v1 prefix.
+func (t *KubernetesAuthzTracker) DisableWithoutPrefix(v, u string) {
+	r := reqdata{Verb: v, BaseURL: u}
+
+	// A nil entry is not the same as a non-existent entry.
+	t.authMap[r] = nil
+}
+
 // Attributes returns the necessary RBAC permissions to check for the endpoint. It will return an error
 // if this endpoint is not registered properly.
 func (t *KubernetesAuthzTracker) Attributes(v, u string) (*authzv1.ResourceAttributes, bool, error) {

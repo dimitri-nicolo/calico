@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -43,7 +44,26 @@ func TestFV_Linseed(t *testing.T) {
 		body           string
 		wantStatusCode int
 		wantBody       string
+		checkBody      func(trimmedResBody string)
 	}{
+		{
+			name: "should return 200 for /version",
+			path: "/version", method: "GET", wantStatusCode: 200,
+			checkBody: func(trimmedResBody string) {
+				var buildInfo struct {
+					BuildDate    string `json:"buildDate"`
+					GitCommit    string `json:"gitCommit"`
+					GitTag       string `json:"gitTag"`
+					BuildVersion string `json:"buildVersion"`
+				}
+				err := json.Unmarshal([]byte(trimmedResBody), &buildInfo)
+				assert.Nil(t, err)
+				assert.NotEmpty(t, buildInfo.BuildDate)
+				assert.NotEmpty(t, buildInfo.GitCommit)
+				assert.NotEmpty(t, buildInfo.GitTag)
+				assert.NotEmpty(t, buildInfo.BuildVersion)
+			},
+		},
 		{
 			name: "should return 404 for /",
 			path: "/", method: "GET", wantStatusCode: 404, wantBody: `{"Status":404,"Msg":"No matching authz options for GET /"}`,
@@ -83,7 +103,14 @@ func TestFV_Linseed(t *testing.T) {
 			res, resBody := doRequest(t, client, httpReqSpec)
 
 			assert.Equal(t, tt.wantStatusCode, res.StatusCode)
-			assert.Equal(t, tt.wantBody, strings.Trim(string(resBody), "\n"))
+			trimmedResBody := strings.Trim(string(resBody), "\n")
+			if tt.checkBody != nil {
+				// Custom check of the body.
+				tt.checkBody(trimmedResBody)
+			} else {
+				// Default check of the body.
+				assert.Equal(t, tt.wantBody, trimmedResBody)
+			}
 		})
 	}
 
