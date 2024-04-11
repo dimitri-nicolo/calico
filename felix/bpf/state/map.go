@@ -119,6 +119,10 @@ type State struct {
 	TimeStamp           uint64
 	NATData             uint64
 	ProgStartTime       uint64
+	SrcAddrMasq         uint32
+	SrcAddrMasq1        uint32
+	SrcAddrMasq2        uint32
+	SrcAddrMasq3        uint32
 	_                   [48]byte // ipv6 padding
 }
 
