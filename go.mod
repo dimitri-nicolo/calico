@@ -139,7 +139,7 @@ require (
 	google.golang.org/protobuf v1.33.0
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
-	// permission denies in felix FV tests after upgrading to a newer version
+	// Replaced with older version below until we can handle the updated permissions it now puts on log files.
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
@@ -409,6 +409,9 @@ replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 
 	github.com/tigera/api => ./api
+
+	// Newer versions set the file mode on logs to 0600, which breaks a lot of our tests.
+	gopkg.in/natefinch/lumberjack.v2 => gopkg.in/natefinch/lumberjack.v2 v2.0.0
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for
