@@ -118,6 +118,7 @@ retry_kubectl "wait pod -l k8s-app=kube-dns --for=condition=Ready -n kube-system
 echo "Calico is running."
 
 kubectl taint nodes --all node-role.kubernetes.io/master-
+kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
 # strict affinity
 curl -sSf -L --retry 5 https://github.com/projectcalico/calico/releases/download/v3.27.0/calicoctl-linux-amd64 -o calicoctl
