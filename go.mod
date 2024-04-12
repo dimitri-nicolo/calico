@@ -210,7 +210,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
+	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0 // indirect
@@ -405,6 +405,8 @@ require (
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
+	github.com/prometheus/common => github.com/prometheus/common v0.47.0
 
 	github.com/tigera/api => ./api
 
