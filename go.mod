@@ -409,6 +409,7 @@ replace (
 	github.com/prometheus/common => github.com/prometheus/common v0.47.0
 
 	github.com/tigera/api => ./api
+	google.golang.org/grpc => google.golang.org/grpc v1.61.0
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for
