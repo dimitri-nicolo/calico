@@ -32,7 +32,6 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/kibana:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__-fips
-    docker pull quay.io/tigera/cloud-controllers:__CE_VERSION__
     docker pull quay.io/tigera/intrusion-detection-job-installer:__CE_VERSION__
     docker pull quay.io/tigera/es-curator:__CE_VERSION__
     docker pull quay.io/tigera/intrusion-detection-controller:__CE_VERSION__
@@ -102,7 +101,6 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/kibana:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/kibana:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__-fips $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__-fips
-    docker pull quay.io/tigera/cloud-controllers:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/cloud-controllers:__CE_VERSION__
     docker pull quay.io/tigera/intrusion-detection-job-installer:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-job-installer:__CE_VERSION__
     docker pull quay.io/tigera/es-curator:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/es-curator:__CE_VERSION__
     docker pull quay.io/tigera/intrusion-detection-controller:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-controller:__CE_VERSION__
@@ -171,7 +169,6 @@ registry, and then push the newly tagged images to your own registry.
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/kibana:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__-fips
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cloud-controllers:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-job-installer:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/es-curator:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/intrusion-detection-controller:__CE_VERSION__
