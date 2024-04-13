@@ -246,11 +246,14 @@ func runServe(options serveOptions) error {
 	healthChecker := gosundheit.New()
 
 	serverConfig := server.Config{
+		AllowedGrantTypes:      c.OAuth2.GrantTypes,
 		SupportedResponseTypes: c.OAuth2.ResponseTypes,
 		SkipApprovalScreen:     c.OAuth2.SkipApprovalScreen,
 		AlwaysShowLoginScreen:  c.OAuth2.AlwaysShowLoginScreen,
 		PasswordConnector:      c.OAuth2.PasswordConnector,
+		Headers:                c.Web.Headers.ToHTTPHeader(),
 		AllowedOrigins:         c.Web.AllowedOrigins,
+		AllowedHeaders:         c.Web.AllowedHeaders,
 		Issuer:                 c.Issuer,
 		Storage:                s,
 		Web:                    c.Frontend,
@@ -406,7 +409,6 @@ func runServe(options serveOptions) error {
 		if err != nil {
 			return fmt.Errorf("listening (%s) on %s: %v", name, c.Web.HTTPS, err)
 		}
-
 		baseTLSConfig := tls2.NewTLSConfig()
 		tlsConfig, err := newTLSReloader(logger, c.Web.TLSCert, c.Web.TLSKey, "", baseTLSConfig)
 		if err != nil {
@@ -531,6 +533,17 @@ func applyConfigOverrides(options serveOptions, config *Config) {
 
 	if config.Frontend.Dir == "" {
 		config.Frontend.Dir = os.Getenv("DEX_FRONTEND_DIR")
+	}
+
+	if len(config.OAuth2.GrantTypes) == 0 {
+		config.OAuth2.GrantTypes = []string{
+			"authorization_code",
+			"implicit",
+			"password",
+			"refresh_token",
+			"urn:ietf:params:oauth:grant-type:device_code",
+			"urn:ietf:params:oauth:grant-type:token-exchange",
+		}
 	}
 }
 
