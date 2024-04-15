@@ -132,7 +132,7 @@ release-archive: manifests/ocp.tgz
 	$(MAKE) -f release-archive.mk release-archive
 
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
-chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release
+chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release tigera-prometheus-operator-release
 
 tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
 
@@ -157,6 +157,7 @@ bin/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type 
 	--app-version $(@:bin/tigera-operator-%.tgz=%)
 
 # Build the tigera-prometheus-operator.tgz helm chart.
+tigera-prometheus-operator-release: bin/tigera-prometheus-operator-$(chartVersion).tgz
 bin/tigera-prometheus-operator-$(chartVersion).tgz:
 	bin/helm package ./charts/tigera-prometheus-operator \
 	--destination ./bin/ \
