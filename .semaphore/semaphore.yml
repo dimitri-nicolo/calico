@@ -999,6 +999,10 @@ blocks:
       - name: make ci
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+    epilogue:
+      always:
+        commands:
+          - ../.semaphore/publish-artifacts
 
 - name: egress-gateway - native arm64 runner
   run:
@@ -1011,11 +1015,19 @@ blocks:
         type: s1-aws-arm64-2
     prologue:
       commands:
+        # The makefile sometimes tries to rebuild the protobufs but
+        # the build fails on ARM (and we know they're fresh due to
+        # the pre-flight job).
+        - touch felix/proto/felixbackend.pb.go
         - cd egress-gateway
     jobs:
       - name: Build image
         commands:
           - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
+    epilogue:
+      always:
+        commands:
+          - ../.semaphore/publish-artifacts
 - name: es-gateway
   run:
     when: "false or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
