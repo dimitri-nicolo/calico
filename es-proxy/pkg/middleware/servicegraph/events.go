@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	alertsQuerySize     = 1000
-	K8sEventTypeWarning = "Warning"
+	alertsQuerySize        = 1000
+	K8sEventTypeWarning    = "Warning"
+	securityEventsSelector = "type IN {'waf', 'runtime_security', 'gtf_suspicious_flow', 'gtf_suspicious_dns_query'} AND NOT dismissed = true"
 )
 
 var replicaRegex = regexp.MustCompile("-[a-z0-9]{5}$")
@@ -100,7 +101,8 @@ func getTigeraEvents(ctx context.Context, lsClient client.Client, cluster string
 
 	// Set up for performing paged list queries for events.
 	params := lapi.EventParams{
-		QueryParams: lsv1.QueryParams{TimeRange: &tr},
+		QueryParams:        lsv1.QueryParams{TimeRange: &tr},
+		LogSelectionParams: lsv1.LogSelectionParams{Selector: securityEventsSelector},
 	}
 	pager := client.NewListPager[lapi.Event](&params)
 	pages, errors := pager.Stream(ctx, lsClient.Events(cluster).List)

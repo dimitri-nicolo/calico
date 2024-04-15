@@ -1,18 +1,19 @@
-From 480168212495aceb3404d7c4f72fbf0f6ed54168 Mon Sep 17 00:00:00 2001
-From: rene-dekker <rene@tigera.io>
-Date: Thu, 4 Jan 2024 15:39:51 -0800
-Subject: [PATCH] Remove code from dex that is unused and requires code generation. Add FIPS support to tls configs.
+From 5bf4e19c390672c97e94c2d6318099869f6580b0 Mon Sep 17 00:00:00 2001
+From: Vara <vara@tigera.io>
+Date: Tue, 9 Apr 2024 13:01:38 -0700
+Subject: [PATCH] Remove code from dex that is unused and requires code
+ generation. Add FIPS support to tls configs.
 
 ---
- dex/cmd/dex/config.go | 11 -----------
- dex/cmd/dex/serve.go  | 28 +++++-----------------------
- 2 files changed, 5 insertions(+), 34 deletions(-)
+ third_party/dex/cmd/dex/config.go | 11 ------
+ third_party/dex/cmd/dex/serve.go  | 58 +++++--------------------------
+ 2 files changed, 8 insertions(+), 61 deletions(-)
 
-diff --git a/dex/cmd/dex/config.go b/dex/cmd/dex/config.go
-index 7bb7fbb780..3bce17d19f 100644
---- a/dex/cmd/dex/config.go
-+++ b/dex/cmd/dex/config.go
-@@ -13,11 +13,9 @@ import (
+diff --git a/third_party/dex/cmd/dex/config.go b/third_party/dex/cmd/dex/config.go
+index 33c0db4782..8f74e49f31 100644
+--- a/third_party/dex/cmd/dex/config.go
++++ b/third_party/dex/cmd/dex/config.go
+@@ -14,11 +14,9 @@ import (
  	"github.com/dexidp/dex/pkg/log"
  	"github.com/dexidp/dex/server"
  	"github.com/dexidp/dex/storage"
@@ -22,9 +23,9 @@ index 7bb7fbb780..3bce17d19f 100644
  	"github.com/dexidp/dex/storage/memory"
 -	"github.com/dexidp/dex/storage/sql"
  )
-
+ 
  // Config is the config format for the main application.
-@@ -180,12 +178,6 @@ var (
+@@ -243,12 +241,6 @@ var (
  	_ StorageConfig = (*etcd.Etcd)(nil)
  	_ StorageConfig = (*kubernetes.Config)(nil)
  	_ StorageConfig = (*memory.Config)(nil)
@@ -35,9 +36,9 @@ index 7bb7fbb780..3bce17d19f 100644
 -	_ StorageConfig = (*ent.Postgres)(nil)
 -	_ StorageConfig = (*ent.MySQL)(nil)
  )
-
+ 
  func getORMBasedSQLStorage(normal, entBased StorageConfig) func() StorageConfig {
-@@ -203,9 +195,6 @@ var storages = map[string]func() StorageConfig{
+@@ -264,9 +256,6 @@ var storages = map[string]func() StorageConfig{
  	"etcd":       func() StorageConfig { return new(etcd.Etcd) },
  	"kubernetes": func() StorageConfig { return new(kubernetes.Config) },
  	"memory":     func() StorageConfig { return new(memory.Config) },
@@ -45,12 +46,12 @@ index 7bb7fbb780..3bce17d19f 100644
 -	"postgres":   getORMBasedSQLStorage(&sql.Postgres{}, &ent.Postgres{}),
 -	"mysql":      getORMBasedSQLStorage(&sql.MySQL{}, &ent.MySQL{}),
  }
-
- // isExpandEnvEnabled returns if os.ExpandEnv should be used for each storage and connector config.
-diff --git a/dex/cmd/dex/serve.go b/dex/cmd/dex/serve.go
-index 70906a866d..3115a14685 100644
---- a/dex/cmd/dex/serve.go
-+++ b/dex/cmd/dex/serve.go
+ 
+ // UnmarshalJSON allows Storage to implement the unmarshaler interface to
+diff --git a/third_party/dex/cmd/dex/serve.go b/third_party/dex/cmd/dex/serve.go
+index 9461a6220a..fe47721072 100644
+--- a/third_party/dex/cmd/dex/serve.go
++++ b/third_party/dex/cmd/dex/serve.go
 @@ -38,6 +38,8 @@ import (
  	"github.com/dexidp/dex/pkg/log"
  	"github.com/dexidp/dex/server"
@@ -60,7 +61,7 @@ index 70906a866d..3115a14685 100644
  )
  
  type serveOptions struct {
-@@ -134,23 +136,8 @@ func runServe(options serveOptions) error {
+@@ -134,37 +136,8 @@ func runServe(options serveOptions) error {
  
  	var grpcOptions []grpc.ServerOption
  
@@ -75,9 +76,23 @@ index 70906a866d..3115a14685 100644
 -		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
 -	}
 -
+-	allowedTLSVersions := map[string]int{
+-		"1.2": tls.VersionTLS12,
+-		"1.3": tls.VersionTLS13,
+-	}
+-
  	if c.GRPC.TLSCert != "" {
+-		tlsMinVersion := tls.VersionTLS12
+-		if c.GRPC.TLSMinVersion != "" {
+-			tlsMinVersion = allowedTLSVersions[c.GRPC.TLSMinVersion]
+-		}
+-		tlsMaxVersion := 0 // default for max is whatever Go defaults to
+-		if c.GRPC.TLSMaxVersion != "" {
+-			tlsMaxVersion = allowedTLSVersions[c.GRPC.TLSMaxVersion]
+-		}
 -		baseTLSConfig := &tls.Config{
--			MinVersion:               tls.VersionTLS12,
+-			MinVersion:               uint16(tlsMinVersion),
+-			MaxVersion:               uint16(tlsMaxVersion),
 -			CipherSuites:             allowedTLSCiphers,
 -			PreferServerCipherSuites: true,
 -		}
@@ -85,12 +100,23 @@ index 70906a866d..3115a14685 100644
  
  		tlsConfig, err := newTLSReloader(logger, c.GRPC.TLSCert, c.GRPC.TLSKey, c.GRPC.TLSClientCA, baseTLSConfig)
  		if err != nil {
-@@ -420,12 +407,7 @@ func runServe(options serveOptions) error {
+@@ -436,23 +409,7 @@ func runServe(options serveOptions) error {
+ 		if err != nil {
  			return fmt.Errorf("listening (%s) on %s: %v", name, c.Web.HTTPS, err)
  		}
- 
+-
+-		tlsMinVersion := tls.VersionTLS12
+-		if c.Web.TLSMinVersion != "" {
+-			tlsMinVersion = allowedTLSVersions[c.Web.TLSMinVersion]
+-		}
+-		tlsMaxVersion := 0 // default for max is whatever Go defaults to
+-		if c.Web.TLSMaxVersion != "" {
+-			tlsMaxVersion = allowedTLSVersions[c.Web.TLSMaxVersion]
+-		}
+-
 -		baseTLSConfig := &tls.Config{
--			MinVersion:               tls.VersionTLS12,
+-			MinVersion:               uint16(tlsMinVersion),
+-			MaxVersion:               uint16(tlsMaxVersion),
 -			CipherSuites:             allowedTLSCiphers,
 -			PreferServerCipherSuites: true,
 -		}
@@ -99,15 +125,27 @@ index 70906a866d..3115a14685 100644
  		tlsConfig, err := newTLSReloader(logger, c.Web.TLSCert, c.Web.TLSKey, "", baseTLSConfig)
  		if err != nil {
  			return fmt.Errorf("invalid config: get HTTP TLS: %v", err)
-@@ -634,7 +616,7 @@ func newTLSReloader(logger log.Logger, certFile, keyFile, caFile string, baseCon
+@@ -672,16 +629,17 @@ func newTLSReloader(logger log.Logger, certFile, keyFile, caFile string, baseCon
  		}
  	}()
  
--	conf := &tls.Config{}
 +	conf := tls2.NewTLSConfig()
  	// https://pkg.go.dev/crypto/tls#baseConfig
  	// Server configurations must set one of Certificates, GetCertificate or GetConfigForClient.
  	if caFile != "" {
+ 		// grpc will use this via tls.Server for mTLS
+-		initialConfig.GetConfigForClient = func(chi *tls.ClientHelloInfo) (*tls.Config, error) { return ptr.Load(), nil }
++		conf.GetConfigForClient = func(chi *tls.ClientHelloInfo) (*tls.Config, error) { return ptr.Load(), nil }
+ 	} else {
+ 		// net/http only uses Certificates or GetCertificate
+-		initialConfig.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) { return &ptr.Load().Certificates[0], nil }
++		conf.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) { return &ptr.Load().Certificates[0], nil }
+ 	}
+-	return initialConfig, nil
++	return conf, nil
+ }
+ 
+ // loadTLSConfig loads the given file paths into a [tls.Config]
 -- 
-2.34.1
+2.25.1
 
