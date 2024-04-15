@@ -1,10 +1,14 @@
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package authorization
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	eusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (n *nativeUserSynchronizer) eeResync() error {
@@ -14,9 +18,11 @@ func (n *nativeUserSynchronizer) eeResync() error {
 	}
 
 	for _, user := range users {
-		if strings.HasPrefix(user.Username, nativeUserPrefix) {
-			subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", nativeUserPrefix))
+		// Exclude Tigera's system users from deletion.
+		if user.FullName != eusers.SystemUserFullName {
+			subjectID := strings.TrimPrefix(user.Username, n.esUserPrefix)
 			if !n.userCache.Exists(subjectID) {
+				log.WithField("subjectId", subjectID).Trace("deleting user from Elasticsearch as it is not present in our cache")
 				if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
 					return err
 				}
@@ -26,13 +32,4 @@ func (n *nativeUserSynchronizer) eeResync() error {
 
 	subjects := n.userCache.SubjectIDs()
 	return n.synchronizeOIDCUsers(subjects)
-}
-
-func (n *nativeUserSynchronizer) eeDeleteEsUsers(esUsers map[string]elasticsearch.User) error {
-	for _, esUser := range esUsers {
-		if err := n.esCLI.DeleteUser(esUser); err != nil {
-			return err
-		}
-	}
-	return nil
 }

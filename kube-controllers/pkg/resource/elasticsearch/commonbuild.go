@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package elasticsearch
 
 import (
@@ -5,6 +7,7 @@ import (
 
 	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
@@ -17,5 +20,5 @@ func (r *restClient) eeCalculateTigeraElasticsearchHash() (string, error) {
 		return "", err
 	}
 
-	return resource.CreateHashFromObject(es.CreationTimestamp)
+	return utils.GenerateTruncatedHash(es.CreationTimestamp, 24)
 }

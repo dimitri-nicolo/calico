@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 package license
 
@@ -6,12 +6,14 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 type reconciler struct {
@@ -58,7 +60,7 @@ func (c *reconciler) reconcileManagedLicense() error {
 		logger.WithError(err).Error("Failed to read license for management cluster")
 		return err
 	}
-	managementLicenseHash, err := resource.CreateHashFromObject(license.Spec)
+	managementLicenseHash, err := utils.GenerateTruncatedHash(license.Spec, 24)
 	if err != nil {
 		logger.WithError(err).Error("Failed to calculate license hash for management cluster")
 		return err
@@ -74,7 +76,7 @@ func (c *reconciler) reconcileManagedLicense() error {
 
 	var managedLicenseHash string
 	if managedLicense != nil {
-		managedLicenseHash, err = resource.CreateHashFromObject(managedLicense.Spec)
+		managedLicenseHash, err = utils.GenerateTruncatedHash(managedLicense.Spec, 24)
 		if err != nil {
 			logger.WithError(err).Error("Failed to calculate license hash for managed cluster")
 			return err
