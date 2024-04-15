@@ -296,7 +296,7 @@ func (e *Service) QueryIPSet(ctx context.Context, geoDB geodb.GeoDatabase, feed 
 	}
 
 	newIpSetHash := util.ComputeSha256Hash(ipset)
-	var fromTimestamp time.Time
+	fromTimestamp := time.Now()
 	currentIpSetHash := feed.Annotations[IpSetHashKey]
 	// If the ipSet has changed we need to query from the beginning of time, otherwise query from the last successful time
 	if feed.Status.LastSuccessfulSearch != nil && strings.Compare(newIpSetHash, currentIpSetHash) == 0 {
@@ -347,7 +347,7 @@ func flowParams(tr lmav1.TimeRange, matchType lsv1.MatchType, t []string) lsv1.F
 
 func (e *Service) QueryDomainNameSet(ctx context.Context, domainNameSet DomainNameSetSpec, feed *apiV3.GlobalThreatFeed) (Iterator[lsv1.DNSLog], string, error) {
 	newDomainNameSetHash := util.ComputeSha256Hash(domainNameSet)
-	var fromTimestamp time.Time
+	fromTimestamp := time.Now()
 	currentDomainNameSetHash := feed.Annotations[DomainNameSetHashKey]
 	// If the domainNameSet has changed we need to query from the beginning of time, otherwise query from the last successful time
 	if feed.Status.LastSuccessfulSearch != nil && strings.Compare(newDomainNameSetHash, currentDomainNameSetHash) == 0 {
