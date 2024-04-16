@@ -3,6 +3,10 @@
 package middlewares
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -12,7 +16,7 @@ import (
 var fieldCapsRegexp = regexp.MustCompile("(/tigera_secure_ee_)(.+)(\\*)(/_field_caps)")
 var asyncSearchRegexp = regexp.MustCompile("(/tigera_secure_ee_)(.+)(\\*)(/_async_search)")
 
-func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
+func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	switch {
 	// All requests that are whitelisted below are needed to mark Kibana up and running
 	case r.URL.Path == "/_bulk" && r.Method == http.MethodPost:
@@ -21,7 +25,7 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// {"update":{"_id":"task:endpoint:user-artifact-packager:1.0.0","_index":".kibana_task_manager_7.17.18"}}
 		// We need to filter through the body of this request and determine if we access any other index that .kibana*
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docs-bulk.html
-		return true, true
+		return isBulkRequestAllowed(w, r)
 	case strings.HasPrefix(r.URL.Path, "/.kibana"):
 		// These request access kibana indices for read/write/update data
 		// DELETE /.kibana_task_manager_7.17.18/_doc/
@@ -46,13 +50,13 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// PUT /.kibana_task_manager_7.17.18_001/_mapping?
 		// PUT /.kibana_task_manager_7.17.18/_create
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/rest-apis.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_nodes" && r.Method == http.MethodGet:
 		// This is a period request Kibana makes to gather information about Elastic nodes
 		// The following information is retrieved: nodes.*.version,nodes.*.http.publish_address,nodes.*.ip
 		// GET /_nodes?filter_path=nodes.*.version%2Cnodes.*.http.publish_address%2Cnodes.*.ip
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster.html#cluster-nodes
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_pit" && r.Method == http.MethodDelete:
 		// This is a request to delete a point in time. We will allow it without checking the index
 		// PIT request are previously make for kibana indices, like the ones below
@@ -60,23 +64,23 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// DELETE /_pit
 		// {"id":"u961AwETLmtpYmFuYV83LjE3LjE4XzAwMRZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3ABY0a1RZdEdHMFRIV0hJYXNIUDZTdFVBAAAAAAAAANE4FnZXUFZrMjdMVENlTFFqSUhxS3VFX1EAARZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3AAA="}
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/point-in-time-api.html
-		return true, true
+		return true, nil
 	case strings.HasPrefix(r.URL.Path, "/_tasks/") && r.Method == http.MethodGet:
 		// This is a request from Kibana to access task APIs
 		// This request is needed for Kibana to be marked Running
 		// GET /_tasks/4kTYtGG0THWHIasHP6StUA%3A658066?wait_for_completion=true&timeout=60s
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/current/tasks.html#tasks-api-path-params
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_template/.kibana" && r.Method == http.MethodHead:
 		// This request checks the existence of template ./_template/.kibana
 		// HEAD /_template/.kibana
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_template/kibana_index_template*" && r.Method == http.MethodGet:
 		// This request retrieves all index templates that start with kibana_index_template
 		// GET /_template/kibana_index_template*
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-get-template.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_search" && r.Method == http.MethodPost:
 		// This is a search request that does not specify the index in the path. This needs special handling to determine
 		// if we support the query or not. For example, search requests with a point in time do not
@@ -94,42 +98,42 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		//    "keep_alive": "10m"
 		//  }..}
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/point-in-time-api.html
-		return true, true
+		return isSearchRequestAllowed(w, r)
 	case r.URL.Path == "/_security/privilege/kibana-.kibana" && r.Method == http.MethodGet:
 		// This request retrieves privileges for application kibana-.kibana
 		// GET /_security/privilege/kibana-.kibana
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-api-get-privileges.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_security/user/_has_privileges" && r.Method == http.MethodPost:
 		// This requests checks what privileges has application kibana-.kibana
 		// POST /_security/user/_has_privileges
 		// {"index":[],"application":[{"application":"kibana-.kibana","resources":["*"],"privileges":["version:7.17.18","login:","ui:7.17.18:enterpriseSearch/all"]}]
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-api-has-privileges.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_xpack" && r.Method == http.MethodGet:
 		// This is a request Kibana makes under format
 		// GET /_xpack?accept_enterprise=true
 		// This request retrieves license details
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/info-api.html
-		return true, false
+		return true, nil
 
 	// All requests that are whitelisted below are needed to load Discovery and Dashboards
-	case asyncSearchRegexp.MatchString(r.URL.Path) && r.Method == http.MethodPost:
+	case asyncSearchRegexp.MatchString(r.URL.Path) && r.Method == http.MethodPost && !r.URL.Query().Has("q"):
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// This will start an async search request. We expect to have the query
 		// defined inside the body at this step. We will allow async requests
 		// only for calico indices and enhance them with tenancy enforcement
 		// POST /tigera_secure_ee_flows*/_async_search
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/async-search.html
-		return true, true
-	case strings.HasPrefix(r.URL.Path, "/_async_search") && r.Method == http.MethodGet:
+		return true, nil
+	case strings.HasPrefix(r.URL.Path, "/_async_search") && r.Method == http.MethodGet && !r.URL.Query().Has("q"):
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// This will retrieve partial results from the previous issued query
 		// We will restrict creation of async searches requests to calico indices and
 		// enhance them with a tenancy enforcement. Thus, these requests will be allowed
 		// GET /_async_search/FnF4REF0THh5U2gtM3Q0eVpMdWltSmcdNGtUWXRHRzBUSFdISWFzSFA2U3RVQToxMTUwMTY=
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/async-search.html
-		return true, false
+		return true, nil
 	case strings.HasPrefix(r.URL.Path, "/_async_search") && r.Method == http.MethodDelete:
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// This will delete a previously started async search requests
@@ -137,13 +141,13 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// enhance them with a tenancy enforcement. Thus, these requests will be allowed
 		// DELETE /_async_search/FnF4REF0THh5U2gtM3Q0eVpMdWltSmcdNGtUWXRHRzBUSFdISWFzSFA2U3RVQToxMTUwMTY=
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/async-search.html
-		return true, false
+		return true, nil
 	case fieldCapsRegexp.MatchString(r.URL.Path) && r.Method == http.MethodGet:
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// We will limit this API only for calico indices
 		// GET /tigera_secure_ee_flows*/_field_caps
 		// Elastic API: https: //www.elastic.co/guide/en/elasticsearch/reference/7.17/search-field-caps.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_mget" && r.Method == http.MethodPost:
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// POST /_mget
@@ -151,12 +155,34 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// We need to filter through the body of this request and determine if we
 		// access any other index that .kibana*
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docs-multi-get.html
-		return true, true
+		return isMGETRequestAllowed(w, r)
 	case r.URL.Path == "/_security/_authenticate" && r.Method == http.MethodGet:
-		// This request is used for users to log in
+		// This request is used when users log in
 		// GET /_security/_authenticate
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-api-authenticate.html
-		return true, false
+		return true, nil
+
+	// All requests below are needed by apm plugin
+	// https://github.com/elastic/kibana/tree/7.17/x-pack/plugins/apm
+	case r.URL.Path == "/.apm-agent-configuration" && r.Method == http.MethodHead:
+		// This request is needed by the apm plugin
+		// HEAD /.apm-agent-configuration
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
+		return true, nil
+	case r.URL.Path == "/.apm-agent-configuration/_mapping" && r.Method == http.MethodPut:
+		// This request is needed by the apm plugin
+		// PUT /.apm-agent-configuration/_mapping
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-put-mapping.html
+		return true, nil
+	case r.URL.Path == "/.apm-custom-link" && r.Method == http.MethodHead:
+		// This request is needed by the apm plugin
+		// HEAD /.apm-custom-link
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
+		return true, nil
+	case r.URL.Path == "/.apm-custom-link/_mapping" && r.Method == http.MethodPut:
+		// This request is needed by the apm plugin
+		// PUT /.apm-custom-link/_mapping
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-put-mapping.html
 
 	// All requests are needed by event log plugin
 	// https://github.com/elastic/kibana/blob/8.13/x-pack/plugins/event_log/README.md
@@ -164,49 +190,27 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// This request is needed by the event log plugin
 		// HEAD /_alias/.kibana-event-log-7.17.18
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-get-alias.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_ilm/policy/kibana-event-log-policy" && r.Method == http.MethodGet:
 		// This request is needed by the event log plugin
 		// GET /_ilm/policy/kibana-event-log-policy
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/ilm-get-lifecycle.html
-		return true, false
+		return true, nil
 	case strings.HasPrefix(r.URL.Path, "/_index_template/.kibana-event-log") && r.Method == http.MethodHead:
 		// This request is needed by the event log plugin
 		// HEAD /_index_template/.kibana-event-log-7.17.18-template
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, false
+		return true, nil
 	case strings.HasPrefix(r.URL.Path, "/_template/.kibana-event-log") && r.Method == http.MethodHead:
 		// This request is needed by the event log plugin
 		// HEAD /_template/.kibana-event-log-7.17.18-template
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_template/.kibana-event-log-*" && r.Method == http.MethodGet:
 		// This request is needed by the event log plugin
 		// GET /_template/.kibana-event-log-*
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-get-template.html
-		return true, false
-
-	// All requests below are needed by apm plugin
-	// https://github.com/elastic/kibana/tree/8.13/x-pack/plugins/apm
-	case r.URL.Path == "/.apm-agent-configuration" && r.Method == http.MethodHead:
-		// This request is needed by the apm plugin
-		// HEAD /.apm-agent-configuration
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, false
-	case r.URL.Path == "/.apm-agent-configuration/_mapping" && r.Method == http.MethodPut:
-		// This request is needed by the apm plugin
-		// PUT /.apm-agent-configuration/_mapping
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-put-mapping.html
-		return true, false
-	case r.URL.Path == "/.apm-custom-link" && r.Method == http.MethodHead:
-		// This request is needed by the apm plugin
-		// HEAD /.apm-custom-link
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, false
-	case r.URL.Path == "/.apm-custom-link/_mapping" && r.Method == http.MethodPut:
-		// This request is needed by the apm plugin
-		// PUT /.apm-custom-link/_mapping
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-put-mapping.html
+		return true, nil
 
 	// All requests are needed by the monitoring plugin
 	// https://github.com/elastic/kibana/tree/8.13/x-pack/plugins/monitoring
@@ -214,7 +218,7 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// This request is needed by the monitor plugin
 		// POST /_monitoring/bulk?system_id=kibana&system_api_version=7&interval=10000ms
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docs-bulk.html
-		return true, false
+		return true, nil
 
 	// All requests are needed by the reporting plugin
 	// https://github.com/elastic/kibana/tree/8.13/x-pack/plugins/reporting
@@ -222,12 +226,12 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// This request is needed by the reporting plugin
 		// POST /.reporting-*/_search?size=1&seq_no_primary_term=true&_source_excludes=output
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-search.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_ilm/policy/kibana-reporting" && r.Method == http.MethodGet:
 		// This request is needed by the reporting plugin
 		// GET /_ilm/policy/kibana-reporting
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/ilm-get-lifecycle.html
-		return true, false
+		return true, nil
 
 	// All requests below are needed by ruleRegistry plugin
 	// https://github.com/elastic/kibana/blob/main/x-pack/plugins/rule_registry/README.md
@@ -235,42 +239,42 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// This request is needed by the ruleRegistry plugin
 		// GET /_component_template/.alerts-ecs-mappings
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/getting-component-templates.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_component_template/.alerts-ecs-mappings" && r.Method == http.MethodPut:
 		// This request is needed by the ruleRegistry plugin
 		// PUT /_component_template/.alerts-ecs-mappings
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_component_template/.alerts-observability.apm.alerts-mappings" && r.Method == http.MethodPut:
 		// This request is needed by the ruleRegistry plugin
 		// PUT /_component_template/.alerts-observability.apm.alerts-mappings
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_component_template/.alerts-observability.logs.alerts-mappings" && r.Method == http.MethodPut:
 		// This request is needed by the ruleRegistry plugin
 		// PUT /_component_template/.alerts-observability.logs.alerts-mappings
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_component_template/.alerts-observability.metrics.alerts-mappings" && r.Method == http.MethodPut:
 		// This request is needed by the ruleRegistry plugin
 		// PUT /_component_template/.alerts-observability.metrics.alerts-mappings
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_component_template/.alerts-observability.uptime.alerts-mappings" && r.Method == http.MethodPut:
 		// This request is needed by the ruleRegistry plugin
 		// PUT /_component_template/.alerts-observability.uptime.alerts-mappings
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_component_template/.alerts-technical-mappings" && r.Method == http.MethodPut:
 		// This request is needed by the ruleRegistry plugin
 		// PUT /_component_template/.alerts-technical-mappings
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_ilm/policy/.alerts-ilm-policy" && r.Method == http.MethodPut:
 		// This request is needed by the ruleRegistry plugin
 		// GET /_ilm/policy/.alerts-ilm-policy
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/ilm-get-lifecycle.html
-		return true, false
+		return true, nil
 
 	// ALl requests below are needed by the security plugin
 	// https://github.com/elastic/kibana/tree/8.13/x-pack/plugins/security
@@ -278,17 +282,203 @@ func IsWhiteListed(r *http.Request) (allow bool, inspectBody bool) {
 		// This request is needed by the security plugin
 		// HEAD /_index_template/.kibana_security_session_index_template_1
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, false
+		return true, nil
 	case r.URL.Path == "/_template/.kibana_security_session_index_template_1" && r.Method == http.MethodHead:
 		// This request checks the existence of template .kibana_security_session_index_template_1
 		// This request is needed by the security plugin
 		// HEAD /_template/.kibana_security_session_index_template_1
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, false
+		return true, nil
 
 	default:
-		return false, false
+		return false, nil
 	}
 
-	return false, false
+	return false, nil
+}
+
+// IndexMetadata is used unmarshal a JSON and
+// extract the index name
+type IndexMetadata struct {
+	Index string `json:"_index"`
+}
+
+// BulkAction is used unmarshal a single JSON line from _bulk request
+// and extract only the index
+type BulkAction struct {
+	Update *IndexMetadata `json:"update,omitempty"`
+	Index  *IndexMetadata `json:"index,omitempty"`
+	Delete *IndexMetadata `json:"delete,omitempty"`
+	Create *IndexMetadata `json:"create,omitempty"`
+}
+
+func (r BulkAction) GetIndexMetadata() *IndexMetadata {
+	if r.Create != nil {
+		return r.Create
+	} else if r.Delete != nil {
+		return r.Delete
+	} else if r.Index != nil {
+		return r.Index
+	} else if r.Update != nil {
+		return r.Update
+	}
+
+	return nil
+}
+
+var NoIndexBulkError = fmt.Errorf("no index referenced on the request")
+
+// isBulkRequestAllowed will determine if a bulk request is allowed or not
+// Bulk requests have the following format:
+// POST _bulk
+// { "index" : { "_index" : "test", "_id" : "1" } }
+// { "field1" : "value1" }
+// { "delete" : { "_index" : "test", "_id" : "2" } }
+// { "create" : { "_index" : "test", "_id" : "3" } }
+// { "field1" : "value3" }
+// { "update" : {"_id" : "1", "_index" : "test"} }
+// { "doc" : {"field2" : "value2"} }
+// We need to process each action and determine if we reference any other index
+// than a .kibana index
+func isBulkRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) {
+	body, err := ReadBody(w, r)
+	if err != nil {
+		return false, err
+	}
+
+	// We need to process each line and determine if we have index, delete, create or update
+	lines := strings.Split(string(bytes.Trim(body, "\r\n")), "\n")
+	for index := 0; index < len(lines); index++ {
+		bulkRequest := BulkAction{}
+		err = json.Unmarshal([]byte(lines[index]), &bulkRequest)
+		if err != nil {
+			return false, err
+		}
+
+		if bulkRequest.Index != nil || bulkRequest.Update != nil || bulkRequest.Create != nil {
+			// This is an index/update/create elastic action
+			// These actions expect the full document on the next line
+			// We will need to skip processing next element
+			index++
+		}
+
+		indexMetadata := bulkRequest.GetIndexMetadata()
+		if indexMetadata == nil {
+			return false, NoIndexBulkError
+		}
+
+		if !isAKibanaIndex(indexMetadata.Index) {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// SearchRequestWithPIT is used unmarshal a JSON _search request
+// and extract only the PointInTime
+type SearchRequestWithPIT struct {
+	PIT PointInTime `json:"pit"`
+}
+
+// PointInTime is used unmarshal a JSON _search request
+// and extract only the PointInTime ID
+type PointInTime struct {
+	ID string `json:"id"`
+}
+
+// isSearchRequestAllowed will determine if a _search request is allowed or not
+// POST /_search?allow_partial_search_results=false
+//
+//	{
+//	 "sort": {
+//	   "_shard_doc": {
+//	     "order": "asc"
+//	   }
+//	 },
+//	 "pit": {
+//	   "id": "u961AwETLmtpYmFuYV83LjE3LjE4XzAwMRZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3ABY0a1RZdEdHMFRIV0hJYXNIUDZTdFVBAAAAAAAAAD_TFnZXUFZrMjdMVENlTFFqSUhxS3VFX1EAARZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3AAA=",
+//	   "keep_alive": "10m"
+//	 }..}
+//
+// We need to process the point in time ID and determine if it references any other index
+// than a .kibana index
+func isSearchRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) {
+	// We expect this type of request to be issued only against Kibana indices
+	body, err := ReadBody(w, r)
+	if err != nil {
+		return false, err
+	}
+	searchRequest := SearchRequestWithPIT{}
+	err = json.Unmarshal(body, &searchRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if searchRequest.PIT.ID == "" {
+		// We will reject any search without an index and a point in time
+		return false, nil
+	}
+
+	// Search request with a point in time do not specify
+	// the index on the request. We can base64 decode and extract the name
+	decodedID, err := base64.StdEncoding.DecodeString(searchRequest.PIT.ID)
+	if err != nil {
+		return false, err
+	}
+
+	if !isAKibanaIndex(string(decodedID)) {
+		// We will reject any search request with a point in time that does not
+		// reference a kibana index
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// MultipleGetRequest is used unmarshal a JSON _mget request
+// and extract only the index from the documents
+type MultipleGetRequest struct {
+	Docs []IndexMetadata `json:"docs"`
+}
+
+// isMGETRequestAllowed will determine if a _mget request is allowed or not
+// POST /_mget
+//
+//	{
+//	 "docs": [
+//	   {
+//	     "_index": "my-index-000001",
+//	     "_id": "1"
+//	   },
+//	   {
+//	     "_index": "my-index-000001",
+//	     "_id": "2"
+//	   }
+//	 ]
+//	}
+//
+// We need to process each document and determine if we reference any other index
+// than a .kibana index
+func isMGETRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) {
+	body, err := ReadBody(w, r)
+	if err != nil {
+		return false, err
+	}
+	mGetRequest := MultipleGetRequest{}
+	err = json.Unmarshal(body, &mGetRequest)
+	if err != nil {
+		return false, err
+	}
+
+	for _, doc := range mGetRequest.Docs {
+		if !isAKibanaIndex(doc.Index) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func isAKibanaIndex(id string) bool {
+	return strings.HasPrefix(id, ".kibana")
 }
