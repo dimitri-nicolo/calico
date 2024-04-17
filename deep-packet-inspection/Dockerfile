@@ -11,7 +11,6 @@ ARG TARGETARCH
 # Copy snort and dependencies
 COPY --from=snort /usr/bin/snort /usr/bin/snort
 COPY --from=snort /usr/lib64/libdaq.so.3 /lib64/libdaq.so.3
-
 COPY --from=snort /lib64/libcrypto.so.1.1 /lib64/libcrypto.so.1.1
 COPY --from=snort /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=snort /lib64/libdnet.so.1 /lib64/libdnet.so.1
@@ -32,10 +31,22 @@ COPY --from=snort /lib64/libz.so.1 /lib64/libz.so.1
 # Copy snort scripts and community rules
 COPY --from=snort /usr/etc/snort /usr/etc/snort/
  
-# Copy log location
+# Copy snort log location
 COPY --from=snort /var/log/snort /var/log/snort/
 COPY --from=snort /var/log/snort-alerts /var/log/snort-alerts/
 
+# Copy tar binary and dependencies
+COPY --from=snort /usr/bin/tar /usr/bin/tar
+COPY --from=snort /lib64/libacl.so.1 /lib64/libacl.so.1
+COPY --from=snort /lib64/libselinux.so.1 /lib64/libselinux.so.1
+COPY --from=snort /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=snort /lib64/libattr.so.1 /lib64/libattr.so.1
+COPY --from=snort /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
+COPY --from=snort /lib64/libdl.so.2 /lib64/libdl.so.2
+COPY --from=snort /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=snort /lib64/libpthread.so.0 /lib64/libpthread.so.0
+
+# Copy the deep-packet-inspection binary
 COPY bin/deep-packet-inspection-${TARGETARCH} /usr/bin/deep-packet-inspection
 
 FROM calico/base
