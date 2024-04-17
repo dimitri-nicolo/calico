@@ -83,7 +83,6 @@ type newProcessor func(ctx context.Context,
 	snortExecFn exec.Snort,
 	snortAlertFileBasePath string,
 	snortAlertFileSize int,
-	snortCommunityRulesFile string,
 	dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor
 
 type newEventGenerator func(cfg *config.Config,
@@ -298,7 +297,7 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 
 func (h *dispatcher) initializeDPI(ctx context.Context, dpiKey model.ResourceKey) DPI {
 	log.Debugf("Initializing deep packet inspection for %v", dpiKey)
-	processor := h.snortProcessor(ctx, dpiKey, h.cfg.NodeName, exec.NewExec, h.cfg.SnortAlertFileBasePath, h.cfg.SnortAlertFileSize, h.cfg.SnortCommunityRulesFile, h.dpiUpdater)
+	processor := h.snortProcessor(ctx, dpiKey, h.cfg.NodeName, exec.NewExec, h.cfg.SnortAlertFileBasePath, h.cfg.SnortAlertFileSize, h.dpiUpdater)
 	generator := h.eventGenerator(h.cfg, h.alertForwarder, h.dpiUpdater, dpiKey, h.wepCache)
 	return DPI{
 		snortProcessor: processor,
