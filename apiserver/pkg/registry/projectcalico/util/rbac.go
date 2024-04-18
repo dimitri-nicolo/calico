@@ -121,7 +121,7 @@ func authorizeTiers(ctx context.Context, tiers []string, authorizer authorizer.T
 	for _, tier := range tiers {
 		err := authorizer.AuthorizeTierOperation(ctx, "", tier)
 		if err != nil {
-			return fmt.Errorf("Operation on Calico tiered policy is forbidden")
+			return err
 		}
 	}
 
