@@ -39,12 +39,9 @@ COPY --from=snort /var/log/snort-alerts /var/log/snort-alerts/
 COPY --from=snort /usr/bin/tar /usr/bin/tar
 COPY --from=snort /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=snort /lib64/libselinux.so.1 /lib64/libselinux.so.1
-COPY --from=snort /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=snort /lib64/libattr.so.1 /lib64/libattr.so.1
 COPY --from=snort /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=snort /lib64/libdl.so.2 /lib64/libdl.so.2
-COPY --from=snort /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=snort /lib64/libpthread.so.0 /lib64/libpthread.so.0
 
 # Copy the deep-packet-inspection binary
 COPY bin/deep-packet-inspection-${TARGETARCH} /usr/bin/deep-packet-inspection
