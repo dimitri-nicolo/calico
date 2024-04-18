@@ -60,7 +60,7 @@ const (
 
 	DefaultConfigMapNamespace = TigeraIntrusionDetectionNamespace
 	DefaultSecretsNamespace   = TigeraIntrusionDetectionNamespace
-	DefaultMaxLinseedTimeSkew = 1 // minute
+	DefaultMaxLinseedTimeSkew = 5 // minute
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
