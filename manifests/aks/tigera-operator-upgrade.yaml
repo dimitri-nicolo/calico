@@ -44103,6 +44103,7 @@ rules:
       - monitors
       - monitors/finalizers
       - monitors/status
+      - packetcaptures
       - policyrecommendations
       - policyrecommendations/finalizers
       - policyrecommendations/status
