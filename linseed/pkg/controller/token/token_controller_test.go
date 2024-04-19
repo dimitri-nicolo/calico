@@ -13,26 +13,26 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	k8stesting "k8s.io/client-go/testing"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+
 	"github.com/SermoDigital/jose/jws"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
-
-	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	k8stesting "k8s.io/client-go/testing"
 
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 
 	"github.com/projectcalico/calico/linseed/pkg/controller/token"
 
@@ -143,18 +143,20 @@ func TestOptions(t *testing.T) {
 func TestMainlineFunction(t *testing.T) {
 	testCases := []struct {
 		tenantNamespace string
+		tenantID        string
 		tenantMode      string
 	}{
-		{"", "single tenant"},
-		{"tenant-a", "multi tenant"},
+		{"", "", "zero tenant"},
+		{"", "tenantA", "single tenant"},
+		{"tenant-a", "tenantA", "multi tenant"},
 	}
 	for _, tc := range testCases {
-		testMainlineFunction(t, tc.tenantNamespace, tc.tenantMode)
+		testMainlineFunction(t, tc.tenantNamespace, tc.tenantID, tc.tenantMode)
 	}
 }
 
-var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string) {
-	t.Run("provision a secret for a service in a connected managed cluster in"+tenantMode, func(t *testing.T) {
+var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantMode string) {
+	t.Run("provision a secret for a service in a connected managed cluster in "+tenantMode, func(t *testing.T) {
 		defer setup(t)()
 
 		// Add a managed cluster.
@@ -180,6 +182,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string
 			token.WithFactory(factory),
 			token.WithK8sClient(mockK8sClient),
 			token.WithNamespace(tenantNamespace),
+			token.WithTenant(tenantID),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -204,6 +207,84 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string
 		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
 		require.Equal(t, tokenName, secret.Name)
 		require.Equal(t, defaultNamespace, secret.Namespace)
+
+		// Check generated token
+		require.NotNil(t, secret.Data)
+		require.NotNil(t, secret.Data["token"])
+		jwtToken, err := jws.ParseJWT(secret.Data["token"])
+		require.NoError(t, err)
+		subject, hasSubject := jwtToken.Claims().Subject()
+		require.True(t, hasSubject)
+		require.Equal(t, fmt.Sprintf("%s:%s:%s:%s", tenantID, mc.Name, defaultNamespace, defaultServiceName), subject)
+	})
+
+	t.Run("provision a secret for a service with a tenant namespace override in a connected managed cluster in "+tenantMode, func(t *testing.T) {
+		defer setup(t)()
+
+		// Add a managed cluster.
+		mc := v3.ManagedCluster{}
+		mc.Name = "test-managed-cluster"
+		mc.Namespace = tenantNamespace
+		mc.Status.Conditions = []v3.ManagedClusterStatusCondition{
+			{
+				Type:   v3.ManagedClusterStatusTypeConnected,
+				Status: v3.ManagedClusterStatusValueTrue,
+			},
+		}
+		err := fakeClient.Create(context.Background(), &mc)
+		require.NoError(t, err)
+
+		// Make a new controller.
+		opts := []token.ControllerOption{
+			token.WithControllerRuntimeClient(fakeClient),
+			token.WithPrivateKey(privateKey),
+			token.WithIssuer(issuer),
+			token.WithIssuerName(issuer),
+			token.WithUserInfos([]token.UserInfo{{Name: defaultServiceName, Namespace: defaultNamespace, TenantNamespaceOverride: tenantNamespace}}),
+			token.WithFactory(factory),
+			token.WithK8sClient(mockK8sClient),
+			token.WithNamespace(tenantNamespace),
+			token.WithTenant(tenantID),
+		}
+		controller, err := token.NewController(opts...)
+		require.NoError(t, err)
+		require.NotNil(t, controller)
+
+		// Set the mock client set as the return value for the factory.
+		factory.On("NewClientSetForApplication", mc.Name).Return(&mockClientSet, nil)
+		factory.On("Impersonate", nilUserPtr).Return(factory)
+
+		// Reconcile.
+		stopCh := make(chan struct{})
+		defer close(stopCh)
+		go controller.Run(stopCh)
+
+		// Expect a token to have been generated. This happens asynchronously, so we need
+		// to wait for the controller to finish processing.
+		var secret *corev1.Secret
+		secretCreated := func() bool {
+			secret, err = mockK8sClient.CoreV1().Secrets(defaultNamespace).Get(ctx, tokenName, v1.GetOptions{})
+			return err == nil
+		}
+		require.Eventually(t, secretCreated, 5*time.Second, 100*time.Millisecond)
+		require.Equal(t, tokenName, secret.Name)
+		require.Equal(t, defaultNamespace, secret.Namespace)
+
+		// Check generated token
+		require.NotNil(t, secret.Data)
+		require.NotNil(t, secret.Data["token"])
+		jwtToken, err := jws.ParseJWT(secret.Data["token"])
+		require.NoError(t, err)
+		subject, hasSubject := jwtToken.Claims().Subject()
+		require.True(t, hasSubject)
+		switch tenantMode {
+		case "multi tenant":
+			require.Equal(t, fmt.Sprintf("%s:%s:%s:%s", tenantID, mc.Name, tenantNamespace, defaultServiceName), subject)
+		case "single tenant":
+			require.Equal(t, fmt.Sprintf("%s:%s:%s:%s", tenantID, mc.Name, defaultNamespace, defaultServiceName), subject)
+		case "zero tenant":
+			require.Equal(t, fmt.Sprintf("%s:%s:%s:%s", tenantID, mc.Name, defaultNamespace, defaultServiceName), subject)
+		}
 	})
 
 	t.Run("provision a secret for a service when a managed cluster becomes connected in "+tenantMode, func(t *testing.T) {
@@ -1018,7 +1099,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantMode string
 			jwt, err := jws.ParseJWT(tokenBytes)
 			require.NoError(t, err)
 
-			newTokenSubject := token.GenerateSubjectLinseed("", newManagedCluster.Name, defaultNamespace, defaultServiceName)
+			newTokenSubject := token.GenerateSubjectLinseed("", newManagedCluster.Name, defaultNamespace, defaultServiceName, "")
 			subj, ok = jwt.Claims().Subject()
 			require.True(t, ok)
 			return subj == newTokenSubject
