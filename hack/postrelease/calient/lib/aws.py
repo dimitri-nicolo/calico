@@ -22,7 +22,7 @@ except ImportError:
 
 
 @functools.cache
-def bc_credential_cache_session():
+def bc_credential_cache_session(profile_name):
     """
     Set up a botocore session object and configure it to use a local
     credential cache (e.g. the one used by the AWS CLI tool).
@@ -33,7 +33,7 @@ def bc_credential_cache_session():
     """
     cli_cache = pathlib.Path("~/.aws/cli/cache").expanduser().as_posix()
     session = botocore.session.get_session()
-    session.set_config_variable("profile", "helm")
+    session.set_config_variable("profile", profile_name)
     session.get_component("credential_provider").get_provider(
         "assume-role"
     ).cache = credentials.JSONFileCache(cli_cache)
@@ -53,7 +53,7 @@ class S3Bucket:
         self.profile_name = profile_name
         self.session = boto3.Session(
             profile_name=self.profile_name,
-            botocore_session=bc_credential_cache_session(),
+            botocore_session=bc_credential_cache_session(profile_name),
         )
         self.s3_resource = self.session.resource("s3")
         self.s3_client = self.session.client("s3")
