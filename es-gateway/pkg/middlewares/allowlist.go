@@ -23,7 +23,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// This is a request Kibana makes to update its indices
 		// POST /_bulk?refresh=false&_source_includes=originId&require_alias=true
 		// {"update":{"_id":"task:endpoint:user-artifact-packager:1.0.0","_index":".kibana_task_manager_7.17.18"}}
-		// We need to filter through the body of this request and determine if we access any other index that .kibana*
+		// We need to filter through the body of this request and determine if we access only .kibana indices
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docs-bulk.html
 		return isBulkRequestAllowed(w, r)
 	case strings.HasPrefix(r.URL.Path, "/.kibana"):
@@ -52,7 +52,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/rest-apis.html
 		return true, nil
 	case r.URL.Path == "/_nodes" && r.Method == http.MethodGet:
-		// This is a period request Kibana makes to gather information about Elastic nodes
+		// This is a periodic request Kibana makes to gather information about Elastic nodes
 		// The following information is retrieved: nodes.*.version,nodes.*.http.publish_address,nodes.*.ip
 		// GET /_nodes?filter_path=nodes.*.version%2Cnodes.*.http.publish_address%2Cnodes.*.ip
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster.html#cluster-nodes
@@ -111,13 +111,12 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-api-has-privileges.html
 		return true, nil
 	case r.URL.Path == "/_xpack" && r.Method == http.MethodGet:
-		// This is a request Kibana makes under format
+		// This is a request Kibana makes to retrieves license details
 		// GET /_xpack?accept_enterprise=true
-		// This request retrieves license details
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/info-api.html
 		return true, nil
 
-	// All requests that are whitelisted below are needed to load Discovery and Dashboards
+	// All requests that are allowed below are needed to load Discovery and Dashboards
 	case asyncSearchRegexp.MatchString(r.URL.Path) && r.Method == http.MethodPost && !r.URL.Query().Has("q"):
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// This will start an async search request. We expect to have the query
@@ -153,7 +152,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// POST /_mget
 		// {"docs":[{"_id":"dashboard:3a849d80-e970-11ea-83c8-edded0d3c4d6","_index":".kibana_7.17.18"}]}
 		// We need to filter through the body of this request and determine if we
-		// access any other index that .kibana*
+		// access only .kibana* indices
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/docs-multi-get.html
 		return isMGETRequestAllowed(w, r)
 	case r.URL.Path == "/_security/_authenticate" && r.Method == http.MethodGet:
@@ -161,28 +160,6 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// GET /_security/_authenticate
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-api-authenticate.html
 		return true, nil
-
-	// All requests below are needed by apm plugin
-	// https://github.com/elastic/kibana/tree/7.17/x-pack/plugins/apm
-	case r.URL.Path == "/.apm-agent-configuration" && r.Method == http.MethodHead:
-		// This request is needed by the apm plugin
-		// HEAD /.apm-agent-configuration
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, nil
-	case r.URL.Path == "/.apm-agent-configuration/_mapping" && r.Method == http.MethodPut:
-		// This request is needed by the apm plugin
-		// PUT /.apm-agent-configuration/_mapping
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-put-mapping.html
-		return true, nil
-	case r.URL.Path == "/.apm-custom-link" && r.Method == http.MethodHead:
-		// This request is needed by the apm plugin
-		// HEAD /.apm-custom-link
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-template-exists-v1.html
-		return true, nil
-	case r.URL.Path == "/.apm-custom-link/_mapping" && r.Method == http.MethodPut:
-		// This request is needed by the apm plugin
-		// PUT /.apm-custom-link/_mapping
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-put-mapping.html
 
 	// All requests are needed by event log plugin
 	// https://github.com/elastic/kibana/blob/8.13/x-pack/plugins/event_log/README.md
