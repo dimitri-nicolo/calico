@@ -23,10 +23,7 @@ def create_github_obj():
     Create and return a Github object with the standard
     authorization token.
     """
-    try:
-        return github.Github(auth=github.Auth.Token(defaults.GITHUB_TOKEN))
-    except UndefinedVariableError:
-        pytest.fail("Required variable GITHUB_TOKEN was not specified")
+    return github.Github()
 
 
 @pytest.fixture(name="operator_obj")
