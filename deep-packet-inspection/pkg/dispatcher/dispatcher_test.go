@@ -60,7 +60,7 @@ var _ = Describe("Resource Dispatcher", func() {
 		mockProcessor2 := &processor.MockProcessor{}
 		mockDPIUpdater := &dpiupdater.MockDPIStatusUpdater{}
 		mockFileMaintainer := &file.MockFileMaintainer{}
-		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, snortCommunityRulesFile string, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
+		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
 			if reflect.DeepEqual(dpiKey, dpiKey1) {
 				return mockProcessor1
 			}
@@ -127,7 +127,7 @@ var _ = Describe("Resource Dispatcher", func() {
 			wepCache cache.WEPCache) eventgenerator.EventGenerator {
 			return mockGenerator
 		}
-		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, snortCommunityRulesFile string, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
+		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
 			return mockProcessor1
 		}
 		ctx := context.Background()
@@ -156,7 +156,7 @@ var _ = Describe("Resource Dispatcher", func() {
 			return mockGenerator
 		}
 
-		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, snortCommunityRulesFile string, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
+		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
 			return mockProcessor1
 		}
 		ctx := context.Background()
@@ -192,7 +192,7 @@ var _ = Describe("Resource Dispatcher", func() {
 			return mockGenerator
 		}
 
-		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, snortCommunityRulesFile string, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
+		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
 			return mockProcessor1
 		}
 		ctx := context.Background()
@@ -218,7 +218,7 @@ var _ = Describe("Resource Dispatcher", func() {
 			return mockGenerator
 		}
 
-		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, snortCommunityRulesFile string, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
+		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
 			return mockProcessor1
 		}
 		ctx := context.Background()
@@ -264,7 +264,7 @@ var _ = Describe("Resource Dispatcher", func() {
 			return mockGenerator
 		}
 
-		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, snortCommunityRulesFile string, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
+		mockSnortProcessor := func(ctx context.Context, dpiKey model.ResourceKey, nodeName string, snortExecFn exec.Snort, snortAlertFileBasePath string, snortAlertFileSize int, dpiUpdater dpiupdater.DPIStatusUpdater) processor.Processor {
 			return mockProcessor1
 		}
 		ctx := context.Background()

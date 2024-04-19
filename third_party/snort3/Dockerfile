@@ -52,4 +52,5 @@ RUN snort -V && snort -c /usr/etc/snort/snort.lua -T
 # Create Snorts Log directory
 RUN mkdir /var/log/snort /var/log/snort-alerts
 
-COPY snort3-community.rules /usr/etc/snort/snort3-community.rules
+# Copy Snort community rules
+COPY snort3-community.rules /usr/etc/snort/rules/snort3-community.rules
