@@ -101,6 +101,105 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, results)
 	})
+
+	RunAllModes(t, "filter flow logs by generated times", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: cluster,
+			Tenant:  backendutils.RandomTenantName(),
+		}
+
+		// Create a dummy flow.
+		f := v1.FlowLog{
+			StartTime:            time.Now().Unix(),
+			EndTime:              time.Now().Unix(),
+			DestType:             "wep",
+			DestNamespace:        "kube-system",
+			DestNameAggr:         "kube-dns-*",
+			DestServiceNamespace: "default",
+			DestServiceName:      "kube-dns",
+			DestServicePortNum:   testutils.Int64Ptr(53),
+			DestIP:               testutils.StringPtr("fe80::0"),
+			SourceIP:             testutils.StringPtr("fe80::1"),
+			Protocol:             "udp",
+			DestPort:             testutils.Int64Ptr(53),
+			SourceType:           "wep",
+			SourceNamespace:      "default",
+			SourceNameAggr:       "my-deployment",
+			ProcessName:          "-",
+			Reporter:             "src",
+			Action:               "allowed",
+		}
+
+		// Create a flow log
+		response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{f})
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		// Adding sleep to make sure there is no time that falls in the same second...
+		time.Sleep(1 * time.Second)
+		inBetweenTime := time.Now().UTC()
+		time.Sleep(1 * time.Second)
+
+		response, err = flb.Create(ctx, clusterInfo, []v1.FlowLog{f})
+		require.NoError(t, err)
+		require.Equal(t, []v1.BulkError(nil), response.Errors)
+		require.Equal(t, 0, response.Failed)
+
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// Read it back and make sure generated time values are what we expect.
+		allOpts := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Minute),
+					To:   time.Now().Add(5 * time.Minute),
+				},
+			},
+		}
+		allResp, err := flb.List(ctx, clusterInfo, &allOpts)
+		require.NoError(t, err)
+		require.Len(t, allResp.Items, 2)
+
+		require.LessOrEqual(t, allResp.Items[0].GeneratedTime.Unix(), allResp.Items[1].GeneratedTime.Unix())
+		require.LessOrEqual(t, allResp.Items[0].GeneratedTime.Unix(), inBetweenTime.Unix())
+		require.LessOrEqual(t, inBetweenTime.Unix(), allResp.Items[1].GeneratedTime.Unix())
+
+		require.LessOrEqual(t, time.Now().Add(-5*time.Minute).Unix(), allResp.Items[0].GeneratedTime.Unix())
+
+		// Get only the first flow log based on generated time
+		FirstOpts := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From:  time.Now().Add(-5 * time.Minute),
+					To:    inBetweenTime,
+					Field: "generated_time",
+				},
+			},
+		}
+		firstResp, err := flb.List(ctx, clusterInfo, &FirstOpts)
+		require.NoError(t, err)
+		require.Len(t, firstResp.Items, 1)
+
+		require.LessOrEqual(t, firstResp.Items[0].GeneratedTime.Unix(), inBetweenTime.Unix())
+
+		// Get only the last flow log based on generated time
+		LastOpts := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From:  inBetweenTime,
+					To:    time.Now().Add(5 * time.Minute),
+					Field: "generated_time",
+				},
+			},
+		}
+		LastResp, err := flb.List(ctx, clusterInfo, &LastOpts)
+		require.NoError(t, err)
+		require.Len(t, LastResp.Items, 1)
+
+		require.Less(t, inBetweenTime.Unix(), LastResp.Items[0].GeneratedTime.Unix())
+	})
 }
 
 func TestFlowSorting(t *testing.T) {
