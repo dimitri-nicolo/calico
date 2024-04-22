@@ -53,6 +53,8 @@ type cluster struct {
 
 	tunnelManager tunnelmgr.Manager
 
+	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
+
 	// Kubernetes client used for querying and watching ManagedCluster resources.
 	k8sCLI bootstrap.K8sClient
 	client ctrlclient.WithWatch
@@ -119,6 +121,8 @@ type clusters struct {
 
 	// Pool used for client certificate verification.
 	clientCertificatePool *x509.CertPool
+
+	statusUpdateFunc func(name string, status v3.ManagedClusterStatusValue)
 }
 
 func (cs *clusters) makeInnerTLSConfig() error {
@@ -148,11 +152,12 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 	}
 
 	c := &cluster{
-		ManagedCluster: *mc,
-		tunnelManager:  tunnelmgr.NewManager(),
-		k8sCLI:         cs.k8sCLI,
-		client:         cs.client,
-		voltronCfg:     cs.voltronCfg,
+		ManagedCluster:   *mc,
+		tunnelManager:    tunnelmgr.NewManager(),
+		k8sCLI:           cs.k8sCLI,
+		client:           cs.client,
+		voltronCfg:       cs.voltronCfg,
+		statusUpdateFunc: cs.statusUpdateFunc,
 	}
 
 	// Append the new certificate to the client certificate pool.
@@ -408,14 +413,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 
 		if c, ok := cs.clusters[id]; ok {
 			if startupSync {
-				c.Lock()
-
-				// Just update the cluster status even if it's already set to false, we just do this on startup.
-				if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
-					c.Unlock()
-					return "", errors.Errorf("failed to update the connection status for cluster %s during startup.", c.ID)
-				}
-				c.Unlock()
+				c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse, mc.ID)
 			}
 		}
 	}
@@ -504,10 +502,7 @@ func (c *cluster) checkTunnelState() {
 	if err := c.tunnelManager.CloseTunnel(); err != nil && err != tunnel.ErrTunnelClosed {
 		logrus.WithError(err).Error("an error occurred closing the tunnel")
 	}
-
-	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueFalse); err != nil {
-		clog.WithError(err).Error("failed to update the connection status")
-	}
+	c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse, c.ID)
 
 	if err != nil {
 		clog.WithError(err).Error("Cluster tunnel is broken, deleted")
@@ -594,51 +589,17 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 			logrus.Debugf("server has stopped listening for connections from %s", c.ID)
 		}()
 	}
-	if err := c.setConnectedStatus(v3.ManagedClusterStatusValueTrue); err != nil {
-		logrus.WithError(err).Errorf("failed to update the connection status for cluster %s", c.ID)
-	}
+
+	c.sendStatusUpdate(v3.ManagedClusterStatusValueTrue, c.ID)
+
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
 	go c.checkTunnelState()
 
 	return nil
 }
 
-// setConnectedStatus updates the MangedClusterConnected condition of this cluster's ManagedCluster CR.
-func (c *cluster) setConnectedStatus(status v3.ManagedClusterStatusValue) error {
-	mc := &v3.ManagedCluster{}
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err := c.client.Get(ctx, types.NamespacedName{Name: c.ID, Namespace: c.voltronCfg.TenantNamespace}, mc)
-	if err != nil {
-		return err
-	}
-
-	var updatedConditions []v3.ManagedClusterStatusCondition
-
-	connectedConditionFound := false
-	for _, c := range mc.Status.Conditions {
-		if c.Type == v3.ManagedClusterStatusTypeConnected {
-			c.Status = status
-			connectedConditionFound = true
-		}
-		updatedConditions = append(updatedConditions, c)
-	}
-
-	if !connectedConditionFound {
-		updatedConditions = append(updatedConditions, v3.ManagedClusterStatusCondition{
-			Type:   v3.ManagedClusterStatusTypeConnected,
-			Status: status,
-		})
-	}
-
-	mc.Status.Conditions = updatedConditions
-
-	err = c.client.Update(ctx, mc)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (c *cluster) sendStatusUpdate(status v3.ManagedClusterStatusValue, managedClusterID string) {
+	c.statusUpdateFunc(managedClusterID, status)
 }
 
 func (c *cluster) stop() {
