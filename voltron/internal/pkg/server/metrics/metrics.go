@@ -105,6 +105,18 @@ var (
 	}, tunnelIngressLabels)
 )
 
+var (
+	managedConnectionLabels   = []string{"tenant"}
+	ConnectionStatusNotInSync = metrics.NewGaugeVec(&metrics.GaugeOpts{
+		Name: "managedcluster_connection_status_not_in_sync",
+		Help: "The number of ManagedCluster updates that haven't been updated yet",
+	}, managedConnectionLabels)
+	ConnectionStatusFailedAttempts = metrics.NewCounterVec(&metrics.CounterOpts{
+		Name: "managedcluster_connection_status_failed_updates",
+		Help: "The number of ManagedCluster updates that have failed",
+	}, managedConnectionLabels)
+)
+
 func NewHandler() http.Handler {
 	registerOnce.Do(func() {
 		RegisterMetricsWith(legacyregistry.MustRegister)
@@ -129,6 +141,8 @@ func RegisterMetricsWith(mustRegister func(...metrics.Registerable)) {
 		InnerRequestTimeSecondsTotal,
 		InnerRequestBadClusterIDErrors,
 		InnerRequestBadTenantIDErrors,
+		ConnectionStatusNotInSync,
+		ConnectionStatusFailedAttempts,
 	)
 }
 
