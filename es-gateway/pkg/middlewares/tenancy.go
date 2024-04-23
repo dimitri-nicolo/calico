@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 )
@@ -52,6 +54,7 @@ func (k KibanaTenancy) Enforce() func(next http.Handler) http.Handler {
 				}
 			}
 
+			logrus.Debug("Passing the request to the next handler")
 			// Finally, pass to the next handler.
 			next.ServeHTTP(w, r)
 		})
@@ -59,45 +62,43 @@ func (k KibanaTenancy) Enforce() func(next http.Handler) http.Handler {
 }
 
 func (k KibanaTenancy) enhanceWithTenancyQuery(w http.ResponseWriter, r *http.Request) error {
-	body, err := ReadBody(w, r)
-	if err != nil {
-		return err
-	}
-
 	asyncSearchRequest := AsyncSearchRequest{}
-	err = json.Unmarshal(body, &asyncSearchRequest)
+	err := httputils.DecodeIgnoreUnknownFieldsWithMaxSize(w, r, &asyncSearchRequest, maxSize)
 	if err != nil {
 		return err
 	}
 
 	if asyncSearchRequest.Query == nil || len(asyncSearchRequest.Query) == 0 {
-		return fmt.Errorf("RequestQuery is empty")
+		return fmt.Errorf("query field is empty")
 	}
 
-	// A valid query. Insert a tenant selector so that we enforce tenancy.
-	logrus.Debug("Add tenancy enforcement to request")
 	// Create a new boolean query, and filter by tenant ID as well as the original query.
+	logrus.Debug("Adding tenancy enforcement to request")
 	tenancyQuery := elastic.NewBoolQuery()
-	tenancyQuery.Must(elastic.NewTermQuery("tenant", k.tenantID))
+	tenancyQuery.Must(elastic.NewTermQuery("tenant.keyword", k.tenantID))
 	tenancyQuery.Filter(asyncSearchRequest.Query)
 
+	// Retrieve the new query with the tenancy enhancement
 	newQuery, err := tenancyQuery.Source()
 	if err != nil {
 		return err
 	}
-	asyncSearchRequest.Query = FromSource(newQuery)
+	// Rewrite the query field on the request
+	asyncSearchRequest.Query = toQuery(newQuery)
 
-	// Update the body of the request.
+	// Transform to json format
 	mod, err := json.Marshal(asyncSearchRequest)
 	if err != nil {
 		return err
 	}
 
+	// Re-write the body of the request
 	logrus.Tracef("Modified query: %s", string(mod))
 	r.Body = io.NopCloser(bytes.NewBuffer(mod))
 
 	// Set a new Content-Length.
 	r.ContentLength = int64(len(mod))
+
 	return nil
 }
 
@@ -112,8 +113,14 @@ func (k KibanaTenancy) traceRequest(w http.ResponseWriter, r *http.Request) bool
 		logrus.Tracef("URL: %s", r.URL.Path)
 		logrus.Tracef("Query: %v", r.URL.Query())
 		logrus.Tracef("Body: %s", string(body))
-		// TODO: Alina: Hide Authorization from print
-		logrus.Tracef("Headers: %v", r.Header)
+
+		allowedHeaders := make(http.Header)
+		for k, v := range r.Header {
+			if k != "Authorization" {
+				allowedHeaders[k] = v
+			}
+		}
+		logrus.Tracef("Headers: %v", allowedHeaders)
 	}
 	return false
 }
@@ -182,7 +189,7 @@ func (r Query) Source() (interface{}, error) {
 	return r, nil
 }
 
-func FromSource(i interface{}) Query {
+func toQuery(i interface{}) Query {
 	if r, ok := i.(map[string]interface{}); ok {
 		return r
 	}

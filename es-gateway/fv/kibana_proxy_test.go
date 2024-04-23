@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -41,6 +42,20 @@ func TestFV_KibanaProxy(t *testing.T) {
 		require.Contains(t, string(elasticBody), "You Know, for Search")
 	})
 
+	var isKibanaReady = func() bool {
+		log.Debugf("Making requests to see if Kibana is up and ready")
+		response, _, err := doRequest("GET", "http://localhost:5601/", nil, nil)
+		if err != nil {
+			log.Warnf("Received error %s", err)
+			return false
+		}
+		if response.StatusCode != http.StatusOK {
+			log.Warnf("Received status %s", response.Status)
+			return false
+		}
+		return true
+	}
+
 	t.Run("Ensure Kibana connects to Elastic via Kibana Proxy", func(t *testing.T) {
 		kibanaArgs := &RunKibanaArgs{
 			Image: "docker.elastic.co/kibana/kibana:7.17.18",
@@ -49,27 +64,76 @@ func TestFV_KibanaProxy(t *testing.T) {
 		}
 		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), kibanaArgs)()
 
-		kibanaReady := func() bool {
-			log.Debugf("Making requests to see if Kibana is up and ready")
-			response, _, err := doRequest("GET", "http://localhost:5601/", nil, nil)
-			if err != nil {
-				log.Warnf("Received error %s", err)
-				return false
-			}
-			if response.StatusCode != http.StatusOK {
-				log.Warnf("Received status %s", response.Status)
-				return false
-			}
-			return true
-		}
-		require.Eventually(t, kibanaReady, 30*time.Second, 100*time.Millisecond)
+		require.Eventually(t, isKibanaReady, 30*time.Second, 100*time.Millisecond)
 
+		log.Debugf("Making requests to see Kibana features")
 		responseKibana, _, err := doRequest("GET", "http://localhost:5601/api/features", nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
 	})
 
-	// TODO: Alina run dashboards installer
-	// TODO: Alina run namespace creation
-	// TODO: Alina run a custom tenancy check using discover
+	t.Run("Ensure Kibana Spaces can be created", func(t *testing.T) {
+		kibanaArgs := &RunKibanaArgs{
+			Image: "docker.elastic.co/kibana/kibana:7.17.18",
+			// We are setting the proxy endpoint as elastic backend
+			ElasticHosts: "http://localhost:5555",
+		}
+		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), kibanaArgs)()
+
+		require.Eventually(t, isKibanaReady, 30*time.Second, 100*time.Millisecond)
+
+		space := `{"id": "any","name": "Any Kibana space"}`
+		headers := map[string]string{
+			"Content-Type": "application/json",
+			"kbn-xsrf":     "true",
+		}
+		log.Debugf("Making requests to see create a Kibana space")
+		responseKibana, body, err := doRequest("POST", "http://localhost:5601/api/spaces/space", headers, []byte(space))
+		if err != nil {
+			log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
+		}
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
+	})
+
+	t.Run("Ensure Dashboards and Index Patterns can be created", func(t *testing.T) {
+		kibanaArgs := &RunKibanaArgs{
+			Image: "docker.elastic.co/kibana/kibana:7.17.18",
+			// We are setting the proxy endpoint as elastic backend
+			ElasticHosts: "http://localhost:5555",
+		}
+		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), kibanaArgs)()
+
+		require.Eventually(t, isKibanaReady, 30*time.Second, 100*time.Millisecond)
+
+		savedObjects := `[
+  {
+    "type": "index-pattern",
+    "id": "my-pattern",
+    "attributes": {
+      "title": "my-pattern-*"
+    }
+  },
+  {
+    "type": "dashboard",
+    "id": "be3733a0-9efe-11e7-acb3-3dab96693fab",
+    "attributes": {
+      "title": "Look at my dashboard"
+    }
+  }
+]`
+		headers := map[string]string{
+			"Content-Type": "application/json",
+			"kbn-xsrf":     "true",
+		}
+		log.Debugf("Making requests to see create a Kibana objects")
+		responseKibana, body, err := doRequest("POST", "http://localhost:5601/api/saved_objects/_bulk_create", headers, []byte(savedObjects))
+		if err != nil {
+			log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
+		}
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
+	})
+
+	// TODO: SHOULD sIMULATE A QUERY with tenancy
 }

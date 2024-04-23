@@ -125,7 +125,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// This is a request Kibana makes to check the health of the cluster
 		// GET /_cluster/health/.kibana_task_manager_7.17.18_001?wait_for_status=yellow&timeout=60s
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster-health.html
-		// TODO: ALINA - FIUGRE THIS OUT
+		// TODO: ALINA - FIGURE THIS OUT
 		return true, nil
 
 	// All requests that are allowed below are needed to load Discovery and Dashboards

@@ -3,27 +3,51 @@ package middlewares_test
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 )
 
 func TestKibanaTenancy_Enforce(t *testing.T) {
 	const (
-		tenantID           string = "anyTenant"
-		sampleBooleanQuery        = `
+		tenantID                           string = "anyTenant"
+		sampleBooleanQueryWithFilterClause        = `
 {
   "query": { 
     "bool": { 
       "must": [
-        { "match": { "title":   "Search"        }},
-        { "match": { "content": "Elasticsearch" }}
       ],
       "filter": [ 
-        { "term":  { "status": "published" }},
-        { "range": { "publish_date": { "gte": "2015-01-01" }}}
+        { "term":  { "message": "document" }}
+      ]
+    }
+  }
+}`
+		sampleBooleanQueryWithMustClause = `
+{
+  "query": { 
+    "bool": { 
+      "must": [
+        { "match": { "tenant":   "A"        }}
+      ],
+      "filter": [ 
+      ]
+    }
+  }
+}`
+
+		sampleBooleanQueryWithMustNotClause = `
+{
+  "query": { 
+    "bool": { 
+      "must_not": [
+        { "match": { "tenant":   "A"        }}
+      ],
+      "filter": [ 
       ]
     }
   }
@@ -32,8 +56,8 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 {
   "query": {
     "query_string": {
-      "query": "(new york city) OR (big apple)",
-      "default_field": "content"
+      "query": "(A) OR (B)",
+      "default_field": "tenant"
     }
   }
 }`
@@ -41,8 +65,8 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 {
   "query": {
     "fuzzy": {
-      "user.id": {
-        "value": "ki"
+      "tenant.keyword": {
+        "value": "A"
       }
     }
   }
@@ -51,12 +75,10 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 {
   "query": {
     "regexp": {
-      "user.id": {
-        "value": "k.*y",
+      "tenant.keyword": {
+        "value": "(A|B)",
         "flags": "ALL",
-        "case_insensitive": true,
-        "max_determinized_states": 10000,
-        "rewrite": "constant_score"
+        "case_insensitive": true
       }
     }
   }
@@ -65,8 +87,8 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 {
   "query": {
     "prefix": {
-      "user.id": {
-        "value": "ki"
+      "tenant.keyword": {
+        "value": "A"
       }
     }
   }
@@ -75,10 +97,8 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 {
   "query": {
     "wildcard": {
-      "user.id": {
-        "value": "ki*y",
-        "boost": 1.0,
-        "rewrite": "constant_score"
+      "tenant.keyword": {
+        "value": "A*"
       }
     }
   }
@@ -87,19 +107,24 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 {
   "query": {
     "range": {
-      "age": {
-        "gte": 10,
-        "lte": 20,
-        "boost": 2.0
+      "tenant.keyword": {
+        "gte": 0
       }
     }
   }
 }`
+		sampleMatchAllQuery = `
+{
+  "query": {
+    "match_all": {}
+  }
+}
+`
 	)
 
 	expectedTenantQuery := map[string]interface{}{
 		"term": map[string]interface{}{
-			"tenant": tenantID,
+			"tenant.keyword": tenantID,
 		},
 	}
 
@@ -110,11 +135,28 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 		wantStatus int
 	}{
 		{
-			name:       "Should enforce tenancy for a generic query boolean query using POST",
-			url:        "/tigera_secure_ee_anyData*/_async_search",
-			body:       sampleBooleanQuery,
+			name: "Should enforce tenancy for a generic boolean query with a filter cause using POST",
+			url:  "/tigera_secure_ee_anyData*/_async_search",
+			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
+			body:       sampleBooleanQueryWithFilterClause,
 			wantStatus: http.StatusOK,
 		},
+
+		{
+			name: "Should enforce tenancy for a generic boolean query with a must cause using POST",
+			url:  "/tigera_secure_ee_anyData*/_async_search",
+			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
+			body:       sampleBooleanQueryWithMustClause,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "Should enforce tenancy for a generic boolean query with a must not cause using POST",
+			url:  "/tigera_secure_ee_anyData*/_async_search",
+			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
+			body:       sampleBooleanQueryWithMustNotClause,
+			wantStatus: http.StatusOK,
+		},
+
 		{
 			name:       "Should deny any search request without an empty query field",
 			url:        "/tigera_secure_ee_anyData*/_async_search",
@@ -178,10 +220,18 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 			name: "Should enforce tenancy for a generic ranger query",
 			url:  "/tigera_secure_ee_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-range-query.html#range-query-ex-request
-			body:       sampleRegexpQuery,
+			body:       sampleRangeQuery,
 			wantStatus: http.StatusOK,
 		},
-		// Script, Script score, Percolate, Nested requests, has child, has parent
+		{
+			name: "Should enforce tenancy for a match all query",
+			url:  "/tigera_secure_ee_anyData*/_async_search",
+			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-match-all-query.html
+			body:       sampleMatchAllQuery,
+			wantStatus: http.StatusOK,
+		},
+
+		// TODO:Alina - Script, Script score, Percolate, Nested requests, has child, has parent and boosting function scores and should clause
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -189,6 +239,14 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req, err := http.NewRequest(http.MethodPost, tt.url, bytes.NewBufferString(tt.body))
 			require.NoError(t, err)
+
+			var wantFilterClause map[string]interface{}
+			if tt.wantStatus == http.StatusOK {
+				var initialQuery map[string]interface{}
+				err = json.Unmarshal([]byte(tt.body), &initialQuery)
+				require.NoError(t, err)
+				wantFilterClause = initialQuery["query"].(map[string]interface{})
+			}
 
 			// Process the requests
 			testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -199,16 +257,28 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 
 				body, err := middlewares.ReadBody(w, r)
 				require.NoError(t, err)
+
+				// Check that the new query is valid json
 				queryBody := make(map[string]interface{})
 				err = json.Unmarshal(body, &queryBody)
 				require.NoError(t, err)
+
+				// Check that we have a boolean query defined
 				require.NotNil(t, queryBody["query"])
 				query := queryBody["query"].(map[string]interface{})
 				require.NotNil(t, query["bool"])
-				filter := query["bool"].(map[string]interface{})
-				require.NotNil(t, filter["must"])
-				tenantQuery := filter["must"].(map[string]interface{})
+				booleanQuery := query["bool"].(map[string]interface{})
+
+				// Check tenancy query is include on must clause
+				require.NotNil(t, booleanQuery["must"])
+				tenantQuery := booleanQuery["must"].(map[string]interface{})
 				require.Equal(t, expectedTenantQuery, tenantQuery)
+
+				// Check initial query is included on filter query
+				if wantFilterClause != nil {
+					require.NotNil(t, booleanQuery["filter"])
+					require.Equal(t, wantFilterClause, booleanQuery["filter"])
+				}
 			})
 
 			handler(testHandler).ServeHTTP(rec, req)
