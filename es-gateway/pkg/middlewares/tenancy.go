@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -40,63 +41,13 @@ func (k KibanaTenancy) Enforce() func(next http.Handler) http.Handler {
 			} else if !allow {
 				k.rejectRequest(w, r)
 				return
-			} else if asyncSearchRegexp.MatchString(r.URL.Path) && r.Method == http.MethodPost {
-				searchRequest, err := readRequest(w, r)
+			}
+
+			if asyncSearchRegexp.MatchString(r.URL.Path) {
+				err := k.enhanceWithTenancyQuery(w, r)
 				if err != nil {
-					logrus.WithError(err).Error("Failed to process request body")
+					logrus.WithError(err).Error("Failed to enforce tenancy")
 					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				if searchRequest["query"] != nil {
-					logrus.Trace("Request has a query string")
-					queryStr, err := json.Marshal(searchRequest["query"])
-					if err != nil {
-						logrus.WithError(err).Error("Failed to marshal query field")
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-
-					query := Query{}
-					err = json.Unmarshal(queryStr, &query)
-					if err != nil {
-						logrus.WithError(err).Error("Failed to unmarshal query string")
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-
-					// A valid query. Insert a tenant selector so that we enforce tenancy.
-					logrus.Info("Add tenancy enforcement to request")
-					// Create a new boolean query, and filter by tenant ID as well as the original query.
-					tenancyQuery := elastic.NewBoolQuery()
-					tenancyQuery.Must(elastic.NewTermQuery("tenant", k.tenantID))
-					tenancyQuery.Filter(query)
-
-					newQuery, err := tenancyQuery.Source()
-					if err != nil {
-						logrus.Warn("Failed to parse the new query")
-						http.Error(w, "Failed to parse the new query", http.StatusBadRequest)
-						return
-					}
-					searchRequest["query"] = FromSource(newQuery)
-
-					// Update the body of the request.
-					mod, err := json.Marshal(searchRequest)
-					if err != nil {
-						logrus.Warn("Failed to parse the marshal the new query")
-						http.Error(w, "Failed to parse the marshal the new query", http.StatusBadRequest)
-						return
-					}
-
-					logrus.Infof("Modified query: %s", string(mod))
-					r.Body = io.NopCloser(bytes.NewBuffer(mod))
-
-					// Set a new Content-Length.
-					r.ContentLength = int64(len(mod))
-
-				} else {
-					// We want to reject all requests without a query field
-					k.rejectRequest(w, r)
 					return
 				}
 			}
@@ -105,6 +56,49 @@ func (k KibanaTenancy) Enforce() func(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func (k KibanaTenancy) enhanceWithTenancyQuery(w http.ResponseWriter, r *http.Request) error {
+	body, err := ReadBody(w, r)
+	if err != nil {
+		return err
+	}
+
+	asyncSearchRequest := AsyncSearchRequest{}
+	err = json.Unmarshal(body, &asyncSearchRequest)
+	if err != nil {
+		return err
+	}
+
+	if asyncSearchRequest.Query == nil || len(asyncSearchRequest.Query) == 0 {
+		return fmt.Errorf("RequestQuery is empty")
+	}
+
+	// A valid query. Insert a tenant selector so that we enforce tenancy.
+	logrus.Debug("Add tenancy enforcement to request")
+	// Create a new boolean query, and filter by tenant ID as well as the original query.
+	tenancyQuery := elastic.NewBoolQuery()
+	tenancyQuery.Must(elastic.NewTermQuery("tenant", k.tenantID))
+	tenancyQuery.Filter(asyncSearchRequest.Query)
+
+	newQuery, err := tenancyQuery.Source()
+	if err != nil {
+		return err
+	}
+	asyncSearchRequest.Query = FromSource(newQuery)
+
+	// Update the body of the request.
+	mod, err := json.Marshal(asyncSearchRequest)
+	if err != nil {
+		return err
+	}
+
+	logrus.Tracef("Modified query: %s", string(mod))
+	r.Body = io.NopCloser(bytes.NewBuffer(mod))
+
+	// Set a new Content-Length.
+	r.ContentLength = int64(len(mod))
+	return nil
 }
 
 func (k KibanaTenancy) traceRequest(w http.ResponseWriter, r *http.Request) bool {
@@ -129,20 +123,6 @@ func (k KibanaTenancy) rejectRequest(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, fmt.Sprintf("Request is not allowed %s", r.URL.Path), http.StatusForbidden)
 }
 
-func readRequest(w http.ResponseWriter, r *http.Request) (map[string]interface{}, error) {
-	body, err := ReadBody(w, r)
-	if err != nil {
-		return nil, err
-	}
-
-	request := make(map[string]interface{})
-	err = json.Unmarshal(body, &request)
-	if err != nil {
-		return nil, err
-	}
-	return request, nil
-}
-
 func ReadBody(w http.ResponseWriter, req *http.Request) ([]byte, error) {
 	req.Body = http.MaxBytesReader(w, req.Body, maxSize)
 	body, err := io.ReadAll(req.Body)
@@ -153,8 +133,51 @@ func ReadBody(w http.ResponseWriter, req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
+// AsyncSearchRequest is the definition used to define which fields are allowed by an_ async_search
+// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/async-search.html
+// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-search.html
+type AsyncSearchRequest struct {
+	// docvalue_fields (Optional, array of strings and objects)
+	DocValueFields []interface{} `json:"doc_value_fields,omitempty"`
+	// fields (Optional, array of strings and objects)
+	Fields []interface{} `json:"fields,omitempty"`
+	// explain (Optional, Boolean)
+	Explain *bool `json:"explain,omitempty"`
+	// from (Optional, integer)
+	From *int `json:"from,omitempty"`
+	// indices_boost (Optional, array of objects)
+	IndicesBoost []interface{} `json:"indices_boost,omitempty"`
+	// min_score (Optional, float)
+	MinScore *float64 `json:"min_score,omitempty"`
+	// query (Optional, query object)
+	Query Query `json:"query,omitempty"`
+	// runtime_mappings (Optional, object of objects)
+	RuntimeMappings map[string]interface{} `json:"runtime_mappings,omitempty"`
+	// seq_no_primary_term (Optional, Boolean)
+	SequenceNoPrimaryTerm *bool `json:"seq_no_primary_term,omitempty"`
+	// size (Optional, integer)
+	Size *int `json:"size,omitempty"`
+	// _source (Optional)
+	Source map[string]interface{} `json:"_source,omitempty"`
+	// stats (Optional, array of strings)
+	Stats []string `json:"stats,omitempty"`
+	// terminate_after (Optional, integer)
+	TerminateAfter *int `json:"terminate_after,omitempty"`
+	// timeout (Optional, time units)
+	Timeout *time.Duration `json:"timeout,omitempty"`
+	// version (Optional, Boolean)
+	Version *bool `json:"version,omitempty"`
+	// aggregations (Optional)
+	// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-aggregations.html
+	Aggregations map[string]interface{} `json:"aggs,omitempty"`
+}
+
+// Query field pass on the async request
 type Query map[string]interface{}
 
+// Source will convert a query to an interface
+// We need to overwrite this function needed by oliver library
+// in order to perform converstion from interface{} to Query struct
 func (r Query) Source() (interface{}, error) {
 	return r, nil
 }
@@ -165,7 +188,4 @@ func FromSource(i interface{}) Query {
 	}
 	logrus.Warnf("Failed to parse query of type %t", i)
 	return nil
-}
-
-type AsyncSearchRequest struct {
 }

@@ -51,7 +51,8 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// PUT /.kibana_task_manager_7.17.18/_create
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/rest-apis.html
 		return true, nil
-	case r.URL.Path == "/_nodes" && r.Method == http.MethodGet:
+	case r.URL.Path == "/_nodes" && r.Method == http.MethodGet &&
+		hasQueryParam(r, "filter_path", "nodes.*.version,nodes.*.http.publish_address,nodes.*.ip"):
 		// This is a periodic request Kibana makes to gather information about Elastic nodes
 		// The following information is retrieved: nodes.*.version,nodes.*.http.publish_address,nodes.*.ip
 		// GET /_nodes?filter_path=nodes.*.version%2Cnodes.*.http.publish_address%2Cnodes.*.ip
@@ -64,7 +65,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// DELETE /_pit
 		// {"id":"u961AwETLmtpYmFuYV83LjE3LjE4XzAwMRZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3ABY0a1RZdEdHMFRIV0hJYXNIUDZTdFVBAAAAAAAAANE4FnZXUFZrMjdMVENlTFFqSUhxS3VFX1EAARZ4WmR3Y1FZY1JBYTQwbWVDam5zeGh3AAA="}
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/point-in-time-api.html
-		return true, nil
+		return isDeletePointInTimeRequestAllowed(w, r)
 	case strings.HasPrefix(r.URL.Path, "/_tasks/") && r.Method == http.MethodGet:
 		// This is a request from Kibana to access task APIs
 		// This request is needed for Kibana to be marked Running
@@ -81,7 +82,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// GET /_template/kibana_index_template*
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-get-template.html
 		return true, nil
-	case r.URL.Path == "/_search" && r.Method == http.MethodPost:
+	case r.URL.Path == "/_search" && r.Method == http.MethodPost && hasQueryParam(r, "allow_partial_search_results", "false"):
 		// This is a search request that does not specify the index in the path. This needs special handling to determine
 		// if we support the query or not. For example, search requests with a point in time do not
 		// specify the index in the URL. Kibana makes _search requests with a point in time during startup.
@@ -110,10 +111,21 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// {"index":[],"application":[{"application":"kibana-.kibana","resources":["*"],"privileges":["version:7.17.18","login:","ui:7.17.18:enterpriseSearch/all"]}]
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-api-has-privileges.html
 		return true, nil
-	case r.URL.Path == "/_xpack" && r.Method == http.MethodGet:
+	case r.URL.Path == "/_xpack" && r.Method == http.MethodGet && hasQueryParam(r, "accept_enterprise", "true"):
 		// This is a request Kibana makes to retrieves license details
 		// GET /_xpack?accept_enterprise=true
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/info-api.html
+		return true, nil
+	case strings.HasPrefix(r.URL.Path, "/_cluster/health/.kibana") && r.Method == http.MethodGet && hasQueryParam(r, "wait_for_status", "yellow"):
+		// This is a request Kibana makes to check the health of the cluster
+		// GET /_cluster/health/.kibana_task_manager_7.17.18_001?wait_for_status=yellow&timeout=60s
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster-health.html
+		return true, nil
+	case r.URL.Path == "/_aliases" && r.Method == http.MethodPost:
+		// This is a request Kibana makes to check the health of the cluster
+		// GET /_cluster/health/.kibana_task_manager_7.17.18_001?wait_for_status=yellow&timeout=60s
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster-health.html
+		// TODO: ALINA - FIUGRE THIS OUT
 		return true, nil
 
 	// All requests that are allowed below are needed to load Discovery and Dashboards
@@ -145,7 +157,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// We will limit this API only for calico indices
 		// GET /tigera_secure_ee_flows*/_field_caps
-		// Elastic API: https: //www.elastic.co/guide/en/elasticsearch/reference/7.17/search-field-caps.html
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-field-caps.html
 		return true, nil
 	case r.URL.Path == "/_mget" && r.Method == http.MethodPost:
 		// This is a request Kibana makes when loading Discovery and Dashboards
@@ -190,7 +202,9 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		return true, nil
 
 	// All requests are needed by the monitoring plugin
-	// https://github.com/elastic/kibana/tree/8.13/x-pack/plugins/monitoring
+	// https://github.com/elastic/kibana/tree/7.17/x-pack/plugins/monitoring
+	// This plugin is needed in order to monitor Kibana application
+	// https://www.elastic.co/guide/en/kibana/7.17/xpack-monitoring.html
 	case r.URL.Path == "/_monitoring/bulk" && r.Method == http.MethodPost:
 		// This request is needed by the monitor plugin
 		// POST /_monitoring/bulk?system_id=kibana&system_api_version=7&interval=10000ms
@@ -199,6 +213,8 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 
 	// All requests are needed by the reporting plugin
 	// https://github.com/elastic/kibana/tree/8.13/x-pack/plugins/reporting
+	// This plugin is needed by Discovery page to share results
+	// https://www.elastic.co/guide/en/kibana/7.17/reporting-getting-started.html
 	case r.URL.Path == "/.reporting-*/_search" && r.Method == http.MethodPost:
 		// This request is needed by the reporting plugin
 		// POST /.reporting-*/_search?size=1&seq_no_primary_term=true&_source_excludes=output
@@ -210,51 +226,11 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/ilm-get-lifecycle.html
 		return true, nil
 
-	// All requests below are needed by ruleRegistry plugin
-	// https://github.com/elastic/kibana/blob/main/x-pack/plugins/rule_registry/README.md
-	case r.URL.Path == "/_component_template/.alerts-ecs-mappings" && r.Method == http.MethodGet:
-		// This request is needed by the ruleRegistry plugin
-		// GET /_component_template/.alerts-ecs-mappings
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/getting-component-templates.html
-		return true, nil
-	case r.URL.Path == "/_component_template/.alerts-ecs-mappings" && r.Method == http.MethodPut:
-		// This request is needed by the ruleRegistry plugin
-		// PUT /_component_template/.alerts-ecs-mappings
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, nil
-	case r.URL.Path == "/_component_template/.alerts-observability.apm.alerts-mappings" && r.Method == http.MethodPut:
-		// This request is needed by the ruleRegistry plugin
-		// PUT /_component_template/.alerts-observability.apm.alerts-mappings
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, nil
-	case r.URL.Path == "/_component_template/.alerts-observability.logs.alerts-mappings" && r.Method == http.MethodPut:
-		// This request is needed by the ruleRegistry plugin
-		// PUT /_component_template/.alerts-observability.logs.alerts-mappings
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, nil
-	case r.URL.Path == "/_component_template/.alerts-observability.metrics.alerts-mappings" && r.Method == http.MethodPut:
-		// This request is needed by the ruleRegistry plugin
-		// PUT /_component_template/.alerts-observability.metrics.alerts-mappings
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, nil
-	case r.URL.Path == "/_component_template/.alerts-observability.uptime.alerts-mappings" && r.Method == http.MethodPut:
-		// This request is needed by the ruleRegistry plugin
-		// PUT /_component_template/.alerts-observability.uptime.alerts-mappings
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, nil
-	case r.URL.Path == "/_component_template/.alerts-technical-mappings" && r.Method == http.MethodPut:
-		// This request is needed by the ruleRegistry plugin
-		// PUT /_component_template/.alerts-technical-mappings
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/indices-component-template.html
-		return true, nil
-	case r.URL.Path == "/_ilm/policy/.alerts-ilm-policy" && r.Method == http.MethodPut:
-		// This request is needed by the ruleRegistry plugin
-		// GET /_ilm/policy/.alerts-ilm-policy
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/ilm-get-lifecycle.html
-		return true, nil
-
 	// ALl requests below are needed by the security plugin
 	// https://github.com/elastic/kibana/tree/8.13/x-pack/plugins/security
+	// This plugin is needed in order to enforce RBAC to correlate kibana users
+	// with their corresponding Elastic roles
+	// https://www.elastic.co/guide/en/kibana/7.17/using-kibana-with-security.html
 	case r.URL.Path == "/_index_template/.kibana_security_session_index_template_1" && r.Method == http.MethodHead:
 		// This request is needed by the security plugin
 		// HEAD /_index_template/.kibana_security_session_index_template_1
@@ -270,8 +246,14 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	default:
 		return false, nil
 	}
+}
 
-	return false, nil
+func hasQueryParam(r *http.Request, key string, value string) bool {
+	queryValue := r.URL.Query().Get(key)
+	if queryValue == "" {
+		return false
+	}
+	return queryValue == value
 }
 
 // IndexMetadata is used unmarshal a JSON and
@@ -303,7 +285,7 @@ func (r BulkAction) GetIndexMetadata() *IndexMetadata {
 	return nil
 }
 
-var NoIndexBulkError = fmt.Errorf("no index referenced on the request")
+var NoIndexError = fmt.Errorf("no index referenced on the request")
 
 // isBulkRequestAllowed will determine if a bulk request is allowed or not
 // Bulk requests have the following format:
@@ -341,7 +323,7 @@ func isBulkRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) 
 
 		indexMetadata := bulkRequest.GetIndexMetadata()
 		if indexMetadata == nil {
-			return false, NoIndexBulkError
+			return false, NoIndexError
 		}
 
 		if !isAKibanaIndex(indexMetadata.Index) {
@@ -404,7 +386,39 @@ func isSearchRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error
 		return false, err
 	}
 
-	if !isAKibanaIndex(string(decodedID)) {
+	if !strings.Contains(string(decodedID), ".kibana") {
+		// We will reject any search request with a point in time that does not
+		// reference a kibana index
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func isDeletePointInTimeRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) {
+	// We expect this type of request to be issued only against Kibana indices
+	body, err := ReadBody(w, r)
+	if err != nil {
+		return false, err
+	}
+	pointInTimeRequest := PointInTime{}
+	err = json.Unmarshal(body, &pointInTimeRequest)
+	if err != nil {
+		return false, err
+	}
+
+	if pointInTimeRequest.ID == "" {
+		return false, nil
+	}
+
+	// Point in time requests do not specify the index on the request.
+	// We can base64 decode and extract the name
+	decodedID, err := base64.StdEncoding.DecodeString(pointInTimeRequest.ID)
+	if err != nil {
+		return false, err
+	}
+
+	if !strings.Contains(string(decodedID), ".kibana") {
 		// We will reject any search request with a point in time that does not
 		// reference a kibana index
 		return false, nil
@@ -448,7 +462,14 @@ func isMGETRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) 
 		return false, err
 	}
 
+	if len(mGetRequest.Docs) == 0 {
+		return false, NoIndexError
+	}
+
 	for _, doc := range mGetRequest.Docs {
+		if doc.Index == "" {
+			return false, NoIndexError
+		}
 		if !isAKibanaIndex(doc.Index) {
 			return false, nil
 		}

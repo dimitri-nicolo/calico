@@ -68,4 +68,8 @@ func TestFV_KibanaProxy(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
 	})
+
+	// TODO: Alina run dashboards installer
+	// TODO: Alina run namespace creation
+	// TODO: Alina run a custom tenancy check using discover
 }
