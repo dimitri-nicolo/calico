@@ -95,7 +95,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		for _, fl := range fls {
 			for _, flog := range flogs {
 				if reflect.DeepEqual(flog.FlowMeta, fl.FlowMeta) &&
-					reflect.DeepEqual(flog.FlowPolicies, fl.FlowPolicies) &&
+					reflect.DeepEqual(flog.FlowPolicySet, fl.FlowPolicySet) &&
 					reflect.DeepEqual(flog.FlowExtras, fl.FlowExtras) &&
 					reflect.DeepEqual(flog.FlowLabels, fl.FlowLabels) &&
 					reflect.DeepEqual(flog.FlowProcessReportedStats, fl.FlowProcessReportedStats) {
@@ -140,8 +140,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			return FlowExtras{OriginalSourceIPs: []net.IP{}, NumOriginalSourceIPs: 0}
 		}
 	}
-	extractFlowPolicies := func(mus ...metric.Update) FlowPolicies {
-		fp := make(FlowPolicies)
+	extractFlowPolicies := func(mus ...metric.Update) FlowPolicySet {
+		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.RuleIDs {
 				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
@@ -772,7 +772,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 	})
 })
 
-func newExpectedFlowLog(t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterType, pi, po, bi, bo int, srcMeta, dstMeta endpoint.Metadata, dstService FlowService, srcLabels, dstLabels map[string]string, fp FlowPolicies, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) FlowLog {
+func newExpectedFlowLog(t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterType, pi, po, bi, bo int, srcMeta, dstMeta endpoint.Metadata, dstService FlowService, srcLabels, dstLabels map[string]string, fp FlowPolicySet, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) FlowLog {
 	return FlowLog{
 		FlowMeta: FlowMeta{
 			Tuple:      t,
@@ -786,8 +786,8 @@ func newExpectedFlowLog(t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterTy
 			SrcLabels: srcLabels,
 			DstLabels: dstLabels,
 		},
-		FlowPolicies: fp,
-		FlowExtras:   fe,
+		FlowPolicySet: fp,
+		FlowExtras:    fe,
 		FlowProcessReportedStats: FlowProcessReportedStats{
 			ProcessName:     fpi.processName,
 			NumProcessNames: fpi.numProcessNames,
