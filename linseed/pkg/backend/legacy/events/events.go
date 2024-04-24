@@ -244,13 +244,33 @@ func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo
 	bulk := b.client.Bulk()
 	numToDismiss := 0
 	bulkErrs := []v1.BulkError{}
+
+	// We need to get the index of each event, as some older events may not belong to the current write index
+	// (after an upgrade or index rollover for example).
+	indexValues, err := b.getEventIndexValues(ctx, i, events)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, event := range events {
 		if err := b.checkTenancy(ctx, i, &event); err != nil {
 			logrus.WithError(err).WithField("id", event.ID).Warn("Error checking tenancy for event")
 			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: err.Error()})
 			continue
 		}
-		req := elastic.NewBulkUpdateRequest().Index(alias).Id(event.ID).Doc(map[string]bool{"dismissed": event.Dismissed})
+		index, found := indexValues[event.ID]
+		if !found {
+			logrus.WithField("id", event.ID).Warn("Event not found with IDs query")
+			// If event does not exists, proceed with query to get response status
+			index = alias
+		}
+		if !strings.Contains(index, alias) {
+			logrus.WithError(err).WithField("id", event.ID).WithField("index", index).WithField("alias", alias).Warn("Error checking index for event")
+			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: "event belongs to another index"})
+			continue
+		}
+
+		req := elastic.NewBulkUpdateRequest().Index(index).Id(event.ID).Doc(map[string]bool{"dismissed": event.Dismissed})
 		bulk.Add(req)
 		numToDismiss++
 	}
@@ -288,6 +308,34 @@ func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo
 	}, nil
 }
 
+func (b *eventsBackend) getEventIndexValues(ctx context.Context, i api.ClusterInfo, events []v1.Event) (map[string]string, error) {
+	ids := []string{}
+	for _, event := range events {
+		ids = append(ids, event.ID)
+	}
+
+	q := b.queryHelper.BaseQuery(i)
+	q = q.Should(elastic.NewIdsQuery().Ids(ids...))
+
+	// Build the query.
+	idsQuery := b.client.Search().
+		Query(q)
+
+	indexValues := make(map[string]string)
+
+	idsResult, err := idsQuery.Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if idsResult.TotalHits() > 0 {
+		for _, hit := range idsResult.Hits.Hits {
+			indexValues[hit.Id] = hit.Index
+		}
+	}
+
+	return indexValues, nil
+}
+
 func (b *eventsBackend) checkTenancy(ctx context.Context, i api.ClusterInfo, event *v1.Event) error {
 	// If we're in single index mode, we need to check tenancy. Otherwise, we can skip this because
 	// the index name already contains the cluster and tenant ID.
@@ -314,6 +362,13 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 	}
 	alias := b.index.Alias(i)
 
+	// We need to get the index of each event, as some older events may not belong to the current write index
+	// (after an upgrade or index rollover for example).
+	indexValues, err := b.getEventIndexValues(ctx, i, events)
+	if err != nil {
+		return nil, err
+	}
+
 	// Build a bulk request using the provided events.
 	bulk := b.client.Bulk()
 	numToDelete := 0
@@ -324,7 +379,18 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: err.Error()})
 			continue
 		}
-		req := elastic.NewBulkDeleteRequest().Index(alias).Id(event.ID)
+		index, found := indexValues[event.ID]
+		if !found {
+			logrus.WithField("id", event.ID).Warn("Event not found with IDs query")
+			// If event does not exists, proceed with query to get response status
+			index = alias
+		}
+		if !strings.Contains(index, alias) {
+			logrus.WithError(err).WithField("id", event.ID).WithField("index", index).WithField("alias", alias).Warn("Error checking index for event")
+			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: "event belongs to another index"})
+			continue
+		}
+		req := elastic.NewBulkDeleteRequest().Index(index).Id(event.ID)
 		bulk.Add(req)
 		numToDelete++
 	}
