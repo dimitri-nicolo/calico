@@ -19,7 +19,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 	argList := []string{"arg1", "arg2"}
 	emptyList := []string{"-"}
 	Describe("should set every field", func() {
-		policies := FlowPolicies{
+		policies := FlowPolicySet{
 			"0|tier.policy|pass|0":                      emptyValue,
 			"1|default.knp.default.default-deny|deny|1": emptyValue,
 		}
@@ -65,7 +65,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				SrcLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 			},
-			FlowPolicies: policies,
+			FlowPolicySet: policies,
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{net.ParseIP("10.0.1.1")},
 				NumOriginalSourceIPs: 1,
