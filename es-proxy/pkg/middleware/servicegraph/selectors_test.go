@@ -85,7 +85,7 @@ var _ = Describe("Selector tests", func() {
 			"a",
 			[]string{"b", "c", "d"},
 		)
-		//Expect(selIn.SelectorString()).To(Equal("a IN (\"b\", \"c\", \"d\")"))
+		// Expect(selIn.SelectorString()).To(Equal("a IN (\"b\", \"c\", \"d\")"))
 		Expect(selIn.SelectorString()).ToNot(BeNil())
 		Expect(*selIn.SelectorString()).To(Equal("a = \"b\" OR a = \"c\" OR a = \"d\""))
 
@@ -94,5 +94,80 @@ var _ = Describe("Selector tests", func() {
 			[]string{},
 		)
 		Expect(selIn.SelectorString()).To(BeNil())
+	})
+
+	Describe("Can build servicegroup node selector correctly", func() {
+		var (
+			selectorHelper *SelectorHelper
+			sg             ServiceGroup
+			servicePort    v1.ServicePort
+		)
+		BeforeEach(func() {
+			backend := CreateMockBackendWithData(RBACFilterIncludeAll{}, NewMockNameHelper(nil, nil))
+
+			namespacedNameFoo := v1.NamespacedName{
+				Namespace: "foo-ns",
+				Name:      "svcfoo",
+			}
+			services := []v1.NamespacedName{
+				namespacedNameFoo,
+			}
+
+			servicePort = v1.ServicePort{
+				NamespacedName: namespacedNameFoo,
+				Protocol:       "tcp",
+				PortName:       "",
+				Port:           443,
+			}
+
+			flowEP := FlowEndpoint{
+				Type:      "ns",
+				Namespace: "default",
+				Name:      "",
+				NameAggr:  "foo-networkset",
+				PortNum:   0,
+				Protocol:  "tcp",
+			}
+			serviceports := map[v1.ServicePort]map[FlowEndpoint]struct{}{
+				servicePort: {flowEP: struct{}{}},
+			}
+
+			sg = ServiceGroup{
+				ID:           "",
+				Services:     services,
+				Namespace:    "default",
+				Name:         "svcfoo",
+				ServicePorts: serviceports,
+			}
+
+			serviceGroups := NewServiceGroups()
+			serviceGroups.AddMapping(servicePort, flowEP)
+			selectorHelper = NewSelectorHelper(nil, backend.NameHelper, serviceGroups)
+		})
+
+		It("GetServiceGroupNodeSelectors should return networkset in the selector", func() {
+			selectorPairs := selectorHelper.GetServiceGroupNodeSelectors(&sg)
+
+			Expect(*selectorPairs.Dest.L3Flows.SelectorString()).To(Equal(
+				`(dest_name_aggr = "foo-networkset" AND dest_namespace = "default" AND dest_type = "ns") OR` +
+					` (dest_service_name = "svcfoo" AND dest_service_namespace = "foo-ns")`))
+		})
+
+		It("GetServiceNodeSelectors should return networkset in the selector", func() {
+			selectorPairs := selectorHelper.GetServiceNodeSelectors(servicePort.NamespacedName)
+
+			Expect(*selectorPairs.Dest.L3Flows.SelectorString()).To(Equal(
+				`(dest_name_aggr = "foo-networkset" AND dest_namespace = "default" AND dest_type = "ns") OR` +
+					` (dest_service_name = "svcfoo" AND dest_service_namespace = "foo-ns")`))
+		})
+
+		It("test GetServicePortNodeSelectors should return networkset in the selector", func() {
+			selectorPairs := selectorHelper.GetServicePortNodeSelectors(servicePort)
+
+			Expect(*selectorPairs.Dest.L3Flows.SelectorString()).To(Equal(
+				`(dest_name_aggr = "foo-networkset" AND dest_namespace = "default" AND dest_type = "ns" AND` +
+					` proto = "tcp") OR (dest_service_name = "svcfoo" AND dest_service_namespace = "foo-ns" AND` +
+					` dest_service_port = "" AND dest_service_port_num = 443 AND proto = "tcp")`))
+		})
 	})
 })
