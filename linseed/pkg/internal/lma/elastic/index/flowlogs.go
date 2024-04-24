@@ -187,7 +187,16 @@ func (h flowLogsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVe
 }
 
 func (h flowLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From.Unix()).Lte(r.To.Unix())
+	timeField := GetTimeFieldForQuery(h, r)
+	var from, to interface{}
+	if timeField == "generated_time" {
+		from = r.From
+		to = r.To
+	} else {
+		from = r.From.Unix()
+		to = r.To.Unix()
+	}
+	return elastic.NewRangeQuery(timeField).Gt(from).Lte(to)
 }
 
 func (h flowLogsIndexHelper) GetTimeField() string {

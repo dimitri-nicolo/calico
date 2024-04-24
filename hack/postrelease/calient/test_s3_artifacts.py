@@ -29,7 +29,7 @@ def get_s3_validator():
     object that we can use for validation
     """
     return S3Bucket(
-        bucket_name=defaults.TIGERA_PUBLIC_BUCKET, profile_name=defaults.AWS_PROFILE
+        bucket_name=defaults.TIGERA_S3_PUBLIC_BUCKET, profile_name=defaults.AWS_PROFILE
     )
 
 
