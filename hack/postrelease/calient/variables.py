@@ -25,6 +25,7 @@ __defaults = {
 AWS_MANIFESTS_SKIP_FILES = [
     "ocp.tgz",
     "manifests.tar.gz",
+    ".gitattributes",
 ]
 
 SELINUX_RHEL_VERSIONS = [

@@ -38,3 +38,9 @@ class QuayNotAuthorizedError(Exception):
     We tried to get information from Quay.io (either from the API or
     via the Docker CLI) but our authentication wasn't accepted.
     """
+
+class QuayNoTagsFoundError(Exception):
+    """
+    The Quay.io api returned HTTP 200 for the image we requested, but
+    the list of tags were empty.
+    """
