@@ -2,6 +2,7 @@
 package servicegraph
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -442,8 +443,15 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 		for _, spd := range sg.ServicePorts {
 			for ep := range spd {
 				switch ep.Type {
-				case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
+				case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeNetworkSet:
+					// for all the endpoints of type host, wep, rep, ns behind the service node add appropriate selector.
 					allEps[ep] = struct{}{}
+				default:
+					// the types not handled in above are skipped from the service node selector
+					epBytes, _ := json.Marshal(ep)
+					printDebugInfo(fmt.Sprintf("type not supported: %v", ep.Type),
+						fmt.Sprintf("skipped endpoint's details: %v", string(epBytes)))
+
 				}
 			}
 		}
@@ -515,8 +523,14 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) Selector
 	if sg != nil {
 		for ep := range sg.ServicePorts[sp] {
 			switch ep.Type {
-			case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
+			case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet, v1.GraphNodeTypeNetworkSet:
+				// for all the endpoints of type host, wep, rep, ns behind the service port add appropriate selector.
 				allEps[ep] = struct{}{}
+			default:
+				// the types not handled in above are skipped from the service port selector
+				epBytes, _ := json.Marshal(ep)
+				printDebugInfo(fmt.Sprintf("type not supported: %v", ep.Type),
+					fmt.Sprintf("skipped endpoint's details: %v", string(epBytes)))
 			}
 		}
 	}
@@ -541,8 +555,11 @@ func (s *SelectorHelper) GetServiceGroupNodeSelectors(sg *ServiceGroup) Selector
 		for ep := range eps {
 			switch ep.Type {
 			case v1.GraphNodeTypeHost, v1.GraphNodeTypeWorkload, v1.GraphNodeTypeReplicaSet:
+				// prepare an endpoint-style selector if endpoint type is host, wep, or rep
 				allEps[ep] = struct{}{}
 			default:
+				// prepare a service-style selector if endpoint type is anything other than the types above including
+				// but not limited to ns (networkset), svc (service), ...
 				allSvcs[sp.NamespacedName] = struct{}{}
 			}
 		}
@@ -733,4 +750,12 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 	}
 
 	return gsp
+}
+
+func printDebugInfo(debugString ...string) {
+	if log.IsLevelEnabled(log.DebugLevel) {
+		for _, printstatement := range debugString {
+			log.Debug(printstatement)
+		}
+	}
 }
