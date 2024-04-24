@@ -1207,9 +1207,11 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					return healthStatus(containerIP(f.Container), "9099", "readiness")
 				}
 
-				for _, f := range tc.Felixes {
-					Eventually(felixReady(f), "5s", "100ms").Should(BeGood())
-				}
+				Eventually(func(g Gomega) {
+					for _, f := range tc.Felixes {
+						g.Expect(felixReady(f)).To(BeGood())
+					}
+				}, "10s", "330ms").Should(Succeed())
 			}
 		}
 
