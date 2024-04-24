@@ -18,7 +18,7 @@ var asyncSearchRegexp = regexp.MustCompile("(/tigera_secure_ee_)(.+)(\\*)(/_asyn
 
 func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	switch {
-	// All requests that are whitelisted below are needed to mark Kibana up and running
+	// All requests that are allowed below are needed to mark Kibana up and running
 	case r.URL.Path == "/_bulk" && r.Method == http.MethodPost:
 		// This is a request Kibana makes to update its indices
 		// POST /_bulk?refresh=false&_source_includes=originId&require_alias=true
@@ -122,11 +122,11 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster-health.html
 		return true, nil
 	case r.URL.Path == "/_aliases" && r.Method == http.MethodPost:
-		// This is a request Kibana makes to check the health of the cluster
-		// GET /_cluster/health/.kibana_task_manager_7.17.18_001?wait_for_status=yellow&timeout=60s
-		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/cluster-health.html
-		// TODO: ALINA - FIGURE THIS OUT
-		return true, nil
+		// This is a request Kibana makes to assign an alias to an index
+		// This is needed by FV tests in order to mark single node Kibana as ready
+		// POST /_aliases
+		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html
+		return isAliasesRequestAllowed(w, r)
 
 	// All requests that are allowed below are needed to load Discovery and Dashboards
 	case asyncSearchRegexp.MatchString(r.URL.Path) && r.Method == http.MethodPost && !r.URL.Query().Has("q"):
@@ -149,7 +149,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// This will delete a previously started async search requests
 		// We will restrict creation of async searches requests to calico indices and
-		// enhance them with a tenancy enforcement. Thus, these requests will be allowed
+		// enhance them with a tenancy enforcement as the next step after we allow the requests.
 		// DELETE /_async_search/FnF4REF0THh5U2gtM3Q0eVpMdWltSmcdNGtUWXRHRzBUSFdISWFzSFA2U3RVQToxMTUwMTY=
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/async-search.html
 		return true, nil
@@ -479,4 +479,76 @@ func isMGETRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) 
 
 func isAKibanaIndex(id string) bool {
 	return strings.HasPrefix(id, ".kibana")
+}
+
+// AliasIndex will only extract the index information
+type AliasIndex struct {
+	Index string `json:"index"`
+}
+
+// Aliases is used unmarshal a JSON _aliases request
+// and extract only the index from actions
+type Aliases struct {
+	Actions []struct {
+		Add         *AliasIndex `json:"add,omitempty"`
+		Remove      *AliasIndex `json:"remove,omitempty"`
+		RemoveIndex *AliasIndex `json:"removeIndex,omitempty"`
+	} `json:"actions"`
+}
+
+// isAliasesRequestAllowed will determine if an alias request is allowed or not
+// POST /_aliases
+//
+//	{
+//	 "actions": [
+//	   {
+//	     "add": {
+//	       "index": ".kibana_task_manager_7.17.18_001",
+//	       "alias": ".kibana_task_manager"
+//	     }
+//	   },
+//	   {
+//	     "add": {
+//	       "index": ".kibana_task_manager_7.17.18_001",
+//	       "alias": ".kibana_task_manager_7.17.18"
+//	     }
+//	   }
+//	 ]
+//	}
+//
+// We need to process each action and determine if the indices referenced are kibana indices
+func isAliasesRequestAllowed(w http.ResponseWriter, r *http.Request) (bool, error) {
+	// We expect this type of request to be issued only against Kibana indices
+	body, err := ReadBody(w, r)
+	if err != nil {
+		return false, err
+	}
+	aliasesRequest := Aliases{}
+	err = json.Unmarshal(body, &aliasesRequest)
+	if err != nil {
+		return false, err
+	}
+
+	for _, action := range aliasesRequest.Actions {
+		if action.Add != nil {
+			// Add needs to reference a kibana index
+			if !isAKibanaIndex(action.Add.Index) {
+				return false, nil
+			}
+		}
+		if action.RemoveIndex != nil {
+			// RemoveIndex needs to reference a kibana index
+			if !isAKibanaIndex(action.Add.Index) {
+				return false, nil
+			}
+		}
+		if action.Remove != nil {
+			// Remove needs to reference a kibana index
+			if !isAKibanaIndex(action.Add.Index) {
+				return false, nil
+			}
+		}
+	}
+
+	return true, nil
 }

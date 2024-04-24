@@ -61,28 +61,28 @@ func TestIsAllowed(t *testing.T) {
 			wantAllow: true,
 		},
 		{
-			name:      "Should reject any bulk requests that does not a targets a kibana index for an index action",
+			name:      "Should reject any bulk requests that does not target a kibana index for an index action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
 			body:      bulkBodyIndexWithNonKibanaIndices,
 			wantAllow: false,
 		},
 		{
-			name:      "Should reject any bulk requests that does not targets a kibana index for a delete action",
+			name:      "Should reject any bulk requests that does not target a kibana index for a delete action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
 			body:      bulkBodyDeleteWithNonKibanaIndices,
 			wantAllow: false,
 		},
 		{
-			name:      "Should reject any bulk requests that does not targets a kibana index for a create action",
+			name:      "Should reject any bulk requests that does not target a kibana index for a create action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
 			body:      bulkBodyCreateWithNonKibanaIndices,
 			wantAllow: false,
 		},
 		{
-			name:      "Should reject any bulk requests that does not targets a kibana index for a update action",
+			name:      "Should reject any bulk requests that does not target a kibana index for a update action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
 			body:      bulkBodyUpdateWithNonKibanaIndices,
@@ -133,7 +133,7 @@ func TestIsAllowed(t *testing.T) {
 			wantAllow: false,
 			wantError: fmt.Errorf("invalid character '@' looking for beginning of object key string"),
 		},
-		// Request that start wit a Kibana index
+		// Request that start with a Kibana index
 		{
 			name:      "Should allow all GET requests for an index that starts with Kibana",
 			method:    http.MethodGet,
@@ -317,7 +317,7 @@ func TestIsAllowed(t *testing.T) {
 			wantAllow: true,
 		},
 		{
-			name:      "Should allow for kibana is check its privileges",
+			name:      "Should allow for kibana to check its privileges",
 			method:    http.MethodPost,
 			url:       "/_security/user/_has_privileges",
 			wantAllow: true,
@@ -395,7 +395,7 @@ func TestIsAllowed(t *testing.T) {
 		//	body: `{}`,
 		//},
 		{
-			name:      "Should allow a delete request for an async searc",
+			name:      "Should allow a delete request for an async search",
 			method:    http.MethodDelete,
 			url:       "/_async_search/FnF4REF0THh5U2gtM3Q0eVpMdWltSmcdNGtUWXRHRzBUSFdISWFzSFA2U3RVQToxMTUwMTY=",
 			wantAllow: true,
@@ -428,20 +428,20 @@ func TestIsAllowed(t *testing.T) {
 		},
 		// MGET requests
 		{
-			name:      "Should reject any mget requests that targets a calico index",
+			name:      "Should reject any mget requests that target a calico index",
 			method:    http.MethodPost,
 			url:       "/tigera_secure_ee_flows.123/_mget",
 			wantAllow: false,
 		},
 		{
-			name:      "Should allow any mget requests that targets a kibana index in its body",
+			name:      "Should allow any mget requests that target a kibana index in its body",
 			method:    http.MethodPost,
 			url:       "/_mget",
 			body:      mgetBodySampleWithKibanaIndices,
 			wantAllow: true,
 		},
 		{
-			name:      "Should reject any mget requests that does not a targets a kibana index",
+			name:      "Should reject any mget requests that does not target a kibana index",
 			method:    http.MethodPost,
 			url:       "/_mget",
 			body:      mgetBodyIndexWithNonKibanaIndices,
@@ -560,7 +560,7 @@ func TestIsAllowed(t *testing.T) {
 			wantAllow: false,
 		},
 		{
-			name:      "Should not allow running multiple templates requests for calico indices  using POST",
+			name:      "Should not allow running multiple templates requests for calico indices using POST",
 			method:    http.MethodPost,
 			url:       "/tigera_secure_ee_anyIndex*/_msearch/template",
 			wantAllow: false,

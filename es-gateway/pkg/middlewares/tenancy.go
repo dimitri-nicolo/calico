@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 
@@ -165,13 +164,13 @@ type AsyncSearchRequest struct {
 	// size (Optional, integer)
 	Size *int `json:"size,omitempty"`
 	// _source (Optional)
-	Source map[string]interface{} `json:"_source,omitempty"`
+	Source interface{} `json:"_source,omitempty"`
 	// stats (Optional, array of strings)
 	Stats []string `json:"stats,omitempty"`
 	// terminate_after (Optional, integer)
 	TerminateAfter *int `json:"terminate_after,omitempty"`
 	// timeout (Optional, time units)
-	Timeout *time.Duration `json:"timeout,omitempty"`
+	Timeout *string `json:"timeout,omitempty"`
 	// version (Optional, Boolean)
 	Version *bool `json:"version,omitempty"`
 	// aggregations (Optional)

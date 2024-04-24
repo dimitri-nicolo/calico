@@ -120,6 +120,28 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
   }
 }
 `
+		sampleBoostingWithAConstantScore = `
+{
+  "query": {
+    "constant_score": {
+      "filter": {
+        "term": { "tenant.keyword": "A" }
+      },
+      "boost": 1.2
+    }
+  }
+}`
+		sampleScriptQuery = `{
+  "query": {
+    "bool": {
+      "filter": {
+        "script": {
+          "script": "any"
+        }
+      }
+    }
+  }
+}`
 	)
 
 	expectedTenantQuery := map[string]interface{}{
@@ -135,7 +157,7 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 		wantStatus int
 	}{
 		{
-			name: "Should enforce tenancy for a generic boolean query with a filter cause using POST",
+			name: "Should enforce tenancy for a generic boolean query with a filter clause using POST",
 			url:  "/tigera_secure_ee_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
 			body:       sampleBooleanQueryWithFilterClause,
@@ -143,14 +165,14 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 		},
 
 		{
-			name: "Should enforce tenancy for a generic boolean query with a must cause using POST",
+			name: "Should enforce tenancy for a generic boolean query with a must clause using POST",
 			url:  "/tigera_secure_ee_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
 			body:       sampleBooleanQueryWithMustClause,
 			wantStatus: http.StatusOK,
 		},
 		{
-			name: "Should enforce tenancy for a generic boolean query with a must not cause using POST",
+			name: "Should enforce tenancy for a generic boolean query with a must not clause using POST",
 			url:  "/tigera_secure_ee_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
 			body:       sampleBooleanQueryWithMustNotClause,
@@ -158,13 +180,13 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 		},
 
 		{
-			name:       "Should deny any search request without an empty query field",
+			name:       "Should deny any search request with an empty query field",
 			url:        "/tigera_secure_ee_anyData*/_async_search",
 			body:       `{"query":{}}`,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:       "Should deny an empty requests",
+			name:       "Should deny an empty async request",
 			url:        "/tigera_secure_ee_anyData*/_async_search",
 			body:       `{}`,
 			wantStatus: http.StatusInternalServerError,
@@ -217,7 +239,7 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
-			name: "Should enforce tenancy for a generic ranger query",
+			name: "Should enforce tenancy for a generic range query",
 			url:  "/tigera_secure_ee_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-range-query.html#range-query-ex-request
 			body:       sampleRangeQuery,
@@ -230,8 +252,20 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 			body:       sampleMatchAllQuery,
 			wantStatus: http.StatusOK,
 		},
-
-		// TODO:Alina - Script, Script score, Percolate, Nested requests, has child, has parent and boosting function scores and should clause
+		{
+			name: "Should enforce tenancy for query using a constant score boost",
+			url:  "/tigera_secure_ee_anyData*/_async_search",
+			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/compound-queries.html
+			body:       sampleBoostingWithAConstantScore,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "Should enforce tenancy for query using a script",
+			url:  "/tigera_secure_ee_anyData*/_async_search",
+			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-script-query.html
+			body:       sampleScriptQuery,
+			wantStatus: http.StatusOK,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -269,7 +303,7 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 				require.NotNil(t, query["bool"])
 				booleanQuery := query["bool"].(map[string]interface{})
 
-				// Check tenancy query is include on must clause
+				// Check tenancy query is included on must clause
 				require.NotNil(t, booleanQuery["must"])
 				tenantQuery := booleanQuery["must"].(map[string]interface{})
 				require.Equal(t, expectedTenantQuery, tenantQuery)

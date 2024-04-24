@@ -87,7 +87,7 @@ func TestFV_KibanaProxy(t *testing.T) {
 
 		require.Eventually(t, isKibanaReady, 30*time.Second, 100*time.Millisecond)
 
-		log.Debugf("Making requests to see create a Kibana space")
+		log.Debugf("Making requests to verify that a Kibana space is created")
 		space := `{"id": "any","name": "Any Kibana space"}`
 		responseKibana, body, err := doRequest("POST", "http://localhost:5601/api/spaces/space", kibanaHeaders, []byte(space))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
@@ -122,7 +122,7 @@ func TestFV_KibanaProxy(t *testing.T) {
   }
 ]`
 
-		log.Debugf("Making requests to see create a Kibana objects")
+		log.Debugf("Making requests to verify that Kibana objects are created successfully")
 		responseKibana, body, err := doRequest("POST", "http://localhost:5601/api/saved_objects/_bulk_create", kibanaHeaders, []byte(savedObjects))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
 		require.NoError(t, err)
