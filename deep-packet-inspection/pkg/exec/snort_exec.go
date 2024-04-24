@@ -18,8 +18,7 @@ type Exec interface {
 	Stop()
 }
 
-type Snort func(podName string, iface string, namespace string, dpiName string, alertFileBasePath string,
-	alertFileSize int, communityRulesFile string) (Exec, error)
+type Snort func(podName string, iface string, namespace string, dpiName string, alertFileBasePath string, alertFileSize int) (Exec, error)
 
 func NewExec(podName string,
 	iface string,
@@ -27,7 +26,6 @@ func NewExec(podName string,
 	dpiName string,
 	alertFileBasePath string,
 	alertFileSize int,
-	communityRulesFile string,
 ) (Exec, error) {
 	s := &snort{}
 
@@ -58,7 +56,6 @@ func NewExec(podName string,
 		"-l", logPath,
 		"--daq", "afpacket",
 		"--lua", fmt.Sprintf("alert_fast={ file = true, limit = %d }", alertFileSize),
-		"-R", communityRulesFile,
 	)
 
 	s.cmd.Stdout = os.Stdout

@@ -14,15 +14,24 @@ class UndefinedVariableError(Exception):
     def __str__(self):
         return f"The variable {self.args[0]} is not defined."
 
-
-class S3ObjectNotFoundError(Exception):
+class CloudStorageObjectNotFoundError(Exception):
     """
-    An S3 object's metadata was requested but the key was not found.
+    Base class for missing cloud storage object exceptions
     """
-
     def __str__(self):
         return f"Object {self.args[0]}/{self.args[1]} does not exist"
 
+class S3ObjectNotFoundError(CloudStorageObjectNotFoundError):
+    """
+    An S3 object's metadata was requested but the key was not found.
+    """
+    pass
+
+class GoogleStorageObjectNotFoundError(CloudStorageObjectNotFoundError):
+    """
+    A Google Storage object's metadata was requested but the key was not found.
+    """
+    pass
 
 class QuayNotAuthorizedError(Exception):
     """

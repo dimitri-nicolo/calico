@@ -15,7 +15,8 @@ __defaults = {
     "CHART_RELEASE": "0",
     "VERSIONS_YAML_FILE": "../../../calico/_data/versions.yml",
     "AWS_PROFILE": "helm",
-    "TIGERA_PUBLIC_BUCKET": "tigera-public",
+    "TIGERA_S3_PUBLIC_BUCKET": "tigera-public",
+    "TIGERA_GCLOUD_WINDOWS_BUCKET": "tigera-windows",
     "SELINUX_SPECFILE_PATH": "../../../selinux/calico-selinux.spec",
     "CALICO_IMAGES_SKIP": "",
     "MANIFESTS_PATH": "../../../manifests"
@@ -59,6 +60,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     args.func(args)
-
-    # defaults.show_variables()
 

@@ -9,20 +9,25 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
+	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -33,13 +38,28 @@ func describe(name string, testFn func(string)) bool {
 	return true
 }
 
+var updateError = false
+
+func InterceptUpdate(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+	if updateError {
+		return fmt.Errorf("update errors for testing purposes")
+	}
+	return client.Update(ctx, obj, opts...)
+}
+
 var _ = describe("Clusters", func(clusterNamespace string) {
+	logrus.SetLevel(logrus.DebugLevel)
 	const clusterID = "resource-name"
 
 	var myClusters *clusters
 	var fakeClient runtimeClient.WithWatch
 	var ctx context.Context
 	var cancel context.CancelFunc
+
+	voltronConfig := config.Config{
+		TenantNamespace: clusterNamespace,
+		TenantClaim:     "tenant_claim",
+	}
 
 	Context("Watch is up and running", func() {
 		BeforeEach(func() {
@@ -49,20 +69,23 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			Expect(err).NotTo(HaveOccurred())
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 
+			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
-				clusters:   make(map[string]*cluster),
-				client:     fakeClient,
-				voltronCfg: &vcfg.Config{TenantNamespace: clusterNamespace},
+				clusters:         make(map[string]*cluster),
+				client:           fakeClient,
+				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				statusUpdateFunc: su.SetStatus,
 			}
 
 			go func() {
 				_ = myClusters.watchK8s(ctx, nil)
 			}()
 		})
+		AfterEach(func() {
+			cancel()
+		})
 
 		It("should be possible to add/update/delete a cluster", func() {
-			defer cancel()
-
 			By("should be possible to add a cluster", func() {
 				annotations := map[string]string{
 					AnnotationActiveCertificateFingerprint: "active-fingerprint-hash-1",
@@ -117,7 +140,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 		})
 	})
 
-	Context("Watch is down", func() {
+	When("Watch is down", func() {
 		BeforeEach(func() {
 			ctx, cancel = context.WithCancel(context.Background())
 			scheme := kscheme.Scheme
@@ -125,16 +148,22 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			Expect(err).NotTo(HaveOccurred())
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 
+			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
-				clusters:   make(map[string]*cluster),
-				client:     fakeClient,
-				voltronCfg: &vcfg.Config{TenantNamespace: clusterNamespace},
+				clusters:         make(map[string]*cluster),
+				client:           fakeClient,
+				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				statusUpdateFunc: su.SetStatus,
 			}
+
+			go func() {
+				_ = myClusters.watchK8s(ctx, nil)
+			}()
 		})
-
+		AfterEach(func() {
+			cancel()
+		})
 		It("should cluster added should be seen after watch restarts", func() {
-			defer cancel()
-
 			Expect(len(myClusters.List())).To(Equal(0))
 			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 				TypeMeta: metav1.TypeMeta{
@@ -153,29 +182,58 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 		})
 	})
 
-	Context("Watch is restarted", func() {
+	When("watch restarts", func() {
+		var statusCtx context.Context
+		var statusCancel context.CancelFunc
+
 		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(context.Background())
+			statusCtx, statusCancel = context.WithCancel(context.Background())
 			scheme := kscheme.Scheme
 			err := v3.AddToScheme(scheme)
 			Expect(err).NotTo(HaveOccurred())
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 
+			su := NewStatusUpdater(statusCtx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
-				clusters:   make(map[string]*cluster),
-				client:     fakeClient,
-				voltronCfg: &vcfg.Config{TenantNamespace: clusterNamespace},
+				clusters:         make(map[string]*cluster),
+				client:           fakeClient,
+				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				statusUpdateFunc: su.SetStatus,
 			}
+
+			go func() {
+				_ = myClusters.watchK8s(ctx, nil)
+			}()
+		})
+		AfterEach(func() {
+			cancel()
+			statusCancel()
+		})
+		It("should add a cluster after watch restarted due to an error", func() {
+			mcList := &v3.ManagedClusterList{}
+			watch, err := fakeClient.Watch(context.Background(), mcList, &runtimeClient.ListOptions{})
+			watch.Stop()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(myClusters.List())).To(Equal(0))
+			go func() {
+				_ = myClusters.watchK8s(ctx, nil)
+			}()
+			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "X",
+					Namespace: clusterNamespace,
+				},
+			})).NotTo(HaveOccurred())
+			Eventually(func() int { return len(myClusters.List()) }).Should(Equal(1))
 		})
 
 		It("should delete a cluster deleted while watch was down", func() {
-			ctx, cancel = context.WithCancel(context.Background())
-			defer cancel()
-
 			By("adding a cluster when watch is running", func() {
-				go func() {
-					_ = myClusters.watchK8s(ctx, nil)
-				}()
-
 				annotations := map[string]string{
 					AnnotationActiveCertificateFingerprint: "active-fingerprint-hash-1",
 				}
@@ -210,35 +268,99 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 						Namespace: clusterNamespace,
 					},
 				})).ShouldNot(HaveOccurred())
+				ctx, cancel = context.WithCancel(context.Background())
 				go func() {
 					_ = myClusters.watchK8s(ctx, nil)
 				}()
 				Eventually(func() int { return len(myClusters.List()) }).Should(Equal(0))
 			})
 		})
+	})
 
-		It("should add a cluster after watch restarted due to an error", func() {
+	When("ManagedCluster update fails", func() {
+		BeforeEach(func() {
 			ctx, cancel = context.WithCancel(context.Background())
-			defer cancel()
-
-			mcList := &v3.ManagedClusterList{}
-			watch, err := fakeClient.Watch(context.Background(), mcList, &runtimeClient.ListOptions{})
-			watch.Stop()
+			scheme := kscheme.Scheme
+			err := v3.AddToScheme(scheme)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(myClusters.List())).To(Equal(0))
+			fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{Update: InterceptUpdate}).Build()
+
+			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
+			myClusters = &clusters{
+				clusters:         make(map[string]*cluster),
+				client:           fakeClient,
+				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				statusUpdateFunc: su.SetStatus,
+			}
+
 			go func() {
 				_ = myClusters.watchK8s(ctx, nil)
 			}()
+		})
+		AfterEach(func() {
+			cancel()
+		})
+		It("should retry until the update succeeds", func() {
+			By("setting the update to fail", func() {
+				updateError = true
+			})
 			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       v3.KindManagedCluster,
 					APIVersion: v3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "X",
+					Name:      "blocked",
 					Namespace: clusterNamespace,
 				},
+				Status: v3.ManagedClusterStatus{
+					Conditions: []v3.ManagedClusterStatusCondition{{
+						Type:   v3.ManagedClusterStatusTypeConnected,
+						Status: v3.ManagedClusterStatusValueTrue,
+					}},
+				},
 			})).NotTo(HaveOccurred())
+
+			Consistently(func() v3.ManagedClusterStatusValue {
+				mc := &v3.ManagedCluster{}
+				err := fakeClient.Get(context.Background(), types.NamespacedName{Name: "blocked", Namespace: clusterNamespace}, mc)
+				if err != nil {
+					return v3.ManagedClusterStatusValueUnknown
+				}
+				for _, v := range mc.Status.Conditions {
+					if v.Type == v3.ManagedClusterStatusTypeConnected {
+						return v.Status
+					}
+				}
+				return v3.ManagedClusterStatusValueUnknown
+			}, "1s").Should(Equal(v3.ManagedClusterStatusValueTrue), "Managed cluster connection status should remain true since the update is failing")
+
+			By("setting the update to succeed", func() {
+				updateError = false
+			})
+			Eventually(func() v3.ManagedClusterStatusValue {
+				mc := &v3.ManagedCluster{}
+				err := fakeClient.Get(context.Background(), types.NamespacedName{Name: "blocked", Namespace: clusterNamespace}, mc)
+				if err != nil {
+					return v3.ManagedClusterStatusValueUnknown
+				}
+				for _, v := range mc.Status.Conditions {
+					if v.Type == v3.ManagedClusterStatusTypeConnected {
+						return v.Status
+					}
+				}
+				return v3.ManagedClusterStatusValueUnknown
+			}, "3s").Should(Equal(v3.ManagedClusterStatusValueFalse), "Managed cluster connection status should be set false when the update succeeds")
+			Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "blocked",
+					Namespace: clusterNamespace,
+				},
+			})).ShouldNot(HaveOccurred())
 			Eventually(func() int { return len(myClusters.List()) }).Should(Equal(1))
 		})
 	})
@@ -253,12 +375,15 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			Expect(err).NotTo(HaveOccurred())
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 
+			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
 			myClusters = &clusters{
-				clusters:   make(map[string]*cluster),
-				client:     fakeClient,
-				voltronCfg: &vcfg.Config{TenantNamespace: clusterNamespace},
+				clusters:         make(map[string]*cluster),
+				client:           fakeClient,
+				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
+				statusUpdateFunc: su.SetStatus,
 			}
 		})
+		AfterEach(func() { cancel() })
 
 		It("should set ManagedClusterConnected status to false if it is true during startup.", func() {
 			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
@@ -288,7 +413,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 				mc := &v3.ManagedCluster{}
 				_ = fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterName, Namespace: clusterNamespace}, mc)
 				return mc.Status.Conditions[0].Status
-			}, 10*time.Second, 1*time.Second).Should(Equal(v3.ManagedClusterStatusValueFalse))
+			}, 5*time.Second, 5*time.Millisecond).Should(Equal(v3.ManagedClusterStatusValueFalse))
 
 			Expect(len(myClusters.List())).To(Equal(1))
 		})
@@ -303,6 +428,7 @@ var _ = describe("Update certificates", func(clusterNamespace string) {
 		k8sCLI:                k8sAPI,
 		voltronCfg:            &vcfg.Config{},
 		clientCertificatePool: x509.NewCertPool(),
+		statusUpdateFunc:      func(string, v3.ManagedClusterStatusValue) {},
 	}
 
 	var (

@@ -60,7 +60,7 @@ const (
 
 	DefaultConfigMapNamespace = TigeraIntrusionDetectionNamespace
 	DefaultSecretsNamespace   = TigeraIntrusionDetectionNamespace
-	DefaultMaxLinseedTimeSkew = 1 // minute
+	DefaultMaxLinseedTimeSkew = 5 // minute
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -147,7 +147,8 @@ func main() {
 		log.WithError(err).Fatal("failed to create linseed client")
 	}
 
-	e := storage.NewService(linseedClient, client, "", time.Duration(maxLinseedTimeSkew))
+	maxLinseedTimeSkewDuration := time.Duration(maxLinseedTimeSkew) * time.Minute
+	e := storage.NewService(linseedClient, client, "", maxLinseedTimeSkewDuration)
 	e.Run(ctx)
 	defer e.Close()
 
@@ -192,8 +193,6 @@ func main() {
 		log.WithError(err).Error("Error while opening Geo IP database.")
 	}
 	defer g.Close()
-
-	maxLinseedTimeSkewDuration := time.Duration(maxLinseedTimeSkew * int(time.Minute))
 
 	s := feedsWatcher.NewWatcher(
 		kubeClientSet.CoreV1().ConfigMaps(configMapNamespace),

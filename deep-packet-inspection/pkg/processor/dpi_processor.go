@@ -29,14 +29,13 @@ type Processor interface {
 }
 
 type dpiProcessor struct {
-	dpiKey                  model.ResourceKey
-	nodeName                string
-	snortExecFn             exec.Snort
-	ch                      chan cacheReq
-	snortAlertFileBasePath  string
-	snortAlertFileSize      int
-	snortCommunityRulesFile string
-	dpiUpdater              dpiupdater.DPIStatusUpdater
+	dpiKey                 model.ResourceKey
+	nodeName               string
+	snortExecFn            exec.Snort
+	ch                     chan cacheReq
+	snortAlertFileBasePath string
+	snortAlertFileSize     int
+	dpiUpdater             dpiupdater.DPIStatusUpdater
 }
 
 type requestType int
@@ -69,18 +68,16 @@ func NewProcessor(ctx context.Context,
 	snortExecFn exec.Snort,
 	snortAlertFileBasePath string,
 	snortAlertFileSize int,
-	snortCommunityRulesFile string,
 	dpiUpdater dpiupdater.DPIStatusUpdater,
 ) Processor {
 	d := &dpiProcessor{
-		dpiKey:                  dpiKey,
-		nodeName:                nodeName,
-		snortExecFn:             snortExecFn,
-		snortAlertFileBasePath:  snortAlertFileBasePath,
-		snortAlertFileSize:      snortAlertFileSize,
-		snortCommunityRulesFile: snortCommunityRulesFile,
-		ch:                      make(chan cacheReq, 100),
-		dpiUpdater:              dpiUpdater,
+		dpiKey:                 dpiKey,
+		nodeName:               nodeName,
+		snortExecFn:            snortExecFn,
+		snortAlertFileBasePath: snortAlertFileBasePath,
+		snortAlertFileSize:     snortAlertFileSize,
+		ch:                     make(chan cacheReq, 100),
+		dpiUpdater:             dpiUpdater,
 	}
 	go d.run(ctx)
 	dpiUpdater.UpdateStatus(ctx, d.dpiKey, false)
@@ -245,8 +242,7 @@ func (p *dpiProcessor) runSnort(ctx context.Context, wepKey model.WorkloadEndpoi
 		if err != nil {
 			log.WithError(err).Error("Failed to get pod name from WEP key")
 		}
-		snortExec, err := p.snortExecFn(podName, iface, p.dpiKey.Namespace, p.dpiKey.Name, p.snortAlertFileBasePath,
-			p.snortAlertFileSize, p.snortCommunityRulesFile)
+		snortExec, err := p.snortExecFn(podName, iface, p.dpiKey.Namespace, p.dpiKey.Name, p.snortAlertFileBasePath, p.snortAlertFileSize)
 		if err != nil {
 			log.WithFields(log.Fields{"DPI": p.dpiKey.String(), "WEP": wepKey.String()}).WithError(err).
 				Errorf("failed to set snort command line")

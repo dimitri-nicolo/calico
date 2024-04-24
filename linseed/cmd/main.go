@@ -274,18 +274,21 @@ func run() {
 		// service account users.
 		//
 		// Each client that connects from a managed cluster will provide these tokens, which will map
-		// back to the permissions assigned to its serviceaccount in the management cluster.
+		// back to the permissions assigned to its service account in the management cluster.
+		// Manager clusters that connect with a multi-tenant management cluster require a token
+		// with the namespace of the tenant instead of the canonical one. Compliance and Intrusion Detection
+		// are components that get deployed inside the tenant namespace, thus we need to create the tokens
+		// to match the tenant namespaces
 		users := []token.UserInfo{
 			{Namespace: "tigera-fluentd", Name: "fluentd-node"},
 			{Namespace: "tigera-fluentd", Name: "fluentd-node-windows"},
 			{Namespace: "tigera-fluentd", Name: "eks-log-forwarder"},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-benchmarker"},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-controller"},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-reporter"},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-snapshotter"},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-benchmarker", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-controller", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-reporter", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: "tigera-compliance", Name: "tigera-compliance-snapshotter", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: "tigera-intrusion-detection", Name: "intrusion-detection-controller", TenantNamespaceOverride: cfg.TenantNamespace},
 			{Namespace: "tigera-dpi", Name: "tigera-dpi"},
-			{Namespace: "tigera-intrusion-detection", Name: "intrusion-detection-controller"},
-			{Namespace: "tigera-intrusion-detection", Name: "anomaly-detectors"},
 		}
 
 		const tokenHealthName = "TokenManager"
@@ -412,7 +415,7 @@ func run() {
 	}
 
 	// Register the /version endpoint without authorization.
-	authzHelper.Disable("GET", "/version")
+	authzHelper.DisableWithoutPrefix("GET", "/version")
 
 	// Start the server.
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)

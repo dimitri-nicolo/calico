@@ -33,7 +33,7 @@ var _ = Describe("DPI processor", func() {
 	var ctx context.Context
 	var p processor.Processor
 
-	snortExecFn := func(podName string, iface string, namespace string, dpiName string, alertPath string, alertFileSize int, communityRulesFile string) (exec.Exec, error) {
+	snortExecFn := func(podName string, iface string, namespace string, dpiName string, alertPath string, alertFileSize int) (exec.Exec, error) {
 		return mockSnortExec, nil
 	}
 
@@ -47,7 +47,7 @@ var _ = Describe("DPI processor", func() {
 		// Status is updated after initializing the processor, once after WEP is added and once when the processor is closed.
 		mockDPIUpdater.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(3)
 
-		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, "", mockDPIUpdater)
+		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, mockDPIUpdater)
 
 		Expect(p.WEPInterfaceCount()).Should(Equal(0))
 		mockSnortExec.On("Start").Return(nil).Times(1)
@@ -62,7 +62,7 @@ var _ = Describe("DPI processor", func() {
 		// Status is updated after initializing the processor, once after WEP is added and once when the WEP is removed.
 		mockDPIUpdater.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(3)
 
-		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, "", mockDPIUpdater)
+		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, mockDPIUpdater)
 		mockSnortExec.On("Start").Return(nil)
 		mockSnortExec.On("Wait").Return(nil)
 		p.Add(ctx, wepKey, ifaceName)
@@ -81,7 +81,7 @@ var _ = Describe("DPI processor", func() {
 		// Status is updated with error once when snort fails.
 		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(1)
 
-		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, "", mockDPIUpdater)
+		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, mockDPIUpdater)
 		mockSnortExec.On("Start").Return(nil).Times(2)
 		mockSnortExec.On("Stop").Return(nil).Times(1)
 
@@ -98,7 +98,7 @@ var _ = Describe("DPI processor", func() {
 		// Status is updated after initializing the processor, twice when WEP is added, and once when process is closed.
 		mockDPIUpdater.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(4)
 
-		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, "", mockDPIUpdater)
+		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, mockDPIUpdater)
 
 		mockSnortExec.On("Start").Return(nil).Times(2)
 		mockSnortExec.On("Wait").Return(nil).Times(2)
