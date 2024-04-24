@@ -126,7 +126,7 @@ type State struct {
 	_                   [48]byte // ipv6 padding
 }
 
-const expectedSize = 480
+const expectedSize = 496
 
 func (s *State) AsBytes() []byte {
 	bPtr := (*[expectedSize]byte)(unsafe.Pointer(s))
