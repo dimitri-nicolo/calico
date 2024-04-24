@@ -32,6 +32,9 @@ type Target struct {
 	// PathReplace if not nil will be used to replace PathRegexp matches
 	PathReplace []byte
 
+	// HostHeader if not nil will replace the Host header for the proxied request.
+	HostHeader *string
+
 	// Transport to use for this target. If nil, Proxy will provide one
 	Transport        http.RoundTripper
 	AllowInsecureTLS bool
@@ -125,14 +128,21 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		logCtx := log.WithField("dst", tgt)
 		if tgt.PathRegexp != nil {
 			if !tgt.PathRegexp.MatchString(r.URL.Path) {
 				http.Error(w, "Not found", 404)
-				log.Debugf("Received request %s rejected by PathRegexp %q", r.RequestURI, tgt.PathRegexp)
+				logCtx.Debugf("Received request %s rejected by PathRegexp %q", r.RequestURI, tgt.PathRegexp)
 				return
 			}
 			if tgt.PathReplace != nil {
+				logCtx.Debugf("Replacing URL path %s.", r.URL.Path)
 				r.URL.Path = tgt.PathRegexp.ReplaceAllString(r.URL.Path, string(tgt.PathReplace))
+				logCtx.Debugf("Replaced URL path is now %s.", r.URL.Path)
+			}
+			if tgt.HostHeader != nil {
+				logCtx.Debugf("Rewriting host header to %s", *tgt.HostHeader)
+				r.Host = *tgt.HostHeader
 			}
 		}
 
@@ -140,7 +150,7 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 			r.Header.Set("Authorization", token)
 		}
 
-		log.Debugf("Received request %s will proxy to %s", r.RequestURI, tgt.Dest)
+		logCtx.Debugf("Received request %s will proxy to %s", r.RequestURI, tgt.Dest)
 
 		p.ServeHTTP(w, r)
 	}, nil

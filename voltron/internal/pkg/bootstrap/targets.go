@@ -31,6 +31,9 @@ type Target struct {
 	PathRegexp strAsByteSlice `json:"pathRegexp,omitempty"`
 	// PathReplace if not nil will be used to replace PathRegexp matches
 	PathReplace strAsByteSlice `json:"pathReplace,omitempty"`
+
+	// HostHeader rewrites the host value for the proxied request.
+	HostHeader *string `json:"hostHeader,omitempty"`
 	// AllowInsecureTLS allows https with insecure tls settings
 	AllowInsecureTLS bool `json:"allowInsecureTLS,omitempty"`
 
@@ -136,6 +139,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 			pt.PathRegexp = r
 		}
 		pt.PathReplace = t.PathReplace
+		pt.HostHeader = t.HostHeader
 
 		pathSet[pt.Path] = true
 		ret = append(ret, pt)
@@ -168,6 +172,9 @@ type TLSPassThroughRoute struct {
 
 	// Server name to match incoming tunnel traffic to. Matching traffic is proxied to the Destination.
 	ServerName string `json:"serverName"`
+
+	// HostHeader rewrites the host value for the proxied request.
+	HostHeader *string `json:"hostHeader,omitempty"`
 }
 
 func TLSPassThroughRoutesFromFile(path string) ([]TLSPassThroughRoute, error) {
