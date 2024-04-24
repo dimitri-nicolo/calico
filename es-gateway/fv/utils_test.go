@@ -20,12 +20,14 @@ type RunKibanaProxyArgs struct {
 	ElasticEndpoint       string
 	ElasticClientCertPath string
 	ElasticCAPath         string
+	TenantID              string
 }
 
 func DefaultKibanaProxyArgs() *RunKibanaProxyArgs {
 	return &RunKibanaProxyArgs{
 		Port:            5555,
 		ElasticEndpoint: "http://localhost:9200",
+		TenantID:        "A",
 	}
 }
 
@@ -39,6 +41,7 @@ func RunKibanaProxy(t *testing.T, args *RunKibanaProxyArgs) *containers.Containe
 		"-e", "ES_GATEWAY_KIBANA_CATCH_ALL_ROUTE=/",
 		"-e", fmt.Sprintf("ES_GATEWAY_KIBANA_PROXY_PORT=%d", args.Port),
 		"-e", fmt.Sprintf("ES_GATEWAY_ELASTIC_ENDPOINT=%s", args.ElasticEndpoint),
+		"-e", fmt.Sprintf("TENANT_ID=%s", args.TenantID),
 		"tigera/es-gateway:latest",
 		"-run-as-kibana-proxy",
 	}
