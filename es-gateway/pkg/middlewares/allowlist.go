@@ -13,8 +13,8 @@ import (
 )
 
 // TODO: Alina - switch to calico cloud indices
-var fieldCapsRegexp = regexp.MustCompile("(/tigera_secure_ee_)(.+)(\\*)(/_field_caps)")
-var asyncSearchRegexp = regexp.MustCompile("(/tigera_secure_ee_)(.+)(\\*)(/_async_search)")
+var fieldCapsRegexp = regexp.MustCompile(`(/tigera_secure_ee_)(.+)(\*)(/_field_caps)`)
+var asyncSearchRegexp = regexp.MustCompile(`(/tigera_secure_ee_)(.+)(\it *)(/_async_search)`)
 
 func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	switch {
