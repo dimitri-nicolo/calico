@@ -19,6 +19,7 @@ package server
 import (
 	"flag"
 	"io"
+	"os"
 
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/spf13/cobra"
@@ -29,6 +30,20 @@ import (
 )
 
 const defaultEtcdPathPrefix = ""
+
+func logrusLevel() logrus.Level {
+	if env := os.Getenv("LOG_LEVEL"); env != "" {
+		return logutils.SafeParseLogLevel(env)
+	}
+
+	if klog.V(2).Enabled() {
+		return logrus.DebugLevel
+	}
+	if klog.V(1).Enabled() {
+		return logrus.InfoLevel
+	}
+	return logrus.ErrorLevel
+}
 
 // NewCommandStartMaster provides a CLI handler for 'start master' command
 func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
@@ -54,6 +69,8 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 	opts.addFlags(flags)
 
 	cmd.Run = func(c *cobra.Command, args []string) {
+		logrus.SetLevel(logrusLevel())
+
 		h := interrupt.New(nil, func() {
 			close(stopCh)
 		})

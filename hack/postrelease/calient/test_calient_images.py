@@ -10,6 +10,7 @@ import pytest
 from variables import defaults
 
 from lib.quay import Quay
+from lib.exceptions import QuayNoTagsFoundError
 
 def versions_data():
     with open(defaults.VERSIONS_YAML_FILE, encoding="utf8") as input_versions_file:
@@ -45,4 +46,7 @@ def test_calico_images(calico_image, calico_tag):
     if calico_image in defaults.CALICO_IMAGES_SKIP.split():
         pytest.skip(f"Image {calico_image} found in skiplist.")
     quay = Quay(token=defaults.QUAY_TOKEN)
-    quay.get_tag(calico_image, calico_tag)
+    fetched_tag = quay.get_tag(calico_image, calico_tag)
+    if fetched_tag is None:
+        pytest.fail(reason=f"Docker image {calico_image}:{calico_tag} was not found on quay.io", pytrace=False,)
+

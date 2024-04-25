@@ -17,10 +17,10 @@ import requests
 
 try:
     from utils import HTTPBearerAuth
-    from exceptions import QuayNotAuthorizedError
+    from exceptions import QuayNotAuthorizedError, QuayNoTagsFoundError
 except ImportError:
     from .utils import HTTPBearerAuth
-    from .exceptions import QuayNotAuthorizedError
+    from .exceptions import QuayNotAuthorizedError, QuayNoTagsFoundError
 
 
 class Quay:
@@ -48,7 +48,11 @@ class Quay:
 
         match response.status_code:
             case 200:
-                return result["tags"][0]
+                try:
+                    requested_tag = result["tags"][0]
+                except IndexError:
+                    return None
+                return requested_tag
             case 401 | 403:
                 raise QuayNotAuthorizedError(
                     f"Error {result['status']}: {result['detail']} ({result['error_type']})"

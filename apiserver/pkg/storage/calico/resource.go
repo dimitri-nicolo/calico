@@ -143,7 +143,7 @@ func validationError(err error, qualifiedKind schema.GroupKind, name string) *aa
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
 func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
-	klog.Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
+	klog.V(1).Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
 	lcObj := rs.converter.convertToLibcalico(obj)
 
 	if rs.hasRestrictions == nil {
@@ -181,7 +181,7 @@ func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Obj
 	preconditions *storage.Preconditions, validateDeletion storage.ValidateObjectFunc,
 	cachedExistingObject runtime.Object,
 ) error {
-	klog.Infof("Delete called with key: %v for resource %v\n", key, rs.resourceName)
+	klog.V(1).Infof("Delete called with key: %v for resource %v\n", key, rs.resourceName)
 
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
@@ -240,7 +240,7 @@ func checkPreconditions(key string, preconditions *storage.Preconditions, out ru
 // If resource version is "0", this interface will get current object at given key
 // and send it in an "ADDED" event, before watch starts.
 func (rs *resourceStore) Watch(ctx context.Context, key string, opts storage.ListOptions) (k8swatch.Interface, error) {
-	klog.Infof("Watch called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.V(1).Infof("Watch called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return nil, err
@@ -256,7 +256,7 @@ func (rs *resourceStore) Watch(ctx context.Context, key string, opts storage.Lis
 // If resource version is "0", this interface will list current objects directory defined by key
 // and send them in "ADDED" events, before watch starts.
 func (rs *resourceStore) WatchList(ctx context.Context, key string, opts storage.ListOptions) (k8swatch.Interface, error) {
-	klog.Infof("WatchList called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.V(1).Infof("WatchList called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return nil, err
@@ -272,7 +272,7 @@ func (rs *resourceStore) WatchList(ctx context.Context, key string, opts storage
 func (rs *resourceStore) Get(ctx context.Context, key string, optsK8s storage.GetOptions,
 	out runtime.Object,
 ) error {
-	klog.Infof("Get called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.V(1).Infof("Get called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return err
@@ -297,7 +297,7 @@ func (rs *resourceStore) Get(ctx context.Context, key string, optsK8s storage.Ge
 // The returned contents may be delayed, but it is guaranteed that they will
 // match 'opts.ResourceVersion' according 'opts.ResourceVersionMatch'.
 func (rs *resourceStore) GetList(ctx context.Context, key string, opts storage.ListOptions, listObj runtime.Object) error {
-	klog.Infof("GetList called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.V(1).Infof("GetList called with key: %v on resource %v\n", key, rs.resourceName)
 	return rs.List(ctx, key, opts, listObj)
 }
 
@@ -306,7 +306,7 @@ func (rs *resourceStore) GetList(ctx context.Context, key string, opts storage.L
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (rs *resourceStore) List(ctx context.Context, key string, optsK8s storage.ListOptions, listObj runtime.Object) error {
-	klog.Infof("List called with key: %v on resource %v\n", key, rs.resourceName)
+	klog.V(1).Infof("List called with key: %v on resource %v\n", key, rs.resourceName)
 	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
 	if err != nil {
 		return err

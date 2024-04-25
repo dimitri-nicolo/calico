@@ -78,6 +78,7 @@ import (
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	logutilslc "github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -356,14 +357,15 @@ type bpfEndpointManager struct {
 
 	// CaliEnt features below
 
-	enableTcpStats   bool
-	lookupsCache     *calc.LookupsCache
-	actionOnDrop     string
-	egIPEnabled      bool
-	egwVxlanPort     uint16
-	v4               *bpfEndpointManagerDataplane
-	v6               *bpfEndpointManagerDataplane
-	healthAggregator *health.HealthAggregator
+	enableTcpStats       bool
+	lookupsCache         *calc.LookupsCache
+	actionOnDrop         string
+	egIPEnabled          bool
+	egwVxlanPort         uint16
+	v4                   *bpfEndpointManagerDataplane
+	v6                   *bpfEndpointManagerDataplane
+	healthAggregator     *health.HealthAggregator
+	updateRateLimitedLog *logutilslc.RateLimitedLogger
 }
 
 type bpfEndpointManagerDataplane struct {
@@ -534,6 +536,11 @@ func newBPFEndpointManager(
 			Detail: "Not yet synced.",
 		})
 	}
+
+	m.updateRateLimitedLog = logutilslc.NewRateLimitedLogger(
+		logutilslc.OptInterval(30*time.Second),
+		logutilslc.OptBurst(10),
+	)
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
 	// _only_ implemented by XDP, so we _should_ fall back to XDPGeneric if necessary in order
@@ -930,18 +937,23 @@ func (m *bpfEndpointManager) reclaimPolicyIdx(name string, ipFamily int, iface *
 		}
 		if attachHook != hook.XDP {
 			if err := m.jumpMapAlloc.Put(idx.policyIdx[attachHook], name); err != nil {
-				log.WithError(err).Error(attachHook.String())
-			}
-			if err := m.jumpMapDelete(attachHook, iface.dpState.filterIdx[attachHook]); err != nil {
-				log.WithError(err).Warn("Filter program may leak.")
-			}
-			if err := m.jumpMapAlloc.Put(iface.dpState.filterIdx[attachHook], name); err != nil {
-				log.WithError(err).Error(attachHook.String())
+				log.WithError(err).Errorf("Policy family %d, hook %s", ipFamily, attachHook)
 			}
 		} else {
 			if err := m.xdpJumpMapAlloc.Put(idx.policyIdx[attachHook], name); err != nil {
 				log.WithError(err).Error(attachHook.String())
 			}
+		}
+	}
+}
+
+func (m *bpfEndpointManager) reclaimFilterIdx(name string, iface *bpfInterface) {
+	for _, attachHook := range []hook.Hook{hook.Ingress, hook.Egress} {
+		if err := m.jumpMapDelete(attachHook, iface.dpState.filterIdx[attachHook]); err != nil {
+			log.WithError(err).Warn("Filter program may leak.")
+		}
+		if err := m.jumpMapAlloc.Put(iface.dpState.filterIdx[attachHook], name); err != nil {
+			log.WithError(err).Errorf("Filter hook %s", attachHook)
 		}
 	}
 }
@@ -977,6 +989,7 @@ func (m *bpfEndpointManager) updateIfaceStateMap(name string, iface *bpfInterfac
 		if m.v6 != nil {
 			m.reclaimPolicyIdx(name, 6, iface)
 		}
+		m.reclaimFilterIdx(name, iface)
 		m.ifStateMap.Desired().Delete(k)
 		iface.dpState.clearJumps()
 	}
@@ -1591,6 +1604,10 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 		}
 		m.reportHealth(true, "")
 	} else {
+		m.dirtyIfaceNames.Iter(func(iface string) error {
+			m.updateRateLimitedLog.WithField("name", iface).Info("Interface remains dirty.")
+			return nil
+		})
 		m.reportHealth(false, "Failed to configure some interfaces.")
 	}
 
@@ -1712,12 +1729,35 @@ func (m *bpfEndpointManager) doApplyPolicyToDataIface(iface string) (bpfInterfac
 		return state, xdpErr
 	}
 
-	if m.v6 != nil && err6 == nil {
-		state.v6Readiness = ifaceIsReady
+	if err4 != nil && err6 != nil {
+		// This covers the case when we don't have hostIP on both paths.
+		return state, errors.Join(err4, err6)
 	}
-	if m.v4 != nil && err4 == nil {
-		state.v4Readiness = ifaceIsReady
+
+	if m.v6 != nil {
+		if err6 == nil {
+			state.v6Readiness = ifaceIsReady
+		}
+		if m.v6.hostIP == nil {
+			// If we do not have host IP for the IP version, we certainly error.
+			// But that should not prevent the other IP version path from
+			// working correctly.
+			err6 = nil
+		}
 	}
+
+	if m.v4 != nil {
+		if err4 == nil {
+			state.v4Readiness = ifaceIsReady
+		}
+		if m.v4.hostIP == nil {
+			// If we do not have host IP for the IP version, we certainly error.
+			// But that should not prevent the other IP version path from
+			// working correctly.
+			err4 = nil
+		}
+	}
+
 	return state, errors.Join(err4, err6)
 }
 
@@ -1729,6 +1769,11 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 		if !m.isDataIface(iface) && !m.isL3Iface(iface) {
 			log.WithField("iface", iface).Debug(
 				"Ignoring interface that doesn't match the host data/l3 interface regex")
+			if !m.isWorkloadIface(iface) {
+				log.WithField("iface", iface).Debug(
+					"Removing interface that doesn't match the host data/l3 interface and is not workload interface")
+				return set.RemoveItem
+			}
 			return nil
 		}
 
@@ -2133,11 +2178,33 @@ func (m *bpfEndpointManager) doApplyPolicy(ifaceName string) (bpfInterfaceState,
 	}
 	state.qdisc = ingressQdisc
 
-	if m.v6 != nil && err6 == nil {
-		state.v6Readiness = ifaceIsReady
+	if err4 != nil && err6 != nil {
+		// This covers the case when we don't have hostIP on both paths.
+		return state, errors.Join(err4, err6)
 	}
-	if m.v4 != nil && err4 == nil {
-		state.v4Readiness = ifaceIsReady
+
+	if m.v6 != nil {
+		if err6 == nil {
+			state.v6Readiness = ifaceIsReady
+		}
+		if m.v6.hostIP == nil {
+			// If we do not have host IP for the IP version, we certainly error.
+			// But that should not prevent the other IP version path from
+			// working correctly.
+			err6 = nil
+		}
+	}
+
+	if m.v4 != nil {
+		if err4 == nil {
+			state.v4Readiness = ifaceIsReady
+		}
+		if m.v4.hostIP == nil {
+			// If we do not have host IP for the IP version, we certainly error.
+			// But that should not prevent the other IP version path from
+			// working correctly.
+			err4 = nil
+		}
 	}
 
 	if errors.Join(err4, err6) != nil {
