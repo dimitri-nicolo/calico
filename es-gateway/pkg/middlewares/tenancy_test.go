@@ -158,7 +158,7 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 	}{
 		{
 			name: "Should enforce tenancy for a generic boolean query with a filter clause using POST",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
 			body:       sampleBooleanQueryWithFilterClause,
 			wantStatus: http.StatusOK,
@@ -166,14 +166,14 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 
 		{
 			name: "Should enforce tenancy for a generic boolean query with a must clause using POST",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
 			body:       sampleBooleanQueryWithMustClause,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for a generic boolean query with a must not clause using POST",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-filter-context.html
 			body:       sampleBooleanQueryWithMustNotClause,
 			wantStatus: http.StatusOK,
@@ -181,87 +181,87 @@ func TestKibanaTenancy_Enforce(t *testing.T) {
 
 		{
 			name:       "Should deny any search request with an empty query field",
-			url:        "/tigera_secure_ee_anyData*/_async_search",
+			url:        "/calico_anyData*/_async_search",
 			body:       `{"query":{}}`,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:       "Should deny an empty async request",
-			url:        "/tigera_secure_ee_anyData*/_async_search",
+			url:        "/calico_anyData*/_async_search",
 			body:       `{}`,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:       "Should not process malformed requests",
-			url:        "/tigera_secure_ee_anyData*/_async_search",
+			url:        "/calico_anyData*/_async_search",
 			body:       `{#!#$!1}`,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:       "Should deny aggregations requests without a query field",
-			url:        "/tigera_secure_ee_anyData*/_async_search",
+			url:        "/calico_anyData*/_async_search",
 			body:       `{"agg":{}}`,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "Should enforce tenancy for a generic query string",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-query-string-query.html
 			body:       sampleQueryStringQuery,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for a generic fuzzy string",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-fuzzy-query.html
 			body:       sampleFuzzyQuery,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for a generic regex query",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-regexp-query.html
 			body:       sampleRegexpQuery,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for a generic prefix query",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-regexp-query.html
 			body:       samplePrefixQuery,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for a generic wildcard query",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-wildcard-query.html
 			body:       sampleWildcardQuery,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for a generic range query",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-range-query.html#range-query-ex-request
 			body:       sampleRangeQuery,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for a match all query",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-match-all-query.html
 			body:       sampleMatchAllQuery,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for query using a constant score boost",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/compound-queries.html
 			body:       sampleBoostingWithAConstantScore,
 			wantStatus: http.StatusOK,
 		},
 		{
 			name: "Should enforce tenancy for query using a script",
-			url:  "/tigera_secure_ee_anyData*/_async_search",
+			url:  "/calico_anyData*/_async_search",
 			// https://www.elastic.co/guide/en/elasticsearch/reference/7.17/query-dsl-script-query.html
 			body:       sampleScriptQuery,
 			wantStatus: http.StatusOK,

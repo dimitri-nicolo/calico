@@ -12,9 +12,8 @@ import (
 	"strings"
 )
 
-// TODO: Alina - switch to calico cloud indices
-var fieldCapsRegexp = regexp.MustCompile(`(/tigera_secure_ee_)(.+)(\*)(/_field_caps)`)
-var asyncSearchRegexp = regexp.MustCompile(`(/tigera_secure_ee_)(.+)(\it *)(/_async_search)`)
+var fieldCapsRegexp = regexp.MustCompile(`(/calico_)(.+)(\*)(/_field_caps)`)
+var asyncSearchRegexp = regexp.MustCompile(`(/calico_)(.+)(\*)(/_async_search)`)
 
 func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	switch {
@@ -134,10 +133,10 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 		// This will start an async search request. We expect to have the query
 		// defined inside the body at this step. We will allow async requests
 		// only for calico indices and enhance them with tenancy enforcement
-		// POST /tigera_secure_ee_flows*/_async_search
+		// POST /calico_flows*/_async_search
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/async-search.html
 		return true, nil
-	case strings.HasPrefix(r.URL.Path, "/_async_search") && r.Method == http.MethodGet && !r.URL.Query().Has("q"):
+	case strings.HasPrefix(r.URL.Path, "/_async_search") && r.Method == http.MethodGet && r.Body == nil && !r.URL.Query().Has("q"):
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// This will retrieve partial results from the previous issued query
 		// We will restrict creation of async searches requests to calico indices and
@@ -156,7 +155,7 @@ func IsAllowed(w http.ResponseWriter, r *http.Request) (allow bool, err error) {
 	case fieldCapsRegexp.MatchString(r.URL.Path) && r.Method == http.MethodGet:
 		// This is a request Kibana makes when loading Discovery and Dashboards
 		// We will limit this API only for calico indices
-		// GET /tigera_secure_ee_flows*/_field_caps
+		// GET /calico_flows*/_field_caps
 		// Elastic API: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-field-caps.html
 		return true, nil
 	case r.URL.Path == "/_mget" && r.Method == http.MethodPost:

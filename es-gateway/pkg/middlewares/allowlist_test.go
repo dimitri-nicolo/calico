@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
@@ -42,7 +43,7 @@ func TestIsAllowed(t *testing.T) {
 		name      string
 		method    string
 		url       string
-		body      string
+		body      *string
 		wantAllow bool
 		wantError error
 	}{
@@ -50,70 +51,70 @@ func TestIsAllowed(t *testing.T) {
 		{
 			name:      "Should reject any bulk requests that targets a calico index ",
 			method:    http.MethodPost,
-			url:       "/tigera_secure_ee_flows.123/_bulk",
+			url:       "/calico_flows.123/_bulk",
 			wantAllow: false,
 		},
 		{
 			name:      "Should allow any bulk requests that targets a kibana index in its body",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      bulkBodySampleWithKibanaIndices,
+			body:      ptrString(bulkBodySampleWithKibanaIndices),
 			wantAllow: true,
 		},
 		{
 			name:      "Should reject any bulk requests that does not target a kibana index for an index action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      bulkBodyIndexWithNonKibanaIndices,
+			body:      ptrString(bulkBodyIndexWithNonKibanaIndices),
 			wantAllow: false,
 		},
 		{
 			name:      "Should reject any bulk requests that does not target a kibana index for a delete action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      bulkBodyDeleteWithNonKibanaIndices,
+			body:      ptrString(bulkBodyDeleteWithNonKibanaIndices),
 			wantAllow: false,
 		},
 		{
 			name:      "Should reject any bulk requests that does not target a kibana index for a create action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      bulkBodyCreateWithNonKibanaIndices,
+			body:      ptrString(bulkBodyCreateWithNonKibanaIndices),
 			wantAllow: false,
 		},
 		{
 			name:      "Should reject any bulk requests that does not target a kibana index for a update action",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      bulkBodyUpdateWithNonKibanaIndices,
+			body:      ptrString(bulkBodyUpdateWithNonKibanaIndices),
 			wantAllow: false,
 		},
 		{
 			name:      "Should reject any bulk requests that contains both kibana indices and non-kibana indices",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      bulkBodyWithKibanaAndNonKibanaIndices,
+			body:      ptrString(bulkBodyWithKibanaAndNonKibanaIndices),
 			wantAllow: false,
 		},
 		{
 			name:      "Should process bulk requests ending in newline",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      fmt.Sprintf("%s\n", bulkBodySampleWithKibanaIndices),
+			body:      ptrString(fmt.Sprintf("%s\n", bulkBodySampleWithKibanaIndices)),
 			wantAllow: true,
 		},
 		{
 			name:      "Should process bulk requests ending in newline for Windows",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      fmt.Sprintf("%s\r\n", bulkBodySampleWithKibanaIndices),
+			body:      ptrString(fmt.Sprintf("%s\r\n", bulkBodySampleWithKibanaIndices)),
 			wantAllow: true,
 		},
 		{
 			name:      "Should not process a empty bulk request",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      ``,
+			body:      ptrString(``),
 			wantAllow: false,
 			wantError: fmt.Errorf("unexpected end of JSON input"),
 		},
@@ -121,7 +122,7 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process bulk request with no actions",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      fmt.Sprintf(`{}%s{}%s`, "\n", "\n"),
+			body:      ptrString(fmt.Sprintf(`{}%s{}%s`, "\n", "\n")),
 			wantAllow: false,
 			wantError: middlewares.NoIndexError,
 		},
@@ -129,7 +130,7 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process a malformed bulk request",
 			method:    http.MethodPost,
 			url:       "/_bulk",
-			body:      `{@#$!@#!32}`,
+			body:      ptrString(`{@#$!@#!32}`),
 			wantAllow: false,
 			wantError: fmt.Errorf("invalid character '@' looking for beginning of object key string"),
 		},
@@ -188,14 +189,14 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should allow a point in time deletion request for a kibana index",
 			method:    http.MethodDelete,
 			url:       "/_pit",
-			body:      closePointInTimeBodyWithKibanaIndex,
+			body:      ptrString(closePointInTimeBodyWithKibanaIndex),
 			wantAllow: true,
 		},
 		{
 			name:      "Should not process a malformed close point in time request",
 			method:    http.MethodDelete,
 			url:       "/_pit",
-			body:      `{@#$!@#!32}`,
+			body:      ptrString(`{@#$!@#!32}`),
 			wantAllow: false,
 			wantError: fmt.Errorf("invalid character '@' looking for beginning of object key string"),
 		},
@@ -203,7 +204,7 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process an empty close point in time request",
 			method:    http.MethodDelete,
 			url:       "/_pit",
-			body:      ``,
+			body:      ptrString(``),
 			wantAllow: false,
 			wantError: fmt.Errorf("unexpected end of JSON input"),
 		},
@@ -211,28 +212,28 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process an empty json for a close point in time request",
 			method:    http.MethodDelete,
 			url:       "/_pit",
-			body:      `{}`,
+			body:      ptrString(`{}`),
 			wantAllow: false,
 		},
 		{
 			name:      "Should not process a close point in time request without an id",
 			method:    http.MethodDelete,
 			url:       "/_pit",
-			body:      `{"id":""}`,
+			body:      ptrString(`{"id":""}`),
 			wantAllow: false,
 		},
 		{
 			name:      "Should deny a close point in time request that does not reference a kibana index",
 			method:    http.MethodDelete,
 			url:       "/_pit",
-			body:      fmt.Sprintf(`{"id":"%s"}`, base64.StdEncoding.EncodeToString([]byte("anyIndex"))),
+			body:      ptrString(fmt.Sprintf(`{"id":"%s"}`, base64.StdEncoding.EncodeToString([]byte("anyIndex")))),
 			wantAllow: false,
 		},
 		{
 			name:      "Should not process a close point in time request without an id that is base64 encoded",
 			method:    http.MethodDelete,
 			url:       "/_pit",
-			body:      `{"id":"anyValue"}`,
+			body:      ptrString(`{"id":"anyValue"}`),
 			wantAllow: false,
 		},
 		// Task requests
@@ -260,14 +261,14 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should allow a search request for a kibana index",
 			method:    http.MethodPost,
 			url:       "/_search?allow_partial_search_results=false",
-			body:      serchBodyWithKibanaIndex,
+			body:      ptrString(serchBodyWithKibanaIndex),
 			wantAllow: true,
 		},
 		{
 			name:      "Should not process a malformed search request",
 			method:    http.MethodPost,
 			url:       "/_search?allow_partial_search_results=false",
-			body:      `{@#$!@#!32}`,
+			body:      ptrString(`{@#$!@#!32}`),
 			wantAllow: false,
 			wantError: fmt.Errorf("invalid character '@' looking for beginning of object key string"),
 		},
@@ -275,7 +276,7 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process an empty search request",
 			method:    http.MethodPost,
 			url:       "/_search?allow_partial_search_results=false",
-			body:      ``,
+			body:      ptrString(``),
 			wantAllow: false,
 			wantError: fmt.Errorf("unexpected end of JSON input"),
 		},
@@ -283,28 +284,28 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process an empty json for search request",
 			method:    http.MethodPost,
 			url:       "/_search?allow_partial_search_results=false",
-			body:      `{}`,
+			body:      ptrString(`{}`),
 			wantAllow: false,
 		},
 		{
 			name:      "Should not process a search request without an id",
 			method:    http.MethodPost,
 			url:       "/_search?allow_partial_search_results=false",
-			body:      `{"pit":{"id":""}}`,
+			body:      ptrString(`{"pit":{"id":""}}`),
 			wantAllow: false,
 		},
 		{
 			name:      "Should deny a search request that does not reference a kibana index",
 			method:    http.MethodPost,
 			url:       "/_search?allow_partial_search_results=false",
-			body:      fmt.Sprintf(`{"pit":{"id":"%s"}}`, base64.StdEncoding.EncodeToString([]byte("anyIndex"))),
+			body:      ptrString(fmt.Sprintf(`{"pit":{"id":"%s"}}`, base64.StdEncoding.EncodeToString([]byte("anyIndex")))),
 			wantAllow: false,
 		},
 		{
 			name:      "Should not process a search request without an id that is base64 encoded",
 			method:    http.MethodPost,
 			url:       "/_search?allow_partial_search_results=false",
-			body:      `{"pit":{"id":"anyID"}}`,
+			body:      ptrString(`{"pit":{"id":"anyID"}}`),
 			wantAllow: false,
 			wantError: fmt.Errorf("illegal base64 data at input byte 4"),
 		},
@@ -343,10 +344,9 @@ func TestIsAllowed(t *testing.T) {
 		},
 		// Async search requests
 		{
-			name:   "Should allow an async search request for a calico cloud index",
-			method: http.MethodPost,
-			// TODO: Alina - replace with calico cloud indices
-			url:       "/tigera_secure_ee_anyData*/_async_search",
+			name:      "Should allow an async search request for a calico cloud index",
+			method:    http.MethodPost,
+			url:       "/calico_anyData*/_async_search",
 			wantAllow: true,
 		},
 		{
@@ -362,10 +362,9 @@ func TestIsAllowed(t *testing.T) {
 			wantAllow: false,
 		},
 		{
-			name:   "Should not allow an async search request for a kibana index and query q param",
-			method: http.MethodPost,
-			// TODO: Alina - replace with calico cloud indices
-			url:       "/tigera_secure_ee_anyData*/_async_search?q=abc",
+			name:      "Should not allow an async search request for a kibana index and query q param",
+			method:    http.MethodPost,
+			url:       "/calico_anyData*/_async_search?q=abc",
 			wantAllow: false,
 		},
 		{
@@ -375,10 +374,9 @@ func TestIsAllowed(t *testing.T) {
 			wantAllow: true,
 		},
 		{
-			name:   "Should not allow an async search request for a kibana index using GET",
-			method: http.MethodGet,
-			// TODO: Alina - replace with calico cloud indices
-			url:       "/tigera_secure_ee_anyData*/_async_search",
+			name:      "Should not allow an async search request for a kibana index using GET",
+			method:    http.MethodGet,
+			url:       "/calico_anyData*/_async_search",
 			wantAllow: false,
 		},
 		{
@@ -387,13 +385,13 @@ func TestIsAllowed(t *testing.T) {
 			url:       "/_async_search/FnF4REF0THh5U2gtM3Q0eVpMdWltSmcdNGtUWXRHRzBUSFdISWFzSFA2U3RVQToxMTUwMTY=?q=any",
 			wantAllow: false,
 		},
-		//{
-		//	name:   "Should not allow an async search request ",
-		//	method: http.MethodGet,
-		//	url:       "/_async_search",
-		//	wantAllow: true,
-		//	body: `{}`,
-		//},
+		{
+			name:      "Should not allow an async search request with a GET with a body",
+			method:    http.MethodGet,
+			url:       "/_async_search",
+			wantAllow: false,
+			body:      ptrString(`{}`),
+		},
 		{
 			name:      "Should allow a delete request for an async search",
 			method:    http.MethodDelete,
@@ -402,10 +400,9 @@ func TestIsAllowed(t *testing.T) {
 		},
 		// Field caps requests
 		{
-			name:   "Should allow a field caps request for a kibana index",
-			method: http.MethodGet,
-			// TODO: Alina - replace with calico cloud indices
-			url:       "/tigera_secure_ee_anyData*/_field_caps",
+			name:      "Should allow a field caps request for a kibana index",
+			method:    http.MethodGet,
+			url:       "/calico_anyData*/_field_caps",
 			wantAllow: true,
 		},
 		{
@@ -430,28 +427,28 @@ func TestIsAllowed(t *testing.T) {
 		{
 			name:      "Should reject any mget requests that target a calico index",
 			method:    http.MethodPost,
-			url:       "/tigera_secure_ee_flows.123/_mget",
+			url:       "/calico_flows.123/_mget",
 			wantAllow: false,
 		},
 		{
 			name:      "Should allow any mget requests that target a kibana index in its body",
 			method:    http.MethodPost,
 			url:       "/_mget",
-			body:      mgetBodySampleWithKibanaIndices,
+			body:      ptrString(mgetBodySampleWithKibanaIndices),
 			wantAllow: true,
 		},
 		{
 			name:      "Should reject any mget requests that does not target a kibana index",
 			method:    http.MethodPost,
 			url:       "/_mget",
-			body:      mgetBodyIndexWithNonKibanaIndices,
+			body:      ptrString(mgetBodyIndexWithNonKibanaIndices),
 			wantAllow: false,
 		},
 		{
 			name:      "Should not process an empty mget request",
 			method:    http.MethodPost,
 			url:       "/_mget",
-			body:      ``,
+			body:      ptrString(``),
 			wantAllow: false,
 			wantError: fmt.Errorf("unexpected end of JSON input"),
 		},
@@ -459,7 +456,7 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process mget request with no docs",
 			method:    http.MethodPost,
 			url:       "/_mget",
-			body:      `{"docs":[]}`,
+			body:      ptrString(`{"docs":[]}`),
 			wantAllow: false,
 			wantError: middlewares.NoIndexError,
 		},
@@ -467,7 +464,7 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process mget request with no index on a doc",
 			method:    http.MethodPost,
 			url:       "/_mget",
-			body:      `{"docs":[{"_index": ""}]}`,
+			body:      ptrString(`{"docs":[{"_index": ""}]}`),
 			wantAllow: false,
 			wantError: middlewares.NoIndexError,
 		},
@@ -475,7 +472,7 @@ func TestIsAllowed(t *testing.T) {
 			name:      "Should not process a malformed mget request",
 			method:    http.MethodPost,
 			url:       "/_mget",
-			body:      `{@#$!@#!32}`,
+			body:      ptrString(`{@#$!@#!32}`),
 			wantAllow: false,
 			wantError: fmt.Errorf("invalid character '@' looking for beginning of object key string"),
 		},
@@ -490,43 +487,43 @@ func TestIsAllowed(t *testing.T) {
 		{
 			name:      "Should not allow any msearch request for calico cloud indices",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_msearch",
+			url:       "/calico_anyIndex*/_msearch",
 			wantAllow: false,
 		},
 		{
 			name:      "Should not allow any count request for calico cloud indices",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_count?q=tenant:any",
+			url:       "/calico_anyIndex*/_count?q=tenant:any",
 			wantAllow: false,
 		},
 		{
 			name:      "Should not allow any validate request for calico cloud indices",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_validate/query?q=tenant:any",
+			url:       "/calico_anyIndex*/_validate/query?q=tenant:any",
 			wantAllow: false,
 		},
 		{
 			name:      "Should not allow any document retrieval request for calico cloud indices",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_doc",
+			url:       "/calico_anyIndex*/_doc",
 			wantAllow: false,
 		},
 		{
 			name:      "Should not allow any knn search request for calico cloud indices",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_knn_search",
+			url:       "/calico_anyIndex*/_knn_search",
 			wantAllow: false,
 		},
 		{
 			name:      "Should not allow any search shards request for calico cloud indices",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_search_shards",
+			url:       "/calico_anyIndex*/_search_shards",
 			wantAllow: false,
 		},
 		{
 			name:      "Should not allow any search templates request for calico cloud indices using GET",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_search/template",
+			url:       "/calico_anyIndex*/_search/template",
 			wantAllow: false,
 		},
 		{
@@ -556,13 +553,13 @@ func TestIsAllowed(t *testing.T) {
 		{
 			name:      "Should not allow running multiple templates requests for calico indices using GET",
 			method:    http.MethodGet,
-			url:       "/tigera_secure_ee_anyIndex*/_msearch/template",
+			url:       "/calico_anyIndex*/_msearch/template",
 			wantAllow: false,
 		},
 		{
 			name:      "Should not allow running multiple templates requests for calico indices using POST",
 			method:    http.MethodPost,
-			url:       "/tigera_secure_ee_anyIndex*/_msearch/template",
+			url:       "/calico_anyIndex*/_msearch/template",
 			wantAllow: false,
 		},
 		{
@@ -587,7 +584,7 @@ func TestIsAllowed(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest(tt.method, tt.url, bytes.NewBufferString(tt.body))
+			req, err := http.NewRequest(tt.method, tt.url, body(tt.body))
 			require.NoError(t, err)
 			gotAllow, gotError := middlewares.IsAllowed(nil, req)
 			require.Equal(t, tt.wantAllow, gotAllow)
@@ -599,4 +596,16 @@ func TestIsAllowed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func body(body *string) io.Reader {
+	if body == nil {
+		return nil
+	}
+
+	return bytes.NewBufferString(*body)
+}
+
+func ptrString(s string) *string {
+	return &s
 }

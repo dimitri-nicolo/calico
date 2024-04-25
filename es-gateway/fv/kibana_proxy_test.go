@@ -129,28 +129,27 @@ func TestFV_KibanaProxy(t *testing.T) {
 		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
 	})
 
-	// TODO: Alina replace with calico indices
 	t.Run("Ensure tenancy is enforce on async search requests", func(t *testing.T) {
 		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), nil)()
 
 		// Write a document for tenant A in Elastic
 		tenantAData := `{"tenant":"A"}`
 		esHeaders := map[string]string{"Content-Type": "application/json"}
-		responseDocTenantA, body, err := doRequest("POST", "http://localhost:9200/tigera_secure_ee_any.001/_doc/", esHeaders, []byte(tenantAData))
+		responseDocTenantA, body, err := doRequest("POST", "http://localhost:9200/calico_any.001/_doc/1?refresh=true", esHeaders, []byte(tenantAData))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, responseDocTenantA.StatusCode)
 
 		// Write a document for tenant B in Elastic
 		tenantBData := `{"tenant":"B"}`
-		responseDocTenantB, body, err := doRequest("POST", "http://localhost:9200/tigera_secure_ee_any.001/_doc/", esHeaders, []byte(tenantBData))
+		responseDocTenantB, body, err := doRequest("POST", "http://localhost:9200/calico_any.001/_doc/2?refresh=true", esHeaders, []byte(tenantBData))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, responseDocTenantB.StatusCode)
 
 		// make an async search request via the Kibana Proxy
 		searchBody := `{"query": {"match_all":{}}}`
-		responseProxy, data, err := doRequest("POST", "http://localhost:5555/tigera_secure_ee_any*/_async_search", kibanaHeaders, []byte(searchBody))
+		responseProxy, data, err := doRequest("POST", "http://localhost:5555/calico_any*/_async_search", kibanaHeaders, []byte(searchBody))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(data)))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, responseProxy.StatusCode)
