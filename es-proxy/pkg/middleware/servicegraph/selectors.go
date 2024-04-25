@@ -2,7 +2,6 @@
 package servicegraph
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -448,10 +447,9 @@ func (s *SelectorHelper) GetServiceNodeSelectors(svc v1.NamespacedName) Selector
 					allEps[ep] = struct{}{}
 				default:
 					// the types not handled in above are skipped from the service node selector
-					epBytes, _ := json.Marshal(ep)
-					printDebugInfo(fmt.Sprintf("type not supported: %v", ep.Type),
-						fmt.Sprintf("skipped endpoint's details: %v", string(epBytes)))
-
+					log.Debugf(
+						"type %v is not included in building service node selector.\nFull flow endpoint = %v",
+						ep.Type, ep)
 				}
 			}
 		}
@@ -528,9 +526,9 @@ func (s *SelectorHelper) GetServicePortNodeSelectors(sp v1.ServicePort) Selector
 				allEps[ep] = struct{}{}
 			default:
 				// the types not handled in above are skipped from the service port selector
-				epBytes, _ := json.Marshal(ep)
-				printDebugInfo(fmt.Sprintf("type not supported: %v", ep.Type),
-					fmt.Sprintf("skipped endpoint's details: %v", string(epBytes)))
+				log.Debugf(
+					"type %v is not included in building serviceport selector.\nFull flow endpoint = %v",
+					ep.Type, ep)
 			}
 		}
 	}
@@ -750,12 +748,4 @@ func (s *SelectorHelper) GetEndpointNodeSelectors(
 	}
 
 	return gsp
-}
-
-func printDebugInfo(debugString ...string) {
-	if log.IsLevelEnabled(log.DebugLevel) {
-		for _, printstatement := range debugString {
-			log.Debug(printstatement)
-		}
-	}
 }
