@@ -28,7 +28,7 @@ func GetHandlerMap(cache cache.SecretsCache) HandlerMap {
 	}
 }
 
-func GetKibanaProxyHandlerMap(tenancy *KibanaTenancy) HandlerMap {
+func GetChallengerHandlerMap(tenancy *KibanaTenancy) HandlerMap {
 	return HandlerMap{
 		TypeLog:         logRequestHandler,
 		TypeMultiTenant: tenancy.Enforce(),

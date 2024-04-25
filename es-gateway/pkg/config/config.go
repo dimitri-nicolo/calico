@@ -48,7 +48,7 @@ type Config struct {
 	KibanaClientKeyPath   string `default:"/certs/kibana/client.key" split_words:"true"`
 	KibanaClientCertPath  string `default:"/certs/kibana/client.crt" split_words:"true"`
 	EnableKibanaMutualTLS bool   `default:"false" split_words:"true"`
-	KibanaProxyPort       int    `default:"8080" split_words:"true"`
+	ChallengerPort        int    `default:"8080" split_words:"true"`
 	TenantID              string `envconfig:"TENANT_ID"`
 
 	// When enabled, any ILM endpoint PUTs or POSTs will be ignored and return success

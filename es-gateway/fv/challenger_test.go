@@ -14,13 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFV_KibanaProxy(t *testing.T) {
-	t.Run("Ensure Kibana Proxy sends connections to Elastic", func(t *testing.T) {
-		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), nil)()
+func TestFV_Challenger(t *testing.T) {
+	t.Run("Ensure Challenger sends connections to Elastic", func(t *testing.T) {
+		defer setupAndTeardown(t, DefaultChallengerArgs(), nil)()
 
-		responseProxy, elasticBody, err := doRequest("GET", "http://localhost:5555/", nil, nil)
+		response, elasticBody, err := doRequest("GET", "http://localhost:5555/", nil, nil)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, responseProxy.StatusCode)
+		require.Equal(t, http.StatusOK, response.StatusCode)
 		// Response sample from Elastic
 		//{
 		//  "name" : "asincu-Precision-5540",
@@ -67,14 +67,14 @@ func TestFV_KibanaProxy(t *testing.T) {
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
-		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), kibanaArgs)()
+		defer setupAndTeardown(t, DefaultChallengerArgs(), kibanaArgs)()
 
 		require.Eventually(t, isKibanaReady, 30*time.Second, 100*time.Millisecond)
 
 		log.Debugf("Making requests to see Kibana features")
-		responseKibana, _, err := doRequest("GET", "http://localhost:5601/api/features", nil, nil)
+		response, _, err := doRequest("GET", "http://localhost:5601/api/features", nil, nil)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
+		require.Equal(t, http.StatusOK, response.StatusCode)
 	})
 
 	t.Run("Ensure Kibana Spaces can be created", func(t *testing.T) {
@@ -83,16 +83,16 @@ func TestFV_KibanaProxy(t *testing.T) {
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
-		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), kibanaArgs)()
+		defer setupAndTeardown(t, DefaultChallengerArgs(), kibanaArgs)()
 
 		require.Eventually(t, isKibanaReady, 30*time.Second, 100*time.Millisecond)
 
 		log.Debugf("Making requests to verify that a Kibana space is created")
 		space := `{"id": "any","name": "Any Kibana space"}`
-		responseKibana, body, err := doRequest("POST", "http://localhost:5601/api/spaces/space", kibanaHeaders, []byte(space))
+		response, body, err := doRequest("POST", "http://localhost:5601/api/spaces/space", kibanaHeaders, []byte(space))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
 		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
+		require.Equal(t, http.StatusOK, response.StatusCode)
 	})
 
 	t.Run("Ensure Dashboards and Index Patterns can be created", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestFV_KibanaProxy(t *testing.T) {
 			// We are setting the proxy endpoint as elastic backend
 			ElasticHosts: "http://localhost:5555",
 		}
-		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), kibanaArgs)()
+		defer setupAndTeardown(t, DefaultChallengerArgs(), kibanaArgs)()
 
 		require.Eventually(t, isKibanaReady, 30*time.Second, 100*time.Millisecond)
 
@@ -123,14 +123,14 @@ func TestFV_KibanaProxy(t *testing.T) {
 ]`
 
 		log.Debugf("Making requests to verify that Kibana objects are created successfully")
-		responseKibana, body, err := doRequest("POST", "http://localhost:5601/api/saved_objects/_bulk_create", kibanaHeaders, []byte(savedObjects))
+		response, body, err := doRequest("POST", "http://localhost:5601/api/saved_objects/_bulk_create", kibanaHeaders, []byte(savedObjects))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(body)))
 		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, responseKibana.StatusCode)
+		require.Equal(t, http.StatusOK, response.StatusCode)
 	})
 
 	t.Run("Ensure tenancy is enforce on async search requests", func(t *testing.T) {
-		defer setupAndTeardown(t, DefaultKibanaProxyArgs(), nil)()
+		defer setupAndTeardown(t, DefaultChallengerArgs(), nil)()
 
 		// Write a document for tenant A in Elastic
 		tenantAData := `{"tenant":"A"}`
@@ -147,12 +147,12 @@ func TestFV_KibanaProxy(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, responseDocTenantB.StatusCode)
 
-		// make an async search request via the Kibana Proxy
+		// make an async search request via the Challenger
 		searchBody := `{"query": {"match_all":{}}}`
-		responseProxy, data, err := doRequest("POST", "http://localhost:5555/calico_any*/_async_search", kibanaHeaders, []byte(searchBody))
+		response, data, err := doRequest("POST", "http://localhost:5555/calico_any*/_async_search", kibanaHeaders, []byte(searchBody))
 		log.Debugf(fmt.Sprintf("Response body: %s", string(data)))
 		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, responseProxy.StatusCode)
+		require.Equal(t, http.StatusOK, response.StatusCode)
 		require.Contains(t, string(data), tenantAData)
 		require.NotContains(t, string(data), tenantBData)
 	})

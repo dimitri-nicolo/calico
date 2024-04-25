@@ -14,8 +14,8 @@ import (
 
 func TestKibanaTenancy_Enforce(t *testing.T) {
 	const (
-		tenantID                           string = "anyTenant"
-		sampleBooleanQueryWithFilterClause        = `
+		tenantID                           = "anyTenant"
+		sampleBooleanQueryWithFilterClause = `
 {
   "query": { 
     "bool": { 
