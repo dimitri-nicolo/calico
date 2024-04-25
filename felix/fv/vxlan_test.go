@@ -71,10 +71,6 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 		enableIPv6 := testConfig.EnableIPv6
 		overlap := testConfig.Overlap
 
-		if BPFMode() && enableIPv6 {
-			continue
-		}
-
 		Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s, brokenXSum: %v, enableIPv6: %v, overlap: %v", vxlanMode, routeSource, brokenXSum, enableIPv6, overlap), func() {
 			var (
 				cs *VXLANClusters
