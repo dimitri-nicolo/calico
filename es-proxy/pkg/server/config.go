@@ -2,9 +2,6 @@
 package server
 
 import (
-	"errors"
-	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -55,19 +52,10 @@ type Config struct {
 	TenantID        string `envconfig:"TENANT_ID"`
 	TenantNamespace string `envconfig:"TENANT_NAMESPACE"`
 
-	// Configuration for connection to Elasticsearch. These are only used when Kibana is enabled,
-	// as all other requests go via Linseed.
-	ElasticScheme         string   `envconfig:"ELASTIC_SCHEME" default:"https"`
-	ElasticHost           string   `envconfig:"ELASTIC_HOST"`
-	ElasticPort           int      `envconfig:"ELASTIC_PORT"`
-	ElasticURL            *url.URL `envconfig:"-"`
-	ElasticCAPath         string   `envconfig:"ELASTIC_CA"`
-	ElasticUser           string   `envconfig:"ELASTIC_USER"`
-	ElasticPassword       string   `envconfig:"ELASTIC_PASSWORD"`
-	ElasticIndexSuffix    string   `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
-	ElasticLicenseType    string   `envconfig:"ELASTIC_LICENSE_TYPE"`
-	ElasticKibanaEndpoint string   `envconfig:"ELASTIC_KIBANA_ENDPOINT" default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601"`
-	ElasticKibanaDisabled bool     `envconfig:"ELASTIC_KIBANA_DISABLED"`
+	// Configuration for connection to Kibana.
+	ElasticLicenseType    string `envconfig:"ELASTIC_LICENSE_TYPE"`
+	ElasticKibanaEndpoint string `envconfig:"ELASTIC_KIBANA_ENDPOINT" default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601"`
+	ElasticKibanaDisabled bool   `envconfig:"ELASTIC_KIBANA_DISABLED"`
 
 	// If multi-cluster management is used inside the cluster, this CA
 	// is necessary for establishing a connection with Voltron, when
@@ -108,35 +96,9 @@ func NewConfigFromEnv() (*Config, error) {
 		return nil, err
 	}
 
-	// Calculate the elastic URl from other config values.
-	config.ElasticURL = &url.URL{
-		Scheme: config.ElasticScheme,
-		Host:   fmt.Sprintf("%s:%d", config.ElasticHost, config.ElasticPort),
-	}
-
 	// Calculate the default cert and key file from the directory.
 	config.DefaultKeyFile = config.DefaultSSLPath + defaultKeyFileName
 	config.DefaultCertFile = config.DefaultSSLPath + defaultCertFileName
 
-	err = validateConfig(config)
-	return config, err
-}
-
-func validateConfig(config *Config) error {
-	if !config.ElasticKibanaDisabled {
-		// Elastic configuration is only needed for Kibana access.
-		if config.ElasticURL.Scheme == "" || config.ElasticURL.Host == "" {
-			return errors.New("Invalid Elasticsearch backend URL specified")
-		}
-		if config.ElasticUser == "" || config.ElasticPassword == "" {
-			return errors.New("Elasticsearch credentials not provided")
-		}
-		if config.ElasticURL.Scheme == "https" && config.ElasticCAPath == "" {
-			return errors.New("Elasticsearch CA not provided")
-		}
-		if config.ElasticURL.Scheme == "http" && config.ElasticCAPath != "" {
-			return errors.New("Elasticsearch CA provided but scheme is set to http")
-		}
-	}
-	return nil
+	return config, nil
 }
