@@ -406,6 +406,11 @@ server D
 EOF
     docker exec bird-d1 chmod -R 0755 /tmp/nginx/
     docker exec bird-d1 docker run --network servernetD --ip 172.31.91.1 --ip6 fd00:0:1234:9999::1 -d --restart always --name nginx-d -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
+
+    docker exec kind-worker sysctl -w net.ipv4.conf.eth1.rp_filter=2
+    docker exec kind-worker sysctl -w net.ipv4.conf.eth2.rp_filter=2
+    docker exec kind-worker sysctl -w net.ipv4.conf.eth3.rp_filter=2
+    docker exec kind-worker sysctl -w net.ipv4.conf.eth4.rp_filter=2
 }
 
 function do_cleanup {
