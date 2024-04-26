@@ -3,8 +3,8 @@ package client
 import (
 	"fmt"
 
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -42,7 +42,7 @@ func GenerateLicenseFromClaims(claims LicenseClaims, pkeyPath, certPath string) 
 		return nil, fmt.Errorf("error creating signer: %s", err)
 	}
 
-	raw, err := jwt.SignedAndEncrypted(signer, enc).Claims(claims).CompactSerialize()
+	raw, err := jwt.SignedAndEncrypted(signer, enc).Claims(claims).Serialize()
 	if err != nil {
 		return nil, fmt.Errorf("error signing the JWT: %s", err)
 	}

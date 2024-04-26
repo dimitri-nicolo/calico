@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
+	"github.com/go-jose/go-jose/v4"
 	"github.com/golang-jwt/jwt/v4"
-	"gopkg.in/square/go-jose.v2"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
@@ -53,7 +53,7 @@ func (a *localAuthenticator) Authenticate(r *http.Request) (user.Info, int, erro
 	tokenString = strings.TrimSpace(tokenString)
 
 	// Now that we know the token was issued by us, we can check if it is (still) valid and extract the user.
-	_, err = jose.ParseSigned(tokenString)
+	_, err = jose.ParseSigned(tokenString, []jose.SignatureAlgorithm{jose.RS256, jose.RS384, jose.RS512, jose.ES256, jose.ES384, jose.ES512})
 	if err != nil {
 		return nil, 401, fmt.Errorf("token has an invalid signature")
 	}
