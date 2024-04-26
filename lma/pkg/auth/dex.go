@@ -10,8 +10,8 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/coreos/go-oidc"
+	"github.com/go-jose/go-jose/v4"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/square/go-jose.v2"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
@@ -217,7 +217,7 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 	}
 
 	// Now that we know the token was issued by dex, we can verify if it is (still) valid and extract the user.
-	_, err = jose.ParseSigned(tkn)
+	_, err = jose.ParseSigned(tkn, []jose.SignatureAlgorithm{jose.RS256, jose.RS384, jose.RS512, jose.ES256, jose.ES384, jose.ES512})
 	if err != nil {
 		return nil, 401, errors.New("dex token has an invalid signature")
 	}
