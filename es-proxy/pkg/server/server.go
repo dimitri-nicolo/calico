@@ -28,7 +28,6 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/event"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/exceptions"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/process"
-	"github.com/projectcalico/calico/es-proxy/pkg/middleware/rawquery"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 	"github.com/projectcalico/calico/es-proxy/pkg/pip"
@@ -36,7 +35,6 @@ import (
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
@@ -346,15 +344,6 @@ func Start(cfg *Config) error {
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 
 	if !cfg.ElasticKibanaDisabled {
-		// initialize Elastic client factory
-		envCfg := lmaelastic.MustLoadConfig()
-		esClientFactory := lmaelastic.NewClusterContextClientFactory(envCfg)
-		esClient, err := esClientFactory.ClientForCluster(cfg.ElasticIndexSuffix)
-		if err != nil {
-			log.WithError(err).Error("failed to create Elastic client from factory")
-			return err
-		}
-
 		kibanaTLSConfig := calicotls.NewTLSConfig()
 		kibanaTLSConfig.InsecureSkipVerify = true
 		kibanaCli := kibana.NewClient(&http.Client{
@@ -366,11 +355,6 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.NewKibanaLoginHandler(k8sClientSet, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
 					middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType))))
-		sm.Handle("/.kibana/_search",
-			middleware.KibanaIndexPattern(
-				middleware.AuthenticateRequest(authn,
-					middleware.AuthorizeRequest(authz,
-						rawquery.RawQueryHandler(esClient.Backend())))))
 	}
 
 	server = &http.Server{
