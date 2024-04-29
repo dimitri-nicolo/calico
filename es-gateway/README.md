@@ -43,3 +43,27 @@ ES gateway has the following health check endpoints:
 - `/health` reports on the health of ES gateway by hitting a [Kubernetes API readyz endpoint](https://kubernetes.io/docs/reference/using-api/health-checks/#api-endpoints-for-health). ES gateway only requires access to the Kubernetes API server in order to be operational. This is because it requires access to a set of secrets containing credentials so that it can perform credential swapping on incoming requests.
 - `/es-health` reports on the health of Elasticsearch API by hitting a [cluster status endpoint](http://www.elastic.co/guide/en/elasticsearch/reference/master/cluster-health.html).
 - `/kb-health` reports the health of Kibana API by hitting a [status endpoint](https://www.elastic.co/guide/en/kibana/master/access.html#status).
+
+## Challenger
+
+ES Gateway can be configured run as traffic interceptor between Kibana and ElasticSearch. This setup is enabled only for multi-tenant management clusters. Challenger will run as a side-car container alongside Kibana. 
+It will inspect traffic for Elastic and determine if the request can be rejected (most of the requests will be denied), allowed (requests needed by Kibana or Kibana plugins to be marked up and ready) or need to be modified. All async search requests for calico indices will be enhanced with an additional boolean query that only targets a single tenant data.
+
+Running as challenger:
+```
+/usr/bin/es-gateway -run-as-challenger
+```
+
+Environment variables needed by this mode
+- `ES_GATEWAY_KIBANA_CATCH_ALL_ROUTE` set to `/`
+- `ES_CHALLENGER_PORT` set to `8080` by default
+- `ES_GATEWAY_LOG_LEVEL` which can be set to TRACE, INFO, DEBUG, WARN or ERROR
+- `ES_GATEWAY_ELASTIC_ENDPOINT`
+- `ES_GATEWAY_ELASTIC_USERNAME`
+- `ES_GATEWAY_ELASTIC_PASSWORD`
+- `ES_GATEWAY_ELASTIC_CA_BUNDLE_PATH`
+
+Docs:
+- [Challenger WriteUp](https://docs.google.com/document/d/1nqwbyqgQJOoOH5PQxvDkwWN_S6iFuS42616xwBDoRQU/edit#heading=h.pfkd1csdzgwy)
+- [Challenger LLD](https://docs.google.com/document/d/1NR1eKszaNKPHq_vJZRM5wwXac4cnp1zXrkKHkfU9tt0/edit#heading=h.29lzo3xxc8t0)
+- [Alternative options to Challenger](https://docs.google.com/document/d/1MeKTn6Xgj_VuNn5Wa5k79TY9tB5v8CyMYLZz3PaT690/edit#heading=h.29lzo3xxc8t0)

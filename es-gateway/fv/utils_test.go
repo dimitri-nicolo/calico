@@ -14,22 +14,24 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
-type RunKibanaProxyArgs struct {
+type RunChallengerArgs struct {
 	Port                  int
 	HealthPort            int
 	ElasticEndpoint       string
 	ElasticClientCertPath string
 	ElasticCAPath         string
+	TenantID              string
 }
 
-func DefaultKibanaProxyArgs() *RunKibanaProxyArgs {
-	return &RunKibanaProxyArgs{
+func DefaultChallengerArgs() *RunChallengerArgs {
+	return &RunChallengerArgs{
 		Port:            5555,
 		ElasticEndpoint: "http://localhost:9200",
+		TenantID:        "A",
 	}
 }
 
-func RunKibanaProxy(t *testing.T, args *RunKibanaProxyArgs) *containers.Container {
+func RunChallenger(t *testing.T, args *RunChallengerArgs) *containers.Container {
 	// The container library uses gomega, so we need to connect our testing.T to it.
 	gomega.RegisterTestingT(t)
 
@@ -37,13 +39,14 @@ func RunKibanaProxy(t *testing.T, args *RunKibanaProxyArgs) *containers.Containe
 		"--net=host",
 		"-e", "ES_GATEWAY_LOG_LEVEL=TRACE",
 		"-e", "ES_GATEWAY_KIBANA_CATCH_ALL_ROUTE=/",
-		"-e", fmt.Sprintf("ES_GATEWAY_KIBANA_PROXY_PORT=%d", args.Port),
+		"-e", fmt.Sprintf("ES_GATEWAY_CHALLENGER_PORT=%d", args.Port),
 		"-e", fmt.Sprintf("ES_GATEWAY_ELASTIC_ENDPOINT=%s", args.ElasticEndpoint),
+		"-e", fmt.Sprintf("TENANT_ID=%s", args.TenantID),
 		"tigera/es-gateway:latest",
-		"-run-as-kibana-proxy",
+		"-run-as-challenger",
 	}
 
-	name := "tigera-kibana-proxy-fv"
+	name := "tigera-challenger-fv"
 
 	c := containers.Run(name, containers.RunOpts{AutoRemove: true, OutputWriter: logutils.TestingTWriter{t}}, dockerArgs...)
 	c.StopLogs()

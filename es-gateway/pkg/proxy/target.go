@@ -28,7 +28,8 @@ type Route struct {
 	// will match with any HTTP method.
 	HTTPMethods []string
 	// Name helps identify this Route (for logging purposes).
-	Name string
+	Name           string
+	EnforceTenancy bool
 }
 
 // Routes is a listing of Route paths that a Target possesses.
