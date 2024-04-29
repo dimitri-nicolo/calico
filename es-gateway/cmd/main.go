@@ -263,6 +263,9 @@ func runChallenger() {
 	if err != nil {
 		log.WithError(err).Fatal("failed to create Challenger target.")
 	}
+	if cfg.TenantID == "" {
+		log.Fatal("Missing Tenant ID configuration")
+	}
 	challengerOpts := []server.Option{
 		server.WithAddr(challengerAddr),
 		server.WithKibanaTarget(challengerTarget),
