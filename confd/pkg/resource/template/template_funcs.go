@@ -312,6 +312,22 @@ func ExternalNetworkBIRDConfig(selfIP string, externalNetworkKVPs memkv.KVPairs,
 			"}",
 		}...)
 
+		kernel = append(kernel,
+			"protocol pipe {",
+			"  peer table "+tableName+";",
+			"  export filter {",
+			"    if (ifname ~ 'cali*') then { ",
+			"      accept; ",
+			"    } else {",
+			"      reject; ",
+			"    };",
+			"  };",
+			"  import filter { ",
+			"    reject; ",
+			"  };",
+			"}",
+		)
+
 		lines = append(lines, kernel...)
 
 		directName := strings.Replace(tableName, "T_", "D_", 1)
@@ -560,7 +576,7 @@ func hashToIPv4(nodeName string) string {
 	}
 	hashBytes := hash.Sum(nil)
 	ip := hashBytes[:4]
-	//BGP doesn't allow router IDs in special IP ranges (e.g., 224.x.x.x)
+	// BGP doesn't allow router IDs in special IP ranges (e.g., 224.x.x.x)
 	ip0Value := int(ip[0])
 	if ip0Value > 223 {
 		ip0Value = ip0Value - 32
