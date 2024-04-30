@@ -363,6 +363,8 @@ EOF
 EOF
 """ % nodes_enetC_original))
             self.add_cleanup(lambda: run("docker exec bird-c1 birdcl configure"))
+            run("docker exec bird-c1 ip route add 10.10.10.1/32 via 172.31.31.5 dev eth0")
+            self.add_cleanup(lambda: run("docker exec bird-c1 ip route del 10.10.10.1/32 via 172.31.31.5 dev eth0"))
 
             # Create egress gateway IP pool and patch default IP pool
             egress_pool_cidr = "10.10.10.0/29"
