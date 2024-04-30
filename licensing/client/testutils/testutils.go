@@ -6,8 +6,10 @@ package testutils
 import (
 	"fmt"
 
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/projectcalico/calico/licensing/client"
 	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
@@ -107,7 +109,11 @@ func (e *IsDevLicense) Error() string {
 // To prevent accidental use of this function, the error is _always_ non-nil. If the function succeeded,
 // it will be an IsDevLicense error. Any other error means the license is corrupted.
 func DecodeDevLicense(lic api.LicenseKey) (client.LicenseClaims, error) {
-	tok, err := jwt.ParseSignedAndEncrypted(lic.Spec.Token)
+	tok, err := jwt.ParseSignedAndEncrypted(
+		lic.Spec.Token,
+		[]jose.KeyAlgorithm{jose.A128GCMKW},
+		[]jose.ContentEncryption{jose.A128GCM},
+		[]jose.SignatureAlgorithm{jose.PS512})
 	if err != nil {
 		return client.LicenseClaims{}, fmt.Errorf("error parsing license: %s", err)
 	}

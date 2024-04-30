@@ -1,13 +1,13 @@
 package client
 
 import (
+	"crypto/x509"
+	"fmt"
 	"strings"
 	"time"
 
-	"gopkg.in/square/go-jose.v2/jwt"
-
-	"crypto/x509"
-	"fmt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 
 	"github.com/projectcalico/calico/licensing/client/features"
 	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
@@ -130,7 +130,11 @@ type LicenseClaims struct {
 // Decode takes a license resource and decodes the claims
 // It returns the decoded LicenseClaims and an error. A non-nil error means the license is corrupted.
 func Decode(lic api.LicenseKey) (LicenseClaims, error) {
-	tok, err := jwt.ParseSignedAndEncrypted(lic.Spec.Token)
+	tok, err := jwt.ParseSignedAndEncrypted(
+		lic.Spec.Token,
+		[]jose.KeyAlgorithm{jose.A128GCMKW},
+		[]jose.ContentEncryption{jose.A128GCM},
+		[]jose.SignatureAlgorithm{jose.PS512})
 	if err != nil {
 		return LicenseClaims{}, fmt.Errorf("error parsing license: %s", err)
 	}
