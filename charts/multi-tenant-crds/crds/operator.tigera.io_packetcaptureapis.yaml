@@ -3,22 +3,21 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: managers.operator.tigera.io
+  name: packetcaptureapis.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
-    kind: Manager
-    listKind: ManagerList
-    plural: managers
-    singular: manager
+    kind: PacketCaptureAPI
+    listKind: PacketCaptureAPIList
+    plural: packetcaptureapis
+    singular: packetcaptureapi
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: |-
-          Manager installs the Calico Enterprise manager graphical user interface. At most one instance
-          of this resource is supported. It must be named "tigera-secure".
+        description: PacketCaptureAPI is used to configure the resource requirement
+          for PacketCaptureAPI deployment. It must be named "tigera-secure".
         properties:
           apiVersion:
             description: |-
@@ -38,45 +37,45 @@ spec:
           metadata:
             type: object
           spec:
-            description: Specification of the desired state for the Calico Enterprise
-              manager.
+            description: Specification of the desired state for the PacketCaptureAPI.
             properties:
-              managerDeployment:
-                description: ManagerDeployment configures the Manager Deployment.
+              packetCaptureAPIDeployment:
+                description: PacketCaptureAPIDeployment configures the PacketCaptureAPI
+                  Deployment.
                 properties:
                   spec:
-                    description: Spec is the specification of the Manager Deployment.
+                    description: Spec is the specification of the PacketCaptureAPI
+                      Deployment.
                     properties:
                       template:
-                        description: Template describes the Manager Deployment pod
-                          that will be created.
+                        description: Template describes the PacketCaptureAPI Deployment
+                          pod that will be created.
                         properties:
                           spec:
-                            description: Spec is the Manager Deployment's PodSpec.
+                            description: Spec is the PacketCaptureAPI Deployment's
+                              PodSpec.
                             properties:
                               containers:
                                 description: |-
-                                  Containers is a list of Manager containers.
-                                  If specified, this overrides the specified Manager Deployment containers.
-                                  If omitted, the Manager Deployment will use its default values for its containers.
+                                  Containers is a list of PacketCaptureAPI containers.
+                                  If specified, this overrides the specified PacketCaptureAPI Deployment containers.
+                                  If omitted, the PacketCaptureAPI Deployment will use its default values for its containers.
                                 items:
-                                  description: ManagerDeploymentContainer is a Manager
-                                    Deployment container.
+                                  description: PacketCaptureAPIDeploymentContainer
+                                    is a PacketCaptureAPI Deployment container.
                                   properties:
                                     name:
                                       description: |-
-                                        Name is an enum which identifies the Manager Deployment container by name.
-                                        Supported values are: tigera-voltron, tigera-manager, tigera-es-proxy
+                                        Name is an enum which identifies the PacketCaptureAPI Deployment container by name.
+                                        Supported values are: tigera-packetcapture-server
                                       enum:
-                                      - tigera-voltron
-                                      - tigera-manager
-                                      - tigera-es-proxy
+                                      - tigera-packetcapture-server
                                       type: string
                                     resources:
                                       description: |-
                                         Resources allows customization of limits and requests for compute resources such as cpu and memory.
-                                        If specified, this overrides the named Manager Deployment container's resources.
-                                        If omitted, the Manager Deployment will use its default value for this container's resources.
+                                        If specified, this overrides the named PacketCaptureAPI Deployment container's resources.
+                                        If omitted, the PacketCaptureAPI Deployment will use its default value for this container's resources.
                                       properties:
                                         claims:
                                           description: |-
@@ -133,28 +132,25 @@ spec:
                                 type: array
                               initContainers:
                                 description: |-
-                                  InitContainers is a list of Manager init containers.
-                                  If specified, this overrides the specified Manager Deployment init containers.
-                                  If omitted, the Manager Deployment will use its default values for its init containers.
+                                  InitContainers is a list of PacketCaptureAPI init containers.
+                                  If specified, this overrides the specified PacketCaptureAPI Deployment init containers.
+                                  If omitted, the PacketCaptureAPI Deployment will use its default values for its init containers.
                                 items:
-                                  description: ManagerDeploymentInitContainer is a
-                                    Manager Deployment init container.
+                                  description: PacketCaptureAPIDeploymentInitContainer
+                                    is a PacketCaptureAPI Deployment init container.
                                   properties:
                                     name:
                                       description: |-
-                                        Name is an enum which identifies the Manager Deployment init container by name.
-                                        Supported values are: manager-tls-key-cert-provisioner, internal-manager-tls-key-cert-provisioner, tigera-voltron-linseed-tls-key-cert-provisioner
+                                        Name is an enum which identifies the PacketCaptureAPI Deployment init container by name.
+                                        Supported values are: tigera-packetcapture-server-tls-key-cert-provisioner
                                       enum:
-                                      - manager-tls-key-cert-provisioner
-                                      - internal-manager-tls-key-cert-provisioner
-                                      - tigera-voltron-linseed-tls-key-cert-provisioner
+                                      - tigera-packetcapture-server-tls-key-cert-provisioner
                                       type: string
                                     resources:
                                       description: |-
                                         Resources allows customization of limits and requests for compute resources such as cpu and memory.
-                                        If specified, this overrides the named Manager Deployment init container's resources.
-                                        If omitted, the Manager Deployment will use its default value for this init container's resources.
-                                        If used in conjunction with the deprecated ComponentResources, then this value takes precedence.
+                                        If specified, this overrides the named PacketCaptureAPI Deployment init container's resources.
+                                        If omitted, the PacketCaptureAPI Deployment will use its default value for this init container's resources.
                                       properties:
                                         claims:
                                           description: |-
@@ -215,7 +211,7 @@ spec:
                 type: object
             type: object
           status:
-            description: Most recently observed state for the Calico Enterprise manager.
+            description: Most recently observed state for the PacketCaptureAPI.
             properties:
               conditions:
                 description: |-
