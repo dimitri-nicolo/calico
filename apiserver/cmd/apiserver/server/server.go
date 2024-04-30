@@ -20,13 +20,13 @@ import (
 	"flag"
 	"io"
 
-	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/spf13/cobra"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
+
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 )
