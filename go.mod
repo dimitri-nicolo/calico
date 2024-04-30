@@ -1,6 +1,6 @@
 module github.com/projectcalico/calico
 
-go 1.22
+go 1.22.2
 
 require (
 	github.com/AppsFlyer/go-sundheit v0.5.0
@@ -126,7 +126,7 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.12
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.22.0
-	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	golang.org/x/net v0.24.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/sys v0.19.0
@@ -139,9 +139,8 @@ require (
 	google.golang.org/protobuf v1.33.0
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
-	// Replaced with older version below until we can handle the updated permissions it now puts on log files.
+	// permission denies in felix FV tests after upgrading to a newer version
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -192,6 +191,7 @@ require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/alexflint/go-filemutex v1.1.0 // indirect
+	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
 	github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
@@ -240,7 +240,7 @@ require (
 	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
+	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-ldap/ldap/v3 v3.4.6 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -258,6 +258,7 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/cadvisor v0.47.3 // indirect
 	github.com/google/cel-go v0.16.1 // indirect
+	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20211214055906-6f57359322fd // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
@@ -376,6 +377,7 @@ require (
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gorm.io/driver/postgres v1.4.6 // indirect
@@ -398,8 +400,6 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
-	github.com/google/gnostic-models v0.6.8 // indirect
 )
 
 replace (

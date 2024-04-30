@@ -34,8 +34,9 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/klog/v2"
 
-	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/tigera/api/pkg/openapi"
+
+	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 )
 
 // CalicoServerOptions contains the aggregation of configuration structs for

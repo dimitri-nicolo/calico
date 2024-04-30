@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	versionFlag     = flag.Bool("version", false, "Print version information")
-	kibanaProxyFlag = flag.Bool("run-as-kibana-proxy", false, "Run as Kibana proxy")
+	versionFlag    = flag.Bool("version", false, "Print version information")
+	challengerFlag = flag.Bool("run-as-challenger", false, "Run as a traffic interceptor between Kibana and Elasticsearch")
 
 	// Configuration object for ES Gateway server.
 	cfg *config.Config
@@ -62,7 +62,7 @@ func init() {
 
 	log.Infof("Starting %s with %s", config.EnvConfigPrefix, printCfg)
 
-	if !*kibanaProxyFlag {
+	if !*challengerFlag {
 		if len(cfg.ElasticCatchAllRoute) > 0 {
 			// Catch-all route should ...
 			elasticCatchAllRoute = &proxy.Route{
@@ -103,8 +103,8 @@ func init() {
 // Start up HTTPS server for ES Gateway.
 func main() {
 
-	if *kibanaProxyFlag {
-		runKibanaProxy()
+	if *challengerFlag {
+		runChallenger()
 	} else {
 		runESGateway()
 	}
@@ -233,26 +233,26 @@ func runESGateway() {
 	log.Fatal(srv.ListenAndServeHTTPS())
 }
 
-func runKibanaProxy() {
-	kibanaProxyAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.KibanaProxyPort)
-	kibanaProxyRoutes := proxy.Routes{
+func runChallenger() {
+	challengerAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.ChallengerPort)
+	challengerRoutes := proxy.Routes{
 		proxy.Route{
 			Name:        "kb-all",
 			Path:        "/",
 			HTTPMethods: []string{"POST", "PUT", "DELETE", "GET", "OPTIONS", "PATCH"},
 		},
 	}
-	kibanaProxyCatchAllRoute := &proxy.Route{
-		Name:         "kb-catch-all",
-		Path:         cfg.KibanaCatchAllRoute,
-		IsPathPrefix: true,       // ... always be a prefix route.
-		HTTPMethods:  []string{}, // ... not filter on HTTP methods.
-		RequireAuth:  false,
+	challengerCatchAllRoute := &proxy.Route{
+		Name:           "kb-catch-all",
+		Path:           cfg.KibanaCatchAllRoute,
+		IsPathPrefix:   true,       // ... always be a prefix route.
+		HTTPMethods:    []string{}, // ... not filter on HTTP methods.
+		EnforceTenancy: true,
 	}
-	// Create Kibana Proxy target that will be used to configure all routing to Elasticsearch.
-	kibanaProxyTarget, err := proxy.CreateTarget(
-		kibanaProxyCatchAllRoute,
-		kibanaProxyRoutes,
+	// Create Challenger target that will be used to configure all routing to Elasticsearch.
+	challengerTarget, err := proxy.CreateTarget(
+		challengerCatchAllRoute,
+		challengerRoutes,
 		cfg.ElasticEndpoint,
 		cfg.ElasticCABundlePath,
 		cfg.ElasticClientCertPath,
@@ -261,17 +261,20 @@ func runKibanaProxy() {
 		false,
 	)
 	if err != nil {
-		log.WithError(err).Fatal("failed to create Kibana Proxy target.")
+		log.WithError(err).Fatal("failed to create Challenger target.")
 	}
-	kibanaProxyOpts := []server.Option{
-		server.WithAddr(kibanaProxyAddr),
-		server.WithKibanaTarget(kibanaProxyTarget),
-		server.WithMiddlewareMap(middlewares.GetKibanaProxyHandlerMap()),
+	if cfg.TenantID == "" {
+		log.Fatal("Missing Tenant ID configuration")
 	}
-	kibanaProxy, err := server.New(kibanaProxyOpts...)
+	challengerOpts := []server.Option{
+		server.WithAddr(challengerAddr),
+		server.WithKibanaTarget(challengerTarget),
+		server.WithMiddlewareMap(middlewares.GetChallengerHandlerMap(middlewares.NewKibanaTenancy(cfg.TenantID))),
+	}
+	challenger, err := server.New(challengerOpts...)
 	if err != nil {
-		log.WithError(err).Fatal("failed to create Kibana Proxy.")
+		log.WithError(err).Fatal("failed to create Challenger.")
 	}
-	log.Infof("Kibana Proxy listening for HTTPS requests at %s", kibanaProxyAddr)
-	log.Fatal(kibanaProxy.ListenAndServeHTTP())
+	log.Infof("Challenger listening for HTTPS requests at %s", challengerAddr)
+	log.Fatal(challenger.ListenAndServeHTTP())
 }

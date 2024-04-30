@@ -24,22 +24,20 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/square/go-jose.v2/jwt"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	licClient "github.com/projectcalico/calico/licensing/client"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/safetext/yamltemplate"
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
+
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	licClient "github.com/projectcalico/calico/licensing/client"
 )
 
 type ResourcePrinter interface {

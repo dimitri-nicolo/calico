@@ -16,20 +16,20 @@ import (
 )
 
 var (
-	ctx         context.Context
-	kibana      *containers.Container
-	kibanaProxy *containers.Container
+	ctx        context.Context
+	kibana     *containers.Container
+	challenger *containers.Container
 )
 
 // setupAndTeardown provides common setup and teardown logic for all FV tests to use.
-func setupAndTeardown(t *testing.T, args *RunKibanaProxyArgs, kibanaArgs *RunKibanaArgs) func() {
+func setupAndTeardown(t *testing.T, args *RunChallengerArgs, kibanaArgs *RunKibanaArgs) func() {
 	// Hook logrus into testing.T
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
 
 	// Start a Kibana proxy instance.
 	if args != nil {
-		kibanaProxy = RunKibanaProxy(t, args)
+		challenger = RunChallenger(t, args)
 	}
 
 	// Configure Kibana instance
@@ -42,8 +42,8 @@ func setupAndTeardown(t *testing.T, args *RunKibanaProxyArgs, kibanaArgs *RunKib
 	ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second)
 
 	return func() {
-		if kibanaProxy != nil {
-			kibanaProxy.Stop()
+		if challenger != nil {
+			challenger.Stop()
 		}
 		if kibana != nil {
 			kibana.Stop()

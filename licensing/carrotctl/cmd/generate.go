@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"

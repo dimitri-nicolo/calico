@@ -55,7 +55,7 @@ var (
 // Decodes and maintains the request body onto the next handler. Forms a malformed request error passes the error up
 // to be handled. This function verifies that all fields in the body are expected.
 func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
-	return decode(w, r, dst, false)
+	return decode(w, r, dst, false, maxBytes)
 }
 
 // DecodeIgnoreUnknownFields decodes the json body onto a destination interface.
@@ -63,11 +63,15 @@ func Decode(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 // As per Decode above, but this ignores unknown fields. This method is useful if decoding into a temporary
 // structure.
 func DecodeIgnoreUnknownFields(w http.ResponseWriter, r *http.Request, dst interface{}) error {
-	return decode(w, r, dst, true)
+	return decode(w, r, dst, true, maxBytes)
+}
+
+func DecodeIgnoreUnknownFieldsWithMaxSize(w http.ResponseWriter, r *http.Request, dst interface{}, maxSize int) error {
+	return decode(w, r, dst, true, maxSize)
 }
 
 // decode implements the backing code for both Decode and DecodeIgnoreUnknownFields
-func decode(w http.ResponseWriter, r *http.Request, dst interface{}, ignoreUnknownFields bool) error {
+func decode(w http.ResponseWriter, r *http.Request, dst interface{}, ignoreUnknownFields bool, maxBytes int) error {
 	if r.Header.Get("Content-Type") != "" {
 		value, _ := header.ParseValueAndParams(r.Header, "Content-Type")
 		if value != "application/json" {
@@ -86,7 +90,7 @@ func decode(w http.ResponseWriter, r *http.Request, dst interface{}, ignoreUnkno
 	}
 
 	// Limit the allowable request body size.
-	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 	// Retain the body, to pass it forward.
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
