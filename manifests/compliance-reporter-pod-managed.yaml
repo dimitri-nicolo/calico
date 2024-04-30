@@ -13,6 +13,8 @@ spec:
   tolerations:
     - key: node-role.kubernetes.io/master
       effect: NoSchedule
+    - key: node-role.kubernetes.io/control-plane
+      effect: NoSchedule
   imagePullSecrets:
     - name: tigera-pull-secret
   containers:

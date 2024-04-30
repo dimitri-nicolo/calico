@@ -20,16 +20,15 @@ import (
 	"flag"
 	"io"
 
+	"github.com/spf13/cobra"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-
-	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
-
-	"k8s.io/kubernetes/pkg/util/interrupt"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/spf13/cobra"
+	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
+
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/util/interrupt"
 )
 
 const defaultEtcdPathPrefix = ""
