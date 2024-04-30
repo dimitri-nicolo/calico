@@ -386,7 +386,7 @@ EOF
             # Assign BGP peers to external networks
             self._patch_peer_external_net("peer-c1", "rednet")
 
-            # Create 2 egress gateways, on each egress node
+            # Create 2 egress gateways, one each egress node
             gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", egress_pool_cidr, color="red", external_networks="rednet")
             gw_red2 = self.create_egress_gateway_pod("kind-worker3", "gw-red2", egress_pool_cidr, color="red", external_networks="rednet")
 
