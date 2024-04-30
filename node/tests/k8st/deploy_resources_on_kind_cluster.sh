@@ -71,8 +71,9 @@ for image in calico/cni:master calico/pod2daemon-flexvol:master; do
     done
 done
 
-# Install pull secret so we can pull the right calicoctl.
-${kubectl} -n kube-system create secret generic cnx-pull-secret \
+# Install pull secret so we can pull the right calicoctl
+${kubectl} get secret cnx-pull-secret -n kube-system ||
+  ${kubectl} -n kube-system create secret generic cnx-pull-secret \
    --from-file=.dockerconfigjson=${GCR_IO_PULL_SECRET} \
    --type=kubernetes.io/dockerconfigjson
 
@@ -111,7 +112,8 @@ echo
 ${kubectl} exec -i -n kube-system calicoctl -- calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
 
 echo "Install MetalLB controller for allocating LoadBalancer IPs"
-${kubectl} create ns metallb-system
+${kubectl} get ns metallb-system ||
+  ${kubectl} create ns metallb-system
 ${kubectl} apply -f $TEST_DIR/infra/metallb.yaml
 ${kubectl} apply -f $TEST_DIR/infra/metallb-config.yaml
 
@@ -132,10 +134,11 @@ echo
 echo "Deploy Calico apiserver"
 cp $TEST_DIR/infra/apiserver.yaml $TEST_DIR/infra/apiserver.yaml.tmp
 sed -i "s/amd64/${ARCH}/" $TEST_DIR/infra/apiserver.yaml.tmp
-${kubectl} create -f ${TEST_DIR}/infra/apiserver.yaml.tmp
+${kubectl} apply -f ${TEST_DIR}/infra/apiserver.yaml.tmp
 rm $TEST_DIR/infra/apiserver.yaml.tmp
 openssl req -x509 -nodes -newkey rsa:4096 -keyout apiserver.key -out apiserver.crt -days 365 -subj "/" -addext "subjectAltName = DNS:calico-api.calico-apiserver.svc"
-${kubectl} create secret -n calico-apiserver generic calico-apiserver-certs --from-file=apiserver.key --from-file=apiserver.crt
+${kubectl} get secret -n calico-apiserver calico-apiserver-certs ||
+  ${kubectl} create secret -n calico-apiserver generic calico-apiserver-certs --from-file=apiserver.key --from-file=apiserver.crt
 ${kubectl} patch apiservice v3.projectcalico.org -p \
   "{\"spec\": {\"caBundle\": \"$(${kubectl} get secret -n calico-apiserver calico-apiserver-certs -o go-template='{{ index .data "apiserver.crt" }}')\"}}"
 time ${kubectl} wait pod -l k8s-app=calico-apiserver --for=condition=Ready -n calico-apiserver --timeout=300s

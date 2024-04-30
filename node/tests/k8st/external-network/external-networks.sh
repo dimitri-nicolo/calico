@@ -427,7 +427,7 @@ function do_cleanup {
     docker exec kind-worker ip route del 172.31.51.0/24 via 172.31.41.1 || true
     docker exec kind-worker ip -6 route del fd00:0:1234:5555::/64 via fd00:0:1234:4444::1 || true
 
-    docker rm -f bird-a1 bird-b1 bird-b2 bird-c1 node-d1 bird-d1
+    docker rm -f bird-a1 bird-b1 bird-b2 bird-c1 node-d1 bird-d1 || true
 
     docker network disconnect enetA kind-worker || true
     docker network disconnect enetB kind-worker || true
