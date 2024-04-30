@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/projectcalico/calico/confd/pkg/backends"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 
@@ -14,7 +16,7 @@ import (
 )
 
 const (
-	maxFuncNameLen       = 66 //Max BIRD symbol length of 64 + 2 for bookending single quotes
+	maxFuncNameLen       = 66 // Max BIRD symbol length of 64 + 2 for bookending single quotes
 	v4GlobalPeerIP1Str   = "77.0.0.1"
 	v4GlobalPeerIP2Str   = "77.0.0.2"
 	v4GlobalPeerIP3Str   = "77.0.0.3"
@@ -173,12 +175,13 @@ func Test_BGPFilterBIRDFuncs(t *testing.T) {
 }
 
 func resultCheckerForExternalNetworkBIRDConfig(externalNetworksKVP, globalPeersKVP, explicitPeersKVP memkv.KVPairs, expected []string, t *testing.T) {
+	t.Helper()
 	result, err := ExternalNetworkBIRDConfig("dontcare", externalNetworksKVP, globalPeersKVP, explicitPeersKVP)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("Expected did not match result.\nGenerated: %s\nExpected: %s", result, expected)
+	if diff := cmp.Diff(result, expected); diff != "" {
+		t.Errorf("Expected did not match result: %s", diff)
 	}
 }
 
@@ -288,6 +291,19 @@ func Test_ExternalNetworkBIRDConfig_MultiplePeersSomeWithExternalNetworksSomeWit
 		"    reject;",
 		"  };",
 		"}",
+		"protocol pipe {",
+		"  peer table 'T_test-enet-1';",
+		"  export filter {",
+		"    if (ifname ~ \"cali*\") then { ",
+		"      accept; ",
+		"    } else {",
+		"      reject; ",
+		"    }",
+		"  };",
+		"  import filter { ",
+		"    reject; ",
+		"  };",
+		"}",
 		"protocol direct 'D_test-enet-1' from direct_template {",
 		"  table 'T_test-enet-1';",
 		"}",
@@ -307,6 +323,19 @@ func Test_ExternalNetworkBIRDConfig_MultiplePeersSomeWithExternalNetworksSomeWit
 		"    if proto = \"Node_44_0_0_3\" then accept;",
 		"    if proto = \"Node_4400__3\" then accept;",
 		"    reject;",
+		"  };",
+		"}",
+		"protocol pipe {",
+		"  peer table 'T_test-enet-2';",
+		"  export filter {",
+		"    if (ifname ~ \"cali*\") then { ",
+		"      accept; ",
+		"    } else {",
+		"      reject; ",
+		"    }",
+		"  };",
+		"  import filter { ",
+		"    reject; ",
 		"  };",
 		"}",
 		"protocol direct 'D_test-enet-2' from direct_template {",
@@ -346,6 +375,19 @@ func Test_ExternalNetworkBIRDConfig_PeersWithPorts(t *testing.T) {
 		"    if proto = \"Node_44_0_0_1_port_44\" then accept;",
 		"    if proto = \"Node_4400__1_port_44\" then accept;",
 		"    reject;",
+		"  };",
+		"}",
+		"protocol pipe {",
+		"  peer table 'T_test-enet-1';",
+		"  export filter {",
+		"    if (ifname ~ \"cali*\") then { ",
+		"      accept; ",
+		"    } else {",
+		"      reject; ",
+		"    }",
+		"  };",
+		"  import filter { ",
+		"    reject; ",
 		"  };",
 		"}",
 		"protocol direct 'D_test-enet-1' from direct_template {",
