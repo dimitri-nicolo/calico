@@ -21,19 +21,17 @@ import (
 	"io"
 	"os"
 
+	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
+	"github.com/spf13/cobra"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
-	"k8s.io/kubernetes/pkg/util/interrupt"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/util/interrupt"
 )
 
 const defaultEtcdPathPrefix = ""

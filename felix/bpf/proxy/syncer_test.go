@@ -1067,8 +1067,8 @@ var _ = Describe("BPF Syncer", func() {
 				proxy.K8sSvcWithHintsAnnotation("auto"),
 			)
 			state.EpsMap[svcKey] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.NewString("us-west-2a")},
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.NewString("us-west-2b")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.New[string]("us-west-2a")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.New[string]("us-west-2b")},
 			}
 			state.NodeZone = "us-west-2a"
 
@@ -1085,8 +1085,8 @@ var _ = Describe("BPF Syncer", func() {
 				proxy.K8sSvcWithHintsAnnotation("auto"),
 			)
 			state.EpsMap[svcKey] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.NewString("us-west-2a")},
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.NewString("us-west-2b")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.New[string]("us-west-2a")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.New[string]("us-west-2b")},
 			}
 			state.NodeZone = "us-west-2b"
 
@@ -1103,8 +1103,8 @@ var _ = Describe("BPF Syncer", func() {
 				proxy.K8sSvcWithHintsAnnotation("disabled"),
 			)
 			state.EpsMap[svcKey] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.NewString("us-west-2a")},
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.NewString("us-west-2b")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.New[string]("us-west-2a")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.New[string]("us-west-2b")},
 			}
 			state.NodeZone = "us-west-2b"
 
@@ -1120,8 +1120,8 @@ var _ = Describe("BPF Syncer", func() {
 				v1.ProtocolTCP,
 			)
 			state.EpsMap[svcKey] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.NewString("us-west-2a")},
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.NewString("us-west-2b")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.New[string]("us-west-2a")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.New[string]("us-west-2b")},
 			}
 			state.NodeZone = "us-west-2b"
 
@@ -1138,8 +1138,8 @@ var _ = Describe("BPF Syncer", func() {
 				proxy.K8sSvcWithHintsAnnotation("auto"),
 			)
 			state.EpsMap[svcKey] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.NewString("us-west-2a")},
-				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.NewString("us-west-2b")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555", ZoneHints: sets.New[string]("us-west-2a")},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.2:5555", ZoneHints: sets.New[string]("us-west-2b")},
 			}
 			state.NodeZone = ""
 
