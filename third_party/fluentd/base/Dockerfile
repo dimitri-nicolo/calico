@@ -18,7 +18,8 @@ RUN gem install async-http -v 0.60.2 && \
        gem install json -v 2.6.3 && \
        gem install oj -v 3.16.1 && \
        gem install rexml -v 3.2.6 && \
-       gem install uri -v 0.12.2
+       gem install uri -v 0.12.2 && \
+       gem install time -v 0.1.1
 
 # Calico Enterprise dependencies
 RUN gem install elasticsearch-api -v 7.17.10 && \
@@ -47,5 +48,8 @@ RUN mkdir -p /fluentd/etc/output_runtime
 RUN mkdir -p /fluentd/etc/output_tsee_audit
 RUN mkdir -p /fluentd/etc/output_waf
 RUN mkdir -p /fluentd/log
+
+RUN rm /usr/share/gems/specifications/default/time-0.1.0.gemspec
+RUN rm /usr/share/gems/specifications/default/uri-0.10.1.gemspec
 
 COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb
