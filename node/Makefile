@@ -71,7 +71,7 @@ INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
 TEST_CONTAINER_NAME_VER?=latest
 TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
 
-TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc')
+TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc' | -name '*.tmp' )
 
 # Variables controlling the image
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
@@ -509,7 +509,7 @@ external-network-test:
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
 external-network-setup: .calico_test.created external-network-cleanup kubectl dist/calicoctl $(KIND_KUBECONFIG)
 	STEPS=setup \
-	ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
+	  ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
 EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py -s --nocapture --nologcapture
 .PHONY: external-network-run-test
@@ -527,7 +527,8 @@ external-network-run-test: .calico_test.created $(KIND_KUBECONFIG)
 
 .PHONY: external-network-cleanup
 external-network-cleanup:
-	-STEPS=cleanup $(EXTERNAL_NETWORK_DIR)/external-networks.sh
+	STEPS=cleanup \
+	  ROUTER_IMAGE=$(BIRD_DIND_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG)  $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
 .PHONY: st
 ## Run the system tests
