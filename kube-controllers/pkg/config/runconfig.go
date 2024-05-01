@@ -74,6 +74,7 @@ type ControllersConfig struct {
 	AuthorizationConfiguration *AuthorizationControllerCfg
 	ManagedCluster             *ManagedClusterControllerConfig
 	ManagedClusterLicensing    *ManagedClusterControllerConfig
+	Usage                      *UsageControllerConfig
 }
 
 type GenericControllerConfig struct {
@@ -117,6 +118,12 @@ type ManagedClusterControllerConfig struct {
 	ElasticConfig                  ElasticsearchCfgControllerCfg
 	LicenseConfig                  LicenseControllerCfg
 	TenantNamespace                string
+}
+
+type UsageControllerConfig struct {
+	GenericControllerConfig
+	UsageReportsPerDay int
+	RESTConfig         *restclient.Config
 }
 
 type RunConfigController struct {
@@ -444,6 +451,15 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.AuthorizationConfiguration.EnableElasticsearchOIDCWorkaround = envCfg.EnableElasticsearchOIDCWorkaround
 	}
 
+	if rc.Usage != nil {
+		rc.Usage.UsageReportsPerDay = envCfg.UsageReportsPerDay
+		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build kubernetes client config")
+		}
+		rc.Usage.RESTConfig = restCfg
+	}
+
 	rCfg.ShortLicensePolling = envCfg.DebugUseShortPollIntervals
 
 	return rCfg, status
@@ -661,6 +677,8 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			case "authorization":
 				rc.AuthorizationConfiguration = &AuthorizationControllerCfg{}
 				// authorization not supported on KubeControllersConfiguration yet
+			case "usage":
+				rc.Usage = &UsageControllerConfig{}
 			default:
 				log.Fatalf("Invalid controller '%s' provided.", controllerType)
 			}

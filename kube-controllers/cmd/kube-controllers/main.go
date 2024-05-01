@@ -26,6 +26,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/profile"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/projectcalico/calico/typha/pkg/tlsutils"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/usage"
+
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -33,8 +40,6 @@ import (
 	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	restclient "k8s.io/client-go/rest"
 
-	"github.com/pkg/profile"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
@@ -65,7 +70,10 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/serviceaccount"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/status"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
@@ -73,11 +81,6 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
-	"github.com/projectcalico/calico/typha/pkg/tlsutils"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/status"
-	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -790,6 +793,17 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				cfg.Controllers.AuthorizationConfiguration,
 			),
 		}
+	}
+
+	if cfg.Controllers.Usage != nil {
+		usageController, err := usage.NewUsageController(ctx, cfg.Controllers.Usage, k8sClientset, calicoClient, nodeInformer)
+		if err != nil {
+			log.WithError(err).Fatal("failed to created usage controller")
+		}
+		cc.controllerStates["Usage"] = &controllerState{
+			controller: usageController,
+		}
+		cc.registerInformers(nodeInformer)
 	}
 }
 
