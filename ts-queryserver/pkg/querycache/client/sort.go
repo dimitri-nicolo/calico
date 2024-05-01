@@ -247,6 +247,21 @@ var policyDiffFuncs = map[string]policyDiffFunc{
 	"numEndpoints": func(p, q *Policy) int {
 		return p.NumWorkloadEndpoints + p.NumHostEndpoints - q.NumHostEndpoints - q.NumWorkloadEndpoints
 	},
+	"order": func(p, q *Policy) int {
+		if p.Order != nil && q.Order != nil {
+			return int(*p.Order - *q.Order)
+		} else if p.Order == nil && q.Order == nil {
+			return 0
+		} else if p.Order != nil {
+			return 1
+		} else if q.Order != nil {
+			return -1
+		}
+		return 0
+	},
+	"creation-time": func(p, q *Policy) int {
+		return int(p.CreationTime.Unix() - q.CreationTime.Unix())
+	},
 }
 
 const policyDefaultSortField = "index"

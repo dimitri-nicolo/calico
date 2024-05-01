@@ -9,6 +9,7 @@ import (
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/strings/slices"
 
 	log "github.com/sirupsen/logrus"
 
@@ -437,16 +438,21 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}
 
 	var ordered []api.Tier
-	if policySet == nil && req.Tier != "" {
+	if policySet == nil && len(req.Tier) > 0 {
 		// If a tier has been specified, but no other query parameters then we can request just
 		// the policies associated with a Tier as a minor finesse.
-		tier := c.policies.GetTier(model.ResourceKey{
-			Kind: apiv3.KindTier,
-			Name: req.Tier,
-		})
-		if tier != nil {
-			ordered = append(ordered, tier)
+		for _, tierName := range req.Tier {
+			if tierName != "" {
+				tier := c.policies.GetTier(model.ResourceKey{
+					Kind: apiv3.KindTier,
+					Name: tierName,
+				})
+				if tier != nil {
+					ordered = append(ordered, tier)
+				}
+			}
 		}
+
 	} else {
 		// Get the required policies ordered by tier and policy Order parameter. If the policy set is
 		// empty this will return all policies across all tiers.
@@ -460,8 +466,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	for _, t := range ordered {
 		op := t.GetOrderedPolicies()
 		// If a tier is specified, filter out policies that are not in the requested tier.
-		if req.Tier != "" && t.GetName() != req.Tier {
-			log.Info("Filter out wrong tier")
+		if len(req.Tier) > 0 && !slices.Contains(req.Tier, t.GetName()) {
+			log.Info("Filter out unwanted tier")
 			continue
 		}
 
@@ -498,6 +504,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 	ep := p.GetEndpointCounts()
 	res := p.GetResource()
+
+	creationTime := res.GetObjectMeta().GetCreationTimestamp()
 	return &Policy{
 		Index:                idx,
 		Name:                 res.GetObjectMeta().GetName(),
@@ -509,6 +517,8 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
 		Ingress:              c.convertRules(p.GetRuleEndpointCounts().Ingress),
 		Egress:               c.convertRules(p.GetRuleEndpointCounts().Egress),
+		Order:                p.GetOrder(),
+		CreationTime:         &creationTime,
 	}
 }
 

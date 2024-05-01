@@ -49,8 +49,8 @@ func policyTestQueryData() []testQueryData {
 	qcPolicy_gnp1_t1_all_res_more := qcPolicy(gnp1_t1_o4_more_rules, 1, 3, 0, 0)
 	qcPolicy_gnp1_t1_all_res_more.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp1_t1_all_res_more.Ingress[0].Destination.NumWorkloadEndpoints = 0
-	//qcPolicy_gnp1_t1_all_res_more.Ingress[0].Source.NumHostEndpoints = 4
-	//qcPolicy_gnp1_t1_all_res_more.Ingress[0].Source.NumWorkloadEndpoints = 4
+	// qcPolicy_gnp1_t1_all_res_more.Ingress[0].Source.NumHostEndpoints = 4
+	// qcPolicy_gnp1_t1_all_res_more.Ingress[0].Source.NumWorkloadEndpoints = 4
 	qcPolicy_gnp1_t1_all_res_more.Egress[0].Source.NumHostEndpoints = 4
 	qcPolicy_gnp1_t1_all_res_more.Egress[0].Source.NumWorkloadEndpoints = 2
 
@@ -825,7 +825,7 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
 			},
 			client.QueryPoliciesReq{
-				Tier: tier2.Name,
+				Tier: []string{tier2.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 4,
@@ -844,13 +844,63 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
 			},
 			client.QueryPoliciesReq{
-				Tier: tier1.Name,
+				Tier: []string{tier1.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 4,
 				Items: []client.Policy{
 					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t1_o2_ns2, 0, 2, 0, 0),
 					qcPolicy(gnp1_t1_o3, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res,
+				},
+			},
+		},
+		{
+			"bunch of endpoints and tier1 and tier2 policies - query tier1 and tier2",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
+			},
+			client.QueryPoliciesReq{
+				Tier: []string{tier1.Name, tier2.Name},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0),
+					qcPolicy(np2_t1_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t1_o3, 1, 3, 0, 0),
+					qcPolicy_gnp2_t1_all_res,
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0),
+					qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0),
+					qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
+				},
+			},
+		},
+		{
+			"bunch of endpoints and tier 1 and tier2 policies - query empty tier",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
+			},
+			client.QueryPoliciesReq{
+				Tier: []string{},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0),
+					qcPolicy(np2_t1_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t1_o3, 1, 3, 0, 0),
+					qcPolicy_gnp2_t1_all_res,
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0),
+					qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0),
+					qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -863,7 +913,7 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, namespacednetset1,
 			},
 			client.QueryPoliciesReq{
-				Tier: tier1.Name,
+				Tier: []string{tier1.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 4,
@@ -882,7 +932,7 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
 			},
 			client.QueryPoliciesReq{
-				Tier: tier2.Name,
+				Tier: []string{tier2.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 4,
@@ -901,7 +951,7 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
 			},
 			client.QueryPoliciesReq{
-				Tier: tier1.Name,
+				Tier: []string{tier1.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 4,
@@ -920,7 +970,7 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
 			},
 			client.QueryPoliciesReq{
-				Tier: tier1.Name,
+				Tier: []string{tier1.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 4,
@@ -1114,7 +1164,7 @@ func policyTestQueryData() []testQueryData {
 					"server":                      "1",
 				},
 				Endpoint: resourceKey(wep4_n2_ns1),
-				Tier:     tier2.Name,
+				Tier:     []string{tier2.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 1,
@@ -1138,7 +1188,7 @@ func policyTestQueryData() []testQueryData {
 					"server":                      "1",
 				},
 				Endpoint: resourceKey(wep4_n2_ns1),
-				Tier:     tier2.Name,
+				Tier:     []string{tier2.Name},
 			},
 			&client.QueryPoliciesResp{
 				Count: 1,
