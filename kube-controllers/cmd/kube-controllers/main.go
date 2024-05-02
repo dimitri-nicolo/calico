@@ -76,7 +76,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
@@ -134,9 +133,6 @@ var (
 )
 
 func init() {
-	// Make sure the RNG is seeded.
-	seedrng.EnsureSeeded()
-
 	// Add a flag to check the version.
 	flag.BoolVar(&version, "version", false, "Display version")
 	flag.StringVar(&statusFile, "status-file", status.DefaultStatusFile, "File to write status information to")

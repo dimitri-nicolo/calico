@@ -30,6 +30,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
+	"github.com/projectcalico/calico/libcalico-go/lib/metricsserver"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/bgpsyncer"
@@ -42,7 +45,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/security"
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator/clients"
 	"github.com/projectcalico/calico/typha/pkg/buildinfo"
@@ -148,9 +150,6 @@ func (t *TyphaDaemon) InitializeAndServeForever(cxt context.Context) error {
 
 // DoEarlyRuntimeSetup does early runtime/logging configuration that needs to happen before we do any work.
 func (t *TyphaDaemon) DoEarlyRuntimeSetup() {
-	// Go's RNG is not seeded by default.  Do that now.
-	seedrng.EnsureSeeded()
-
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.
 	t.ConfigureEarlyLogging()

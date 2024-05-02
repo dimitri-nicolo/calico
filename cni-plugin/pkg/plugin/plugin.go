@@ -42,7 +42,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -737,9 +736,6 @@ func cmdDummyCheck(args *skel.CmdArgs) (err error) {
 }
 
 func Main(version string) {
-	// Make sure the RNG is seeded.
-	seedrng.EnsureSeeded()
-
 	// Set up logging formatting.
 	logrus.SetFormatter(&logutils.Formatter{})
 
