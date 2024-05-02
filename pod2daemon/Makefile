@@ -75,7 +75,7 @@ $(BINDIR)/csi-driver-%: $(SRC_FILES)
 	$(call build_binary, csidriver/main.go, $@)
 
 UPSTREAM_REGISTRAR_PROJECT ?= kubernetes-csi/$(REGISTRAR_IMAGE)
-UPSTREAM_REGISTRAR_TAG     ?= v2.10.1
+UPSTREAM_REGISTRAR_TAG     ?= a498c31b88cd31f8ea7bafd0d715a75f9939fa1f
 
 REGISTRAR_TIGERA_BUILD_CMD="cd /go/src/github.com/$(UPSTREAM_REGISTRAR_PROJECT) && \
 	go build -buildvcs=false -tags $(TAGS) -v -o $(BINDIR)/csi-node-driver-registrar cmd/csi-node-driver-registrar/*.go"
@@ -109,12 +109,20 @@ $(BINDIR)/node-driver-registrar-%: clone-registrar-upstream
 clone-registrar-upstream:
 ifeq ("$(wildcard ./$(REGISTRAR_IMAGE))", "")
 	@echo "Directory does not exist."
+<<<<<<< HEAD
 	git clone --depth 1 --branch $(UPSTREAM_REGISTRAR_TAG) --single-branch https://github.com/$(UPSTREAM_REGISTRAR_PROJECT).git
 	patch -d node-driver-registrar -p1 < patches/0001-Update-go.mod-to-patch-CVEs.patch
 	rm -rf node-driver-registrar/vendor
 else
 	@echo "Upstream repo already cloned."
+=======
+	git clone --depth 1 --single-branch https://github.com/$(UPSTREAM_REGISTRAR_PROJECT).git
+>>>>>>> 329502fbe7
 endif
+	cd $(REGISTRAR_IMAGE) && \
+	  git checkout $(UPSTREAM_REGISTRAR_TAG) || \
+	  git fetch --tags origin $(UPSTREAM_REGISTRAR_TAG) && \
+	  git checkout $(UPSTREAM_REGISTRAR_TAG)
 
 clean-registrar:
 	rm -rf node-driver-registrar
@@ -153,12 +161,12 @@ $(CSI_CONTAINER_FIPS_CREATED): csidriver/Dockerfile $(BINDIR)/csi-driver-$(ARCH)
 
 $(REGISTRAR_IMAGE): $(REGISTRAR_CONTAINER_MARKER)
 $(REGISTRAR_CONTAINER_CREATED): node-driver-registrar-docker/Dockerfile $(BINDIR)/node-driver-registrar-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(REGISTRAR_IMAGE):latest-$(ARCH) -f node-driver-registrar-docker/Dockerfile .
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) --build-arg UPSTREAM_VER=$(UPSTREAM_REGISTRAR_TAG) -t $(REGISTRAR_IMAGE):latest-$(ARCH) -f node-driver-registrar-docker/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(REGISTRAR_IMAGE)
 	touch $@
 
 $(REGISTRAR_CONTAINER_FIPS_CREATED): node-driver-registrar-docker/Dockerfile $(BINDIR)/node-driver-registrar-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(REGISTRAR_IMAGE):latest-fips-$(ARCH) -f node-driver-registrar-docker/Dockerfile .
+	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) --build-arg UPSTREAM_VER=$(UPSTREAM_REGISTRAR_TAG) -t $(REGISTRAR_IMAGE):latest-fips-$(ARCH) -f node-driver-registrar-docker/Dockerfile .
 	$(MAKE) FIPS=true retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips BUILD_IMAGES=$(REGISTRAR_IMAGE) LATEST_IMAGE_TAG=latest-fips
 	touch $@
 
