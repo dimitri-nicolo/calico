@@ -3,11 +3,10 @@
 package calico
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/projectcalico/calico/licensing/client/features"
-
-	"golang.org/x/net/context"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"

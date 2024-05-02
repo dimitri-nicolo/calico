@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	features "github.com/projectcalico/calico/licensing/client/features"
 

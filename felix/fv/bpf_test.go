@@ -450,7 +450,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						felix.Exec("calico-bpf", "-6", "routes", "dump")
 						felix.Exec("calico-bpf", "-6", "nat", "dump")
 						felix.Exec("calico-bpf", "-6", "nat", "aff")
-						felix.Exec("calico-bpf", "-6", "conntrack", "dump")
+						felix.Exec("calico-bpf", "-6", "conntrack", "dump", "--raw")
 						felix.Exec("calico-bpf", "-6", "arp", "dump")
 					} else {
 						felix.Exec("iptables-save", "-c")
@@ -464,7 +464,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						felix.Exec("calico-bpf", "routes", "dump")
 						felix.Exec("calico-bpf", "nat", "dump")
 						felix.Exec("calico-bpf", "nat", "aff")
-						felix.Exec("calico-bpf", "conntrack", "dump")
+						felix.Exec("calico-bpf", "conntrack", "dump", "--raw")
 						felix.Exec("calico-bpf", "arp", "dump")
 					}
 					felix.Exec("calico-bpf", "counters", "dump")
@@ -2393,9 +2393,9 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						)
 
 						if testOpts.ipv6 {
-							ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "-6", "dump")
+							ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "-6", "dump", "--raw")
 						} else {
-							ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "dump")
+							ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "dump", "--raw")
 						}
 						Expect(err).NotTo(HaveOccurred())
 						re := regexp.MustCompile(`LastSeen:\s*(\d+)`)
@@ -2416,9 +2416,9 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						// entries.
 						numWl0ConntrackEntries := func() int {
 							if testOpts.ipv6 {
-								ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "-6", "dump")
+								ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "-6", "dump", "--raw")
 							} else {
-								ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "dump")
+								ctDump, err = tc.Felixes[0].ExecOutput("calico-bpf", "conntrack", "dump", "--raw")
 							}
 							Expect(err).NotTo(HaveOccurred())
 							return strings.Count(ctDump, w[0][0].IP)
