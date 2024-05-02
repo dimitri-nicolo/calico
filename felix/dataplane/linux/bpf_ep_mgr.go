@@ -278,6 +278,7 @@ type bpfEndpointManager struct {
 	vxlanMTU                int
 	vxlanPort               uint16
 	wgPort                  uint16
+	wg6Port                 uint16
 	dsrEnabled              bool
 	dsrOptoutCidrs          bool
 	bpfExtToServiceConnmark int
@@ -489,6 +490,7 @@ func newBPFEndpointManager(
 		vxlanMTU:                config.VXLANMTU,
 		vxlanPort:               uint16(config.VXLANPort),
 		wgPort:                  uint16(config.Wireguard.ListeningPort),
+		wg6Port:                 uint16(config.Wireguard.ListeningPortV6),
 		dsrEnabled:              config.BPFNodePortDSREnabled,
 		dsrOptoutCidrs:          len(config.BPFDSROptoutCIDRs) > 0,
 		bpfExtToServiceConnmark: config.BPFExtToServiceConnmark,
@@ -2703,6 +2705,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 	ap.Type = endpointType
 	if ap.Type != tcdefs.EpTypeWorkload {
 		ap.WgPort = m.wgPort
+		ap.Wg6Port = m.wg6Port
 		ap.NATin = uint32(m.natInIdx)
 		ap.NATout = uint32(m.natOutIdx)
 	} else {

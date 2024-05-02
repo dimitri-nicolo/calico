@@ -27,6 +27,7 @@ type TcGlobalData struct {
 	VethNS         uint16
 	Flags          uint32
 	WgPort         uint16
+	Wg6Port        uint16
 	NatIn          uint32
 	NatOut         uint32
 	EgwVxlanPort   uint16
