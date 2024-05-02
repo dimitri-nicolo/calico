@@ -37,6 +37,7 @@ import (
 
 	"github.com/projectcalico/calico/apiserver/cmd/apiserver/server"
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
+	licutils "github.com/projectcalico/calico/licensing/utils"
 )
 
 const defaultEtcdPathPrefix = ""
