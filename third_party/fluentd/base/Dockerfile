@@ -41,6 +41,7 @@ RUN rm -fr /tmp/* /usr/local/share/gems/cache/*.gem
 RUN rm -fr /usr/local/share/gems/gems/fluentd-1.16.3/test/
 RUN rm /usr/share/gems/specifications/default/time-0.1.0.gemspec
 RUN rm /usr/share/gems/specifications/default/uri-0.10.1.gemspec
+RUN rm /usr/share/gems/specifications/default/cgi-0.2.1.gemspec
 
 RUN mkdir -p /fluentd/etc/output_bgp
 RUN mkdir -p /fluentd/etc/output_compliance_reports
