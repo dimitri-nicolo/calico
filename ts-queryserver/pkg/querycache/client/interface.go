@@ -136,6 +136,7 @@ type QueryEndpointsReqBody struct {
 	// Filters
 	EndpointsList []string `json:"endpointsList"` // we need to identify when this field is passed as empty list or is not passed
 	Node          string   `json:"node,omitempty" validate:"omitempty"`
+	Namespace     string   `json:"namespace,omitempty" validate:"omitempty"`
 	Unlabelled    bool     `json:"unlabelled,omitempty"  validate:"omitempty"`
 	Page          *Page    `json:"page,omitempty" validate:"omitempty"`
 	Sort          *Sort    `json:"sort,omitempty" validate:"omitempty"`
@@ -156,6 +157,7 @@ type QueryEndpointsReq struct {
 	// Filters
 	EndpointsList []string
 	Node          string
+	Namespace     string
 	Unlabelled    bool
 	Page          *Page
 	Sort          *Sort

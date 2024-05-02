@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -295,7 +296,7 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		return nil, err
 	}
 
-	// build regex pattern from the list of endpoints_name / endpointaggregate_name
+	// build regex pattern from the list of endpoints_name / endpoint aggregate_name
 	// for a list of 100 endpoints, the resulting regexPattern will look like: ep1^|ep2^|ep3^|...|ep_100^
 	var epListRegex *regexp.Regexp
 	if req.EndpointsList != nil {
@@ -305,8 +306,14 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		}
 	}
 
+	var skippedNamespaces []string
 	items := make([]Endpoint, 0, len(epkeys))
 	for _, result := range epkeys {
+
+		if req.Namespace != "" && !strings.EqualFold(result.(model.ResourceKey).Namespace, req.Namespace) {
+			skippedNamespaces = append(skippedNamespaces, result.(model.ResourceKey).Namespace)
+			continue
+		}
 		// if endpointList is not nil --> epListRegex is not nil. Thus, we should check endpoint (result.String) to
 		// be from the endpointList (by checking of epListRegex can match result.String())
 		if epListRegex != nil && !epListRegex.MatchString(result.String()) {
@@ -327,6 +334,12 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
 	}
 
+	// log list of skipped ns if any for debugging purposes
+	if log.IsLevelEnabled(log.DebugLevel) && len(skippedNamespaces) > 0 {
+		log.Debugf("some endpoints are skipped due to namespace mismatch. requested:%s vs. actual:%v",
+			req.Namespace,
+			strings.Join(skippedNamespaces, ","))
+	}
 	sortEndpoints(items, req.Sort)
 
 	count := len(items)

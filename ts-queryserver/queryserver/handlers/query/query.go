@@ -219,6 +219,7 @@ func parseEndpointsBody(bodyBytes []byte) (*client.QueryEndpointsReq, error) {
 		Unprotected:         body.Unprotected,
 		EndpointsList:       body.EndpointsList,
 		Node:                body.Node,
+		Namespace:           body.Namespace,
 		Unlabelled:          body.Unlabelled,
 		Page:                body.Page,
 		Sort:                body.Sort,
