@@ -22,7 +22,7 @@ func (n *nativeUserSynchronizer) eeResync() error {
 		if user.FullName != eusers.SystemUserFullName {
 			subjectID := strings.TrimPrefix(user.Username, n.esUserPrefix)
 			if !n.userCache.Exists(subjectID) {
-				log.WithField("subjectId", subjectID).Trace("deleting user from Elasticsearch as it is not present in our cache")
+				log.WithField("subjectId", subjectID).Debug("deleting user from Elasticsearch as it is not present in our cache")
 				if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
 					return err
 				}
