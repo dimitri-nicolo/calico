@@ -480,7 +480,7 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 			if err != nil {
 				return nil, nil, err
 			}
-			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Trace("public user comparison")
+			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Debug("public user comparison")
 			if secret.Labels[UserChangeHashLabel] == userHash {
 				delete(publicEsUsers, username)
 			}
@@ -498,13 +498,13 @@ func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]el
 			if err != nil {
 				return nil, nil, err
 			}
-			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Trace("private user comparison")
+			log.WithField("userName", user.Username).WithField("userHash", userHash).WithField("secretHash", secret.Labels[UserChangeHashLabel]).Debug("private user comparison")
 			if secret.Labels[UserChangeHashLabel] == userHash {
 				delete(privateEsUsers, username)
 			}
 		}
 	}
-	log.WithField("privateUsers", privateEsUsers).WithField("publicUsers", publicEsUsers).Trace("missing users")
+	log.WithField("privateUsers", privateEsUsers).WithField("publicUsers", publicEsUsers).Debug("missing users")
 	return privateEsUsers, publicEsUsers, nil
 }
 
