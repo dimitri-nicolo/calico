@@ -50,6 +50,9 @@ monitor:
 compliance:
   enabled: true
 
+packetCaptureAPI:
+  enabled: true
+
 policyRecommendation:
   enabled: true
 
