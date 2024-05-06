@@ -573,11 +573,9 @@ func TestBPFFeatureDetection(t *testing.T) {
 		{
 			"Linux version 5.10.0 - ubuntu",
 			Features{
-				IPIPDeviceIsL3: false,
-				BPFKprobes:     true,
-				NFLogSize:      true,
-				NFQueueBypass:  true,
-				IPIPDeviceIsL3: false,
+				BPFKprobes:    true,
+				NFLogSize:     true,
+				NFQueueBypass: true,
 			},
 			map[string]string{},
 		},
@@ -588,7 +586,6 @@ func TestBPFFeatureDetection(t *testing.T) {
 				BPFKprobes:     true,
 				NFLogSize:      true,
 				NFQueueBypass:  true,
-				IPIPDeviceIsL3: true,
 			},
 			map[string]string{},
 		},
@@ -599,7 +596,6 @@ func TestBPFFeatureDetection(t *testing.T) {
 				BPFKprobes:     true,
 				NFLogSize:      true,
 				NFQueueBypass:  true,
-				IPIPDeviceIsL3: true,
 			},
 			map[string]string{},
 		},
@@ -610,7 +606,6 @@ func TestBPFFeatureDetection(t *testing.T) {
 				BPFKprobes:     true,
 				NFLogSize:      true,
 				NFQueueBypass:  true,
-				IPIPDeviceIsL3: true,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "true",
@@ -623,7 +618,6 @@ func TestBPFFeatureDetection(t *testing.T) {
 				BPFKprobes:     true,
 				NFLogSize:      true,
 				NFQueueBypass:  true,
-				IPIPDeviceIsL3: false,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
@@ -636,7 +630,6 @@ func TestBPFFeatureDetection(t *testing.T) {
 				BPFKprobes:     true,
 				NFLogSize:      true,
 				NFQueueBypass:  true,
-				IPIPDeviceIsL3: false,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
