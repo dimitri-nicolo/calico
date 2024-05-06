@@ -109,15 +109,11 @@ $(BINDIR)/node-driver-registrar-%: clone-registrar-upstream
 clone-registrar-upstream:
 ifeq ("$(wildcard ./$(REGISTRAR_IMAGE))", "")
 	@echo "Directory does not exist."
-<<<<<<< HEAD
-	git clone --depth 1 --branch $(UPSTREAM_REGISTRAR_TAG) --single-branch https://github.com/$(UPSTREAM_REGISTRAR_PROJECT).git
+	git clone --depth 1 --single-branch https://github.com/$(UPSTREAM_REGISTRAR_PROJECT).git
 	patch -d node-driver-registrar -p1 < patches/0001-Update-go.mod-to-patch-CVEs.patch
 	rm -rf node-driver-registrar/vendor
 else
 	@echo "Upstream repo already cloned."
-=======
-	git clone --depth 1 --single-branch https://github.com/$(UPSTREAM_REGISTRAR_PROJECT).git
->>>>>>> 329502fbe7
 endif
 	cd $(REGISTRAR_IMAGE) && \
 	  git checkout $(UPSTREAM_REGISTRAR_TAG) || \
