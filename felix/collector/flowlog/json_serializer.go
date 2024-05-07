@@ -188,11 +188,11 @@ func ToOutput(l *FlowLog) JSONOutput {
 	out.Action = string(l.Action)
 	out.Reporter = string(l.Reporter)
 
-	if l.FlowPolicies == nil {
+	if l.FlowPolicySet == nil {
 		out.Policies = nil
 	} else {
-		all_p := make([]string, 0, len(l.FlowPolicies))
-		for pol := range l.FlowPolicies {
+		all_p := make([]string, 0, len(l.FlowPolicySet))
+		for pol := range l.FlowPolicySet {
 			all_p = append(all_p, pol)
 		}
 		out.Policies = &policiesJSONOutput{
@@ -376,11 +376,11 @@ func (o JSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.TotalRetrans = int(o.TotalRetrans)
 	fl.UnrecoveredRTO = int(o.UnrecoveredRTO)
 	if o.Policies == nil {
-		fl.FlowPolicies = nil
+		fl.FlowPolicySet = nil
 	} else {
-		fl.FlowPolicies = make(FlowPolicies)
+		fl.FlowPolicySet = make(FlowPolicySet)
 		for _, pol := range o.Policies.AllPolicies {
-			fl.FlowPolicies[pol] = emptyValue
+			fl.FlowPolicySet[pol] = emptyValue
 		}
 	}
 
