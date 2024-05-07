@@ -269,19 +269,19 @@ func compareProcessReportedStats(actual, expected FlowProcessReportedStats) bool
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
 
-	expectFlowLog := func(fl FlowLog, t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterType, pi, po, bi, bo int, sm, dm endpoint.Metadata, dsvc FlowService, sl, dl map[string]string, fp FlowPolicies, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) {
+	expectFlowLog := func(fl FlowLog, t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterType, pi, po, bi, bo int, sm, dm endpoint.Metadata, dsvc FlowService, sl, dl map[string]string, fp FlowPolicySet, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) {
 		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, dsvc, sl, dl, fp, fe, fpi, tcps)
 
 		// We don't include the start and end time in the comparison, so copy to a new log without these
 		var flNoTime FlowLog
 		flNoTime.FlowMeta = fl.FlowMeta
 		flNoTime.FlowLabels = fl.FlowLabels
-		flNoTime.FlowPolicies = fl.FlowPolicies
+		flNoTime.FlowPolicySet = fl.FlowPolicySet
 
 		var expFlowNoProc FlowLog
 		expFlowNoProc.FlowMeta = expectedFlow.FlowMeta
 		expFlowNoProc.FlowLabels = expectedFlow.FlowLabels
-		expFlowNoProc.FlowPolicies = expectedFlow.FlowPolicies
+		expFlowNoProc.FlowPolicySet = expectedFlow.FlowPolicySet
 
 		Expect(flNoTime).Should(Equal(expFlowNoProc))
 		Expect(compareProcessReportedStats(fl.FlowProcessReportedStats, expectedFlow.FlowProcessReportedStats)).Should(Equal(true))
@@ -294,7 +294,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			flNoTime := FlowLog{}
 			flNoTime.FlowMeta = fl.FlowMeta
 			flNoTime.FlowLabels = fl.FlowLabels
-			flNoTime.FlowPolicies = fl.FlowPolicies
+			flNoTime.FlowPolicySet = fl.FlowPolicySet
 			flNoTime.FlowProcessReportedStats = fl.FlowProcessReportedStats
 			actualFlowsNoTime = append(actualFlowsNoTime, flNoTime)
 		}
@@ -339,8 +339,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 		}
 	}
 
-	extractFlowPolicies := func(mus ...metric.Update) FlowPolicies {
-		fp := make(FlowPolicies)
+	extractFlowPolicies := func(mus ...metric.Update) FlowPolicySet {
+		fp := make(FlowPolicySet)
 		for _, mu := range mus {
 			for idx, r := range mu.RuleIDs {
 				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,

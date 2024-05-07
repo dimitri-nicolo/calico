@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 package flowlog
 
@@ -6,6 +6,7 @@ import (
 	"container/list"
 	"fmt"
 	"net"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -163,7 +164,7 @@ type FlowSpec struct {
 	FlowStatsByProcess
 	flowExtrasRef
 	FlowLabels
-	FlowPolicies
+	FlowPolicySets
 	FlowDestDomains
 
 	// Reset aggregated data on the next metric update to ensure we clear out obsolete labels, policies and Domains for
@@ -176,7 +177,7 @@ func NewFlowSpec(mu *metric.Update, maxOriginalIPsSize, maxDomains int, includeP
 	// TODO: reconsider/refactor the inner functions called in NewFlowStatsByProcess to avoid above scenario
 	return &FlowSpec{
 		FlowLabels:         NewFlowLabels(*mu),
-		FlowPolicies:       NewFlowPolicies(*mu),
+		FlowPolicySets:     NewFlowPolicySets(*mu),
 		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit, displayDebugTraceLogs, natOutgoingPortLimit),
 		flowExtrasRef:      NewFlowExtrasRef(*mu, maxOriginalIPsSize),
 		FlowDestDomains:    NewFlowDestDomains(*mu, maxDomains),
@@ -212,12 +213,19 @@ func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, include
 		}
 
 		if !includePolicies {
-			fl.FlowPolicies = nil
+			fl.FlowPolicySet = nil
+			flogs = append(flogs, fl)
 		} else {
-			fl.FlowPolicies = f.FlowPolicies
+			if len(f.FlowPolicySets) > 1 {
+				log.WithField("FlowLog", fl).Warning("Flow was split into multiple flow logs since multiple policy sets were observed for the same flow. Possible causes: policy updates during log aggregation or NFLOG buffer overruns.")
+			}
+			for _, fp := range f.FlowPolicySets {
+				cpfl := *fl
+				cpfl.FlowPolicySet = fp
+				flogs = append(flogs, &cpfl)
+			}
 		}
 
-		flogs = append(flogs, fl)
 	}
 	return flogs
 }
@@ -225,14 +233,14 @@ func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, include
 func (f *FlowSpec) AggregateMetricUpdate(mu *metric.Update) {
 	if f.resetAggrData {
 		// Reset the aggregated data from this metric update.
-		f.FlowPolicies = make(FlowPolicies)
+		f.FlowPolicySets = make(FlowPolicySets, 0)
 		f.FlowLabels.SrcLabels = nil
 		f.FlowLabels.DstLabels = nil
 		f.FlowDestDomains.reset()
 		f.resetAggrData = false
 	}
 	f.aggregateFlowLabels(*mu)
-	f.aggregateFlowPolicies(*mu)
+	f.aggregateFlowPolicySets(*mu)
 	f.aggregateFlowDestDomains(*mu)
 	f.aggregateFlowExtrasRef(*mu)
 	f.aggregateFlowStatsByProcess(mu)
@@ -313,10 +321,10 @@ func (f *FlowLabels) aggregateFlowLabels(mu metric.Update) {
 	}
 }
 
-type FlowPolicies map[string]empty
+type FlowPolicySet map[string]empty
 
-func NewFlowPolicies(mu metric.Update) FlowPolicies {
-	fp := make(FlowPolicies)
+func newFlowPolicySet(mu metric.Update) FlowPolicySet {
+	fp := make(FlowPolicySet)
 	if mu.RuleIDs == nil {
 		return fp
 	}
@@ -329,16 +337,29 @@ func NewFlowPolicies(mu metric.Update) FlowPolicies {
 	return fp
 }
 
-func (fp FlowPolicies) aggregateFlowPolicies(mu metric.Update) {
-	if mu.RuleIDs == nil {
-		return
-	}
-	for idx, rid := range mu.RuleIDs {
-		if rid == nil {
-			continue
+// FlowPolicySets is used to keep track of multiple policy traces that are associated with a flow.
+// This is useful when a flow is associated with multiple policy sets.
+type FlowPolicySets []FlowPolicySet
+
+func NewFlowPolicySets(mu metric.Update) FlowPolicySets {
+	fp := newFlowPolicySet(mu)
+
+	fpl := FlowPolicySets{}
+	fpl = append(fpl, fp)
+
+	return fpl
+}
+
+func (fpl *FlowPolicySets) aggregateFlowPolicySets(mu metric.Update) {
+	fp := newFlowPolicySet(mu)
+
+	for _, p := range *fpl {
+		if reflect.DeepEqual(p, fp) {
+			return
 		}
-		fp[fmt.Sprintf("%d|%s|%s", idx, rid.GetFlowLogPolicyName(), rid.IndexStr)] = emptyValue
 	}
+
+	*fpl = append(*fpl, fp)
 }
 
 type FlowDestDomains struct {
@@ -1052,7 +1073,7 @@ type FlowLog struct {
 	StartTime, EndTime time.Time
 	FlowMeta
 	FlowLabels
-	FlowPolicies
+	FlowPolicySet
 	FlowDestDomains
 	FlowExtras
 	FlowProcessReportedStats
@@ -1156,12 +1177,12 @@ func (f *FlowLog) Deserialize(fl string) error {
 
 	// Parse policies, empty ones are just -
 	if parts[26] == "-" {
-		f.FlowPolicies = make(FlowPolicies)
+		f.FlowPolicySet = make(FlowPolicySet)
 	} else if len(parts[26]) > 1 {
-		f.FlowPolicies = make(FlowPolicies)
+		f.FlowPolicySet = make(FlowPolicySet)
 		polParts := strings.Split(parts[26][1:len(parts[26])-1], ",")
 		for _, p := range polParts {
-			f.FlowPolicies[p] = emptyValue
+			f.FlowPolicySet[p] = emptyValue
 		}
 	}
 
