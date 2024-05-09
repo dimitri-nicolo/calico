@@ -18,48 +18,6 @@ import (
 var VERSION string = "dev"
 
 func main() {
-	arguments, err := docopt.ParseArgs(usage, nil, VERSION)
-	if err != nil {
-		println(usage)
-		return
-	}
-	if arguments["--debug"].(bool) {
-		log.SetLevel(log.DebugLevel)
-	}
-	if arguments["server"].(bool) {
-		runServer(arguments)
-	} else if arguments["client"].(bool) {
-		runClient(arguments)
-	}
-}
-
-func runServer(arguments map[string]interface{}) {
-	filePath := arguments["--listen"].(string)
-	dial := arguments["--dial"].(string)
-	_, err := os.Stat(filePath)
-	if !os.IsNotExist(err) {
-		// file exists, try to delete it.
-		err := os.Remove(filePath)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"listen": filePath,
-				"err":    err,
-			}).Fatal("File exists and unable to remove.")
-		}
-	}
-	lis, err := net.Listen("unix", filePath)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"listen": filePath,
-			"err":    err,
-		}).Fatal("Unable to listen.")
-	}
-	defer lis.Close()
-	err = os.Chmod(filePath, 0777) // Anyone on system can connect.
-	if err != nil {
-		log.Fatal("Unable to set write permission on socket.")
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
