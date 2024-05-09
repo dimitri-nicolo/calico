@@ -43,6 +43,7 @@ clean:
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 	rm -rf _release_archive
+	rm -f manifests/ocp.tgz
 
 ci-preflight-checks:
 	$(MAKE) check-dockerfiles
@@ -123,8 +124,13 @@ chartVersion:=$(GIT_VERSION)
 appVersion:=$(GIT_VERSION)
 endif
 
+publish: var-require-all-CHART_RELEASE-RELEASE_STREAM-REGISTRY publish-chart-release publish-release-archive
+
 chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
+
+publish-chart-release: chart-release
+	@aws --profile helm s3 cp ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz s3://tigera-public/ee/archives/ --acl public-read
 
 publish-release-archive: release-archive
 	$(MAKE) -f release-archive.mk publish-release-archive
