@@ -16,8 +16,3 @@ RUN --mount=type=cache,target=/var/cache/apt \
 
 RUN --mount=type=bind,source=requirements.txt,target=/root/requirements.txt\
     pip install -r /root/requirements.txt
-
-RUN useradd --create-home --shell /bin/bash --user-group --uid ${UID} testrunner
-
-USER testrunner
-
