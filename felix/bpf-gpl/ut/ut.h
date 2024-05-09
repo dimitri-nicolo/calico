@@ -27,7 +27,7 @@
 
 const volatile struct cali_tc_preamble_globals __globals;
 
-static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb);
+static CALI_BPF_INLINE int calico_unittest_entry(struct __sk_buff *skb);
 
 __attribute__((section("tc"))) int unittest(struct __sk_buff *skb)
 {

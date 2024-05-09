@@ -9,6 +9,7 @@
 #include "perf.h"
 #include "events.h"
 #include "sock.h"
+#include "sendrecv.h"
 #include <linux/bpf_perf_event.h>
 
 static CALI_BPF_INLINE void calico_report_dns(struct cali_tc_ctx *ctx)
@@ -155,7 +156,6 @@ static CALI_BPF_INLINE void calico_dns_check(struct cali_tc_ctx *ctx)
 			calico_check_for_dns(ctx);
 		}
 	}
-	return;
 }
 
 #endif /* __CALI_DNS_H__ */
