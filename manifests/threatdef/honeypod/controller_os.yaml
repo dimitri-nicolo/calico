@@ -60,7 +60,7 @@ spec:
       containers:
         - name: controller
           imagePullPolicy: "IfNotPresent"
-          image: gcr.io/unique-caldron-775/cnx/tigera/honeypod-controller:master
+          image: quay.io/tigera/honeypod-controller:v3.19.0-2.0
           env:
             - name: ELASTIC_SCHEME
               value: https
