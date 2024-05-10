@@ -125,6 +125,7 @@ appVersion:=$(GIT_VERSION)
 endif
 
 publish: var-require-all-CHART_RELEASE-RELEASE_STREAM-REGISTRY publish-chart-release publish-release-archive
+	cd selinux && make publish
 
 chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
