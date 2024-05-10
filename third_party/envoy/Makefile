@@ -2,8 +2,16 @@ include ../../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy
 
-ENVOY_IMAGE ?= envoy
-BUILD_IMAGES ?= $(ENVOY_IMAGE)
+ENVOYBINARY_IMAGE ?= envoybinary
+BUILD_IMAGES ?= $(ENVOYBINARY_IMAGE)
+
+ENVOY_VERSION=v1.29.0
+# https://github.com/envoyproxy/envoy/issues/2181
+ENVOY_COMMIT=a6d1d66a62b985baed414ba90ad0daebfc074664
+
+DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
+BRANCH_NAME = $(ENVOY_VERSION)
+LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
 ##############################################################################
 # Include lib.Makefile before anything else
@@ -17,15 +25,12 @@ include ../../lib.Makefile
 ##############################################################################
 ENVOY_DOWNLOADED=.envoy.downloaded
 
-ENVOY_VERSION=v1.29.0
-# https://github.com/envoyproxy/envoy/issues/2181
-ENVOY_COMMIT=a6d1d66a62b985baed414ba90ad0daebfc074664
-
 .PHONY: init-source
 init-source:: $(ENVOY_DOWNLOADED)
 $(ENVOY_DOWNLOADED):
 	mkdir -p envoy
 	curl -sfL https://github.com/envoyproxy/envoy/archive/refs/tags/${ENVOY_VERSION}.tar.gz | tar xz --strip-components 1 -C envoy
+	patch -d envoy -p1 < patches/0001-use-localaddr-if-sock-is-transparent.patch
 	touch $@
 
 build: init-source
@@ -34,36 +39,43 @@ build: init-source
 	ENVOY_DOCKER_BUILD_DIR=$(shell pwd)/envoy/build ci/run_envoy_docker.sh "ci/do_ci.sh release.server_only"
 
 clean:
-	rm -f ${ENVOY_DOWNLOADED} ${ENVOY_IMAGE_CREATED} Makefile.common*
+	rm -f ${ENVOY_DOWNLOADED} ${ENVOYBINARY_IMAGE_CREATED} Makefile.common*
 	rm -fr envoy/
-	-docker image rm -f $$(docker images $(ENVOY_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(ENVOYBINARY_IMAGE) -a -q)
 
 ##############################################################################
 # Image
 ##############################################################################
-ENVOY_IMAGE_CREATED=.envoy.created-$(ARCH)
+ENVOYBINARY_IMAGE_CREATED=.envoybinary.created-$(ARCH)
 
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+# intermediate multi-arch image holds our patched envoy binary.
 .PHONY: image
-image: $(ENVOY_IMAGE)
+image: $(ENVOYBINARY_IMAGE)
 
-# We don't have any custom fix to apply so build step is skipped
-$(ENVOY_IMAGE): $(ENVOY_IMAGE_CREATED)
-$(ENVOY_IMAGE_CREATED): register Dockerfile
-	$(DOCKER_BUILD) --build-arg ENVOY_VERSION=$(ENVOY_VERSION) \
-		-t $(ENVOY_IMAGE):latest-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+ENVOY_ARCH=$(ARCH)
+ifeq ($(ARCH),amd64)
+ENVOY_ARCH=x64
+endif
+
+$(ENVOYBINARY_IMAGE): $(ENVOYBINARY_IMAGE_CREATED)
+$(ENVOYBINARY_IMAGE_CREATED): Dockerfile build
+	$(DOCKER_BUILD) --build-arg ENVOY_ARCH=$(ENVOY_ARCH) \
+		-t $(ENVOYBINARY_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) -f Dockerfile .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
 
 ##############################################################################
 # CI/CD
 ##############################################################################
-.PHONY: ci
-ci: image
-
 .PHONY: cd
-cd: image-all cd-common
+cd: image-all var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
+	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(LATEST_IMAGE_TAG) EXCLUDEARCH="$(EXCLUDEARCH)"
+
+.PHONY: push-manifest
+push-manifest:
+	$(MAKE) push-manifests IMAGETAG=$(LATEST_IMAGE_TAG)
