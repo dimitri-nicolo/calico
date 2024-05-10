@@ -68,6 +68,13 @@ FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
 ###############################################################################
 include ../lib.Makefile
 
+# Set the platform correctly for building docker images.
+ifeq ($(ARCH),arm64)
+# Required for eBPF support in ARM64.
+# We need to force ARM64 build image to be used in a crosscompilation run.
+CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+endif
+
 FV_ETCDIMAGE?=$(ETCD_IMAGE)
 FV_TYPHAIMAGE?=felix-test/typha:latest-$(BUILDARCH)
 FV_K8SIMAGE=$(CALICO_BUILD)
@@ -161,7 +168,8 @@ bin/calico-felix: bin/calico-felix-$(ARCH)
 libbpf: $(LIBBPF_A)
 $(LIBBPF_A): $(shell find bpf-gpl/include/libbpf -type f ! -name "*.a")
 	mkdir -p bpf-gpl/include/libbpf/src/$(ARCH)
-	$(DOCKER_GO_BUILD) sh -c "make -j 16 -C bpf-gpl/include/libbpf/src BUILD_STATIC_ONLY=1 OBJDIR=$(ARCH)"
+	$(MAKE) register ARCH=$(ARCH)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c "make -j 16 -C bpf-gpl/include/libbpf/src BUILD_STATIC_ONLY=1 OBJDIR=$(ARCH)"
 
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) $(TARGET_PLATFORM) -e $(ACK_GINKGO) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
 

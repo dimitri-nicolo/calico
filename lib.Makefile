@@ -151,7 +151,7 @@ endif
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 GO_BUILD_IMAGE ?= calico/go-build
-CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)-$(BUILDARCH)
+CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
 
 # Build a binary with boring crypto support.
 # This function expects you to pass in two arguments:
