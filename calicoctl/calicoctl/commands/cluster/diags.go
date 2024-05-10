@@ -320,6 +320,7 @@ func collectTigeraOperator(dir string) {
 	commands := []common.Cmd{}
 	for _, resource := range []string{
 		"apiservers",
+		"applicationlayers",
 		"compliances",
 		"installations",
 		"intrusiondetections",
