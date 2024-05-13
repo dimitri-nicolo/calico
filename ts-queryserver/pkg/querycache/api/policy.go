@@ -8,6 +8,7 @@ type Policy interface {
 	GetEndpointCounts() EndpointCounts
 	GetRuleEndpointCounts() Rule
 	IsUnmatched() bool
+	GetOrder() *float64
 }
 
 type PolicyCounts struct {

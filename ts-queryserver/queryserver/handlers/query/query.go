@@ -219,6 +219,7 @@ func parseEndpointsBody(bodyBytes []byte) (*client.QueryEndpointsReq, error) {
 		Unprotected:         body.Unprotected,
 		EndpointsList:       body.EndpointsList,
 		Node:                body.Node,
+		Namespace:           body.Namespace,
 		Unlabelled:          body.Unlabelled,
 		Page:                body.Page,
 		Sort:                body.Sort,
@@ -244,6 +245,18 @@ func (q *query) Endpoint(w http.ResponseWriter, r *http.Request) {
 	}, true)
 }
 
+// Policies handles GET requets to /policies api
+//
+// list of parameters that can be passed in the url:
+// - endpoint (endpoints:<endpoint name>)
+// - labels (list of labels staritng with labels_ ex. labels_a)
+// - networkset (networkset:<ns name>)
+// - unmatched (unmatched:<true/false>)
+// - items in a page (maxItems:10)
+// - page number (page:0)
+// - list of tiers (tier=t1,t2,t3)
+// - sorting attribute (sortBy=<index/kind/name/namespace/tier/numHostEndpoints/numWorkloadEndpoints/numEndpoints>)
+// - sort ascending or descending (reverseSort=<true/false>)
 func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 	endpoints, err := getEndpoints(r)
 	if err != nil {
@@ -276,8 +289,15 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		q.writeError(w, err, http.StatusBadRequest)
 		return
 	}
+
+	var tiers []string
+	tiersString := r.URL.Query().Get(QueryTier)
+	if tiersString != "" {
+		tiers = strings.Split(tiersString, ",")
+	}
+
 	q.runQuery(w, r, client.QueryPoliciesReq{
-		Tier:       r.URL.Query().Get(QueryTier),
+		Tier:       tiers,
 		Labels:     getLabels(r),
 		Endpoint:   endpoint,
 		NetworkSet: networkset,

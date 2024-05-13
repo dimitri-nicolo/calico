@@ -66,7 +66,7 @@ func (n *nativeUserSynchronizer) resync() error {
 			if user.FullName == esusers.SystemUserFullName || !strings.HasSuffix(rolesNames[0], tenantID) {
 				continue
 			}
-			subjectID := strings.TrimPrefix(user.Username, fmt.Sprintf("%s-", n.esUserPrefix))
+			subjectID := strings.TrimPrefix(user.Username, n.esUserPrefix)
 			if !n.userCache.Exists(subjectID) {
 				if err := n.esCLI.DeleteUser(elasticsearch.User{Username: user.Username}); err != nil {
 					return err

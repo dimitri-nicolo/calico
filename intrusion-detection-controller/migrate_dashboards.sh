@@ -3,7 +3,7 @@
 USERNAME=$(kubectl -n tigera-intrusion-detection get secret tigera-ee-installer-elasticsearch-access -o go-template='{{.data.username | base64decode}}')
 PASSWORD=$(kubectl -n tigera-intrusion-detection get secret tigera-ee-installer-elasticsearch-access -o go-template='{{.data.password | base64decode}}')
 
-DASHBOARDS="api-kibana-dashboard.json tor-vpn-dashboard.json honeypod-dashboard.json dns-dashboard.json kubernetes-api-dashboard.json"
+DASHBOARDS="api-kibana-dashboard.json tor-vpn-dashboard.json dns-dashboard.json kubernetes-api-dashboard.json"
 for FILE in $DASHBOARDS; do
   CODE=1
   while [ $CODE != 0 ]; do

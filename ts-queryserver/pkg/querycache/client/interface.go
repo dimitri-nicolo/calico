@@ -1,9 +1,11 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 package client
 
 import (
 	"context"
 	"time"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -88,7 +90,7 @@ type QueryPoliciesReq struct {
 
 	// Filters
 	Unmatched bool
-	Tier      string
+	Tier      []string
 	Page      *Page
 	Sort      *Sort
 }
@@ -109,6 +111,8 @@ type Policy struct {
 	NumWorkloadEndpoints int               `json:"numWorkloadEndpoints"`
 	Ingress              []RuleDirection   `json:"ingressRules"`
 	Egress               []RuleDirection   `json:"egressRules"`
+	Order                *float64          `json:"order"`
+	CreationTime         *v1.Time          `json:"creation-time"`
 }
 
 type RuleDirection struct {
@@ -136,6 +140,7 @@ type QueryEndpointsReqBody struct {
 	// Filters
 	EndpointsList []string `json:"endpointsList"` // we need to identify when this field is passed as empty list or is not passed
 	Node          string   `json:"node,omitempty" validate:"omitempty"`
+	Namespace     string   `json:"namespace,omitempty" validate:"omitempty"`
 	Unlabelled    bool     `json:"unlabelled,omitempty"  validate:"omitempty"`
 	Page          *Page    `json:"page,omitempty" validate:"omitempty"`
 	Sort          *Sort    `json:"sort,omitempty" validate:"omitempty"`
@@ -156,6 +161,7 @@ type QueryEndpointsReq struct {
 	// Filters
 	EndpointsList []string
 	Node          string
+	Namespace     string
 	Unlabelled    bool
 	Page          *Page
 	Sort          *Sort

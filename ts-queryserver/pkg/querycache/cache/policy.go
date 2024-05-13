@@ -566,6 +566,22 @@ func (d *policyData) GetTier() string {
 	return ""
 }
 
+func (d *policyData) GetOrder() *float64 {
+	switch r := d.resource.(type) {
+	case *apiv3.NetworkPolicy:
+		return r.Spec.Order
+	case *apiv3.GlobalNetworkPolicy:
+		return r.Spec.Order
+	case *apiv3.StagedNetworkPolicy:
+		return r.Spec.Order
+	case *apiv3.StagedGlobalNetworkPolicy:
+		return r.Spec.Order
+	default:
+		log.Debugf("order is not defined for policy of type: %v", r.GetObjectKind())
+	}
+	return nil
+}
+
 func (d *policyData) IsUnmatched() bool {
 	return d.endpoints.NumWorkloadEndpoints == 0 && d.endpoints.NumHostEndpoints == 0
 }

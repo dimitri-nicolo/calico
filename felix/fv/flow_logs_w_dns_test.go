@@ -263,14 +263,14 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 				// the enforced policy.
 				if flowLog.Tuple.GetDestPort() == 53 {
 					foundDNS = true
-					if len(flowLog.FlowPolicies) != 2 {
-						errs = append(errs, fmt.Sprintf("Unexpected number of policies for DNS: %#v", flowLog.FlowPolicies))
+					if len(flowLog.FlowPolicySet) != 2 {
+						errs = append(errs, fmt.Sprintf("Unexpected number of policies for DNS: %#v", flowLog.FlowPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowPolicies, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|0")
-					delete(flowLog.FlowPolicies, "1|tier2|tier2.ep1-1-allow-netset2|allow|0")
-					if len(flowLog.FlowPolicies) != 0 {
-						errs = append(errs, fmt.Sprintf("Unexpected policies for DNS: %#v", flowLog.FlowPolicies))
+					delete(flowLog.FlowPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|0")
+					delete(flowLog.FlowPolicySet, "1|tier2|tier2.ep1-1-allow-netset2|allow|0")
+					if len(flowLog.FlowPolicySet) != 0 {
+						errs = append(errs, fmt.Sprintf("Unexpected policies for DNS: %#v", flowLog.FlowPolicySet))
 						return nil
 					}
 					return nil
@@ -302,15 +302,15 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 					// an allow if the network set has been programmed or otherwise a no-match deny.  As a result we
 					// have to expect 2 or 3 policies.
 					foundNetset1 = true
-					if len(flowLog.FlowPolicies) != 2 && len(flowLog.FlowPolicies) != 3 {
-						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset1: %#v", flowLog.FlowPolicies))
+					if len(flowLog.FlowPolicySet) != 2 && len(flowLog.FlowPolicySet) != 3 {
+						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset1: %#v", flowLog.FlowPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowPolicies, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|1")
-					delete(flowLog.FlowPolicies, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|deny|-1")
-					delete(flowLog.FlowPolicies, "1|tier2|tier2.ep1-1-allow-netset2|deny|-1")
-					if len(flowLog.FlowPolicies) != 0 {
-						errs = append(errs, fmt.Sprintf("Unexpected policies for netset1: %#v", flowLog.FlowPolicies))
+					delete(flowLog.FlowPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|1")
+					delete(flowLog.FlowPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|deny|-1")
+					delete(flowLog.FlowPolicySet, "1|tier2|tier2.ep1-1-allow-netset2|deny|-1")
+					if len(flowLog.FlowPolicySet) != 0 {
+						errs = append(errs, fmt.Sprintf("Unexpected policies for netset1: %#v", flowLog.FlowPolicySet))
 						return nil
 					}
 				}
@@ -328,15 +328,15 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 					// an allow if the network set has been programmed or otherwise a no-match deny.  As a result we
 					// have to expect 2 or 3 policies.
 					foundNetset2 = true
-					if len(flowLog.FlowPolicies) != 2 && len(flowLog.FlowPolicies) != 3 {
-						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset2: %#v", flowLog.FlowPolicies))
+					if len(flowLog.FlowPolicySet) != 2 && len(flowLog.FlowPolicySet) != 3 {
+						errs = append(errs, fmt.Sprintf("Unexpected number of policies for netset2: %#v", flowLog.FlowPolicySet))
 						return nil
 					}
-					delete(flowLog.FlowPolicies, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|2")
-					delete(flowLog.FlowPolicies, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|deny|-1")
-					delete(flowLog.FlowPolicies, "1|tier2|tier2.ep1-1-allow-netset2|allow|1")
-					if len(flowLog.FlowPolicies) != 0 {
-						errs = append(errs, fmt.Sprintf("Unexpected policies for netset2: %#v", flowLog.FlowPolicies))
+					delete(flowLog.FlowPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|allow|2")
+					delete(flowLog.FlowPolicySet, "0|tier1|tier1.staged:ep1-1-allow-netset1-netset2|deny|-1")
+					delete(flowLog.FlowPolicySet, "1|tier2|tier2.ep1-1-allow-netset2|allow|1")
+					if len(flowLog.FlowPolicySet) != 0 {
+						errs = append(errs, fmt.Sprintf("Unexpected policies for netset2: %#v", flowLog.FlowPolicySet))
 					}
 				}
 

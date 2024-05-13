@@ -26,8 +26,6 @@ var (
 	apiDashboard string
 	//go:embed data/tor-vpn-dashboard.json
 	torVpnDashBoard string
-	//go:embed data/honeypod-dashboard.json
-	honeypodDashboard string
 	//go:embed data/dns-dashboard.json
 	dnsDashboard string
 	//go:embed data/kubernetes-api-dashboard.json
@@ -82,7 +80,6 @@ func main() {
 	bulkCreateURL := fmt.Sprintf("%sapi/saved_objects/_bulk_create", kibanaURL)
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "apiDashboard", apiDashboard)
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "torVpnDashBoard", torVpnDashBoard)
-	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "honeypodDashboard", honeypodDashboard)
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "dnsDashboard", dnsDashboard)
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "k8sApiDashboard", k8sApiDashboard)
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "l7Dashboard", l7Dashboard)

@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/strings/slices"
 
 	log "github.com/sirupsen/logrus"
 
@@ -295,7 +297,7 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		return nil, err
 	}
 
-	// build regex pattern from the list of endpoints_name / endpointaggregate_name
+	// build regex pattern from the list of endpoints_name / endpoint aggregate_name
 	// for a list of 100 endpoints, the resulting regexPattern will look like: ep1^|ep2^|ep3^|...|ep_100^
 	var epListRegex *regexp.Regexp
 	if req.EndpointsList != nil {
@@ -305,8 +307,14 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		}
 	}
 
+	var skippedNamespaces []string
 	items := make([]Endpoint, 0, len(epkeys))
 	for _, result := range epkeys {
+
+		if req.Namespace != "" && !strings.EqualFold(result.(model.ResourceKey).Namespace, req.Namespace) {
+			skippedNamespaces = append(skippedNamespaces, result.(model.ResourceKey).Namespace)
+			continue
+		}
 		// if endpointList is not nil --> epListRegex is not nil. Thus, we should check endpoint (result.String) to
 		// be from the endpointList (by checking of epListRegex can match result.String())
 		if epListRegex != nil && !epListRegex.MatchString(result.String()) {
@@ -327,6 +335,12 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
 	}
 
+	// log list of skipped ns if any for debugging purposes
+	if log.IsLevelEnabled(log.DebugLevel) && len(skippedNamespaces) > 0 {
+		log.Debugf("some endpoints are skipped due to namespace mismatch. requested:%s vs. actual:%v",
+			req.Namespace,
+			strings.Join(skippedNamespaces, ","))
+	}
 	sortEndpoints(items, req.Sort)
 
 	count := len(items)
@@ -424,16 +438,21 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}
 
 	var ordered []api.Tier
-	if policySet == nil && req.Tier != "" {
+	if policySet == nil && len(req.Tier) > 0 {
 		// If a tier has been specified, but no other query parameters then we can request just
 		// the policies associated with a Tier as a minor finesse.
-		tier := c.policies.GetTier(model.ResourceKey{
-			Kind: apiv3.KindTier,
-			Name: req.Tier,
-		})
-		if tier != nil {
-			ordered = append(ordered, tier)
+		for _, tierName := range req.Tier {
+			if tierName != "" {
+				tier := c.policies.GetTier(model.ResourceKey{
+					Kind: apiv3.KindTier,
+					Name: tierName,
+				})
+				if tier != nil {
+					ordered = append(ordered, tier)
+				}
+			}
 		}
+
 	} else {
 		// Get the required policies ordered by tier and policy Order parameter. If the policy set is
 		// empty this will return all policies across all tiers.
@@ -447,8 +466,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	for _, t := range ordered {
 		op := t.GetOrderedPolicies()
 		// If a tier is specified, filter out policies that are not in the requested tier.
-		if req.Tier != "" && t.GetName() != req.Tier {
-			log.Info("Filter out wrong tier")
+		if len(req.Tier) > 0 && !slices.Contains(req.Tier, t.GetName()) {
+			log.Info("Filter out unwanted tier")
 			continue
 		}
 
@@ -485,6 +504,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 	ep := p.GetEndpointCounts()
 	res := p.GetResource()
+
+	creationTime := res.GetObjectMeta().GetCreationTimestamp()
 	return &Policy{
 		Index:                idx,
 		Name:                 res.GetObjectMeta().GetName(),
@@ -496,6 +517,8 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
 		Ingress:              c.convertRules(p.GetRuleEndpointCounts().Ingress),
 		Egress:               c.convertRules(p.GetRuleEndpointCounts().Egress),
+		Order:                p.GetOrder(),
+		CreationTime:         &creationTime,
 	}
 }
 

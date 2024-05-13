@@ -861,7 +861,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
@@ -885,7 +885,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
@@ -919,7 +919,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|-1":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
@@ -943,7 +943,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
@@ -1059,7 +1059,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
@@ -1083,7 +1083,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "src",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|0":     {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
@@ -1117,7 +1117,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|allow|0":    {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
@@ -1141,7 +1141,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 						Action:     "allow",
 						Reporter:   "dst",
 					},
-					FlowPolicies: flowlog.FlowPolicies{
+					FlowPolicySet: flowlog.FlowPolicySet{
 						"0|tier1|default/tier1.np1-1|pass|0":            {},
 						"1|tier2|default/tier2.staged:np2-1|deny|0":     {},
 						"2|__PROFILE__|__PROFILE__.kns.default|allow|0": {},
