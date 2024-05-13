@@ -27,6 +27,7 @@ FROM scratch AS source
 COPY --from=kibana /bin/bash /bin/bash
 COPY --from=kibana /bin/sh /bin/sh
 COPY --from=kibana /bin/tini /bin/tini
+COPY --from=kibana /usr/bin/basename /usr/bin/basename
 COPY --from=kibana /usr/bin/coreutils /usr/bin/coreutils
 COPY --from=kibana /usr/bin/dirname /usr/bin/dirname
 COPY --from=kibana /usr/bin/echo /usr/bin/echo
