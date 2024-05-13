@@ -23,7 +23,7 @@ fi
 defaultCalicoVersion=$($YQ '.[0].title' ../calico/_data/versions.yml)
 CALICO_VERSION=${CALICO_VERSION:-$defaultCalicoVersion}
 
-defaultRegistry=gcr.io/unique-caldron-775/cnx
+defaultRegistry=quay.io
 REGISTRY=${REGISTRY:-$defaultRegistry}
 
 # Versions retrieved from charts.
