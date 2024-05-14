@@ -278,6 +278,7 @@ type bpfEndpointManager struct {
 	vxlanMTU                int
 	vxlanPort               uint16
 	wgPort                  uint16
+	wg6Port                 uint16
 	dsrEnabled              bool
 	dsrOptoutCidrs          bool
 	bpfExtToServiceConnmark int
@@ -489,6 +490,7 @@ func newBPFEndpointManager(
 		vxlanMTU:                config.VXLANMTU,
 		vxlanPort:               uint16(config.VXLANPort),
 		wgPort:                  uint16(config.Wireguard.ListeningPort),
+		wg6Port:                 uint16(config.Wireguard.ListeningPortV6),
 		dsrEnabled:              config.BPFNodePortDSREnabled,
 		dsrOptoutCidrs:          len(config.BPFDSROptoutCIDRs) > 0,
 		bpfExtToServiceConnmark: config.BPFExtToServiceConnmark,
@@ -789,6 +791,12 @@ func (m *bpfEndpointManager) updateHostIP(ip net.IP, ipFamily int) {
 			m.dirtyIfaceNames.Add(ifaceName)
 		}
 		m.ifacesLock.Unlock()
+
+		// We use host IP as the source when routing service for the ctlb workaround. We
+		// need to update those routes, so make them all dirty.
+		for svc := range m.services {
+			m.dirtyServices.Add(svc)
+		}
 	} else {
 		log.Warn("Cannot parse hostip, no change applied")
 	}
@@ -2697,6 +2705,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 	ap.Type = endpointType
 	if ap.Type != tcdefs.EpTypeWorkload {
 		ap.WgPort = m.wgPort
+		ap.Wg6Port = m.wg6Port
 		ap.NATin = uint32(m.natInIdx)
 		ap.NATout = uint32(m.natOutIdx)
 	} else {
@@ -3936,19 +3945,21 @@ var (
 )
 
 func (m *bpfEndpointManager) setRoute(cidr ip.CIDR) {
-	if m.v6 != nil && cidr.Version() == 6 {
-		m.routeTableV6.RouteUpdate(bpfInDev, routetable.Target{
-			Type: routetable.TargetTypeGlobalUnicast,
-			CIDR: cidr,
-			GW:   bpfnatGWIPv6,
-		})
+	target := routetable.Target{
+		Type: routetable.TargetTypeGlobalUnicast,
+		CIDR: cidr,
 	}
-	if m.v4 != nil && cidr.Version() == 4 {
-		m.routeTableV4.RouteUpdate(bpfInDev, routetable.Target{
-			Type: routetable.TargetTypeGlobalUnicast,
-			CIDR: cidr,
-			GW:   bpfnatGWIP,
-		})
+
+	if cidr.Version() == 6 {
+		if m.v6 != nil && m.v6.hostIP != nil {
+			target.GW = bpfnatGWIPv6
+			target.Src = ip.FromNetIP(m.v6.hostIP)
+			m.routeTableV6.RouteUpdate(bpfInDev, target)
+		}
+	} else if m.v4 != nil && m.v4.hostIP != nil {
+		target.GW = bpfnatGWIP
+		target.Src = ip.FromNetIP(m.v4.hostIP)
+		m.routeTableV4.RouteUpdate(bpfInDev, target)
 	}
 
 	log.WithFields(log.Fields{

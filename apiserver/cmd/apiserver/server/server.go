@@ -21,10 +21,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/spf13/cobra"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+
+	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 
 	"github.com/sirupsen/logrus"
 

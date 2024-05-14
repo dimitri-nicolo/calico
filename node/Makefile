@@ -58,7 +58,18 @@ NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 NODE_CONTAINER_MARKER=$(NODE_CONTAINER_CREATED)
 endif
 
+# Set the platform correctly for building docker images.
+ifeq ($(ARCH),arm64)
+# Required for eBPF support in ARM64.
+# We need to force ARM64 build image to be used in a crosscompilation run.
+CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+endif
+
 ###############################################################################
+
+# Our (public) GCP bucket where we mirror any third party files
+# that are flaky to retrieve.
+THIRD_PARTY_DEPS_MIRROR=https://storage.googleapis.com/public-calico-third-party-deps
 
 # Versions and location of dependencies used in the build.
 BIRD_IMAGE ?= calico/bird:$(BIRD_VERSION)-$(ARCH)
@@ -92,6 +103,8 @@ WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
 # Version of NSSM to download.
 # We host nssm ourselves in Calico OSS, when updating the version number the new zip needs to be added to release artifacts
 WINDOWS_NSSM_VERSION=2.24-103-gdee49fc
+# Original source: https://nssm.cc/ci/nssm-$(WINDOWS_NSSM_VERSION).zip
+WINDOWS_NSSM_URL=$(THIRD_PARTY_DEPS_MIRROR)/nssm/nssm-$(WINDOWS_NSSM_VERSION).zip
 # Explicit list of files that we copy in from the mod cache.  This is required because the copying rules we use are pattern-based
 # and they only work with an explicit rule of the form "$(WINDOWS_MOD_CACHED_FILES): <file path from project root>" (otherwise,
 # make has no way to know that the mod cache target produces the files we need).
@@ -605,7 +618,7 @@ $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt:
 
 ## Download NSSM.
 windows-packaging/nssm.zip:
-	curl -sSf -L --retry 5 -o $@ https://github.com/projectcalico/calico/releases/download/v3.27.0/nssm-$(WINDOWS_NSSM_VERSION).zip
+	curl -sSf -L --retry 5 -o $@ $(WINDOWS_NSSM_URL)
 
 windows-packaging/nssm.exe: windows-packaging/nssm.zip
 	cd windows-packaging && \

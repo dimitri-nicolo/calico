@@ -11,7 +11,6 @@ import (
 
 	"github.com/projectcalico/calico/compliance/mockdata/scaleloader"
 	"github.com/projectcalico/calico/compliance/pkg/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
@@ -24,10 +23,6 @@ type Scenario struct {
 }
 
 func main() {
-	// We use rand in the playbook for getting the next step from a random
-	// endpoint. Make sure the RNG is seeded.
-	seedrng.EnsureSeeded()
-
 	var scenario string
 	var playbookBase string
 	var logLevel string

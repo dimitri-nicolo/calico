@@ -23,8 +23,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
-
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -39,12 +37,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
-
-func init() {
-	// We use rand for backoffs and the like, make sure it's seeded (seedrng uses a sync.Once to avoid
-	// doing this multiple times).
-	seedrng.EnsureSeeded()
-}
 
 // client implements the client.Interface.
 type client struct {

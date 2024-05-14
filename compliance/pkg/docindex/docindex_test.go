@@ -9,13 +9,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/compliance/pkg/docindex"
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 )
 
 var _ = Describe("Document index tests", func() {
-	// Make sure the RNG is seeded.
-	seedrng.EnsureSeeded()
-
 	It("should order indexes correctly", func() {
 
 		By("Creating a bunch of ids")

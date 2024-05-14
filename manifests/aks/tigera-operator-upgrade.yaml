@@ -39438,6 +39438,8 @@ kind: ServiceAccount
 metadata:
   name: tigera-operator-enterprise
   namespace: tigera-operator-enterprise
+  labels:
+    k8s-app: tigera-operator
 imagePullSecrets:
   - name: tigera-pull-secret
 ---
@@ -39447,6 +39449,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: tigera-operator-enterprise
+  labels:
+    k8s-app: tigera-operator
 rules:
   - apiGroups:
       - ""
@@ -39920,6 +39924,8 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-operator-enterprise
+  labels:
+    k8s-app: tigera-operator
 subjects:
 - kind: ServiceAccount
   name: tigera-operator-enterprise
@@ -40010,6 +40016,7 @@ metadata:
   labels:
     k8s-app: tigera-operator-uninstall
     helm.sh/chart: "tigera-operator-v0.0"
+    k8s-app: tigera-operator
   annotations:
     # Mark this Job as a pre-deletion hook. This will only be executed as part
     # of helm uninstall, in order to ensure the Installation is cleaned up prior to

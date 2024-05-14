@@ -3,15 +3,9 @@
 package checker
 
 import (
+	"context"
 	"fmt"
 	"os"
-
-	log "github.com/sirupsen/logrus"
-
-	"golang.org/x/net/context"
-	"google.golang.org/genproto/googleapis/rpc/code"
-	"google.golang.org/genproto/googleapis/rpc/status"
-	"google.golang.org/grpc"
 
 	core_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -20,6 +14,10 @@ import (
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	type_v2 "github.com/envoyproxy/go-control-plane/envoy/type"
 	_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/genproto/googleapis/rpc/code"
+	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"

@@ -5,7 +5,7 @@ package calico
 import (
 	"reflect"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/projectcalico/calico/licensing/client/features"
 

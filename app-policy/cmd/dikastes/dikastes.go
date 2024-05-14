@@ -13,15 +13,11 @@ import (
 
 	"github.com/projectcalico/calico/app-policy/flags"
 	"github.com/projectcalico/calico/app-policy/server"
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 )
 
 var VERSION string = "dev"
 
 func main() {
-	// Make sure the RNG is seeded.
-	seedrng.EnsureSeeded()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
