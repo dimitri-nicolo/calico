@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	k8sFake "k8s.io/client-go/kubernetes/fake"
@@ -25,15 +27,17 @@ var _ = Describe("Usage Controller UTs", func() {
 		// Fake runtime client with no objects associated with it.
 		fakeRuntimeClient := runtimeFake.NewClientBuilder().WithScheme(createScheme()).Build()
 
-		// And finally, a fake informer.
-		fakeInformer := &fakerInformer{}
+		// And finally, fake informers.
+		fakeNodeInformer := &fakerInformer{}
+		fakePodInformer := &fakerInformer{}
 
 		controller := usageController{
 			ctx:                context.Background(),
 			k8sClient:          fakeClientSet,
 			calicoClient:       fakeCalicoClient,
 			usageClient:        fakeRuntimeClient,
-			informer:           fakeInformer,
+			nodeInformer:       fakeNodeInformer,
+			podInformer:        fakePodInformer,
 			usageReportsPerDay: reportsPerDay,
 		}
 
@@ -46,7 +50,8 @@ var _ = Describe("Usage Controller UTs", func() {
 		close(stopCh)
 
 		// Validate that nothing is receiving values on the reporter input channels.
-		assertChannelNotReceiving[nodeEvent](controller.reporter.nodeUpdates, nodeEvent{})
+		assertChannelNotReceiving[event[*v1.Node]](controller.reporter.nodeUpdates, event[*v1.Node]{})
+		assertChannelNotReceiving[event[*v1.Pod]](controller.reporter.podUpdates, event[*v1.Pod]{})
 		assertChannelNotReceiving[bool](controller.reporter.initialSyncComplete, true)
 		assertChannelNotReceiving[bool](controller.reporter.intervalComplete, true)
 

@@ -4,6 +4,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 )
@@ -17,6 +19,7 @@ func newReportGenerator(events events, stop chan struct{}) reportGenerator {
 		reports:    make(chan basicLicenseUsageReport),
 		usage: usageState{
 			nodes:                make(map[string]*v1.Node),
+			pods:                 make(map[string]*v1.Pod),
 			initialSyncCompleted: false,
 		},
 	}
@@ -30,6 +33,12 @@ func (r *reportGenerator) startGeneratingReports() {
 		select {
 		case nodeUpdate := <-r.nodeUpdates:
 			r.updateNodesTracked(nodeUpdate)
+			r.recalculateCurrentCounts()
+			r.recalculateMinCountsForInterval()
+			r.recalculateMaxCountsForInterval()
+
+		case podUpdate := <-r.podUpdates:
+			r.updatePodsTracked(podUpdate)
 			r.recalculateCurrentCounts()
 			r.recalculateMinCountsForInterval()
 			r.recalculateMaxCountsForInterval()
@@ -72,25 +81,47 @@ func (r *reportGenerator) resetInterval() {
 	r.usage.maxCounts = r.usage.currentCounts
 }
 
-func (r *reportGenerator) updateNodesTracked(event nodeEvent) {
+func (r *reportGenerator) updateNodesTracked(event event[*v1.Node]) {
 	if event.old != nil {
-		delete(r.usage.nodes, event.old.Name)
+		delete(r.usage.nodes, string(event.old.UID))
 	}
 	if event.new != nil {
-		r.usage.nodes[event.new.Name] = event.new
+		r.usage.nodes[string(event.new.UID)] = event.new
+	}
+}
+
+func (r *reportGenerator) updatePodsTracked(event event[*v1.Pod]) {
+	if event.old != nil {
+		delete(r.usage.pods, string(event.old.UID))
+	}
+	if event.new != nil {
+		r.usage.pods[string(event.new.UID)] = event.new
 	}
 }
 
 func (r *reportGenerator) recalculateCurrentCounts() {
-	var vCPUs int
-	for _, node := range r.usage.nodes {
-		// CPU capacity has the unit of cores, e.g. 4 cores.
-		// Make sure we round this value in case we receive a fractional core.
-		vCPUs += int(math.Round(node.Status.Capacity.Cpu().AsApproximateFloat64()))
+	// Determine the set of nodes that are running calico-node.
+	nodesRunningCalico := set.New[string]()
+	for _, pod := range r.usage.pods {
+		podName := getPodNameFromLabels(pod)
+		if pod.Namespace == "calico-system" && (podName == "calico-node" || podName == "calico-node-windows") {
+			nodesRunningCalico.Add(pod.Spec.NodeName)
+		}
 	}
 
+	// Establish our counts using the nodes that run calico-node.
+	var vCPUs int
+	var nodes int
+	for _, node := range r.usage.nodes {
+		if nodesRunningCalico.Contains(node.Name) {
+			// CPU capacity has the unit of cores, e.g. 4 cores.
+			// Make sure we round this value in case we receive a fractional core.
+			vCPUs += int(math.Round(node.Status.Capacity.Cpu().AsApproximateFloat64()))
+			nodes++
+		}
+	}
 	r.usage.currentCounts.vCPU = vCPUs
-	r.usage.currentCounts.nodes = len(r.usage.nodes)
+	r.usage.currentCounts.nodes = nodes
 }
 
 func (r *reportGenerator) initializeMinCountsForInterval() {
@@ -133,6 +164,14 @@ func (r *reportGenerator) recalculateMaxCountsForInterval() {
 	}
 }
 
+func getPodNameFromLabels(pod *v1.Pod) string {
+	if name, ok := pod.Labels["app.kubernetes.io/name"]; ok {
+		return name
+	} else {
+		return pod.Labels["k8s-app"]
+	}
+}
+
 type reportGenerator struct {
 	events
 	stopIssued chan struct{}
@@ -154,7 +193,10 @@ type basicLicenseUsageReport struct {
 
 type events struct {
 	// Updates to v1.Node objects in the cluster.
-	nodeUpdates chan nodeEvent
+	nodeUpdates chan event[*v1.Node]
+
+	// Updates to v1.Pod objects in the cluster. Used to determine which nodes are running calico-node.
+	podUpdates chan event[*v1.Pod]
 
 	// Synchronization with the datastore.
 	initialSyncComplete chan bool
@@ -165,6 +207,7 @@ type events struct {
 
 type usageState struct {
 	nodes                map[string]*v1.Node
+	pods                 map[string]*v1.Pod
 	intervalStart        time.Time
 	currentCounts        counts
 	minCounts            counts

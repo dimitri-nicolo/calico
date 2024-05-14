@@ -792,14 +792,14 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 	}
 
 	if cfg.Controllers.Usage != nil {
-		usageController, err := usage.NewUsageController(ctx, cfg.Controllers.Usage, k8sClientset, calicoClient, nodeInformer)
+		usageController, err := usage.NewUsageController(ctx, cfg.Controllers.Usage, k8sClientset, calicoClient, nodeInformer, podInformer)
 		if err != nil {
 			log.WithError(err).Fatal("failed to created usage controller")
 		}
 		cc.controllerStates["Usage"] = &controllerState{
 			controller: usageController,
 		}
-		cc.registerInformers(nodeInformer)
+		cc.registerInformers(nodeInformer, podInformer)
 	}
 }
 

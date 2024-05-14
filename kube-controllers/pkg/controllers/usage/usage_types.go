@@ -36,6 +36,9 @@ type LicenseUsageReportData struct {
 
 	// Seconds that the reporter has been up for.
 	ReporterUptime int `json:"reporterUptime"`
+
+	// Indicates whether the report was generated from a complete view of the Kubernetes datastore.
+	CompleteReport bool `json:"completeReport"`
 }
 
 type Stats struct {

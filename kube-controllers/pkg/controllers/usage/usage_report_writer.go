@@ -23,21 +23,30 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
-const reportCreationAttempts = 3
+const apiServerOperationAttempts = 3
 
 var hmacKey = []byte("e94818465e656dc3082610a08c300cdf30f3d3a2c2fb8505f83406befe7bce83ba028b6862ebc8aaa473063fc03a7b4ccb5a9a34426a85b563457d68befdde96")
 var rfc1123Base32Encoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 
 // newReportWriter observes the basicLicenseUsageReport objects sent on the reports channel, and enriches them with context from the cluster
 // to create LicenseUsageReport objects. These objects are then written to the datastore, with retries if appropriate.
-func newReportWriter(reports chan basicLicenseUsageReport, stopIssued chan struct{}, ctx context.Context, k8sClient kubernetes.Interface, calicoClient clientv3.Interface, usageClient crtlclient.Client) reportWriter {
+func newReportWriter(
+	reports chan basicLicenseUsageReport,
+	stopIssued chan struct{},
+	ctx context.Context,
+	k8sClient kubernetes.Interface,
+	calicoClient clientv3.Interface,
+	usageClient crtlclient.Client,
+	retentionPeriod time.Duration,
+) reportWriter {
 	return reportWriter{
-		reports:      reports,
-		stopIssued:   stopIssued,
-		ctx:          ctx,
-		k8sClient:    k8sClient,
-		calicoClient: calicoClient,
-		usageClient:  usageClient,
+		reports:         reports,
+		stopIssued:      stopIssued,
+		ctx:             ctx,
+		k8sClient:       k8sClient,
+		calicoClient:    calicoClient,
+		usageClient:     usageClient,
+		retentionPeriod: retentionPeriod,
 	}
 }
 
@@ -48,19 +57,21 @@ func (w *reportWriter) startWriting() {
 	for {
 		select {
 		case report := <-w.reports:
-			if !report.complete {
-				log.Warn("Received a report for an interval that was not completely observed. No datastore report will be written.")
-				continue
-			}
 			datastoreReport, err := w.convertToDatastoreReport(report)
 			if err != nil {
-				log.WithError(err).Error("Failed to convert basic report to datastore report")
-				continue
+				log.WithError(err).Error("Failed to convert basic usage report to datastore report. No datastore report will be written")
+			} else {
+				err = w.writeDatastoreReport(datastoreReport)
+				if err != nil {
+					log.WithError(err).Error("Failed to write usage report to datastore")
+				}
 			}
-			err = w.writeDatastoreReport(datastoreReport)
+
+			err = w.removeOldDatastoreReports()
 			if err != nil {
-				log.WithError(err).Error("Failed to write usage report to datastore")
+				log.WithError(err).Error("Failed to clean up old usage reports in datastore")
 			}
+
 		case <-w.stopIssued:
 			log.Info("Stopping Report Writer")
 			return
@@ -84,6 +95,7 @@ func (w *reportWriter) convertToDatastoreReport(report basicLicenseUsageReport) 
 		},
 		IntervalStart:  report.intervalStart,
 		IntervalEnd:    report.intervalEnd,
+		CompleteReport: report.complete,
 		ReporterUptime: int(time.Since(w.startedReportingAt).Seconds()),
 	}
 
@@ -129,29 +141,64 @@ func (w *reportWriter) convertToDatastoreReport(report basicLicenseUsageReport) 
 // with a delay, then the request is retried a fixed amount of times. An error will be returned if the datastore commit
 // failed.
 func (w *reportWriter) writeDatastoreReport(datastoreReport *usagev1.LicenseUsageReport) error {
-	for creationAttempt := 0; creationAttempt < reportCreationAttempts; creationAttempt++ {
-		err := w.usageClient.Create(w.ctx, datastoreReport)
+	err := w.performAPIServerOperationWithRetries("create", func() error {
+		return w.usageClient.Create(w.ctx, datastoreReport)
+	})
+
+	if err != nil {
+		return err
+	}
+
+	reportUID := string(datastoreReport.UID)
+	w.lastPublishedReportUID = &reportUID
+	return nil
+}
+
+func (w *reportWriter) performAPIServerOperationWithRetries(opName string, op func() error) error {
+	for attempt := 0; attempt < apiServerOperationAttempts; attempt++ {
+		err := op()
 		if err != nil {
-			log.WithError(err).Debugf("Inner attempt %d to write usage report to datastore failed", creationAttempt)
+			log.WithError(err).Debugf("Inner attempt %d (of %d) to %s usage report to datastore failed", attempt, apiServerOperationAttempts, opName)
 
 			delay, retryable := errors.SuggestsClientDelay(err)
 			if !retryable {
 				return err
 			}
 
-			if creationAttempt == reportCreationAttempts-1 {
+			if attempt == apiServerOperationAttempts-1 {
 				return err
 			}
 
 			time.Sleep(time.Duration(delay) * time.Second)
 			continue
 		}
-
-		reportUID := string(datastoreReport.UID)
-		w.lastPublishedReportUID = &reportUID
 		break
 	}
 
+	log.Debugf("Usage report %s to datastore succeeded", opName)
+	return nil
+}
+
+func (w *reportWriter) removeOldDatastoreReports() error {
+	// List all reports. The usage client is cached, so this read should not put load on the API server.
+	var datastoreReports usagev1.LicenseUsageReportList
+	err := w.usageClient.List(w.ctx, &datastoreReports)
+	if err != nil {
+		return err
+	}
+
+	// Delete all reports before the retention cutoff.
+	retentionCutoff := time.Now().Add(-w.retentionPeriod)
+	for _, datastoreReport := range datastoreReports.Items {
+		if datastoreReport.CreationTimestamp.Time.Before(retentionCutoff) {
+			err := w.performAPIServerOperationWithRetries("delete", func() error {
+				return w.usageClient.Delete(w.ctx, &datastoreReport)
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -176,6 +223,7 @@ type reportWriter struct {
 	usageClient            crtlclient.Client
 	lastPublishedReportUID *string
 	startedReportingAt     time.Time
+	retentionPeriod        time.Duration
 }
 
 func ComputeHMAC(message string) string {

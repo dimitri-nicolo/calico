@@ -1,7 +1,10 @@
 package usage
 
 import (
+	"encoding/json"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -11,14 +14,16 @@ import (
 const defaultReportsPerDay = 4
 
 // newEventCollector collects input events relevant to report generation and outputs them on its event channels.
-func newEventCollector(stopCh chan struct{}, informer cache.SharedIndexInformer, usageReportsPerDay int) eventCollector {
+func newEventCollector(stopCh chan struct{}, nodeInformer, podInformer cache.SharedIndexInformer, usageReportsPerDay int) eventCollector {
 	return eventCollector{
 		events: events{
-			nodeUpdates:         make(chan nodeEvent),
+			nodeUpdates:         make(chan event[*v1.Node]),
+			podUpdates:          make(chan event[*v1.Pod]),
 			intervalComplete:    make(chan bool),
 			initialSyncComplete: make(chan bool),
 		},
-		informer:           informer,
+		nodeInformer:       nodeInformer,
+		podInformer:        podInformer,
 		usageReportsPerDay: defaultReportsPerDayIfNecessary(usageReportsPerDay),
 		stopIssued:         stopCh,
 	}
@@ -32,8 +37,12 @@ func (c *eventCollector) startCollectingEvents() {
 	defer checkSyncTicker.Stop()
 
 	// Wire up the node event handler to the informer. This will feed the node update channel.
-	nodeEventHandler := &nodeEventHandler{eventChannel: c.nodeUpdates}
-	handlerRegistration, _ := c.informer.AddEventHandler(nodeEventHandler)
+	nodeEventHandler := &eventHandler[*v1.Node]{eventChannel: c.nodeUpdates}
+	nodeHandlerRegistration, _ := c.nodeInformer.AddEventHandler(nodeEventHandler)
+
+	// Wire up the pod event handler to the informer. This will feed the pod update channel.
+	podEventHandler := &eventHandler[*v1.Pod]{eventChannel: c.podUpdates}
+	podHandlerRegistration, _ := c.podInformer.AddEventHandler(podEventHandler)
 
 	// Watch for events on the tickers. These will feed the interval completion and initial sync channels.
 	for {
@@ -43,7 +52,7 @@ func (c *eventCollector) startCollectingEvents() {
 			mustSend[bool](c.intervalComplete, true)
 
 		case <-checkSyncTicker.C:
-			if handlerRegistration.HasSynced() {
+			if nodeHandlerRegistration.HasSynced() && podHandlerRegistration.HasSynced() {
 				log.Info("Sync received")
 				mustSend[bool](c.initialSyncComplete, true)
 				checkSyncTicker.Stop()
@@ -57,7 +66,8 @@ func (c *eventCollector) startCollectingEvents() {
 
 type eventCollector struct {
 	events
-	informer           cache.SharedIndexInformer
+	nodeInformer       cache.SharedIndexInformer
+	podInformer        cache.SharedIndexInformer
 	stopIssued         chan struct{}
 	usageReportsPerDay int
 }
@@ -71,34 +81,41 @@ func defaultReportsPerDayIfNecessary(reportsPerDay int) int {
 	return reportsPerDay
 }
 
-// nodeEventHandler sends node update events to the provided eventChannel.
-type nodeEventHandler struct {
-	eventChannel chan nodeEvent
+type eventHandler[T metav1.Object] struct {
+	eventChannel chan event[T]
 }
 
-type nodeEvent struct {
-	old *v1.Node
-	new *v1.Node
+type event[T metav1.Object] struct {
+	old T
+	new T
 }
 
-func (n *nodeEventHandler) OnAdd(obj interface{}, isInInitialList bool) {
-	log.Debugf("Node create event received for %s", obj.(*v1.Node).Name)
-	mustSend[nodeEvent](n.eventChannel, nodeEvent{
-		old: nil,
-		new: obj.(*v1.Node),
+func (e *eventHandler[T]) OnAdd(obj interface{}, isInInitialList bool) {
+	if log.GetLevel() == log.DebugLevel {
+		objBytes, err := json.Marshal(obj)
+		log.Debugf("Create event received. json_err=%s obj=%s", err, string(objBytes))
+	}
+	mustSend[event[T]](e.eventChannel, event[T]{
+		new: obj.(T),
 	})
 }
-func (n *nodeEventHandler) OnUpdate(oldObj, newObj interface{}) {
-	log.Debugf("Node update event received for %s", newObj.(*v1.Node).Name)
-	mustSend[nodeEvent](n.eventChannel, nodeEvent{
-		old: oldObj.(*v1.Node),
-		new: newObj.(*v1.Node),
+func (e *eventHandler[T]) OnUpdate(oldObj, newObj interface{}) {
+	if log.GetLevel() == log.DebugLevel {
+		oldObjBytes, oldObjErr := json.Marshal(oldObj)
+		newObjBytes, newObjErr := json.Marshal(newObj)
+		log.Debugf("Update event received. old_json_err=%s old_obj=%s new_json_err=%s new_obj=%s", oldObjErr, string(oldObjBytes), newObjErr, string(newObjBytes))
+	}
+	mustSend[event[T]](e.eventChannel, event[T]{
+		old: oldObj.(T),
+		new: newObj.(T),
 	})
 }
-func (n *nodeEventHandler) OnDelete(obj interface{}) {
-	log.Debugf("Node delete event received for %s", obj.(*v1.Node).Name)
-	mustSend[nodeEvent](n.eventChannel, nodeEvent{
-		old: obj.(*v1.Node),
-		new: nil,
+func (e *eventHandler[T]) OnDelete(obj interface{}) {
+	if log.GetLevel() == log.DebugLevel {
+		objBytes, err := json.Marshal(obj)
+		log.Debugf("Delete event received. json_err=%s obj=%s", err, string(objBytes))
+	}
+	mustSend[event[T]](e.eventChannel, event[T]{
+		old: obj.(T),
 	})
 }

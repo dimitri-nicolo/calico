@@ -2,6 +2,13 @@ package usage
 
 import (
 	"context"
+	"reflect"
+	"time"
+
+	"github.com/google/uuid"
+	"k8s.io/apimachinery/pkg/types"
+
+	. "github.com/onsi/gomega"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -9,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	k8swatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllertest"
@@ -258,31 +264,67 @@ func (f fakeCalicoClient) EnsureInitialized(ctx context.Context, calicoVersion, 
 	panic("implement me")
 }
 
-// errorReturningFakeRuntimeClient responds only to Create requests with the specified err, unless the resolveAtRequestCount has been reached.
+// errorReturningFakeRuntimeClient responds to a limit set of requests with an error. The error may resolve after a specified number of requests.
 type errorReturningFakeRuntimeClient struct {
-	requestCount          int
-	resolveAtRequestCount *int
-	err                   error
+	objects []ctrlclient.Object
+	err     error
+
+	requestCounts   map[string]int
+	resolveAtCounts map[string]*int
 }
 
-func (e *errorReturningFakeRuntimeClient) Create(ctx context.Context, obj ctrlclient.Object, opts ...ctrlclient.CreateOption) error {
-	e.requestCount++
-	if e.resolveAtRequestCount == nil || e.requestCount < *e.resolveAtRequestCount {
-		return e.err
-	} else {
-		return nil
+func newErrorReturningFakeRuntimeClient() *errorReturningFakeRuntimeClient {
+	return &errorReturningFakeRuntimeClient{
+		requestCounts:   make(map[string]int),
+		resolveAtCounts: make(map[string]*int),
 	}
 }
 
-func (e *errorReturningFakeRuntimeClient) Get(ctx context.Context, key ctrlclient.ObjectKey, obj ctrlclient.Object, opts ...ctrlclient.GetOption) error {
-	panic("implement me")
+func (e *errorReturningFakeRuntimeClient) handleCall(callType string, commit func() error) error {
+	e.requestCounts[callType]++
+	if e.resolveAtCounts[callType] == nil || e.requestCounts[callType] < *e.resolveAtCounts[callType] {
+		return e.err
+	} else {
+		return commit()
+	}
 }
 
-func (e *errorReturningFakeRuntimeClient) List(ctx context.Context, list ctrlclient.ObjectList, opts ...ctrlclient.ListOption) error {
-	panic("implement me")
+func (e *errorReturningFakeRuntimeClient) Create(ctx context.Context, obj ctrlclient.Object, opts ...ctrlclient.CreateOption) error {
+	return e.handleCall("create", func() error {
+		e.objects = append(e.objects, obj)
+		return nil
+	})
 }
 
 func (e *errorReturningFakeRuntimeClient) Delete(ctx context.Context, obj ctrlclient.Object, opts ...ctrlclient.DeleteOption) error {
+	return e.handleCall("delete", func() error {
+		for i, storedObj := range e.objects {
+			if reflect.DeepEqual(obj, storedObj) {
+				e.objects = append(e.objects[:i], e.objects[i+1:]...)
+				return nil
+			}
+		}
+		return errors.NewNotFound(schema.GroupResource{
+			Group:    usagev1.UsageGroupVersion.Group,
+			Resource: "licenseusagereports",
+		}, obj.GetName())
+	})
+}
+
+func (e *errorReturningFakeRuntimeClient) List(ctx context.Context, list ctrlclient.ObjectList, opts ...ctrlclient.ListOption) error {
+	return e.handleCall("list", func() error {
+		var runtimeObjs []runtime.Object
+		for _, clientObj := range e.objects {
+			runtimeObjs = append(runtimeObjs, clientObj)
+		}
+
+		err := meta.SetList(list, runtimeObjs)
+		Expect(err).NotTo(HaveOccurred())
+		return nil
+	})
+}
+
+func (e *errorReturningFakeRuntimeClient) Get(ctx context.Context, key ctrlclient.ObjectKey, obj ctrlclient.Object, opts ...ctrlclient.GetOption) error {
 	panic("implement me")
 }
 
@@ -326,54 +368,38 @@ func (e *errorReturningFakeRuntimeClient) Watch(ctx context.Context, obj ctrlcli
 	panic("implement me")
 }
 
-// callCountingObjectTracker tracker simply tracks calls made to the datastore.
-type callCountingObjectTracker struct {
-	creates int
-	updates int
-	lists   int
-	deletes int
-	watches int
+func (e *errorReturningFakeRuntimeClient) seedReportFrom(duration time.Duration) {
+	e.objects = append(e.objects, &usagev1.LicenseUsageReport{
+		ObjectMeta: metav1.ObjectMeta{
+			CreationTimestamp: metav1.Time{Time: time.Now().Add(-duration)},
+			UID:               types.UID(uuid.NewString()),
+		},
+		Spec: usagev1.LicenseUsageReportSpec{},
+	})
 }
 
-func (c *callCountingObjectTracker) Create(gvr schema.GroupVersionResource, obj runtime.Object, ns string) error {
-	c.creates++
-	return nil
+func (e *errorReturningFakeRuntimeClient) resolveCallAt(callType string, count int) {
+	e.resolveAtCounts[callType] = &count
 }
 
-func (c *callCountingObjectTracker) Update(gvr schema.GroupVersionResource, obj runtime.Object, ns string) error {
-	c.updates++
-	return nil
+func (e *errorReturningFakeRuntimeClient) resolveImmediately(callType string) {
+	e.resolveCallAt(callType, 0)
 }
 
-func (c *callCountingObjectTracker) List(gvr schema.GroupVersionResource, gvk schema.GroupVersionKind, ns string) (runtime.Object, error) {
-	c.lists++
-	return nil, nil
+func (e *errorReturningFakeRuntimeClient) getRequestCount(callType string) int {
+	return e.requestCounts[callType]
 }
 
-func (c *callCountingObjectTracker) Delete(gvr schema.GroupVersionResource, ns, name string) error {
-	c.deletes++
-	return nil
+func (e *errorReturningFakeRuntimeClient) numberOfMethodsCalled() int {
+	return len(e.requestCounts)
 }
 
-func (c *callCountingObjectTracker) Watch(gvr schema.GroupVersionResource, ns string) (k8swatch.Interface, error) {
-	c.watches++
-	return nil, nil
+func (e *errorReturningFakeRuntimeClient) clearRequestCounts() {
+	e.requestCounts = make(map[string]int)
 }
 
-func (c *callCountingObjectTracker) Add(obj runtime.Object) error {
-	panic("implement me")
-}
-
-func (c *callCountingObjectTracker) Get(gvr schema.GroupVersionResource, ns, name string) (runtime.Object, error) {
-	panic("implement me")
-}
-
-func (c *callCountingObjectTracker) noCallsMade() bool {
-	return *c == callCountingObjectTracker{}
-}
-
-func (c *callCountingObjectTracker) clear() {
-	*c = callCountingObjectTracker{}
+func (e *errorReturningFakeRuntimeClient) setError(err error) {
+	e.err = err
 }
 
 // createScheme creates the scheme used for LicenseUsageReports.

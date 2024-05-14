@@ -122,8 +122,9 @@ type ManagedClusterControllerConfig struct {
 
 type UsageControllerConfig struct {
 	GenericControllerConfig
-	UsageReportsPerDay int
-	RESTConfig         *restclient.Config
+	UsageReportsPerDay         int
+	UsageReportRetentionPeriod time.Duration
+	RESTConfig                 *restclient.Config
 }
 
 type RunConfigController struct {
@@ -452,12 +453,16 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 	}
 
 	if rc.Usage != nil {
+		var err error
 		rc.Usage.UsageReportsPerDay = envCfg.UsageReportsPerDay
-		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
+		rc.Usage.UsageReportRetentionPeriod, err = time.ParseDuration(envCfg.UsageReportRetentionPeriod)
+		if err != nil {
+			log.WithError(err).Fatalf("failed to parse usage report duration (%s)", envCfg.UsageReportRetentionPeriod)
+		}
+		rc.Usage.RESTConfig, err = clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
 		if err != nil {
 			log.WithError(err).Fatal("failed to build kubernetes client config")
 		}
-		rc.Usage.RESTConfig = restCfg
 	}
 
 	rCfg.ShortLicensePolling = envCfg.DebugUseShortPollIntervals
