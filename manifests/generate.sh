@@ -78,6 +78,7 @@ ${HELM} -n tigera-operator template \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
 	--set policyRecommendation.enabled=false \
+	--set packetCaptureAPI.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set calicoctl.tag=$CALICO_VERSION \
@@ -180,6 +181,7 @@ ${HELM} template --include-crds \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
 	--set policyRecommendation.enabled=false \
+	--set packetCaptureAPI.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set imagePullSecrets.tigera-pull-secret=SECRET \
