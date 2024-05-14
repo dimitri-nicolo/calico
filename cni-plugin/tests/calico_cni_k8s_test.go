@@ -1610,6 +1610,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				NodenameFileOptional: true,
 				AWSSubnetsFile:       "/tmp/aws-subnets",
 				LogLevel:             "debug",
+				Nodename:             testNodeName,
 			}
 			nc.IPAM.Type = "calico-ipam"
 			ncb, err := json.Marshal(nc)
@@ -3489,6 +3490,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Policy:               types.Policy{PolicyType: "k8s"},
 				NodenameFileOptional: true,
 				LogLevel:             "info",
+				Nodename:             testNodeName,
 			}
 			nc.IPAM.Type = "calico-ipam"
 			ncb, err := json.Marshal(nc)
@@ -3558,6 +3560,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					Policy:               types.Policy{PolicyType: "k8s"},
 					NodenameFileOptional: true,
 					LogLevel:             "info",
+					Nodename:             testNodeName,
 				}
 				nc.IPAM.Type = "calico-ipam"
 				ncb, err := json.Marshal(nc)
@@ -3664,6 +3667,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Policy:               types.Policy{PolicyType: "k8s"},
 				NodenameFileOptional: true,
 				LogLevel:             "info",
+				Nodename:             testNodeName,
 			}
 			nc.IPAM.Type = "calico-ipam"
 			ncb, err := json.Marshal(nc)
@@ -3791,6 +3795,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					Policy:               types.Policy{PolicyType: "k8s"},
 					NodenameFileOptional: true,
 					LogLevel:             "info",
+					Nodename:             testNodeName,
 				}
 				nc.IPAM.Type = "calico-ipam"
 				ncb, err := json.Marshal(nc)
