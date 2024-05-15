@@ -135,10 +135,6 @@ promotions:
     pipeline_file: push-images/third_party/eck-operator.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push third-party envoy images
-    pipeline_file: push-images/third_party/envoy.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push third-party fluentd images
     pipeline_file: push-images/third_party/fluentd.yml
     auto_promote:
