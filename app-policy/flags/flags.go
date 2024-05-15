@@ -47,11 +47,17 @@ func New() *Config {
 	fs.StringVar(&cfg.ListenNetwork, "listen-network", "unix", "Listen network e.g. tcp, unix")
 	fs.StringVar(&cfg.DialAddress, "dial", "", "PolicySync address e.g. /var/run/nodeagent/socket")
 	fs.StringVar(&cfg.DialNetwork, "dial-network", "unix", "PolicySync network e.g. tcp, unix")
-	fs.StringVar(&cfg.LogLevel, "log-level", "info", "Log at specified level e.g. panic, fatal, info, debug, trace")
 	fs.BoolVar(&cfg.WAFEnabled, "waf-enabled", false, "Enable WAF.")
 	fs.Var(&cfg.WAFRulesetFiles, "waf-ruleset-file", "WAF ruleset file path to load. e.g. /etc/modsecurity-ruleset/tigera.conf. Can be specified multiple times.")
 	fs.Var(&cfg.WAFDirectives, "waf-directive", "Additional directives to specify for WAF (if enabled). Can be specified multiple times.")
 	fs.StringVar(&cfg.WAFLogFile, "waf-log-file", "", "WAF log file path. e.g. /var/log/calico/waf/waf.log")
+
+	fs.StringVar(
+		&cfg.LogLevel,
+		"log-level",
+		getEnv("LOG_LEVEL", "info"),
+		"Log at specified level e.g. panic, fatal, info, debug, trace",
+	)
 
 	fs.DurationVar(
 		&cfg.WAFEventsFlushInterval,
