@@ -56,6 +56,7 @@ func NewExec(podName string,
 		"-l", logPath,
 		"--daq", "afpacket",
 		"--lua", fmt.Sprintf("alert_fast={ file = true, limit = %d }", alertFileSize),
+		"-R", "/usr/etc/snort/rules/*",
 	)
 
 	s.cmd.Stdout = os.Stdout
