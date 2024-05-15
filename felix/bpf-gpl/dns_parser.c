@@ -13,11 +13,6 @@
 #include "bpf.h"
 #include "dns_reply.h"
 
-CALI_MAP(cali_dns_data, 1,
-		BPF_MAP_TYPE_PERCPU_ARRAY,
-		__u32, char[512],
-		1, 0)
-
 SEC("tc")
 int calico_dns_parser(struct __sk_buff *skb)
 {
