@@ -8,11 +8,21 @@
 #define DNS_NAME_LEN		256
 #define DNS_SCRATCH_SIZE 	256
 
+#define DNS_ANSWERS_MAX		1000
+
 struct dns_scratch {
 	int name_len;
 	unsigned char name[DNS_NAME_LEN];
 	char ip[32];
 	unsigned char buf[DNS_SCRATCH_SIZE];
+};
+
+struct dns_iter_ctx {
+	struct dns_scratch *scratch;
+	struct cali_tc_ctx *ctx;
+	int off;
+	bool failed;
+	unsigned int answers;
 };
 
 CALI_MAP(cali_dns_data, 1,
@@ -143,12 +153,71 @@ static CALI_BPF_INLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scr
 	return true;
 }
 
+static long dns_process_answer(__u32 i, void *__ctx)
+{
+	struct dns_scratch *scratch = ((struct dns_iter_ctx *)__ctx)->scratch;
+	struct cali_tc_ctx *ctx = ((struct dns_iter_ctx *)__ctx)->ctx;
+	int off = ((struct dns_iter_ctx *)__ctx)->off;
+
+	if (((struct dns_iter_ctx *)__ctx)->answers == i) {
+		return 1;
+	}
+
+	int bytes = dns_skip_name(ctx, scratch, off);
+
+	if (bytes == 0) {
+		CALI_DEBUG("DNS: failed skipping name in asnwer %d", i);
+		goto failed;
+	}
+
+	CALI_DEBUG("DNS: skipped %d bytes of name\n", bytes);
+	off += bytes + 1;
+
+	struct dns_rr *rr = (void *) scratch->buf;
+
+	if (!dns_load_bytes(ctx, scratch, off, sizeof(struct dns_rr))) {
+		CALI_DEBUG("DNS: failed to read rr in asnwer %d", i);
+		goto failed;
+	}
+
+	switch (bpf_ntohs(rr->type)) {
+#ifdef IPVER6
+	case TYPE_AAAA:
+#else
+	case TYPE_A:
+#endif
+		{
+#ifdef IPVER6
+			__u32 len = 32;
+#else
+			__u32 len = 4;
+#endif
+			if (bpf_load_bytes(ctx, off + sizeof(struct dns_rr), scratch->ip, len)) {
+				CALI_DEBUG("DNS: failed to read data type %d class %d\n",
+						bpf_ntohs(rr->type), bpf_ntohs(rr->class));
+				goto failed;
+			}
+			CALI_DEBUG("DNS: IP 0x%x\n", *(__u32*)scratch->ip);
+		}
+		break;
+	default:
+		CALI_DEBUG("DNS: skipping rr type %d class %d\n", bpf_ntohs(rr->type), bpf_ntohs(rr->class));
+	};
+
+	((struct dns_iter_ctx *)__ctx)->off = off + sizeof(struct dns_rr) + bpf_ntohs(rr->rdlength);
+
+	return 0;
+
+failed:
+	((struct dns_iter_ctx *)__ctx)->failed = true;
+	return 1;
+}
+
 static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 {
 	int off = skb_iphdr_offset(ctx) + ctx->ipheader_len + UDP_SIZE;
 	struct dns_scratch *scratch;
 	struct dnshdr dnshdr;
-	int answers;
 
 	if (!(scratch = dns_scratch_get())) {
 		CALI_DEBUG("DNS: could not get scratch.\n");
@@ -182,7 +251,7 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 
 	CALI_DEBUG("Queries: %d\n", dnshdr.queries);
 
-	answers = dnshdr.answers + dnshdr.authority + dnshdr.additional;
+	unsigned int answers = dnshdr.answers + dnshdr.authority + dnshdr.additional;
 	if (answers == 0) {
 		CALI_DEBUG("DNS: no answers or data in the response\n");
 	}
@@ -237,51 +306,21 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 	 * them one by one, does not matter if it is an answer or auth etc.
 	 */
 
-	int i;
+	struct dns_iter_ctx ictx = {
+		.scratch = scratch,
+		.ctx = ctx,
+		.off = off,
+		.answers = answers,
+	};
 
-	for (i = 0; i < answers && off < ctx->skb->len && i < 6; i++) {
-		int bytes = dns_skip_name(ctx, scratch, off);
+	if (bpf_loop(DNS_ANSWERS_MAX, dns_process_answer, &ictx, 0) < 0) {
+		CALI_DEBUG("DNS: bpf_loop failed\n");
+		return;
+	}
 
-		if (bytes == 0) {
-			CALI_DEBUG("DNS: failed skipping name in asnwer %d", i);
-			return;
-		}
-
-		CALI_DEBUG("DNS: skipped %d bytes of name\n", bytes);
-		off += bytes + 1;
-	
-		struct dns_rr *rr = (void *) scratch->buf;
-
-		if (!dns_load_bytes(ctx, scratch, off, sizeof(struct dns_rr))) {
-			CALI_DEBUG("DNS: failed to read rr in asnwer %d", i);
-			return;
-		}
-
-		switch (bpf_ntohs(rr->type)) {
-#ifdef IPVER6
-		case TYPE_AAAA:
-#else
-		case TYPE_A:
-#endif
-			{
-#ifdef IPVER6
-				__u32 len = 32;
-#else
-				__u32 len = 4;
-#endif
-				if (bpf_load_bytes(ctx, off + sizeof(struct dns_rr), scratch->ip, len)) {
-					CALI_DEBUG("DNS: failed to read data type %d class %d\n",
-							bpf_ntohs(rr->type), bpf_ntohs(rr->class));
-					return;
-				}
-				CALI_DEBUG("DNS: IP 0x%x\n", *(__u32*)scratch->ip);
-			}
-			break;
-		default:
-			CALI_DEBUG("DNS: skipping rr type %d class %d\n", bpf_ntohs(rr->type), bpf_ntohs(rr->class));
-		};
-
-		off += sizeof(struct dns_rr) + bpf_ntohs(rr->rdlength);
+	if (ictx.failed) {
+		CALI_DEBUG("DNS: bpf_loop callback failed\n");
+		return;
 	}
 }
 
