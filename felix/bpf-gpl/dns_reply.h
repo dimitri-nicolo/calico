@@ -10,11 +10,20 @@
 
 #define DNS_ANSWERS_MAX		1000
 
+union dns_lpm_key {
+        struct bpf_lpm_trie_key lpm;
+	struct {
+		__u32 len;
+		unsigned char rev_name[DNS_NAME_LEN];
+	};
+};
+
 struct dns_scratch {
 	int name_len;
 	unsigned char name[DNS_NAME_LEN];
 	char ip[32];
 	unsigned char buf[DNS_SCRATCH_SIZE];
+	union dns_lpm_key lpm_key;
 };
 
 struct dns_iter_ctx {
@@ -213,6 +222,36 @@ failed:
 	return 1;
 }
 
+static CALI_BPF_INLINE void dns_get_lpm_key(struct dns_scratch *scratch)
+{
+	unsigned char *name = scratch->name;
+	unsigned char *key = scratch->lpm_key.rev_name;
+
+	unsigned int len;
+
+	if (scratch->name_len < 1 || scratch->name_len >= DNS_NAME_LEN) {
+		return; /* we know that this is not true, but tell the verifier */
+	}
+	len = scratch->name_len - 1;
+
+	unsigned char *k = key, *n = name + len;
+	long d = len;
+
+	/* Needs to be written with calculating and checking d indendently so
+	 * that verifier is happy.
+	 */
+	for (; d >= 0;) {
+		*k = *n;
+		k++;
+		n--;
+		d = n - name;
+	}
+
+	key[len + 1] = '\0';
+
+	scratch->lpm_key.len = len*8;
+}
+
 static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 {
 	int off = skb_iphdr_offset(ctx) + ctx->ipheader_len + UDP_SIZE;
@@ -299,6 +338,8 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		CALI_DEBUG("DNS: Not interested in qtype %d\n", bpf_ntohs(q->qtype));
 		return;
 	}
+
+	dns_get_lpm_key(scratch);
 
 	off += sizeof(struct dns_query);
 
