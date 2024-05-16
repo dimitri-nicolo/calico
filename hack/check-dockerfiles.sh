@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-problems="$(find -name '*Dockerfile*' | xargs grep --with-filename '^ADD ')"
+problems="$(find -name '*Dockerfile*' -not -path './third_party/envoy/*' | xargs grep --with-filename '^ADD ')"
 
 if [ "$problems" ]; then
   echo "Some Dockerfiles use ADD instead of COPY"
