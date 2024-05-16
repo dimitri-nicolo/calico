@@ -15,7 +15,7 @@ SNORT3_VERSION ?= 3.1.81.0
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
 BRANCH_NAME = v$(SNORT3_VERSION)
-LATEST_IMAGE_TAG = $(BRANCH_NAME)
+LATEST_IMAGE_TAG = $(BRANCH_NAME)-mod
 
 ###############################################################################
 # Include lib.Makefile
