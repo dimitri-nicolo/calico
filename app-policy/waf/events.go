@@ -157,7 +157,7 @@ func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog 
 			}
 
 			dstEp = &linseedv1.WAFEndpoint{
-				IP:           entry.srcIP,
+				IP:           entry.destIP,
 				PodName:      dstName,
 				PodNameSpace: dstNamespace,
 				PortNum:      int32(entry.dstPort),
