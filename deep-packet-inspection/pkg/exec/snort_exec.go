@@ -4,12 +4,19 @@ package exec
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	SnortConfigFileLocation = "/usr/etc/snort/snort.lua"
+	SnortRulesDirectory     = "/usr/etc/snort/rules/"
 )
 
 type Exec interface {
@@ -45,10 +52,9 @@ func NewExec(podName string,
 		return nil, err
 	}
 
-	s.cmd = exec.Command(
-		"snort",
+	snortArgs := append([]string{
 		"-c",
-		"/usr/etc/snort/snort.lua",
+		SnortConfigFileLocation,
 		"-q",
 		"-y",
 		"-k", "none",
@@ -56,8 +62,9 @@ func NewExec(podName string,
 		"-l", logPath,
 		"--daq", "afpacket",
 		"--lua", fmt.Sprintf("alert_fast={ file = true, limit = %d }", alertFileSize),
-		"-R", "/usr/etc/snort/rules/*",
-	)
+	}, s.detectRules()...)
+
+	s.cmd = exec.Command("snort", snortArgs...)
 
 	s.cmd.Stdout = os.Stdout
 	s.cmd.Stderr = os.Stderr
@@ -85,4 +92,29 @@ func (s *snort) Stop() {
 			log.WithError(err).Errorf("failed to kill process snort")
 		}
 	}
+}
+
+func (s *snort) detectRules() []string {
+	args := []string{}
+
+	if err := filepath.Walk(SnortRulesDirectory, func(path string, info fs.FileInfo, err error) error {
+		switch {
+		case err != nil:
+			break
+		case info.IsDir():
+			break
+		case !strings.HasSuffix(path, ".rules"):
+			break
+		default:
+			log.WithField("file", path).Info("snort rules found")
+			args = append(args, "-R", path)
+		}
+		return err
+	}); err != nil {
+		log.WithError(err).Error("unable to find snort rules")
+	} else if len(args) == 0 {
+		log.Warn("no snort rule files found")
+	}
+
+	return args
 }
