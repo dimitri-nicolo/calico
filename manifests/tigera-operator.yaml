@@ -39594,6 +39594,7 @@ rules:
       - monitors/finalizers
       - monitors/status
       - packetcaptureapis
+      - packetcaptureapis/finalizers
       - packetcaptureapis/status
       - policyrecommendations
       - policyrecommendations/finalizers
