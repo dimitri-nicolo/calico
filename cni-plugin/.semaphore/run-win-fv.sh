@@ -4,7 +4,7 @@ set -e
 set -x
 
 FV_DIR="/home/semaphore/calico-private/process/testing/winfv"
-CONTAINER_RUNTIME="${CONTAINER_RUNTIME:=docker}"
+CONTAINER_RUNTIME="${CONTAINER_RUNTIME:=containerd}"
 
 pushd ${FV_DIR}
 # Prepare local files
@@ -58,6 +58,13 @@ for log_file in /home/semaphore/fv.log/*.log; do
     prefix="[$(basename ${log_file})]"
     cat ${log_file} | iconv -f UTF-16 -t UTF-8 | sed 's/\r$//g' | grep --line-buffered --perl ${log_regexps} -B 2 -A 15 | sed 's/.*/'"${prefix}"' &/g'
 done;
+
+# Search for the file indicates that the Windows node has completed the FV process
+if [ ! -f /home/semaphore/report/done-marker ];
+then
+    echo "Windows node failed to complete the FV process."
+    exit 1
+fi
 
 # Search for error code file
 if [ -f /home/semaphore/report/error-codes ];
