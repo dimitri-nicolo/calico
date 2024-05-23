@@ -47,7 +47,7 @@ const (
 
 // Separate const block to avoid conflicts when merging from OS.
 const (
-	numPrivateOnlyFelixConfigs = 107
+	numPrivateOnlyFelixConfigs = 108
 	numBaseFelixConfigs        = 138
 )
 
