@@ -5819,9 +5819,9 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							},
 						},
 					},
-					"bpfPerfBufferSize": {
+					"bpfBufferSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "BPFPBufferSize in BPF mode, controls the buffer size used for sending BPF events to felix. [Default: 1<<20]",
+							Description: "BPFBufferSize in BPF mode, controls the buffer size used for sending BPF events to felix. [Default: 1<<20]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
