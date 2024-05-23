@@ -19,6 +19,7 @@ package ipsets
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -96,6 +97,10 @@ func (e IPSetEntry) Protocol() uint8 {
 
 func (e IPSetEntry) Port() uint16 {
 	return binary.LittleEndian.Uint16(e[16:18])
+}
+
+func (e IPSetEntry) String() string {
+	return fmt.Sprintf("0x%08x %11s prefix %d port %d  proto %d", e.SetID(), e.Addr(), e.PrefixLen(), e.Port(), e.Protocol())
 }
 
 func IPSetEntryFromBytes(b []byte) IPSetEntryInterface {

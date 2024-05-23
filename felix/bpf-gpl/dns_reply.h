@@ -5,6 +5,8 @@
 #ifndef __CALI_DNS_REPLY_H__
 #define __CALI_DNS_REPLY_H__
 
+#include "policy.h"
+
 #define DNS_NAME_LEN		256
 #define DNS_SCRATCH_SIZE 	256
 
@@ -17,6 +19,23 @@ union dns_lpm_key {
 		unsigned char rev_name[DNS_NAME_LEN];
 	};
 };
+
+#define DNS_LPM_IPSETS_MAX	8
+
+struct dns_lpm_value {
+	__u32 count;
+	__u32 __pad; /* XXX flags for v4/v6 ? */
+	__u64 ipsets[DNS_LPM_IPSETS_MAX]; /* If we want to expand beyond
+					   * DNS_LPM_IPSETS_MAX sets in which the prefix
+					   *  can live, we will need a prefix ID.
+					   */
+};
+
+CALI_MAP(cali_dns_pfx, 2,
+	 BPF_MAP_TYPE_LPM_TRIE,
+	 union dns_lpm_key, struct dns_lpm_value,
+	 64*1024, BPF_F_NO_PREALLOC)
+
 
 struct dns_scratch {
 	int name_len;
@@ -32,6 +51,7 @@ struct dns_iter_ctx {
 	int off;
 	bool failed;
 	unsigned int answers;
+	struct dns_lpm_value v;
 };
 
 CALI_MAP(cali_dns_data, 1,
@@ -164,11 +184,12 @@ static CALI_BPF_INLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scr
 
 static long dns_process_answer(__u32 i, void *__ctx)
 {
-	struct dns_scratch *scratch = ((struct dns_iter_ctx *)__ctx)->scratch;
-	struct cali_tc_ctx *ctx = ((struct dns_iter_ctx *)__ctx)->ctx;
-	int off = ((struct dns_iter_ctx *)__ctx)->off;
+	struct dns_iter_ctx *ictx = (struct dns_iter_ctx *)__ctx;
+	struct dns_scratch *scratch = ictx->scratch;
+	struct cali_tc_ctx *ctx = ictx->ctx;
+	int off = ictx->off;
 
-	if (((struct dns_iter_ctx *)__ctx)->answers == i) {
+	if (ictx->answers == i) {
 		return 1;
 	}
 
@@ -188,37 +209,50 @@ static long dns_process_answer(__u32 i, void *__ctx)
 		CALI_DEBUG("DNS: failed to read rr in asnwer %d", i);
 		goto failed;
 	}
+			
+	__u32 len = 4;
 
 	switch (bpf_ntohs(rr->type)) {
-#ifdef IPVER6
 	case TYPE_AAAA:
-#else
+		len = 32;
+		/* fallthrough */
 	case TYPE_A:
-#endif
-		{
-#ifdef IPVER6
-			__u32 len = 32;
-#else
-			__u32 len = 4;
-#endif
-			if (bpf_load_bytes(ctx, off + sizeof(struct dns_rr), scratch->ip, len)) {
-				CALI_DEBUG("DNS: failed to read data type %d class %d\n",
-						bpf_ntohs(rr->type), bpf_ntohs(rr->class));
-				goto failed;
+		if (bpf_load_bytes(ctx, off + sizeof(struct dns_rr), scratch->ip, len)) {
+			CALI_DEBUG("DNS: failed to read data type %d class %d\n",
+					bpf_ntohs(rr->type), bpf_ntohs(rr->class));
+			goto failed;
+		}
+		CALI_DEBUG("DNS: IP 0x%x\n", *(__u32*)scratch->ip);
+
+		union ip_set_lpm_key k = {
+			.ip = {
+				.mask = (8 + len) * 8,
+				.addr = *(__u32*)scratch->ip,
+			},
+		};
+
+		int i;
+
+		for (i = 0; i < ictx->v.count && i < DNS_LPM_IPSETS_MAX; i++) {
+			__u32 v = 0;
+			int ret;
+
+			k.ip.set_id = ictx->v.ipsets[i];
+			if ((ret = cali_ip_sets_update_elem(&k, &v, 0))) {
+				CALI_DEBUG("DNS: Failed to update ipset 0x%x err %d\n", k.ip.set_id, ret);
 			}
-			CALI_DEBUG("DNS: IP 0x%x\n", *(__u32*)scratch->ip);
 		}
 		break;
 	default:
 		CALI_DEBUG("DNS: skipping rr type %d class %d\n", bpf_ntohs(rr->type), bpf_ntohs(rr->class));
 	};
 
-	((struct dns_iter_ctx *)__ctx)->off = off + sizeof(struct dns_rr) + bpf_ntohs(rr->rdlength);
+	ictx->off = off + sizeof(struct dns_rr) + bpf_ntohs(rr->rdlength);
 
 	return 0;
 
 failed:
-	((struct dns_iter_ctx *)__ctx)->failed = true;
+	ictx->failed = true;
 	return 1;
 }
 
@@ -249,7 +283,7 @@ static CALI_BPF_INLINE void dns_get_lpm_key(struct dns_scratch *scratch)
 
 	key[len + 1] = '\0';
 
-	scratch->lpm_key.len = len*8;
+	scratch->lpm_key.len = (len + 1) * 8;
 }
 
 static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
@@ -341,6 +375,15 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 
 	dns_get_lpm_key(scratch);
 
+	struct dns_lpm_value *v = cali_dns_pfx_lookup_elem(&scratch->lpm_key);
+	if (v) {
+		CALI_DEBUG("HIT key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
+		CALI_DEBUG("count %d\n", v->count);
+	} else {
+		CALI_DEBUG("MISS key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
+		return;
+	}
+
 	off += sizeof(struct dns_query);
 
 	/* Now start parsing answers. All sections carry RRs so just process
@@ -352,6 +395,7 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		.ctx = ctx,
 		.off = off,
 		.answers = answers,
+		.v = *v,
 	};
 
 	if (bpf_loop(DNS_ANSWERS_MAX, dns_process_answer, &ictx, 0) < 0) {

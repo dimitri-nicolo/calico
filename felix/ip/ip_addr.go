@@ -331,6 +331,11 @@ func FromNetIP(netIP net.IP) Addr {
 	return nil
 }
 
+func CIDRFromStringNoErr(cidrStr string) CIDR {
+	cidr, _ := CIDRFromString(cidrStr)
+	return cidr
+}
+
 func CIDRFromString(cidrStr string) (CIDR, error) {
 	_, cidr, err := net.ParseCIDR(cidrStr)
 	if err != nil {
