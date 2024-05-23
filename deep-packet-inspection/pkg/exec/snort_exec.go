@@ -3,6 +3,7 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -53,8 +54,7 @@ func NewExec(podName string,
 	}
 
 	snortArgs := append([]string{
-		"-c",
-		SnortConfigFileLocation,
+		"-c", SnortConfigFileLocation,
 		"-q",
 		"-y",
 		"-k", "none",
@@ -62,7 +62,7 @@ func NewExec(podName string,
 		"-l", logPath,
 		"--daq", "afpacket",
 		"--lua", fmt.Sprintf("alert_fast={ file = true, limit = %d }", alertFileSize),
-	}, s.detectRules()...)
+	}, detectRules()...)
 
 	s.cmd = exec.Command("snort", snortArgs...)
 
@@ -94,7 +94,7 @@ func (s *snort) Stop() {
 	}
 }
 
-func (s *snort) detectRules() []string {
+func detectRules() []string {
 	args := []string{}
 
 	if err := filepath.Walk(SnortRulesDirectory, func(path string, info fs.FileInfo, err error) error {
@@ -117,4 +117,22 @@ func (s *snort) detectRules() []string {
 	}
 
 	return args
+}
+
+func ValidateSnortConfiguration() error {
+	snortArgs := append([]string{"-c", SnortConfigFileLocation, "-T"}, detectRules()...)
+	snortCmd := exec.Command("snort", snortArgs...)
+
+	if err := snortCmd.Start(); err != nil {
+		return nil
+	}
+
+	if err := snortCmd.Wait(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 0 {
+			return nil
+		}
+		return errors.New("snort configuration is invalid")
+	}
+
+	return nil
 }

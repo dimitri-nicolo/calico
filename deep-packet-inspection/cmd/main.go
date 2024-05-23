@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dispatcher"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/eventgenerator"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/exec"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/syncer"
@@ -55,6 +56,12 @@ func main() {
 	cfg := &config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, cfg); err != nil {
 		log.Fatal(err)
+	}
+
+	if err := exec.ValidateSnortConfiguration(); err != nil {
+		log.Fatal(err)
+	} else {
+		log.Info("Snort configuration is valid")
 	}
 
 	// Configure logging
