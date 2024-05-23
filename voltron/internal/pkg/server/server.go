@@ -27,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
@@ -145,6 +146,9 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 			voltronCfg: &vcfg,
 			k8sCLI:     k8s,
 			client:     client,
+			// Dummy function that will be overwritten if voltron is accepting
+			// managed cluster connections.
+			statusUpdateFunc: func(string, v3.ManagedClusterStatusValue) {},
 		},
 		tunnelEnableKeepAlive:   true,
 		tunnelKeepAliveInterval: 100 * time.Millisecond,
@@ -212,9 +216,9 @@ func New(k8s bootstrap.K8sClient, client ctrlclient.WithWatch, config *rest.Conf
 		go srv.acceptTunnels(
 			tunnel.WithKeepAliveSettings(srv.tunnelEnableKeepAlive, srv.tunnelKeepAliveInterval),
 		)
-		if err != nil {
-			return nil, errors.WithMessage(err, "Could not create a template to render manifests")
-		}
+
+		x := NewStatusUpdater(srv.ctx, client, vcfg, nil)
+		srv.clusters.statusUpdateFunc = x.SetStatus
 
 		srv.clusters.clientCertificatePool = srv.tunSrv.GetClientCertificatePool()
 	}
