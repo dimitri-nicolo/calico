@@ -261,12 +261,16 @@ type controller struct {
 	// impersonationInfo contains the information necessary to populate the HTTP impersonation headers needed to perform
 	// certain actions on behalf of the managed cluster (eg. copying secrets)
 	impersonationInfo *user.DefaultInfo
+
+	// informerStopChans tracks the managed cluster's informers and their stop channels.
+	informerStopChans map[*v3.ManagedCluster]chan struct{}
 }
 
-type ManagedClusterObj struct {
-	mc        *v3.ManagedCluster
-	eventType string
-	namespace string
+// tokenEvent represents an event indicating that tokens and optionally secrets should be reconciled based on the provided fields.
+type tokenEvent struct {
+	mc               *v3.ManagedCluster
+	namespace        string
+	reconcileSecrets bool
 }
 
 func (c *controller) Run(stopCh <-chan struct{}) {
@@ -278,40 +282,44 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	logrus.Info("Starting token controller")
 
 	// Make channels for sending updates.
-	mcChan := make(chan *ManagedClusterObj, 100)
+	updateChan := make(chan *tokenEvent, 100)
 	secretChan := make(chan *corev1.Secret, 100)
-	defer close(mcChan)
+	defer close(updateChan)
 	defer close(secretChan)
 
-	// Map to keep track of the managedcluster informers
-	managedClientStopChans := make(map[*v3.ManagedCluster]chan struct{})
+	c.informerStopChans = make(map[*v3.ManagedCluster]chan struct{})
+	defer func() {
+		for _, mcStopCh := range c.informerStopChans {
+			close(mcStopCh)
+		}
+	}()
 
 	managedClusterHandler := cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
-				// stop the informers when the managed clusters get deleted
-				if mcStopCh, ok := managedClientStopChans[mc]; ok {
+				// Stop the informers when the managed clusters get deleted.
+				if mcStopCh, ok := c.informerStopChans[mc]; ok {
 					close(mcStopCh)
-					delete(managedClientStopChans, mc)
+					delete(c.informerStopChans, mc)
 				}
 			}
 		},
 		AddFunc: func(obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok && isConnected(mc) {
-				mcObj := &ManagedClusterObj{
-					mc:        mc,
-					eventType: "ADD",
+				mcObj := &tokenEvent{
+					mc:               mc,
+					reconcileSecrets: true,
 				}
-				mcChan <- mcObj
+				updateChan <- mcObj
 			}
 		},
 		UpdateFunc: func(_, obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok && isConnected(mc) {
-				mcObj := &ManagedClusterObj{
-					mc:        mc,
-					eventType: "UPDATE",
+				mcObj := &tokenEvent{
+					mc:               mc,
+					reconcileSecrets: true,
 				}
-				mcChan <- mcObj
+				updateChan <- mcObj
 			}
 		},
 	}
@@ -374,12 +382,10 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	// Start the token manager.
 	c.ManageTokens(
 		stopCh,
-		mcChan,
+		updateChan,
 		secretChan,
 		mcInformer,
-		managedClientStopChans,
 	)
-
 }
 
 func isConnected(mc *v3.ManagedCluster) bool {
@@ -392,7 +398,7 @@ func isConnected(mc *v3.ManagedCluster) bool {
 	return false
 }
 
-func retryUpdate[T corev1.Secret | ManagedClusterObj](rc *retryCalculator, id string, obj T, objChan chan *T, stop <-chan struct{}) {
+func retryUpdate[T corev1.Secret | tokenEvent](rc *retryCalculator, id string, obj T, objChan chan *T, stop <-chan struct{}) {
 	updateType := fmt.Sprintf("%T", obj)
 	log := logrus.WithField(updateType, id)
 
@@ -418,13 +424,12 @@ func retryUpdate[T corev1.Secret | ManagedClusterObj](rc *retryCalculator, id st
 	}()
 }
 
-func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *ManagedClusterObj, secretChan chan *corev1.Secret, mcInformer cache.SharedIndexInformer, managedClientStopChans map[*v3.ManagedCluster]chan struct{}) {
+func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEvent, secretChan chan *corev1.Secret, mcInformer cache.SharedIndexInformer) {
 	defer logrus.Info("Token manager shutting down")
 
-	// Channel to track the managedcluster's namespace informer
-	// this channel get populated when tigera-conpliance namespace gets created in the managed cluster, so that linseed could create and copy the tokens needs.
-	mcTokenReconcilerChan := make(chan *ManagedClusterObj, 100)
-	defer close(mcTokenReconcilerChan)
+	// reconcileChan handls reconcilation of tokens and secrets.
+	reconcileChan := make(chan *tokenEvent, 200)
+	defer close(reconcileChan)
 
 	ticker := time.After(*c.reconcilePeriod)
 	rc := NewRetryCalculator(*c.baseRetryPeriod, *c.maxRetries)
@@ -435,6 +440,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *ManagedClus
 		case <-stop:
 			return
 		case <-ticker:
+			// ticker triggers reconcilation of tokens and secrets for all clusters at the reconcilePeriod interval, defaulting to 60 minutes.
 			logrus.Debug("Reconciling tokens and copying secrets for all clusters")
 
 			// Get all clusters.
@@ -449,94 +455,82 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *ManagedClus
 					logrus.Warnf("Received unexpected type %T", obj)
 					continue
 				}
-				log := c.loggerForManagedCluster(mc)
-				managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
-				if err != nil {
-					log.WithError(err).Error("failed to get client for cluster")
-					continue
-				}
 
-				if err = c.reconcileTokensForCluster(mc, managedClient, ""); err != nil {
-					log.WithError(err).Error("failed to reconcile tokens")
-				}
-
-				if err = c.reconcileSecretsForCluster(mc, c.secretsToCopy, managedClient); err != nil {
-					log.WithError(err).Error("failed to reconcile secrets")
+				// Queue managed cluster for reconciliation.
+				reconcileChan <- &tokenEvent{
+					mc:               mc,
+					reconcileSecrets: true,
 				}
 			}
 
 			if c.reportHealth != nil {
 				c.reportHealth(&health.HealthReport{Live: true, Ready: true})
 			}
-		case mcObj := <-mcChan:
-			retry := retryUpdate[ManagedClusterObj]
+		case event := <-updateChan:
+			// updateChan triggers reconciliation of tokens and secrets, when a managed cluster is added or updated.
+			log := c.loggerForManagedCluster(event.mc)
 
-			mc := mcObj.mc
-			log := c.loggerForManagedCluster(mc)
-
-			// Ensure that the cluster exists before proceeding with the reconciliation.
+			// Ensure cluster exists before proceeding with the reconciliation.
 			// This prevents reconcilation of token and secrets for deleted managed clusters.
-			if _, ok, _ := mcInformer.GetStore().Get(mc); !ok {
+			if _, ok, _ := mcInformer.GetStore().Get(event.mc); !ok {
 				log.Info("Manager cluster does not exist")
 				continue
 			}
 
-			managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
+			// Queue ManagedCluster for reconcilation.
+			reconcileChan <- &tokenEvent{
+				mc:               event.mc,
+				reconcileSecrets: true,
+			}
+
+			// Create managed cluster informer if it does not exist.
+			if _, ok := c.informerStopChans[event.mc]; !ok {
+				namespaceInformer, err := c.createInformer(event.mc, reconcileChan)
+				if err != nil {
+					log.WithError(err).Error("failed to create namespace Informer for cluster")
+					continue
+				}
+				// Track the informers to clean up when the managed cluster is deleted.
+				mcStopCh := make(chan struct{})
+				c.informerStopChans[event.mc] = mcStopCh
+				go namespaceInformer.Run(mcStopCh)
+			}
+		case event := <-reconcileChan:
+			retry := retryUpdate[tokenEvent]
+			log := c.loggerForManagedCluster(event.mc)
+
+			// Ensure cluster exists before proceeding with the reconciliation.
+			if _, ok, _ := mcInformer.GetStore().Get(event.mc); !ok {
+				log.Info("Manager cluster does not exist")
+				continue
+			}
+
+			managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(event.mc.Name)
 			if err != nil {
 				log.WithError(err).Error("failed to get client for cluster")
-				retry(rc, mc.Name, *mcObj, mcChan, stop)
+				retry(rc, event.mc.Name, *event, updateChan, stop)
 				continue
 			}
 
 			var needRetry bool
-			if err = c.reconcileTokensForCluster(mc, managedClient, ""); err != nil {
+			if err = c.reconcileTokensForCluster(event.mc, managedClient, event.namespace); err != nil {
 				log.WithError(err).Error("failed to reconcile tokens for cluster")
 				needRetry = true
 
 			}
-			if err = c.reconcileSecretsForCluster(mc, c.secretsToCopy, managedClient); err != nil {
-				needRetry = true
-				log.WithError(err).Error("failed to reconcile secrets for cluster")
+
+			// Skip reconcile secret for namespace specific events
+			if event.reconcileSecrets {
+				if err = c.reconcileSecretsForCluster(event.mc, c.secretsToCopy, managedClient); err != nil {
+					log.WithError(err).Error("failed to reconcile secrets for cluster")
+					needRetry = true
+				}
 			}
 
 			// Use single retry when either or both of them fails.
 			if needRetry {
-				retry(rc, mc.Name, *mcObj, mcChan, stop)
+				retry(rc, event.mc.Name, *event, updateChan, stop)
 			}
-
-			if mcObj.eventType == "ADD" {
-				// create a namespace informer for the managed cluster
-				namespaceFactory := informers.NewSharedInformerFactory(managedClient, 0)
-				namespaceInformer := namespaceFactory.Core().V1().Namespaces().Informer()
-				namespaceHandler := cache.ResourceEventHandlerFuncs{
-					DeleteFunc: func(obj interface{}) {},
-					AddFunc: func(obj interface{}) {
-						if ns, ok := obj.(*corev1.Namespace); ok {
-							if ns.Name == "tigera-compliance" { // TODO: pass the namespace name
-								// Populate the mcTokenReconcilerChan channel, which will be used to reconcile the token when a namespace is created.
-								mcObj := &ManagedClusterObj{
-									mc:        mc,
-									namespace: ns.Name,
-									eventType: "",
-								}
-								mcTokenReconcilerChan <- mcObj
-							}
-						}
-					},
-					UpdateFunc: func(_, obj interface{}) {}, // Do nothing
-				}
-
-				_, err = namespaceInformer.AddEventHandler(namespaceHandler)
-				if err != nil {
-					logrus.WithError(err).Fatal("Failed to add managed cluster namespace event handler")
-				}
-
-				// Track it in the map to clean up when the managed cluster is deleted
-				mcStopCh := make(chan struct{})
-				managedClientStopChans[mc] = mcStopCh
-				go namespaceInformer.Run(mcStopCh)
-			}
-
 		case secret := <-secretChan:
 			retry := retryUpdate[corev1.Secret]
 
@@ -563,26 +557,6 @@ func (c *controller) ManageTokens(stop <-chan struct{}, mcChan chan *ManagedClus
 					retry(rc, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name), *secret, secretChan, stop)
 				}
 			}
-
-		case mcObj := <-mcTokenReconcilerChan:
-			logrus.Debug("Reconciling tokens for managed cluster")
-			retry := retryUpdate[ManagedClusterObj]
-
-			mc := mcObj.mc
-			log := c.loggerForManagedCluster(mc)
-
-			managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
-			if err != nil {
-				log.WithError(err).Error("failed to get client for cluster")
-				retry(rc, mc.Name, *mcObj, mcChan, stop)
-				continue
-			}
-
-			if err = c.reconcileTokensForCluster(mc, managedClient, mcObj.namespace); err != nil {
-				log.WithError(err).Error("failed to reconcile tokens for cluster")
-				retry(rc, mc.Name, *mcObj, mcChan, stop)
-			}
-
 		}
 	}
 }
@@ -668,22 +642,24 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 
 	var tokenErrors []error
 	for _, user := range c.userInfos {
-		// mcNamespace is not nil then copy tokens only for those namespace skip otherwise
+		log = log.WithField("service", user.Name)
+
+		// If mcNamespace is specified, copy tokens only for those namespaces, otherwise skip.
 		if len(mcNamespace) > 0 && user.Namespace != mcNamespace {
 			continue
 		}
 
-		// Check if the namespace exists before copying the token. For example, the tigera-compliance namespace might not exist if the user has not opted in for compliance.
-		if ok, err := CheckNamespaceExist(managedClient, user.Namespace); !ok {
-			log.Debug("Manged cluster does not have the Namespace:", user.Namespace)
-			continue
-		} else if err != nil {
-			log.WithError(err).Error("error checking namespace exist")
+		// Check if the namespace exists before copying the token.
+		exists, err := namespaceExists(managedClient, user.Namespace)
+		if err != nil {
+			log.WithError(err).Error("error checking namespace exists")
 			tokenErrors = append(tokenErrors, err)
 			continue
 		}
-
-		log = log.WithField("service", user.Name)
+		if !exists {
+			log.Warn("Manged cluster does not have the Namespace:", user.Namespace)
+			continue
+		}
 
 		// First, check if token exists. If it does, we don't need to do anything.
 		tokenName := c.tokenNameForService(user.Name)
@@ -905,7 +881,7 @@ func newManagedClusterListWatcher(ctx context.Context, c ctrlclient.WithWatch, n
 	}
 }
 
-func CheckNamespaceExist(c kubernetes.Interface, namespace string) (bool, error) {
+func namespaceExists(c kubernetes.Interface, namespace string) (bool, error) {
 	_, err := c.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -914,4 +890,50 @@ func CheckNamespaceExist(c kubernetes.Interface, namespace string) (bool, error)
 		return false, fmt.Errorf("error looking for the Namespace: %s, %w", namespace, err)
 	}
 	return true, nil
+}
+
+func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *tokenEvent) (cache.SharedIndexInformer, error) {
+
+	managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
+	if err != nil {
+		logrus.WithError(err).Error("failed to get client for cluster")
+		return nil, err
+	}
+
+	// Create a namespace informer for the managed cluster.
+	namespaceFactory := informers.NewSharedInformerFactory(managedClient, 0)
+	namespaceInformer := namespaceFactory.Core().V1().Namespaces().Informer()
+	namespaceHandler := cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if ns, ok := obj.(*corev1.Namespace); ok {
+				if isRelevantNamespace(ns.Name) {
+					// Populate the reconcileChan channel to copy the tokens when a namespace is created in the managed cluster.
+					newtokenEvent := &tokenEvent{
+						mc:        mc,
+						namespace: ns.Name,
+					}
+					reconcileChan <- newtokenEvent
+				}
+			}
+		},
+		UpdateFunc: func(_, obj interface{}) {},
+		DeleteFunc: func(obj interface{}) {},
+	}
+
+	_, err = namespaceInformer.AddEventHandler(namespaceHandler)
+	if err != nil {
+		logrus.WithError(err).Fatal("failed to add managed cluster namespace event handler")
+		return nil, err
+	}
+	return namespaceInformer, nil
+}
+
+func isRelevantNamespace(namespace string) bool {
+	relevantNamespaces := []string{resource.ComplianceNamespace, resource.IntrusionDetectionNamespace, resource.DPINamespace}
+	for _, ns := range relevantNamespaces {
+		if ns == namespace {
+			return true
+		}
+	}
+	return false
 }

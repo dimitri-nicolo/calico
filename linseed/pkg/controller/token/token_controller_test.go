@@ -90,6 +90,19 @@ func setup(t *testing.T) func() {
 	mockK8sClient = k8sfake.NewSimpleClientset()
 	mockClientSet = clientSetSet{mockK8sClient, cs}
 
+	mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "namespaces", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		name := action.(k8stesting.GetAction).GetName()
+		if name == "default" {
+			namespace := &corev1.Namespace{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "default",
+				},
+			}
+			return true, namespace, nil
+		}
+		return false, nil, nil
+	})
+
 	scheme := kscheme.Scheme
 	err = v3.AddToScheme(scheme)
 	require.NoError(t, err)
@@ -1128,6 +1141,20 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			{Name: "failing-secret-b", Namespace: "ns-b"},
 			{Name: "secret-c", Namespace: "ns-c"},
 		}
+
+		mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "namespaces", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			name := action.(k8stesting.GetAction).GetName()
+
+			if name == "ns-a" || name == "ns-b" || name == "ns-c" {
+				namespace := &corev1.Namespace{
+					ObjectMeta: v1.ObjectMeta{
+						Name: name,
+					},
+				}
+				return true, namespace, nil
+			}
+			return false, nil, nil
+		})
 
 		mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "secrets", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 			name := action.(k8stesting.GetAction).GetName()
