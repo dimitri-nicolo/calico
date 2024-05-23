@@ -120,7 +120,7 @@ func TestPolicyVerdictEvents(t *testing.T) {
 		},
 	}
 
-	evnts, err := events.New(events.SourcePerfEvents)
+	evnts, err := events.New(events.SourcePerfEvents, 1<<20)
 	Expect(err).NotTo(HaveOccurred())
 	defer evnts.Close()
 

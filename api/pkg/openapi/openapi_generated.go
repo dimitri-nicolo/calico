@@ -5819,6 +5819,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							},
 						},
 					},
+					"bpfPerfBufferSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFPBufferSize in BPF mode, controls the buffer size used for sending BPF events to felix. [Default: 1<<20]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"syslogReporterEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SyslogReporterEnabled turns on the feature to write logs to Syslog. Please note that this can incur significant disk space usage when running felix on non-cluster hosts.",

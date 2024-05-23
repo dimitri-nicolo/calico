@@ -252,6 +252,7 @@ type Config struct {
 	BPFEnforceRPF                      string
 	BPFDisableGROForIfaces             *regexp.Regexp
 	BPFExcludeCIDRsFromNAT             []string
+	BPFBufferSize                      int
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
@@ -911,7 +912,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.BPFEnabled || config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
 		var err error
-		bpfEvnt, err = events.New(events.SourcePerfEvents)
+		bpfEvnt, err = events.New(events.SourcePerfEvents, config.BPFBufferSize)
 		if err != nil {
 			log.WithError(err).Error("Failed to create perf event")
 			config.FlowLogsCollectProcessInfo = false

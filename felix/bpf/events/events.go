@@ -83,10 +83,10 @@ type Events interface {
 }
 
 // New creates a new Events object to consume events.
-func New(src Source) (Events, error) {
+func New(src Source, size int) (Events, error) {
 	switch src {
 	case SourcePerfEvents:
-		return newPerfEvents()
+		return newPerfEvents(size)
 	}
 
 	return nil, errors.Errorf("unknown events source: %s", src)
@@ -99,7 +99,7 @@ type perfEventsReader struct {
 	next func() (Event, error)
 }
 
-func newPerfEvents() (Events, error) {
+func newPerfEvents(size int) (Events, error) {
 	if runtime.NumCPU() > MaxCPUs {
 		return nil, errors.Errorf("more cpus (%d) than the max supported (%d)", runtime.NumCPU(), 128)
 	}
@@ -109,7 +109,7 @@ func newPerfEvents() (Events, error) {
 		return nil, err
 	}
 
-	perfEvents, err := perf.New(perfMap, 1<<20)
+	perfEvents, err := perf.New(perfMap, size)
 	if err != nil {
 		return nil, err
 	}
