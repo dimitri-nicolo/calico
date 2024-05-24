@@ -164,16 +164,7 @@ func NewIPSetHTTPPuller(
 			ip.gnsLabels[k] = v
 		}
 	}
-	// p := &httpPuller{
-	// 	configMapClient: configMapClient,
-	// 	secretsClient:   secretsClient,
-	// 	client:          client,
-	// 	feed:            f.DeepCopy(),
-	// 	needsUpdate:     true,
-	// 	setHandler:      ip,
-	// }
 
-	// p.period = util.ParseFeedDuration(p.feed)
 	p := NewHttpPuller(configMapClient, secretsClient, client, f.DeepCopy(), true, ip)
 
 	return p
