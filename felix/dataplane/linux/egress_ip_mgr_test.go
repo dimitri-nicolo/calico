@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2024 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -175,6 +175,7 @@ var _ = Describe("EgressIPManager", func() {
 	Describe("with multiple ipsets and endpoints update", func() {
 		var ips0, ips1 []string
 		var zeroTime, nowTime, thirtySecsAgo, inThirtySecsTime, inSixtySecsTime time.Time
+		var egwRules0, egwRules1 []*proto.EgressGatewayRule
 		BeforeEach(func() {
 			zeroTime = time.Time{}
 			nowTime = time.Now()
@@ -257,12 +258,12 @@ var _ = Describe("EgressIPManager", func() {
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 
-			egwRules0 := egwPolicyWithSingleRule("set0", 0)
-			egwRules1 := []*proto.EgressGatewayRule{
-				&proto.EgressGatewayRule{
+			egwRules0 = egwPolicyWithSingleRule("set0", 0)
+			egwRules1 = []*proto.EgressGatewayRule{
+				{
 					Destination: "10.0.0.0/16",
 				},
-				&proto.EgressGatewayRule{
+				{
 					IpSetId:     "set1",
 					Destination: defaultDestv4,
 					MaxNextHops: 2,
@@ -378,6 +379,85 @@ var _ = Describe("EgressIPManager", func() {
 					HostIP:    ip.FromString("10.0.1.3"),
 				},
 			))
+		})
+
+		It("should update route rules when workload address changes", func() {
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, []string{"10.0.140.0/32"}, egwRules0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, []string{"10.0.141.0/32"}, egwRules0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, []string{"10.0.142.0/32"}, egwRules0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, []string{"10.0.143.0/32"}, egwRules1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, []string{"10.0.144.0/32"}, egwRules1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, []string{"10.0.145.0/32"}, egwRules1))
+
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+
+			// routeRules should be created.
+			Expect(manager.routeRules).NotTo(BeNil())
+			rr = rrFactory.Rules()
+
+			expectRulesAndTable([]string{"10.0.140.0/32"}, 1, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
+
+			expectRulesAndTable([]string{"10.0.141.0/32"}, 2, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
+
+			expectRulesAndTable([]string{"10.0.142.0/32"}, 3, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}),
+				},
+			})
+
+			expectRulesAndTable([]string{"10.0.143.0/32"}, 4, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.2", "10.0.1.3"}),
+				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
+				},
+			})
+
+			expectRulesAndTable([]string{"10.0.144.0/32"}, 5, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.3"}),
+				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
+				},
+			})
+
+			expectRulesAndTable([]string{"10.0.145.0/32"}, 6, routetable.InterfaceNone, []routetable.Target{
+				{
+					CIDR:      defaultCidr,
+					Type:      routetable.TargetTypeVXLAN,
+					MultiPath: multiPath([]string{"10.0.1.1", "10.0.1.2"}),
+				},
+				{
+					CIDR: ip.MustParseCIDROrIP("10.0.0.0/16"),
+					Type: routetable.TargetTypeThrow,
+				},
+			})
+
+			mainTable.checkRoutes(routetable.InterfaceNone, nil)
+			mainTable.checkRoutes("egress.calico", nil)
 		})
 
 		It("should have the right routes when PreferLocalEgressGateway is set", func() {
