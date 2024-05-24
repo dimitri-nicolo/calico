@@ -39563,6 +39563,7 @@ rules:
       - compliances/status
       - egressgateways
       - egressgateways/finalizers
+      - egressgateways/status
       - imagesets
       - installations
       - installations/finalizers
