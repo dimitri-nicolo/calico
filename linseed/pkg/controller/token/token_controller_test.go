@@ -103,6 +103,17 @@ func setup(t *testing.T) func() {
 		return false, nil, nil
 	})
 
+	// Set up mock reactions for List namespace action.
+	// It populates namespaces to reconcile tokens while creating managedcluster informer
+	mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "namespaces", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		namespace := &corev1.Namespace{
+			ObjectMeta: v1.ObjectMeta{
+				Name: defaultNamespace,
+			},
+		}
+		return true, &corev1.NamespaceList{Items: []corev1.Namespace{*namespace}}, nil
+	})
+
 	scheme := kscheme.Scheme
 	err = v3.AddToScheme(scheme)
 	require.NoError(t, err)
@@ -196,6 +207,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			token.WithK8sClient(mockK8sClient),
 			token.WithNamespace(tenantNamespace),
 			token.WithTenant(tenantID),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -258,6 +270,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			token.WithK8sClient(mockK8sClient),
 			token.WithNamespace(tenantNamespace),
 			token.WithTenant(tenantID),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -327,6 +340,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			token.WithFactory(factory),
 			token.WithK8sClient(mockK8sClient),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -393,6 +407,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			// across several reconciles.
 			token.WithReconcilePeriod(50 * time.Millisecond),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -460,6 +475,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			// the secret and we wouldn't need this.
 			token.WithReconcilePeriod(10 * time.Millisecond),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -540,6 +556,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			// the expiry time of the tokens it creates.
 			token.WithReconcilePeriod(10 * time.Millisecond),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -631,6 +648,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			token.WithBaseRetryPeriod(1 * time.Millisecond),
 			token.WithMaxRetries(5),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -713,6 +731,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			// the kick channel.
 			token.WithBaseRetryPeriod(50 * time.Millisecond),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -807,6 +826,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			// the kick channel.
 			token.WithBaseRetryPeriod(50 * time.Millisecond),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -898,6 +918,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			token.WithReconcilePeriod(1 * time.Second),
 			token.WithSecretsToCopy(secretsToCopy),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -973,6 +994,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			token.WithReconcilePeriod(24 * time.Hour), // Make update period long enough that we're guaranteed not to trigger it during test
 			token.WithSecretsToCopy(secretsToCopy),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -1053,6 +1075,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			// the changes we make to the ManagedClusters
 			token.WithReconcilePeriod(10 * time.Millisecond),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{defaultNamespace}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)
@@ -1167,6 +1190,27 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			return false, &corev1.Secret{}, nil
 		})
 
+		mockK8sClient.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "namespaces", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			namespaceNames := []string{"ns-a", "ns-b", "ns-c"}
+			namespaces := []corev1.Namespace{}
+
+			for _, name := range namespaceNames {
+				namespace := corev1.Namespace{
+					ObjectMeta: v1.ObjectMeta{
+						Name: name,
+					},
+				}
+				namespaces = append(namespaces, namespace)
+			}
+
+			namespaceList := &corev1.NamespaceList{
+				Items: namespaces,
+			}
+
+			// Return the mocked response
+			return true, namespaceList, nil
+		})
+
 		// Make a new controller.
 		opts := []token.ControllerOption{
 			token.WithControllerRuntimeClient(fakeClient),
@@ -1177,6 +1221,7 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 			token.WithFactory(factory),
 			token.WithK8sClient(mockK8sClient),
 			token.WithNamespace(tenantNamespace),
+			token.WithLinseedTokenTargetNamespaces([]string{"ns-a", "ns-b", "ns-c"}),
 		}
 		controller, err := token.NewController(opts...)
 		require.NoError(t, err)

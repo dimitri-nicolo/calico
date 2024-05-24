@@ -291,6 +291,9 @@ func run() {
 			{Namespace: "tigera-dpi", Name: "tigera-dpi"},
 		}
 
+		// List of namespaces where the Linseed token should be copied in the managed cluster.
+		linseedTokenNamespaces := []string{resource.ComplianceNamespace, resource.IntrusionDetectionNamespace, resource.DPINamespace, resource.FluentdNamespace}
+
 		const tokenHealthName = "TokenManager"
 		tokenReconcilePeriod := 1 * time.Hour
 		tokenExpiry := 24 * time.Hour
@@ -314,6 +317,7 @@ func run() {
 			token.WithFactory(factory),
 			token.WithTenant(cfg.ExpectedTenantID),
 			token.WithHealthReport(reportHealth),
+			token.WithLinseedTokenTargetNamespaces(linseedTokenNamespaces),
 		}
 
 		if cfg.TenantNamespace != "" {

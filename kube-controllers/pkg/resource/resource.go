@@ -21,4 +21,5 @@ const (
 	ComplianceNamespace         = "tigera-compliance"
 	IntrusionDetectionNamespace = "tigera-intrusion-detection"
 	DPINamespace                = "tigera-dpi"
+	FluentdNamespace            = "tigera-fluentd"
 )
