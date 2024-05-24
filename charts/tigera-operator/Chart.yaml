@@ -4,7 +4,6 @@ description: Installs the Tigera operator for Calico and Calico Enterprise
 home: https://docs.tigera.io/about/about-calico
 icon: https://projectcalico.docs.tigera.io/images/felix_icon.png
 sources:
-sources:
   - https://github.com/projectcalico/calico/tree/master/charts/tigera-operator
   - https://github.com/tigera/operator
 # version will be overridden at chart compilation time via args, but still must exist in chart.yaml
