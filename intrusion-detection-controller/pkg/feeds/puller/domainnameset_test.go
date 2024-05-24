@@ -66,7 +66,7 @@ func TestQueryDomainNameSet(t *testing.T) {
 	puller := NewDomainNameSetHTTPPuller(&testGTFDomainNameSet, &storage.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
 
 	go func() {
-		err := puller.query(ctx, feedCacher, 1, 0)
+		err := puller.queryURL(ctx, feedCacher, 1, 0)
 		g.Expect(err).ShouldNot(HaveOccurred())
 	}()
 
@@ -115,7 +115,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	puller := NewDomainNameSetHTTPPuller(f, &storage.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
 
 	go func() {
-		err := puller.query(ctx, feedCacher, 1, 0)
+		err := puller.queryURL(ctx, feedCacher, 1, 0)
 		g.Expect(err).ShouldNot(HaveOccurred())
 	}()
 
@@ -186,7 +186,7 @@ func TestSyncGNSFromDB_DomainNameSet(t *testing.T) {
 
 	puller := NewDomainNameSetHTTPPuller(feed, dnSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, feedCacher)
+	puller.setHandler.syncFromDB(ctx, feedCacher)
 
 	g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions).
 		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
