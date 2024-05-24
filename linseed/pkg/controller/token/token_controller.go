@@ -421,7 +421,6 @@ func isConnected(mc *v3.ManagedCluster) bool {
 func retryUpdate[T corev1.Secret | tokenEvent](rc *retryCalculator, id string, obj T, objChan chan *T, stop <-chan struct{}) {
 	updateType := fmt.Sprintf("%T", obj)
 	log := logrus.WithField(updateType, id)
-	fmt.Println("VAKUMAR: RETRY rec name:")
 
 	// Check if we should retry this update.
 	retry, dur := rc.duration(id)
@@ -493,10 +492,6 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 			// updateChan triggers reconciliation of tokens and secrets, when a managed cluster is added or updated.
 			log := c.loggerForManagedCluster(event.mc)
 
-			fmt.Println("VAKUMAR: updateChan rec name:", event.mc.Name)
-			fmt.Println("VAKUMAR: updateChan rec type:", event.reconcileAction)
-			fmt.Println("VAKUMAR updateChan namespace rec", event.namespace)
-
 			// Ensure cluster exists before proceeding with the reconciliation.
 			// This prevents reconcilation of token and secrets for deleted managed clusters.
 			if _, ok, _ := mcInformer.GetStore().Get(event.mc); !ok {
@@ -533,10 +528,6 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 		case event := <-reconcileChan:
 			retry := retryUpdate[tokenEvent]
 			log := c.loggerForManagedCluster(event.mc)
-
-			fmt.Println("VAKUMAR: event rec name:", event.mc.Name)
-			fmt.Println("VAKUMAR: event rec type:", event.reconcileAction)
-			fmt.Println("VAKUMAR event namespace rec", event.namespace)
 
 			// Ensure cluster exists before proceeding with the reconciliation.
 			if _, ok, _ := mcInformer.GetStore().Get(event.mc); !ok {
@@ -672,7 +663,6 @@ func (c *controller) loggerForManagedCluster(mc *v3.ManagedCluster) *logrus.Entr
 func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedClient kubernetes.Interface, mcNamespace string) error {
 	log := c.loggerForManagedCluster(mc)
 
-	fmt.Println("VAKUMAR: reconcileTokensForCluster event rec name:")
 	if err := isValid(mc); err != nil {
 		return err
 	} else if !isConnected(mc) {
@@ -691,7 +681,6 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 
 		// Check if the namespace exists before copying the token.
 		exists, err := namespaceExists(managedClient, user.Namespace)
-		fmt.Println("VAKUMAR: reconcileTokensForCluster ns exist rec name:", exists)
 		if err != nil {
 			log.WithError(err).Error("error checking namespace exists")
 			tokenErrors = append(tokenErrors, err)
@@ -705,7 +694,6 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 		// First, check if token exists. If it does, we don't need to do anything.
 		tokenName := c.tokenNameForService(user.Name)
 		if update, err := c.needsUpdate(log, managedClient, mc.Name, tokenName, user); err != nil {
-			fmt.Println("VAKUMAR: reconcileTokensForCluster ns exist rec name:", update)
 			log.WithError(err).Error("error checking token")
 			tokenErrors = append(tokenErrors, err)
 			continue
@@ -739,7 +727,6 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 		}
 		log.WithField("name", secret.Name).Info("Created/updated token secret")
 	}
-	fmt.Println("VAKUMAR: reconcileTokensForCluster ns return:")
 	return errors.Join(tokenErrors...)
 }
 
@@ -948,10 +935,8 @@ func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *t
 	namespaceHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if ns, ok := obj.(*corev1.Namespace); ok {
-				fmt.Println("VAKUMAR namespace added:", ns.Name)
 				if c.isRelevantNamespace(ns.Name) {
 					// Populate the reconcileChan channel to copy the tokens when a namespace is created in the managed cluster.
-					fmt.Println("VAKUMAR revelvant namespace added:", ns.Name)
 					newtokenEvent := &tokenEvent{
 						mc:              mc,
 						namespace:       ns.Name,
