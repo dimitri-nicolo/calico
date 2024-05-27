@@ -15,16 +15,6 @@ include ../lib.Makefile
 ###############################################################################
 # Build
 ###############################################################################
-FIPS ?= false
-
-ifeq ($(FIPS),true)
-CGO_ENABLED=1
-GOEXPERIMENT=boringcrypto
-TAGS=osusergo,netgo
-else
-CGO_ENABLED=0
-endif
-
 build: bin/elasticsearch-metrics-$(ARCH)
 
 .PHONY: bin/elasticsearch-metrics-$(ARCH)
