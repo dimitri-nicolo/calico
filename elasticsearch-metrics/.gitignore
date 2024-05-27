@@ -1,0 +1,3 @@
+.go-pkg-cache
+Makefile.common*
+bin/
