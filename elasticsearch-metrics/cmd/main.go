@@ -18,7 +18,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -212,7 +211,7 @@ func main() {
 		prometheus.MustRegister(collector.NewIndicesMappings(logger, httpClient, esURL))
 	}
 	// BEGIN TIGERA CHANGES
-	caCertFile, err := ioutil.ReadFile(*ca)
+	caCertFile, err := os.ReadFile(*ca)
 	if err != nil {
 		log.Fatalf("error reading CA certificate: %v", err)
 	}
@@ -364,7 +363,7 @@ func createTLSConfig(pemFile, pemCertFile, pemPrivateKeyFile string, insecureSki
 }
 
 func loadCertificatesFrom(pemFile string) (*x509.CertPool, error) {
-	caCert, err := ioutil.ReadFile(pemFile)
+	caCert, err := os.ReadFile(pemFile)
 	if err != nil {
 		return nil, err
 	}
