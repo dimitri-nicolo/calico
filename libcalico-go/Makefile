@@ -24,6 +24,9 @@ UPGRADE_SRCS := $(filter-out ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_gen
 # Create a list of files upon which the generated file depends, skip the generated file itself
 APIS_SRCS := $(filter-out ./lib/apis/v3/zz_generated.deepcopy.go, $(wildcard ./lib/apis/v3/*.go))
 
+USAGE_APIS_SRCS := $(filter-out ./lib/apis/usage.tigera.io/v1/zz_generated.deepcopy.go, $(wildcard ./lib/apis/usage.tigera.io/v1/*.go))
+
+
 .PHONY: clean
 clean:
 	rm -rf $(BINDIR) checkouts
@@ -35,7 +38,8 @@ clean:
 GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 	./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
 	./lib/apis/v3/openapi_generated.go \
-	./lib/apis/v1/openapi_generated.go
+	./lib/apis/v1/openapi_generated.go \
+	./lib/apis/usage.tigera.io/v1/zz_generated.deepcopy.go
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
@@ -67,6 +71,14 @@ gen-crds:
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
 		--input-dirs "$(PACKAGE_NAME)/lib/apis/v3" \
+		--bounding-dirs "github.com/projectcalico/calico/libcalico-go" \
+		--output-file-base zz_generated.deepcopy'
+
+./lib/apis/usage.tigera.io/v1/zz_generated.deepcopy.go: $(USAGE_APIS_SRCS)
+	$(DOCKER_GO_BUILD) sh -c 'deepcopy-gen \
+		--v 1 --logtostderr \
+		--go-header-file "./docs/boilerplate.go.txt" \
+		--input-dirs "$(PACKAGE_NAME)/lib/apis/usage.tigera.io/v1" \
 		--bounding-dirs "github.com/projectcalico/calico/libcalico-go" \
 		--output-file-base zz_generated.deepcopy'
 

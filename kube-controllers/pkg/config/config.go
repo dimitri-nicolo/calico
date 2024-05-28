@@ -84,6 +84,9 @@ type Config struct {
 
 	// TenantNamespace configuration for MultiTenant.
 	TenantNamespace string `split_words:"true" default:""`
+
+	UsageReportsPerDay         int    `default:"4" split_words:"true"`
+	UsageReportRetentionPeriod string `default:"8760h" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct
