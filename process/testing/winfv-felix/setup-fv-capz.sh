@@ -28,11 +28,11 @@ set -o pipefail
 
 GIT_VERSION=$(git describe --tags --dirty --long --always --abbrev=12)
 CALICO_HOME=$(cd $(dirname $0)/../../../; pwd)
-CAPZ_LOCATION=$CALICO_HOME/process/testing/winfv/capz
-KUBECONFIG=$CALICO_HOME/process/testing/winfv/capz/kubeconfig
+CAPZ_LOCATION=$CALICO_HOME/process/testing/winfv-felix/capz
+KUBECONFIG=$CALICO_HOME/process/testing/winfv-felix/capz/kubeconfig
 KUBECTL=$CAPZ_LOCATION/bin/kubectl
 KCAPZ="${KUBECTL} --kubeconfig=${KUBECONFIG}"
-REPORT_DIR=$CALICO_HOME/process/testing/winfv/report
+REPORT_DIR=$CALICO_HOME/process/testing/winfv-felix/report
 SSH_OUTPUT_FILE=$REPORT_DIR/ssh_output.log
 SEMAPHORE="${SEMAPHORE:="false"}"
 export RAND=$(tr -dc a-z0-9 </dev/urandom | head -c 4; echo)
@@ -48,7 +48,7 @@ trap shutdown_cluster EXIT
 
 function prepare_env(){
 # Set up capz variables
-  if [[ $FV_TYPE != "cni-plugin" ]] && [[ $FV_TYPE != "calico-felix" ]]; then
+  if [[ $FV_TYPE != "calico-felix" ]]; then
     echo "FV_TYPE not set or invalid"
     exit 1
   fi
@@ -57,7 +57,7 @@ function prepare_env(){
     export CLUSTER_NAME_CAPZ="${USER}-capz-win-${RAND}"
   fi
 
-  . $CALICO_HOME/process/testing/winfv/capz/export-env.sh
+  . $CALICO_HOME/process/testing/winfv-felix/capz/export-env.sh
 
   mkdir -p $REPORT_DIR
 }
@@ -95,11 +95,8 @@ function upload_calico_images(){
 }
 
 function upload_fv(){
-  if [[ $FV_TYPE == "cni-plugin" ]]; then
-    $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/process/testing/winfv/run-cni-fv.ps1 c:\\run-cni-fv.ps1
-    $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/cni-plugin/bin/windows/win-fv.exe c:\\k\\win-cni-fv.exe
-  elif [[ $FV_TYPE == "calico-felix" ]]; then
-    $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/process/testing/winfv/run-felix-fv.ps1 c:\\run-felix-fv.ps1
+  if [[ $FV_TYPE == "calico-felix" ]]; then
+    $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/process/testing/winfv-felix/run-felix-fv.ps1 c:\\run-felix-fv.ps1
     $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/felix/fv/win-fv.exe c:\\k\\win-felix-fv.exe
   fi
 }
@@ -118,20 +115,10 @@ function prepare_windows_images(){
 }
 
 function prepare_fv(){
-  if [[ $FV_TYPE == "cni-plugin" ]]; then
-    make -C $CALICO_HOME/cni-plugin bin/windows/win-fv.exe
-    FV_RUN_CNI=$CALICO_HOME/process/testing/winfv/run-cni-fv.ps1
-    cp $CALICO_HOME/process/testing/winfv/run-fv-cni-plugin.ps1 $FV_RUN_CNI
-    sed -i "s?<your kube version>?${KUBE_VERSION}?g" $FV_RUN_CNI
-    sed -i "s?<your linux pip>?${LINUX_NODE}?g" $FV_RUN_CNI
-    sed -i "s?<your os version>?${WINDOWS_SERVER_VERSION}?g" $FV_RUN_CNI
-    sed -i "s?<your container runtime>?containerd?g" $FV_RUN_CNI
-    sed -i "s?<your containerd version>?${CONTAINERD_VERSION}?g" $FV_RUN_CNI
-    sed -i "s?win-fv.exe?win-cni-fv.exe?g" $FV_RUN_CNI
-  elif [[ $FV_TYPE == "calico-felix" ]]; then
+  if [[ $FV_TYPE == "calico-felix" ]]; then
     make -C $CALICO_HOME/felix fv/win-fv.exe
-    FV_RUN_FELIX=$CALICO_HOME/process/testing/winfv/run-felix-fv.ps1
-    cp $CALICO_HOME/process/testing/winfv/run-fv-full.ps1 $FV_RUN_FELIX
+    FV_RUN_FELIX=$CALICO_HOME/process/testing/winfv-felix/run-felix-fv.ps1
+    cp $CALICO_HOME/process/testing/winfv-felix/run-fv-full.ps1 $FV_RUN_FELIX
     sed -i "s?<your kube version>?${KUBE_VERSION}?g" $FV_RUN_FELIX
     sed -i "s?<your linux pip>?${LINUX_NODE}?g" $FV_RUN_FELIX
     sed -i "s?<your os version>?${WINDOWS_SERVER_VERSION}?g" $FV_RUN_FELIX
@@ -163,11 +150,11 @@ function wait_for_nodes(){
 function update_windows_node(){
   upload_calico_images
   ${KCAPZ} annotate ds -n calico-system calico-node-windows unsupported.operator.tigera.io/ignore="true"
-  ${KCAPZ} patch ds -n calico-system calico-node-windows --patch-file $CALICO_HOME/process/testing/winfv/calico-node-windows.yaml
+  ${KCAPZ} patch ds -n calico-system calico-node-windows --patch-file $CALICO_HOME/process/testing/winfv-felix/calico-node-windows.yaml
 }
 
 function start_test_infra(){
-  $CALICO_HOME/process/testing/winfv/infra/setup.sh $KUBECONFIG
+  $CALICO_HOME/process/testing/winfv-felix/infra/setup.sh $KUBECONFIG
 
   #Wait for porter pod to be running on windows node
   for i in `seq 1 30`; do
@@ -183,9 +170,7 @@ function start_test_infra(){
 }
 
 function run_windows_fv(){
-  if [[ $FV_TYPE == "cni-plugin" ]]; then
-    $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-cni-fv.ps1' >> $SSH_OUTPUT_FILE
-  elif [[ $FV_TYPE == "calico-felix" ]]; then
+  if [[ $FV_TYPE == "calico-felix" ]]; then
     $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-felix-fv.ps1' >> $SSH_OUTPUT_FILE
   fi
 }
