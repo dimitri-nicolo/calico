@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apiserver/pkg/endpoints/filters"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
@@ -110,7 +113,11 @@ func getAuthorizedTiers(ctx context.Context, authorizer authorizer.TierAuthorize
 	}
 
 	if len(allowedTiers) == 0 && len(tiers) != 0 {
-		return nil, fmt.Errorf("Operation on Calico tiered policy is forbidden")
+		attributes, err := filters.GetAuthorizerAttributes(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.NewForbidden(v3.Resource(attributes.GetResource()), "", fmt.Errorf("Operation on Calico tiered policy is forbidden"))
 	}
 
 	return allowedTiers, nil
