@@ -103,14 +103,6 @@ promotions:
     pipeline_file: push-images/firewall-integration.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push honeypod-controller images
-    pipeline_file: push-images/honeypod-controller.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push honeypod-prototype images
-    pipeline_file: push-images/honeypod-prototype.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
   - name: Push ingress-collector images
     pipeline_file: push-images/ingress-collector.yml
     auto_promote:
