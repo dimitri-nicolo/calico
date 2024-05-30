@@ -144,6 +144,15 @@ func WithLinseedTokenTargetNamespaces(ns []string) ControllerOption {
 	}
 }
 
+// WithInitialReconciliationDelay sets the duration to wait before initiating the token reconciliation process with the managed cluster.
+// This delay allows the necessary RBAC resources to be created before attempting to access the namespace.
+func WithInitialReconciliationDelay(d time.Duration) ControllerOption {
+	return func(c *controller) error {
+		c.initialReconciliationDelay = &d
+		return nil
+	}
+}
+
 type UserInfo struct {
 	Name                    string
 	Namespace               string
@@ -226,6 +235,12 @@ func NewController(opts ...ControllerOption) (Controller, error) {
 		n := 20
 		c.maxRetries = &n
 	}
+
+	if c.initialReconciliationDelay == nil {
+		d := 0 * time.Second
+		c.initialReconciliationDelay = &d
+	}
+
 	if c.informerStopChans == nil {
 		c.informerStopChans = make(map[string]chan struct{})
 	}
@@ -284,6 +299,8 @@ type controller struct {
 
 	// linseedTokenTargetNamespaces holds the names of namespaces where the Linseed token should be copied.
 	linseedTokenTargetNamespaces []string
+
+	initialReconciliationDelay *time.Duration
 }
 
 type ReconcileAction int
@@ -322,8 +339,10 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 				if mcStopCh, ok := c.informerStopChans[mc.Name]; ok {
 					close(mcStopCh)
 					delete(c.informerStopChans, mc.Name)
+					logrus.WithField("name", mc.Name).Info("removed informer for the deleted managed cluster")
+				} else {
+					logrus.WithField("name", mc.Name).Warn("no informer found for the deleted managed cluster")
 				}
-				logrus.WithField("name", mc.Name).Info("removed informer for the deleted managed cluster")
 			}
 		},
 		AddFunc: func(obj interface{}) {
@@ -447,7 +466,7 @@ func retryUpdate[T corev1.Secret | tokenEvent](rc *retryCalculator, id string, o
 func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEvent, secretChan chan *corev1.Secret, mcInformer cache.SharedIndexInformer) {
 	defer logrus.Info("Token manager shutting down")
 
-	// reconcileChan handls reconcilation of tokens and secrets.
+	// reconcileChan handles reconcilation of tokens and secrets.
 	reconcileChan := make(chan *tokenEvent, 300)
 	defer close(reconcileChan)
 
@@ -495,7 +514,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 			// Ensure cluster exists before proceeding with the reconciliation.
 			// This prevents reconcilation of token and secrets for deleted managed clusters.
 			if _, ok, _ := mcInformer.GetStore().Get(event.mc); !ok {
-				log.Info("Manager cluster does not exist")
+				log.Info("Managed cluster does not exist")
 				continue
 			}
 
@@ -942,7 +961,12 @@ func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *t
 						namespace:       ns.Name,
 						reconcileAction: ReconcileTokens,
 					}
-					reconcileChan <- newtokenEvent
+					go func(newtokenEvent *tokenEvent) {
+						//Wait a moment before sending the event to allow RBAC resources to be created
+						//before we attempt to access the namespace.
+						time.Sleep(*c.initialReconciliationDelay)
+						reconcileChan <- newtokenEvent
+					}(newtokenEvent)
 				}
 			}
 		},
