@@ -206,7 +206,7 @@ func Start(cfg *Config) error {
 					search.SearchHandler(
 						search.SearchTypeFlows,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						k8sClientSet,
+						k8sClientSetFactory,
 						linseed,
 					)))))
 	sm.Handle("/endpoints/aggregation",
@@ -230,7 +230,7 @@ func Start(cfg *Config) error {
 					search.SearchHandler(
 						search.SearchTypeDNS,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						k8sClientSet,
+						k8sClientSetFactory,
 						linseed,
 					)))))
 	sm.Handle("/l7Logs/aggregation",
@@ -245,7 +245,7 @@ func Start(cfg *Config) error {
 					search.SearchHandler(
 						search.SearchTypeL7,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						k8sClientSet,
+						k8sClientSetFactory,
 						linseed,
 					)))))
 	sm.Handle("/events/bulk",
@@ -260,7 +260,7 @@ func Start(cfg *Config) error {
 					search.SearchHandler(
 						search.SearchTypeEvents,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						k8sClientSet,
+						k8sClientSetFactory,
 						linseed,
 					)))))
 	sm.Handle("/events/statistics",
