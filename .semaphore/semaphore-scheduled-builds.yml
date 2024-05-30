@@ -91,6 +91,10 @@ promotions:
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push elasticsearch-metrics images
+    pipeline_file: push-images/elasticsearch-metrics.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push es-gateway images
     pipeline_file: push-images/es-gateway.yml
     auto_promote:
@@ -1013,6 +1017,26 @@ blocks:
       always:
         commands:
           - ../.semaphore/publish-artifacts
+- name: elasticsearch-metrics
+  run:
+    when: "true or change_in(['/*', '/elasticsearch-metrics/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd elasticsearch-metrics
+    jobs:
+      - name: elasticsearch-metrics tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: es-gateway
   run:
     when: "true or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
