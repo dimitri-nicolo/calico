@@ -962,8 +962,8 @@ func (c *controller) createInformer(mc *v3.ManagedCluster, reconcileChan chan *t
 						reconcileAction: ReconcileTokens,
 					}
 					go func(newtokenEvent *tokenEvent) {
-						//Wait a moment before sending the event to allow RBAC resources to be created
-						//before we attempt to access the namespace.
+						// Wait a moment before sending the event to allow RBAC resources to be created
+						// before we attempt to access the namespace.
 						time.Sleep(*c.initialReconciliationDelay)
 						reconcileChan <- newtokenEvent
 					}(newtokenEvent)
