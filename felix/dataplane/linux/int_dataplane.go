@@ -1081,6 +1081,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.RulesConfig.ActionOnDrop,
 			config.FlowLogsCollectTcpStats,
 			config.HealthAggregator,
+			dataplaneFeatures,
 		)
 
 		if err != nil {
@@ -1088,8 +1089,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		dp.RegisterManager(bpfEndpointManager)
-
-		bpfEndpointManager.Features = dataplaneFeatures
 
 		// HostNetworkedNAT is Enabled and CTLB enabled.
 		// HostNetworkedNAT is Disabled and CTLB is either disabled/TCP.
