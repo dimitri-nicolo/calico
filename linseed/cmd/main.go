@@ -280,20 +280,32 @@ func run() {
 		// are components that get deployed inside the tenant namespace, thus we need to create the tokens
 		// to match the tenant namespaces
 		users := []token.UserInfo{
-			{Namespace: "tigera-fluentd", Name: "fluentd-node"},
-			{Namespace: "tigera-fluentd", Name: "fluentd-node-windows"},
-			{Namespace: "tigera-fluentd", Name: "eks-log-forwarder"},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-benchmarker", TenantNamespaceOverride: cfg.TenantNamespace},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-controller", TenantNamespaceOverride: cfg.TenantNamespace},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-reporter", TenantNamespaceOverride: cfg.TenantNamespace},
-			{Namespace: "tigera-compliance", Name: "tigera-compliance-snapshotter", TenantNamespaceOverride: cfg.TenantNamespace},
-			{Namespace: "tigera-intrusion-detection", Name: "intrusion-detection-controller", TenantNamespaceOverride: cfg.TenantNamespace},
-			{Namespace: "tigera-dpi", Name: "tigera-dpi"},
+			{Namespace: resource.FluentdNamespace, Name: "fluentd-node"},
+			{Namespace: resource.FluentdNamespace, Name: "fluentd-node-windows"},
+			{Namespace: resource.FluentdNamespace, Name: "eks-log-forwarder"},
+			{Namespace: resource.ComplianceNamespace, Name: "tigera-compliance-benchmarker", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: resource.ComplianceNamespace, Name: "tigera-compliance-controller", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: resource.ComplianceNamespace, Name: "tigera-compliance-reporter", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: resource.ComplianceNamespace, Name: "tigera-compliance-snapshotter", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: resource.IntrusionDetectionNamespace, Name: "intrusion-detection-controller", TenantNamespaceOverride: cfg.TenantNamespace},
+			{Namespace: resource.DPINamespace, Name: "tigera-dpi"},
+		}
+
+		// Compute the list of namespaces where the Linseed token should be copied in the managed cluster.
+		linseedTokenNamespaces := []string{}
+		namespaceMap := make(map[string]bool)
+		for _, user := range users {
+			if _, exists := namespaceMap[user.Namespace]; !exists {
+				namespaceMap[user.Namespace] = true
+				linseedTokenNamespaces = append(linseedTokenNamespaces, user.Namespace)
+			}
 		}
 
 		const tokenHealthName = "TokenManager"
 		tokenReconcilePeriod := 1 * time.Hour
 		tokenExpiry := 24 * time.Hour
+		initialReconcilationDelay := 2 * time.Second
+
 		// Register the health report period for token reconcile as double the time of the reconcile period
 		healthAggregator.RegisterReporter(tokenHealthName, &health.HealthReport{Live: true}, 2*tokenReconcilePeriod)
 		reportHealth := func(h *health.HealthReport) {
@@ -314,6 +326,8 @@ func run() {
 			token.WithFactory(factory),
 			token.WithTenant(cfg.ExpectedTenantID),
 			token.WithHealthReport(reportHealth),
+			token.WithLinseedTokenTargetNamespaces(linseedTokenNamespaces),
+			token.WithInitialReconciliationDelay(initialReconcilationDelay),
 		}
 
 		if cfg.TenantNamespace != "" {

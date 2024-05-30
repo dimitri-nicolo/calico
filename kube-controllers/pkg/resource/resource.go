@@ -16,4 +16,10 @@ const (
 	LicenseName                  = "default"
 	CalicoNamespaceName          = "calico-system"
 	ActiveOperatorConfigMapName  = "active-operator"
+
+	// Namespaces for Linseed token
+	ComplianceNamespace         = "tigera-compliance"
+	IntrusionDetectionNamespace = "tigera-intrusion-detection"
+	DPINamespace                = "tigera-dpi"
+	FluentdNamespace            = "tigera-fluentd"
 )
