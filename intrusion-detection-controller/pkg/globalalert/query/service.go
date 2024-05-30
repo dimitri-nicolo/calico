@@ -755,11 +755,6 @@ func extractEventData(record JsonObject) lsv1.Event {
 		}
 	}
 
-	// for events generated from honeypods in tigera-internal namespace (not the honeypod-controller).
-	if val, ok := record["host.keyword"].(string); ok {
-		e.Host = val
-	}
-
 	e.Record = record
 	return e
 }

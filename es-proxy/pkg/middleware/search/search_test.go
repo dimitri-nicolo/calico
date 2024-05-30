@@ -739,7 +739,7 @@ var _ = Describe("SearchElasticHits", func() {
 						},
 						Spec: v3.AlertExceptionSpec{
 							Description: "AlertException OR",
-							Selector:    "origin = origin2 OR type = honeypod",
+							Selector:    "origin = origin2 OR type = waf",
 						},
 					},
 					// mixed AND / OR
@@ -757,7 +757,7 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 
 			updatedSelector := UpdateSelectorWithAlertExceptions(&alertExceptions, "NOT dismissed = true")
-			Expect(updatedSelector).To(Equal("(NOT dismissed = true) AND NOT (( origin = origin1 AND type = global_alert ) OR ( origin = origin2 OR type = honeypod ) OR ( origin = origin3 AND type = alert OR source_namespace = ns3 ))"))
+			Expect(updatedSelector).To(Equal("(NOT dismissed = true) AND NOT (( origin = origin1 AND type = global_alert ) OR ( origin = origin2 OR type = waf ) OR ( origin = origin3 AND type = alert OR source_namespace = ns3 ))"))
 		})
 
 		It("should skip invalid alert exceptions selector", func() {

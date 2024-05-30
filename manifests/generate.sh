@@ -37,7 +37,7 @@ OPERATOR_REGISTRY=${OPERATOR_REGISTRY:-$defaultOperatorRegistry}
 NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi calico/node-driver-registrar calico/mock-node calico/dikastes"
 NON_HELM_MANIFEST_IMAGES_ENT="tigera/compliance-reporter tigera/firewall-integration tigera/ingress-collector \
 tigera/license-agent tigera/prometheus-operator tigera/prometheus-config-reloader tigera/anomaly_detection_jobs \
-tigera/honeypod tigera/honeypod-controller tigera/honeypod-exp-service tigera/calico-windows tigera/calicoctl"
+tigera/calico-windows tigera/calicoctl"
 NON_HELM_MANIFEST_IMAGES+=" $NON_HELM_MANIFEST_IMAGES_ENT"
 
 
