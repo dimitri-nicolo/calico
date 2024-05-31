@@ -47,11 +47,11 @@ manager:
 monitor:
   enabled: true
 
-compliance:
-  enabled: true
-
 policyRecommendation:
   enabled: true
+
+compliance:
+  enabled: false
 
 packetCaptureAPI:
   enabled: false
