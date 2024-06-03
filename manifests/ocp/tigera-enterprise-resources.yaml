@@ -7,14 +7,6 @@ metadata:
 
 
 ---
-# This section installs and configures Calico Enterprise compliance functionality.
-apiVersion: operator.tigera.io/v1
-kind: Compliance
-metadata:
-  name: tigera-secure
-
-
----
 # This section installs and configures Calico Enterprise intrusion detection functionality.
 apiVersion: operator.tigera.io/v1
 kind: IntrusionDetection

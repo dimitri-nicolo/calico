@@ -76,7 +76,6 @@ ${HELM} -n tigera-operator template \
 	--set logStorage.enabled=false \
 	--set manager.enabled=false \
 	--set monitor.enabled=false \
-	--set compliance.enabled=false \
 	--set policyRecommendation.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
@@ -178,7 +177,6 @@ ${HELM} template --include-crds \
 	--set logStorage.enabled=false \
 	--set manager.enabled=false \
 	--set monitor.enabled=false \
-	--set compliance.enabled=false \
 	--set policyRecommendation.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
