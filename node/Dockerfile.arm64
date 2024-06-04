@@ -157,7 +157,7 @@ RUN rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.aarch64.rpm && \
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-RUN touch /in-the-container && microdnf clean all
+RUN microdnf clean all
 
 # Change the permissions for ipset so it can be run by any container user.
 RUN chgrp 0 /usr/sbin/ipset && \
@@ -205,7 +205,7 @@ RUN chmod u+s /bin/mountns
 COPY clean-up-filesystem.sh /clean-up-filesystem.sh
 # Allowing qemu binaries to persist.
 RUN sed -i 's#zmore#zmore\n\tqemu\n#m' /clean-up-filesystem.sh
-RUN /clean-up-filesystem.sh
+RUN touch /in-the-container && /clean-up-filesystem.sh
 
 # Delete qemu binaries
 RUN rm /usr/bin/qemu-aarch64-static

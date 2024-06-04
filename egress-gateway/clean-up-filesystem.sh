@@ -184,15 +184,18 @@ packages_to_keep=(
   kmod
   libacl
   libattr
+  libbpf
   libcap
   libcrypto
   libelf
   libgcc
+  libibverbs
   libidn2
   libmnl
   libnetfilter
   libnfnetlink
   libnftnl
+  libnl3
   libpcap
   libselinux
   libsigsegv

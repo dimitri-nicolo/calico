@@ -147,7 +147,7 @@ RUN rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.x86_64.rpm && \
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
 
-RUN touch /in-the-container && microdnf clean all
+RUN microdnf clean all
 
 # Change the permissions for ipset so it can be run by any container user.
 RUN chgrp 0 /usr/sbin/ipset && \
@@ -193,7 +193,7 @@ RUN chmod u+s /bin/mountns
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
 # or any of its dependencies.
 COPY clean-up-filesystem.sh /clean-up-filesystem.sh
-RUN /clean-up-filesystem.sh
+RUN touch /in-the-container && /clean-up-filesystem.sh
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
 # that have been removed in our later layers.
