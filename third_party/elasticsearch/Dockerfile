@@ -1,6 +1,4 @@
-ARG UBI8_IMAGE
-
-FROM ${UBI8_IMAGE}
+FROM registry.access.redhat.com/ubi8/ubi:latest
 
 ARG ELASTIC_ARCH
 ARG ELASTIC_VERSION
