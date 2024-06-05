@@ -1,8 +1,1 @@
-.elastic.downloaded
-.elasticsearch*.created
-.go-pkg-cache
-.idea
-.vscode
-Makefile.*
-bin
-build
+.elasticsearch.created-*

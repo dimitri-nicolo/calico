@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"regexp"
@@ -30,7 +29,7 @@ func main() {
 		fail(fmt.Sprintf("failed to check if file %s exists", labelsFilePath), err)
 	} else if exists {
 		// Get Elasticsearch version from the downward API
-		contents, err := ioutil.ReadFile(labelsFilePath)
+		contents, err := os.ReadFile(labelsFilePath)
 		if err != nil {
 			fail(fmt.Sprintf("failed to read contents of %s", labelsFilePath), err)
 		}
@@ -59,7 +58,7 @@ func main() {
 		if exists, err := fileExists(probePasswordPath); err != nil {
 			fail("failed to check if password file exists (error message omitted)", nil)
 		} else if exists {
-			probePassword, err := ioutil.ReadFile(probePasswordPath)
+			probePassword, err := os.ReadFile(probePasswordPath)
 			if err != nil {
 				fail("failed to read password (error message omitted)", nil)
 			}
@@ -91,6 +90,9 @@ func main() {
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fail("failed to read readiness probe response body", err)
+	}
 	if resp.StatusCode != 200 || (resp.StatusCode == 503 && len(version) > 1 && version[0:2] == ".6") {
 		fail(fmt.Sprintf("status: %d, body: %s", resp.StatusCode, string(body)), nil)
 	}
