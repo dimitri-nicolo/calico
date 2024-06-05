@@ -37,7 +37,7 @@ global_job_config:
       - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
       - sudo systemctl start docker
       # Free up space on the build machine.
-      - sudo rm -rf ~/{.kerl,.kiex,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,phantomjs*}
+      - sudo rm -rf ~/{.kerl,.kiex,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/local/{aws2,phantomjs*}
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
       # Disable initramfs update to save space on the Semaphore VM (and we don't need it because we're not going to reboot).
       - sudo apt-get install -y -u crudini
@@ -89,6 +89,10 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push egress-gateway images
     pipeline_file: push-images/egress-gateway.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push elasticsearch images
+    pipeline_file: push-images/elasticsearch.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push elasticsearch-metrics images
@@ -1037,6 +1041,83 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+- name: Publish tigera/elasticsearch images
+  run:
+    when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu2004
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+        - sem-version java 17
+    jobs:
+      - name: Linux amd64
+        commands:
+          - make -C third_party/elasticsearch cd ARCHES=amd64 CONFIRM=true
+- name: Publish tigera/elasticsearch images - native arm64 runner
+  run:
+    when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+    jobs:
+      - name: Linux arm64
+        commands:
+          - make -C third_party/elasticsearch cd ARCHES=arm64 CONFIRM=true
+- name: Publish tigera/elasticsearch multi-arch manifests
+  run:
+    when: "false or change_in(['/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+  dependencies:
+    - Publish tigera/elasticsearch images
+    - Publish tigera/elasticsearch images - native arm64 runner
+  task:
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+    jobs:
+      - name: Linux multi-arch manifests
+        commands:
+          - make -C third_party/elasticsearch push-manifest CONFIRM=true
+
+- name: elasticsearch
+  run:
+    when: "true or change_in(['/*', '/elasticsearch/', '/third_party/elasticsearch'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Publish tigera/elasticsearch multi-arch manifests
+  task:
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+    jobs:
+      - name: elasticsearch tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make -C elasticsearch ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make -C elasticsearch build ARCH=$ARCH
 - name: es-gateway
   run:
     when: "true or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
