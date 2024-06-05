@@ -78,7 +78,7 @@ else ifeq ($(ARCH),arm64)
 	override OPENJDK_ARCH=aarch64
 endif
 
-$(ELASTICSEARCH_IMAGE_MARKER): Dockerfile
+$(ELASTICSEARCH_IMAGE_MARKER): Dockerfile build
 	$(DOCKER_BUILD) --build-arg ELASTIC_ARCH=$(ELASTIC_ARCH) \
 		--build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
 		--build-arg TINI_VERSION=$(TINI_VERSION) \
