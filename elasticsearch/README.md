@@ -12,26 +12,25 @@ When upgrading Elasticsearch versions you MUST take note of the following:
 
 ### Update version and patch
 
-To update Elasticsearch version, update the `ELASTICSEARCH_VERSION` variable in the `Makefile`.
+To update Elasticsearch version, update the `ELASTIC_VERSION` variable in the `metadata.mk`.
 
 To update Tigera customization patch, follow the next steps:
 
 1. Clone the upstream [Elasticsearch](https://github.com/elastic/elasticsearch) repository to your develop machine.
 2. Switch to a target release tag.
-3. Apply all patches under the `patches` folder to your clone and resolve conflicts.
+3. Apply all patches under the [third_party/elasticsearch/patches](/third_party/elasticsearch/patches) folder to your clone and resolve conflicts.
 4. Make your changes, and update dependencies by running `./gradlew --write-verification-metadata sha256 help`.
-5. Use [`git commit`](https://git-scm.com/docs/git-commit) to commit your changes into your clone. It can be multiple commits and  you don't need to push them.
+5. Use [`git commit`](https://git-scm.com/docs/git-commit) to commit your changes into your clone. It can be multiple commits and you don't need to push them.
 6. Use [`git format-patch`](https://git-scm.com/docs/git-format-patch) to generate patch files. If you have multiple commits, you need to generate one patch file for each commit.
-7. Copy patch files back to the `patches` folder and update the `Run patch` lines in `Dockerfile.amd64`.
+7. Copy patch files back to the [third_party/elasticsearch/patches](/third_party/elasticsearch/patches) folder and update the `patch` lines in `Makefile`.
 8. Build a new elasticsearch image and validate.
 
 You may also want to read the official [Building Elasticsearch with Gradle](https://github.com/elastic/elasticsearch/blob/main/BUILDING.md) guide.
 
 ### Building the image
 
-Run `make image` to create the image, run `make compressed-image` to create an image with the extra layers removed.
+Build third-party Elasticsearch image first and then run `make image` to create the production image.
 
 ### Releasing / Deploying on ECK
 
-The image released must be the compressed image, e.g. the one created by running `make compressed-image`. The readiness 
-probe for ECK must be changed to use the one added to the image at /readiness-probe.
+The readiness probe for ECK must be changed to use the one added to the image at `/readiness-probe`.
