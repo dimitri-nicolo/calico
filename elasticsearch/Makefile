@@ -41,10 +41,11 @@ sub-image-%:
 .PHONY: image
 image: $(ELASTICSEARCH_IMAGE)
 
-$(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_CONTAINER_MARKER)
+$(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_IMAGE_MARKER)
 
-$(ELASTICSEARCH_CONTAINER_MARKER): Dockerfile bin/readiness-probe-$(ARCH)
-	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(ELASTICSEARCH_IMAGE_MARKER): Dockerfile bin/readiness-probe-$(ARCH)
+	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) --build-arg ELASTIC_VERSION=$(ELASTIC_VERSION) \
+		-t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
