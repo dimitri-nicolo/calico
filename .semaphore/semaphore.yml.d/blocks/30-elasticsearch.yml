@@ -13,7 +13,6 @@
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - sem-version java 17
     jobs:
       - name: Linux amd64
         commands:

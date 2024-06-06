@@ -39,12 +39,15 @@ else ifeq ($(ARCH),arm64)
 	override GRADLE_TASK=:distribution:archives:linux-aarch64-tar:assemble
 endif
 
+OPENJDK_BUILD=registry.access.redhat.com/ubi8/openjdk-17:latest
+
 .PHONY: build
 build: init-elastic
-	build/elasticsearch-$(ELASTIC_VERSION)/gradlew $(GRADLE_TASK) \
-		-p build/elasticsearch-$(ELASTIC_VERSION) \
-		-Dbuild.snapshot=false \
-		-Dlicense.key=x-pack/license-tools/src/test/resources/public.key
+	$(DOCKER_RUN) --user=$(LOCAL_USER_ID):$(LOCAL_GROUP_ID) -e GRADLE_USER_HOME=/go/src/$(PACKAGE_NAME)/build/.gradle \
+		$(OPENJDK_BUILD) build/elasticsearch-$(ELASTIC_VERSION)/gradlew $(GRADLE_TASK) \
+			-p build/elasticsearch-$(ELASTIC_VERSION) \
+			-Dbuild.snapshot=false \
+			-Dlicense.key=x-pack/license-tools/src/test/resources/public.key
 	find build/elasticsearch-$(ELASTIC_VERSION)/ -name "elasticsearch-$(ELASTIC_VERSION)-linux-*.tar.gz" -exec cp {} build/ \;
 
 .PHONY: clean
