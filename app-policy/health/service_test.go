@@ -20,7 +20,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
+	healthzv1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type reporter struct {
@@ -33,28 +33,18 @@ func (r *reporter) Readiness() bool {
 
 func TestHealthService(t *testing.T) {
 	g := NewWithT(t)
-	// Test happy path case where ReadinessReporter reports true.
 	reporter := &reporter{
-		Ready: true,
+		Ready: false,
 	}
 	s := NewHealthCheckService(reporter)
 
-	req := &dikastesproto.HealthCheckRequest{}
-	resp, err := s.CheckReadiness(context.Background(), req)
+	req := &healthzv1.HealthCheckRequest{}
+	resp, err := s.Check(context.Background(), req)
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(resp.Healthy).To(BeTrue())
+	g.Expect(resp.Status).To(Equal(healthzv1.HealthCheckResponse_NOT_SERVING))
 
-	resp, err = s.CheckLiveness(context.Background(), req)
+	reporter.Ready = true
+	resp, err = s.Check(context.Background(), req)
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(resp.Healthy).To(BeTrue())
-
-	// Now with ReadinessReporter returning false.
-	reporter.Ready = false
-	resp, err = s.CheckReadiness(context.Background(), req)
-	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(resp.Healthy).To(BeFalse())
-
-	resp, err = s.CheckLiveness(context.Background(), req)
-	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(resp.Healthy).To(BeTrue())
+	g.Expect(resp.Status).To(Equal(healthzv1.HealthCheckResponse_SERVING))
 }

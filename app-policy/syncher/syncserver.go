@@ -22,10 +22,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	healthzv1 "google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/projectcalico/calico/app-policy/health"
 	"github.com/projectcalico/calico/app-policy/policystore"
-	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/felix/proto"
 )
@@ -87,7 +87,7 @@ func (s *SyncClient) syncRequest() *proto.SyncRequest {
 }
 
 func (s *SyncClient) RegisterGRPCServices(gs *grpc.Server) {
-	dikastesproto.RegisterHealthzServer(gs, health.NewHealthCheckService(s))
+	healthzv1.RegisterHealthServer(gs, health.NewHealthCheckService(s))
 }
 
 func (s *SyncClient) Start(ctx context.Context) {

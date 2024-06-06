@@ -17,13 +17,18 @@ package health
 import (
 	"context"
 
-	dikastesproto "github.com/projectcalico/calico/app-policy/proto"
+	healthzv1 "google.golang.org/grpc/health/grpc_health_v1"
 
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	_ healthzv1.HealthServer = (*healthCheckService)(nil)
+)
+
 // An implementation of the HealthzServer health check service.
 type healthCheckService struct {
+	healthzv1.UnimplementedHealthServer
 	reporter ReadinessReporter
 }
 
@@ -36,13 +41,16 @@ func NewHealthCheckService(h ReadinessReporter) *healthCheckService {
 	return &healthCheckService{reporter: h}
 }
 
-func (h healthCheckService) CheckReadiness(_ context.Context, request *dikastesproto.HealthCheckRequest) (*dikastesproto.HealthCheckResponse, error) {
-	r := h.reporter.Readiness()
-	log.Debugf("health service: returning readiness %t", r)
-	return &dikastesproto.HealthCheckResponse{Healthy: r}, nil
-}
-
-func (h healthCheckService) CheckLiveness(_ context.Context, request *dikastesproto.HealthCheckRequest) (*dikastesproto.HealthCheckResponse, error) {
-	log.Debugf("health service: checking liveness")
-	return &dikastesproto.HealthCheckResponse{Healthy: true}, nil
+//	Check - Implements the HealthServer interface
+//
+// We don't configure any liveness or readiness probes for Dikastes in Enterprise.
+// But, we will add a startup probe for the new L7 implementation(s),
+//
+//	which will call this endpoint, and we want that to depend on Dikastes readiness.
+func (h *healthCheckService) Check(ctx context.Context, req *healthzv1.HealthCheckRequest) (*healthzv1.HealthCheckResponse, error) {
+	log.WithField("request", req).Debug("Health check request received")
+	if h.reporter.Readiness() {
+		return &healthzv1.HealthCheckResponse{Status: healthzv1.HealthCheckResponse_SERVING}, nil
+	}
+	return &healthzv1.HealthCheckResponse{Status: healthzv1.HealthCheckResponse_NOT_SERVING}, nil
 }

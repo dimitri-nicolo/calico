@@ -4,7 +4,7 @@ PACKAGE_NAME = github.com/projectcalico/calico/app-policy
 
 ###############################################################################
 
-GENERATED_FILES=../felix/proto/felixbackend.pb.go proto/healthz.pb.go
+GENERATED_FILES=../felix/proto/felixbackend.pb.go
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
 
 # Name of the images.
@@ -72,7 +72,6 @@ build-all: $(VALIDARCHES)
 .PHONY: build
 build:
 	$(MAKE) $(BINDIR)/dikastes-$(ARCH) ARCH=$(ARCH)
-	$(MAKE) $(BINDIR)/healthz-$(ARCH) ARCH=$(ARCH)
 
 $(BINDIR)/dikastes-amd64: ARCH=amd64
 $(BINDIR)/dikastes-arm64: ARCH=arm64
@@ -83,45 +82,17 @@ else
 	$(call build_cgo_binary, ./cmd/dikastes, $@)
 endif
 
-$(BINDIR)/healthz-amd64: ARCH=amd64
-$(BINDIR)/healthz-arm64: ARCH=arm64
-$(BINDIR)/healthz-%: protobuf $(SRC_FILES)
-ifeq ($(FIPS),true)
-	$(call build_cgo_boring_binary, ./cmd/healthz, $@)
-else
-	$(call build_binary, ./cmd/healthz, $@)
-endif
-
 
 ###############################################################################
 # Protobufs, 
 #
-# 1. defer to felix's makefile for felixbackend stuff
-# 2. build proto for healthz
+# defer to felix's makefile for felixbackend stuff
 ###############################################################################
 
 ../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
 	$(MAKE) --directory ../felix protobuf
 
-# We use gogofast for protobuf compilation.  Regular gogo is incompatible with
-# gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
-# case.  See https://github.com/gogo/protobuf/issues/386 for more details.
-# Note that we cannot seem to use gogofaster because of incompatibility with
-# Envoy's validation library.
-# When importing, we must use gogo versions of google/protobuf and
-# google/rpc (aka googleapis).
-PROTOC_IMPORTS =  -I proto\
-		  -I ./
-
 protobuf: $(GENERATED_FILES)
-
-proto/healthz.pb.go: proto/healthz.proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
-		      $(PROTOC_CONTAINER) \
-		      $(PROTOC_IMPORTS) \
-		      proto/*.proto \
-		      --gogofast_out=plugins=grpc:proto
-	$(MAKE) fix
 
 ###############################################################################
 # Building the image
@@ -133,12 +104,12 @@ sub-image-%:
 	$(MAKE) image FIPS=$(FIPS) ARCH=$*
 
 $(DIKASTES_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+$(CONTAINER_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(DIKASTES_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
