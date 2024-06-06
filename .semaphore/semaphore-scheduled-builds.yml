@@ -1106,17 +1106,18 @@ blocks:
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+        - cd elasticsearch
     jobs:
       - name: elasticsearch tests
         commands:
-          - ../.semaphore/run-and-monitor ci.log make -C elasticsearch ci
+          - ../.semaphore/run-and-monitor ci.log make ci
       - name: Build binary
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make -C elasticsearch build ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: es-gateway
   run:
     when: "true or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
