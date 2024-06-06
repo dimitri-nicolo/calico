@@ -7,7 +7,7 @@ FV_DIR="/home/semaphore/calico-private/process/testing/winfv-cni-plugin/aso"
 pushd ${FV_DIR}
 
 # Prepare local files
-cp ~/$SEMAPHORE_GIT_DIR/cni-plugin/bin/windows/*.exe ./windows
+cp $HOME/$SEMAPHORE_GIT_DIR/cni-plugin/bin/windows/*.exe ./windows
 
 # Run FV.
 make run-fv | tee run-fv.log

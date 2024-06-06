@@ -182,7 +182,6 @@ func (r *RouteRules) IsValidTableIndex(index int) bool {
 
 // Set a Rule. Add to activeRules if it does not already exist based on matchForUpdate function.
 func (r *RouteRules) SetRule(rule *Rule) {
-
 	if r.netlinkFamily != rule.nlRule.Family {
 		log.WithField("rule", rule).Warnf("Rule does not match family %d, ignoring.", r.netlinkFamily)
 	}
@@ -200,7 +199,6 @@ func (r *RouteRules) SetRule(rule *Rule) {
 
 // Remove a Rule. Do nothing if Rule not exists depends based on matchForRemove function.
 func (r *RouteRules) RemoveRule(rule *Rule) {
-
 	if r.netlinkFamily != rule.nlRule.Family {
 		log.WithField("rule", rule).Warnf("Rule does not match family %d, ignoring.", r.netlinkFamily)
 	}
@@ -227,7 +225,7 @@ func (r *RouteRules) getNetlinkHandle() (HandleIface, error) {
 			log.WithField("numFailures", r.numConsistentNetlinkFailures).Panic(
 				"Repeatedly failed to connect to netlink.")
 		}
-		log.Info("Trying to connect to netlink")
+		log.Debug("Trying to connect to netlink")
 		nlHandle, err := r.newNetlinkHandle()
 		if err != nil {
 			r.numConsistentNetlinkFailures++
