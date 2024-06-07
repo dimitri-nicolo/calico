@@ -1325,10 +1325,6 @@ spec:
                 - Enable
                 - Disable
                 type: string
-              bpfBufferSize:
-                description: 'BPFBufferSize in BPF mode, controls the buffer size
-                  used for sending BPF events to felix. [Default: 1<<20]'
-                type: integer
               bpfCTLBLogFilter:
                 description: 'BPFCTLBLogFilter specifies, what is logged by connect
                   time load balancer when BPFLogLevel is debug. Currently has to be
@@ -1403,6 +1399,10 @@ spec:
                 items:
                   type: string
                 type: array
+              bpfExportBufferSizeBytes:
+                description: 'BPFExportBufferSizeBytes in BPF mode, controls the buffer
+                  size used for sending BPF events to felix. [Default: 1<<20]'
+                type: integer
               bpfExtToServiceConnmark:
                 description: 'BPFExtToServiceConnmark in BPF mode, control a 32bit
                   mark that is set on connections from an external client to a local

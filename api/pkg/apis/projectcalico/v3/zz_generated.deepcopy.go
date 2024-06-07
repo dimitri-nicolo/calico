@@ -2816,8 +2816,8 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			copy(*out, *in)
 		}
 	}
-	if in.BPFBufferSize != nil {
-		in, out := &in.BPFBufferSize, &out.BPFBufferSize
+	if in.BPFExportBufferSizeBytes != nil {
+		in, out := &in.BPFExportBufferSizeBytes, &out.BPFExportBufferSizeBytes
 		*out = new(int)
 		**out = **in
 	}

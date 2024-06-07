@@ -613,9 +613,9 @@ type FelixConfigurationSpec struct {
 	// resolution so that host can handle them. A typical usecase is node local
 	// DNS cache.
 	BPFExcludeCIDRsFromNAT *[]string `json:"bpfExcludeCIDRsFromNAT,omitempty" validate:"omitempty,cidrs"`
-	// BPFBufferSize in BPF mode, controls the buffer size used for sending BPF events to felix.
+	// BPFExportBufferSizeBytes in BPF mode, controls the buffer size used for sending BPF events to felix.
 	// [Default: 1<<20]
-	BPFBufferSize *int `json:"bpfBufferSize,omitempty" validate:"omitempty,cidrs"`
+	BPFExportBufferSizeBytes *int `json:"bpfExportBufferSizeBytes,omitempty" validate:"omitempty,cidrs"`
 
 	// SyslogReporterEnabled turns on the feature to write logs to Syslog. Please note that this can incur significant
 	// disk space usage when running felix on non-cluster hosts.
