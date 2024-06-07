@@ -20,9 +20,11 @@ import (
 	mergefs "github.com/jcchavezs/mergefs"
 	mergefsio "github.com/jcchavezs/mergefs/io"
 
+	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 	code "google.golang.org/genproto/googleapis/rpc/code"
 	status "google.golang.org/genproto/googleapis/rpc/status"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
@@ -91,8 +93,13 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		log.WithFields(log.Fields{"attributes": checkReq.Attributes}).Debug("check request received")
 	}
 
+	attrs := checkReq.Attributes
+	req := attrs.Request
+	httpReq := req.Http
+	dstHost, dstPort, _ := peerToHostPort(attrs.Destination)
+	srcHost, srcPort, _ := peerToHostPort(attrs.Source)
 	if st != nil {
-		src, dst, _ := checker.LookupEndpointsFromRequest(st, checkReq)
+		src, dst, _ := checker.LookupEndpointKeysFromSrcDst(st, srcHost, dstHost)
 		// this logic is only triggered if:
 		// - dikastes is connected to policysync
 		// - has source information, most likely running in daemonset mode
@@ -100,13 +107,48 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		// in this case, we allow traffic to continue to its destination hop/next processing leg.
 		if len(src) > 0 && len(dst) == 0 {
 			log.Debugf("allowing traffic to continue to its destination hop/next processing leg. (req: %s)", checkReq.String())
-			return OK, nil
+			srcNamespace, srcName := extractFirstWepNameAndNamespace(src)
+
+			// pass header values to the next hop
+			// specifically for the source workload name and namespace
+			resp := &envoyauthz.CheckResponse{
+				Status: &status.Status{Code: int32(code.Code_OK)},
+				HttpResponse: &envoyauthz.CheckResponse_OkResponse{
+					OkResponse: &envoyauthz.OkHttpResponse{
+						Headers: []*corev3.HeaderValueOption{
+							{
+								Header: &corev3.HeaderValue{
+									Key:   "x-source-workload-name",
+									Value: srcName,
+								},
+								Append: &wrappers.BoolValue{Value: false},
+							},
+							{
+								Header: &corev3.HeaderValue{
+									Key:   "x-source-workload-namespace",
+									Value: srcNamespace,
+								},
+								Append: &wrappers.BoolValue{Value: false},
+							},
+						},
+					},
+				},
+			}
+
+			log.Debugf("allowing traffic to continue to its destination hop/next processing leg - repsonse. (resp: %s)", resp)
+			return resp, nil
 		}
 	}
 
-	attrs := checkReq.Attributes
-	req := attrs.Request
-	httpReq := req.Http
+	reqHeaders := httpReq.Headers
+	srcName, ok := reqHeaders["x-source-workload-name"]
+	if !ok {
+		log.Info("x-source-workload-name header not found")
+	}
+	srcNamespace, ok := reqHeaders["x-source-workload-namespace"]
+	if !ok {
+		log.Info("x-source-workload-namespace header not found")
+	}
 
 	tx := w.NewTransactionWithID(httpReq.Id)
 
@@ -116,9 +158,6 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		return OK, nil
 	}
 
-	dstHost, dstPort, _ := peerToHostPort(attrs.Destination)
-	srcHost, srcPort, _ := peerToHostPort(attrs.Source)
-
 	// after the transaction is closed, process the http info for
 	// the events pipeline
 	defer func() {
@@ -127,14 +166,16 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 			action = in.Action
 		}
 		w.evp.Process(&txHttpInfo{
-			txID:     tx.ID(),
-			destIP:   dstHost,
-			uri:      httpReq.Path,
-			method:   httpReq.Method,
-			protocol: req.Http.Protocol,
-			srcPort:  srcPort,
-			dstPort:  dstPort,
-			action:   action,
+			txID:         tx.ID(),
+			destIP:       dstHost,
+			uri:          httpReq.Path,
+			method:       httpReq.Method,
+			protocol:     req.Http.Protocol,
+			srcPort:      srcPort,
+			dstPort:      dstPort,
+			action:       action,
+			srcName:      srcName,
+			srcNamespace: srcNamespace,
 		})
 	}()
 
