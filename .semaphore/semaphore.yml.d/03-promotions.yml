@@ -42,6 +42,10 @@ promotions:
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push elasticsearch-metrics images
+    pipeline_file: push-images/elasticsearch-metrics.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push es-gateway images
     pipeline_file: push-images/es-gateway.yml
     auto_promote:
@@ -52,14 +56,6 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push firewall-integration images
     pipeline_file: push-images/firewall-integration.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push honeypod-controller images
-    pipeline_file: push-images/honeypod-controller.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push honeypod-prototype images
-    pipeline_file: push-images/honeypod-prototype.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push ingress-collector images

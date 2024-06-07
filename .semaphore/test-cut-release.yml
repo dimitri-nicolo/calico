@@ -82,6 +82,10 @@ promotions:
     pipeline_file: ../egress-gateway/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Elasticsearch Metrics Release
+    pipeline_file: ../elasticsearch-metrics/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut ES Gateway Release
     pipeline_file: ../es-gateway/.semaphore/test-cut-release.yml
     auto_promote:
@@ -92,14 +96,6 @@ promotions:
       when: "result = 'passed'"
   - name: Test Cut Firewall Integration Release
     pipeline_file: ../firewall-integration/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut Honeypod Controller Release
-    pipeline_file: ../honeypod-controller/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut Honeypod Prototype Release
-    pipeline_file: ../honeypod-prototype/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut IDS Controller Release

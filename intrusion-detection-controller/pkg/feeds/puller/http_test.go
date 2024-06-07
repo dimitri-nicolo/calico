@@ -166,7 +166,7 @@ func TestQuery(t *testing.T) {
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &storage.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
 	go func() {
-		err := puller.query(ctx, feedCacher, 1, 0)
+		err := puller.queryURL(ctx, feedCacher, 1, 0)
 		g.Expect(err).ShouldNot(HaveOccurred())
 	}()
 
@@ -226,7 +226,7 @@ func TestQueryHTTPError(t *testing.T) {
 	attempts := uint(5)
 	go func() {
 		defer wg.Done()
-		err := puller.query(ctx, feedCacher, attempts, 0)
+		err := puller.queryURL(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
 
@@ -265,7 +265,7 @@ func TestQueryHTTPStatus404(t *testing.T) {
 
 	attempts := uint(5)
 	go func() {
-		err := puller.query(ctx, feedCacher, attempts, 0)
+		err := puller.queryURL(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
 
@@ -307,7 +307,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	attempts := uint(5)
 	go func() {
 		defer wg.Done()
-		err := puller.query(ctx, feedCacher, attempts, 0)
+		err := puller.queryURL(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
 
@@ -337,7 +337,7 @@ func TestNewHTTPPullerWithNilPull(t *testing.T) {
 	eip := sync2.NewMockIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &storage.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	g.Expect(func() { _ = puller.query(ctx, &cacher.MockGlobalThreatFeedCache{}, 1, 0) }).Should(Panic())
+	g.Expect(func() { _ = puller.queryURL(ctx, &cacher.MockGlobalThreatFeedCache{}, 1, 0) }).Should(Panic())
 }
 
 func TestGetStartupDelay(t *testing.T) {
@@ -691,7 +691,7 @@ func TestSyncGNSFromDB(t *testing.T) {
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, feedCacher)
+	puller.setHandler.syncFromDB(ctx, feedCacher)
 
 	g.Expect(len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions)).Should(Equal(0))
 	g.Expect(len(gns.Local())).Should(Equal(1))
@@ -714,7 +714,7 @@ func TestSyncGNSFromDBElasticError(t *testing.T) {
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, feedCacher)
+	puller.setHandler.syncFromDB(ctx, feedCacher)
 
 	g.Expect(len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions)).Should(Equal(1))
 	g.Expect(len(gns.Local())).Should(Equal(0))
@@ -735,7 +735,7 @@ func TestSyncGNSFromDBNoGNS(t *testing.T) {
 
 	puller := NewIPSetHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
 
-	puller.gnsHandler.syncFromDB(ctx, feedCacher)
+	puller.setHandler.syncFromDB(ctx, feedCacher)
 
 	g.Expect(len(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions)).Should(Equal(0))
 	g.Expect(len(gns.Local())).Should(Equal(0))

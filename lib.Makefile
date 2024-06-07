@@ -693,8 +693,6 @@ SEMAPHORE_FELIX_PRIVATE_PROJECT_ID=e439cca4-156c-4d23-b611-002601440ad0
 SEMAPHORE_FELIX_PROJECT_ID=48267e65-4acc-4f27-a88f-c3df0e8e2c3b
 SEMAPHORE_FIREWALL_INTEGRATION_PROJECT_ID=d4307a31-1e46-4622-82e2-886165b77008
 SEMAPHORE_FLUENTD_DOCKER_PROJECT_ID=50383fb9-d234-461a-ae00-23e18b7cd5b8
-SEMAPHORE_HONEYPOD_CONTROLLER_PROJECT_ID=c010a63a-ac85-48b4-9077-06188408eaee
-SEMAPHORE_HONEYPOD_RECOMMENDATION_PROJECT_ID=f07f5fd4-b15a-4ded-ae1e-04801ae4d99a
 SEMAPHORE_INGRESS_COLLECTOR_PROJECT_ID=cf7947e4-a886-404d-ac6a-c3f3ac1a7b93
 SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID=2beffe81-b05a-41e0-90ce-e0d847dee2ee
 SEMAPHORE_KEY_CERT_PROVISIONER_PROJECT_ID=9efb25f3-8c5d-4f22-aab5-4a1f5519bc7c
@@ -1024,7 +1022,7 @@ ifdef EXPECTED_RELEASE_TAG
 		@echo "Failed to verify release tag$(comma) expected release version is $(EXPECTED_RELEASE_TAG)$(comma) actual is $(RELEASE_TAG)."\
 		&& exit 1)
 endif
-	$(eval NEXT_RELEASE_VERSION = $(shell echo "$(call git-release-tag-from-dev-tag)" | awk -F  "." '{print $$1"."$$2"."$$3+1}'))
+	$(eval NEXT_RELEASE_VERSION = $(shell echo "$(call git-release-tag-from-dev-tag)" | awk '{ split($0,tag,"-"); if (tag[2] ~ /^1\./) { split(tag[2],subver,"."); print tag[1]"-"subver[1]+1".0" } else { split(tag[1],ver,"."); print ver[1]"."ver[2]"."ver[3]+1 } }'))
 ifndef IMAGE_ONLY
 	$(MAKE) maybe-tag-release maybe-push-release-tag\
 		RELEASE_TAG=$(RELEASE_TAG) BRANCH=$(RELEASE_BRANCH) DEV_TAG=$(DEV_TAG)
@@ -1144,7 +1142,7 @@ release-dev-image-arch-to-registry-%:
 # tag that empty commit with an incremented minor version of the previous dev tag for the next release.
 create-release-branch: var-require-one-of-CONFIRM-DRYRUN var-require-all-DEV_TAG_SUFFIX-RELEASE_BRANCH_PREFIX fetch-all
 	$(if $(filter-out $(RELEASE_BRANCH_BASE),$(call current-branch)),$(error create-release-branch must be called on $(RELEASE_BRANCH_BASE)),)
-	$(eval NEXT_RELEASE_VERSION := $(shell echo "$(call git-release-tag-from-dev-tag)" | awk -F  "." '{print $$1"."$$2+1"."0}'))
+	$(eval NEXT_RELEASE_VERSION := $(shell echo "$(call git-release-tag-from-dev-tag)" | awk '{ split($0,tag,"-"); if (tag[2] ~ /^1\./) { split(tag[2],subver,"."); print tag[1]"-"subver[1]+1".0" } else { split(tag[1],ver,"."); print ver[1]"."ver[2]"."ver[3]+1 } }'))
 	$(eval RELEASE_BRANCH_VERSION := $(shell echo "$(call git-release-tag-from-dev-tag)" | awk -F  "." '{print $$1"."$$2}'))
 	git checkout -B $(RELEASE_BRANCH_PREFIX)-$(RELEASE_BRANCH_VERSION) $(GIT_REMOTE)/$(RELEASE_BRANCH_BASE)
 	$(GIT) push $(GIT_REMOTE) $(RELEASE_BRANCH_PREFIX)-$(RELEASE_BRANCH_VERSION)
@@ -1161,7 +1159,7 @@ endif
 # Check if the codebase is dirty or not.
 check-dirty:
 	@if [ "$$(git --no-pager diff --stat)" != "" ]; then \
-	echo "The following files are dirty"; git --no-pager diff --stat; exit 1; fi
+	echo "The following files are dirty"; git --no-pager diff; exit 1; fi
 
 ###############################################################################
 # Common functions for launching a local Kubernetes control plane.

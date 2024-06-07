@@ -27,7 +27,7 @@ func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 var (
 	EventsIndex = "tigera_secure_ee_events"
 
-	// TODO: Remove this once honeypod and intrusion detection have been migrated to Linseed.
+	// TODO: Remove this once intrusion detection have been migrated to Linseed.
 	//go:embed events_mappings.json
 	eventsMapping string
 )

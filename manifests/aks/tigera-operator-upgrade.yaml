@@ -39567,6 +39567,7 @@ rules:
       - compliances/status
       - egressgateways
       - egressgateways/finalizers
+      - egressgateways/status
       - imagesets
       - installations
       - installations/finalizers
@@ -40012,14 +40013,6 @@ spec:
         - name: var-lib-calico
           hostPath:
             path: /var/lib/calico
----
-# Source: tigera-operator/templates/crs/operator_v1_packetcaptureapi_cr.yaml
-apiVersion: operator.tigera.io/v1
-kind: PacketCaptureAPI
-metadata:
-  name: tigera-secure
-spec:
-  {}
 ---
 # Source: tigera-operator/templates/tigera-operator/00-uninstall.yaml
 apiVersion: batch/v1

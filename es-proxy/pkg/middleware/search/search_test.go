@@ -15,12 +15,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -28,6 +30,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/test/thirdpartymock"
 
 	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -79,7 +82,7 @@ func mustParseTime(s string) time.Time {
 
 var _ = Describe("SearchElasticHits", func() {
 	var (
-		fakeClientSet  datastore.ClientSet
+		fakeClientSet  lmak8s.ClientSet
 		mockDoer       *thirdpartymock.MockDoer
 		userAuthReview userAuthorizationReviewMock
 		ctx            context.Context
@@ -213,7 +216,11 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 		}))
 
-		fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
+		// fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
+		mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
+		mockClientSet.On("ProjectcalicoV3").Return(fake.NewSimpleClientset().ProjectcalicoV3())
+		fakeClientSet = mockClientSet
+
 		mockDoer = new(thirdpartymock.MockDoer)
 		userAuthReview = userAuthorizationReviewMock{
 			verbs: []libcalicov3.AuthorizedResourceVerbs{
@@ -732,7 +739,7 @@ var _ = Describe("SearchElasticHits", func() {
 						},
 						Spec: v3.AlertExceptionSpec{
 							Description: "AlertException OR",
-							Selector:    "origin = origin2 OR type = honeypod",
+							Selector:    "origin = origin2 OR type = waf",
 						},
 					},
 					// mixed AND / OR
@@ -750,7 +757,7 @@ var _ = Describe("SearchElasticHits", func() {
 			}
 
 			updatedSelector := UpdateSelectorWithAlertExceptions(&alertExceptions, "NOT dismissed = true")
-			Expect(updatedSelector).To(Equal("(NOT dismissed = true) AND NOT (( origin = origin1 AND type = global_alert ) OR ( origin = origin2 OR type = honeypod ) OR ( origin = origin3 AND type = alert OR source_namespace = ns3 ))"))
+			Expect(updatedSelector).To(Equal("(NOT dismissed = true) AND NOT (( origin = origin1 AND type = global_alert ) OR ( origin = origin2 OR type = waf ) OR ( origin = origin3 AND type = alert OR source_namespace = ns3 ))"))
 		})
 
 		It("should skip invalid alert exceptions selector", func() {
@@ -839,16 +846,21 @@ var _ = Describe("SearchElasticHits", func() {
 
 			// create some alert exceptions
 			for _, alertException := range alertExceptions.Items {
-				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), &alertException, metav1.CreateOptions{})
+				_, err := fakeClientSet.ProjectcalicoV3().AlertExceptions().Create(context.Background(), &alertException, metav1.CreateOptions{})
 				Expect(err).NotTo(HaveOccurred())
 			}
 
 			// validate responses
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(requestFromManager)))
+			req = req.Clone(request.WithUser(context.Background(), &user.DefaultInfo{Name: "test"}))
 			Expect(err).NotTo(HaveOccurred())
 
+			mockClientSetFactory := &lmak8s.MockClientSetFactory{}
+			mockClientSetFactory.On("NewClientSetForUser", mock.Anything, "cluster").Return(fakeClientSet, nil)
+			// mockClientSet.On("ProjectcalicoV3").Return(fake.NewSimpleClientset().ProjectcalicoV3())
+
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, mockClientSetFactory, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -872,10 +884,14 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			req, err := http.NewRequest(http.MethodPatch, "", bytes.NewReader([]byte("any")))
+			req = req.Clone(request.WithUser(context.Background(), &user.DefaultInfo{Name: "test"}))
 			Expect(err).NotTo(HaveOccurred())
 
+			mockClientSetFactory := &lmak8s.MockClientSetFactory{}
+			mockClientSetFactory.On("NewClientSetForUser", mock.Anything, "cluster").Return(fakeClientSet, nil)
+
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, mockClientSetFactory, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
@@ -886,10 +902,14 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("invalid-json-body")))
+			req = req.Clone(request.WithUser(context.Background(), &user.DefaultInfo{Name: "test"}))
 			Expect(err).NotTo(HaveOccurred())
 
+			mockClientSetFactory := &lmak8s.MockClientSetFactory{}
+			mockClientSetFactory.On("NewClientSetForUser", mock.Anything, "cluster").Return(fakeClientSet, nil)
+
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, mockClientSetFactory, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusBadRequest))
@@ -900,10 +920,14 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("{\"policy_matches\": [{}]}")))
+			req = req.Clone(request.WithUser(context.Background(), &user.DefaultInfo{Name: "test"}))
 			Expect(err).NotTo(HaveOccurred())
 
+			mockClientSetFactory := &lmak8s.MockClientSetFactory{}
+			mockClientSetFactory.On("NewClientSetForUser", mock.Anything, "cluster").Return(fakeClientSet, nil)
+
 			rr := httptest.NewRecorder()
-			handler := SearchHandler(SearchTypeEvents, userAuthReview, fakeClientSet, client)
+			handler := SearchHandler(SearchTypeEvents, userAuthReview, mockClientSetFactory, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusBadRequest))

@@ -1,7 +1,0 @@
-[**] [1:50446:1] MALWARE-CNC Win.Downloader.TeamBot outbound cnc connection [**]
-[Classification: A Network Trojan was detected] [Priority: 1] 
-09/25/20-21:06:13.377211 192.168.209.81:41178 -> 192.168.218.202:8080
-PROTO:006 TTL:64 TOS:0x0 ID:4953 IpLen:20 DgmLen:204 DF
-***A**** Seq: 0xCABEC70C  Ack: 0x5FD0362  Win: 0xFE80  TcpLen: 32
-[Xref => http://virustotal.com/#/file/3024ca140830e8eaf6634c1fd00bdfbd3968c3e96886ff9ec7d1b105c946e5c8]
-

@@ -1,8 +1,0 @@
-apiVersion: projectcalico.org/v3
-kind: PacketCapture
-metadata:
-  name: capture-honey
-  namespace: tigera-internal
-spec:
-  selector: all()
----

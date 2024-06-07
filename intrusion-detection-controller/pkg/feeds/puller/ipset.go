@@ -27,25 +27,17 @@ import (
 
 var wrappedInBracketsRegexp = regexp.MustCompile(`^\[.*\]$`)
 
-type ipSetPersistence struct {
-	d storage.IPSet
-	c controller.Controller
+type ipSetHandler struct {
+	database        storage.IPSet
+	ipSetController controller.Controller
+	name            string
+	gnsLabels       map[string]string
+	gnsEnabled      bool
+	gnsController   globalnetworksets.Controller
+	gtfParser       parser
 }
 
-type ipSetGNSHandler struct {
-	name          string
-	labels        map[string]string
-	enabled       bool
-	gnsController globalnetworksets.Controller
-	d             storage.IPSet
-}
-
-type ipSetContent struct {
-	name   string
-	parser parser
-}
-
-func (i *ipSetContent) snapshot(r io.Reader) (interface{}, error) {
+func (i ipSetHandler) snapshot(r io.Reader) (interface{}, error) {
 	var snapshot storage.IPSetSpec
 	var once sync.Once
 
@@ -54,7 +46,7 @@ func (i *ipSetContent) snapshot(r io.Reader) (interface{}, error) {
 		snapshot = append(snapshot, parseIP(entry, log.WithField("name", i.name), n, &once)...)
 	}
 
-	err := i.parser(r, h)
+	err := i.gtfParser(r, h)
 	return snapshot, err
 }
 
@@ -99,20 +91,20 @@ func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) storag
 	}
 }
 
-func (i ipSetPersistence) lastModified(ctx context.Context, name string) (time.Time, error) {
-	return i.d.GetIPSetModified(ctx, name)
+func (i ipSetHandler) lastModified(ctx context.Context, name string) (time.Time, error) {
+	return i.database.GetIPSetModified(ctx, name)
 }
 
-func (i ipSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
-	i.c.Add(ctx, name, snapshot.(storage.IPSetSpec), f, feedCacher)
+func (i ipSetHandler) updateDataStore(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+	i.ipSetController.Add(ctx, name, snapshot.(storage.IPSetSpec), f, feedCacher)
 }
 
-func (h ipSetGNSHandler) get(ctx context.Context) (interface{}, error) {
-	return h.d.GetIPSet(ctx, h.name)
+func (h ipSetHandler) get(ctx context.Context) (interface{}, error) {
+	return h.database.GetIPSet(ctx, h.name)
 }
 
-func (h *ipSetGNSHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
-	if h.enabled {
+func (h ipSetHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
+	if h.gnsEnabled {
 		log.WithField("feed", h.name).Info("synchronizing GlobalNetworkSet from cached feed contents")
 		ipSet, err := h.get(ctx)
 		if err != nil {
@@ -127,19 +119,19 @@ func (h *ipSetGNSHandler) syncFromDB(ctx context.Context, feedCacher cacher.Glob
 	}
 }
 
-func (h *ipSetGNSHandler) makeGNS(snapshot interface{}) *calico.GlobalNetworkSet {
+func (h *ipSetHandler) makeGNS(snapshot interface{}) *calico.GlobalNetworkSet {
 	nets := snapshot.(storage.IPSetSpec)
 	gns := util.NewGlobalNetworkSet(h.name)
 	gns.Labels = make(map[string]string)
-	for k, v := range h.labels {
+	for k, v := range h.gnsLabels {
 		gns.Labels[k] = v
 	}
 	gns.Spec.Nets = append([]string{}, nets...)
 	return gns
 }
 
-func (h *ipSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
-	if h.enabled {
+func (h ipSetHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
+	if h.gnsEnabled {
 		g := h.makeGNS(snapshot)
 		h.gnsController.Add(g, f, feedCacher)
 	} else {
@@ -156,32 +148,24 @@ func NewIPSetHTTPPuller(
 	gnsController globalnetworksets.Controller,
 	controllerIPSet controller.Controller,
 ) Puller {
-	d := ipSetPersistence{d: ipSet, c: controllerIPSet}
-	c := &ipSetContent{name: f.Name, parser: getParserForFormat(f.Spec.Pull.HTTP.Format)}
-	g := &ipSetGNSHandler{
-		name:          f.Name,
-		gnsController: gnsController,
-		d:             ipSet,
-	}
-	if f.Spec.GlobalNetworkSet != nil {
-		g.enabled = true
-		g.labels = make(map[string]string)
-		for k, v := range f.Spec.GlobalNetworkSet.Labels {
-			g.labels[k] = v
-		}
-	}
-	p := &httpPuller{
-		configMapClient: configMapClient,
-		secretsClient:   secretsClient,
-		client:          client,
-		feed:            f.DeepCopy(),
-		needsUpdate:     true,
-		gnsHandler:      g,
-		persistence:     d,
-		content:         c,
+
+	ip := ipSetHandler{
+		database:        ipSet,
+		name:            f.Name,
+		gtfParser:       getParserForFormat(f.Spec.Pull.HTTP.Format),
+		gnsController:   gnsController,
+		ipSetController: controllerIPSet,
 	}
 
-	p.period = util.ParseFeedDuration(p.feed)
+	if f.Spec.GlobalNetworkSet != nil {
+		ip.gnsEnabled = true
+		ip.gnsLabels = make(map[string]string)
+		for k, v := range f.Spec.GlobalNetworkSet.Labels {
+			ip.gnsLabels[k] = v
+		}
+	}
+
+	p := NewHttpPuller(configMapClient, secretsClient, client, f.DeepCopy(), true, ip)
 
 	return p
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/errorcondition"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -43,28 +44,32 @@ type httpPuller struct {
 	url                 *url.URL
 	header              http.Header
 	period              time.Duration
-	gnsHandler          gnsHandler
-	persistence         persistence
+	setHandler          setHandlerinterface
 	enqueueSyncFunction func()
 	syncFailFunction    SyncFailFunction
 	cancel              context.CancelFunc
 	once                sync.Once
 	lock                sync.RWMutex
-	content             content
 }
 
-type persistence interface {
+type setHandlerinterface interface {
 	lastModified(ctx context.Context, name string) (time.Time, error)
-	add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
-}
-
-type content interface {
+	updateDataStore(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher)
 	snapshot(r io.Reader) (interface{}, error)
-}
-
-type gnsHandler interface {
 	handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction)
 	syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher)
+}
+
+func NewHttpPuller(cmClient core.ConfigMapInterface, secClient core.SecretInterface, client *http.Client, tf *calico.GlobalThreatFeed, needsUpdate bool, setHandler setHandlerinterface) *httpPuller {
+	return &httpPuller{
+		configMapClient: cmClient,
+		secretsClient:   secClient,
+		client:          client,
+		feed:            tf.DeepCopy(),
+		needsUpdate:     needsUpdate,
+		setHandler:      setHandler,
+		period:          util.ParseFeedDuration(tf),
+	}
 }
 
 func (h *httpPuller) SetFeed(f *calico.GlobalThreatFeed) {
@@ -88,7 +93,7 @@ func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeed
 
 		syncRunFunc, enqueueSyncFunction := runloop.OnDemand()
 		go syncRunFunc(ctx, func(ctx context.Context, i interface{}) {
-			h.gnsHandler.syncFromDB(ctx, feedCacher)
+			h.setHandler.syncFromDB(ctx, feedCacher)
 		})
 		h.enqueueSyncFunction = func() {
 			enqueueSyncFunction(0)
@@ -100,7 +105,7 @@ func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeed
 			}
 
 			// Synchronize the GlobalNetworkSet on startup
-			h.gnsHandler.syncFromDB(ctx, feedCacher)
+			h.setHandler.syncFromDB(ctx, feedCacher)
 
 			delay := h.getStartupDelay(ctx)
 			if delay > 0 {
@@ -115,7 +120,7 @@ func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeed
 			case <-time.After(delay):
 				break
 			}
-			_ = runFunc(ctx, func() { _ = h.query(ctx, feedCacher, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
+			_ = runFunc(ctx, func() { _ = h.queryURL(ctx, feedCacher, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
 		}()
 
 	})
@@ -191,7 +196,7 @@ func (h *httpPuller) setFeedURIAndHeader(ctx context.Context, f *calico.GlobalTh
 }
 
 func (h *httpPuller) getStartupDelay(ctx context.Context) time.Duration {
-	lastModified, err := h.persistence.lastModified(ctx, h.feed.Name)
+	lastModified, err := h.setHandler.lastModified(ctx, h.feed.Name)
 	if err != nil {
 		return 0
 	}
@@ -231,7 +236,7 @@ func (h *httpPuller) queryInfo(ctx context.Context) (name string, u *url.URL, he
 	return
 }
 
-func (h *httpPuller) query(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher, attempts uint, delay time.Duration) error {
+func (h *httpPuller) queryURL(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher, attempts uint, delay time.Duration) error {
 	name, u, header, err := h.queryInfo(ctx)
 	if err != nil {
 		log.WithError(err).Error("failed to query")
@@ -296,15 +301,15 @@ func (h *httpPuller) query(ctx context.Context, feedCacher cacher.GlobalThreatFe
 		_ = resp.Body.Close()
 	}()
 
-	snapshot, err := h.content.snapshot(resp.Body)
+	snapshot, err := h.setHandler.snapshot(resp.Body)
 	if err != nil {
 		log.WithError(err).Error("failed to parse snapshot")
 		utils.AddErrorToFeedStatus(feedCacher, cacher.PullFailed, err)
 		return err
 	}
 
-	h.persistence.add(ctx, name, snapshot, h.syncFailFunction, feedCacher)
-	h.gnsHandler.handleSnapshot(ctx, snapshot, feedCacher, h.syncFailFunction)
+	h.setHandler.updateDataStore(ctx, name, snapshot, h.syncFailFunction, feedCacher)
+	h.setHandler.handleSnapshot(ctx, snapshot, feedCacher, h.syncFailFunction)
 	updateFeedStatusAfterSuccessfulPull(feedCacher, time.Now())
 
 	return nil

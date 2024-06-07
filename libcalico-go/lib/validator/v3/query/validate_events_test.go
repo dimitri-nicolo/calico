@@ -51,7 +51,6 @@ var _ = DescribeTable("Events", func(atom Atom, ok bool) {
 	Entry("type global_alert", Atom{Key: "type", Value: "global_alert"}, true),
 	Entry("type gtf_suspicious_dns_query", Atom{Key: "type", Value: "gtf_suspicious_dns_query"}, true),
 	Entry("type gtf_suspicious_flow", Atom{Key: "type", Value: "gtf_suspicious_flow"}, true),
-	Entry("type honeypod", Atom{Key: "type", Value: "honeypod"}, true),
 	Entry("type invalid", Atom{Key: "type", Value: "invalid"}, false),
 	Entry("type runtime_security", Atom{Key: "type", Value: "runtime_security"}, true),
 	Entry("type suspicious_dns_query", Atom{Key: "type", Value: "suspicious_dns_query"}, true),

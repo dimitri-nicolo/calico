@@ -18,7 +18,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -29,20 +28,14 @@ var (
 	idnaProfile = idna.New()
 )
 
-type dnSetContent struct {
-	parser parser
+type dnSetHandler struct {
+	parser          parser
+	database        storage.DomainNameSet
+	dnSetController controller.Controller
+	gnsEnabled      bool
 }
 
-type dnSetPersistence struct {
-	d storage.DomainNameSet
-	c controller.Controller
-}
-
-type dnSetGNSHandler struct {
-	enabled bool
-}
-
-func (d *dnSetContent) snapshot(r io.Reader) (interface{}, error) {
+func (d dnSetHandler) snapshot(r io.Reader) (interface{}, error) {
 	var snapshot storage.DomainNameSetSpec
 
 	// line handler
@@ -63,24 +56,24 @@ func (d *dnSetContent) snapshot(r io.Reader) (interface{}, error) {
 	return snapshot, err
 }
 
-func (p dnSetPersistence) lastModified(ctx context.Context, name string) (time.Time, error) {
-	return p.d.GetDomainNameSetModified(ctx, name)
+func (p dnSetHandler) lastModified(ctx context.Context, name string) (time.Time, error) {
+	return p.database.GetDomainNameSetModified(ctx, name)
 }
 
-func (p dnSetPersistence) add(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
-	p.c.Add(ctx, name, snapshot.(storage.DomainNameSetSpec), f, feedCacher)
+func (p dnSetHandler) updateDataStore(ctx context.Context, name string, snapshot interface{}, f func(error), feedCacher cacher.GlobalThreatFeedCacher) {
+	p.dnSetController.Add(ctx, name, snapshot.(storage.DomainNameSetSpec), f, feedCacher)
 }
 
-func (d *dnSetGNSHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
-	if d.enabled {
+func (d dnSetHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
+	if d.gnsEnabled {
 		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
 	} else {
 		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 	}
 }
 
-func (d *dnSetGNSHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
-	if d.enabled {
+func (d dnSetHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
+	if d.gnsEnabled {
 		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
 	} else {
 		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
@@ -95,26 +88,17 @@ func NewDomainNameSetHTTPPuller(
 	client *http.Client,
 	e controller.Controller,
 ) Puller {
-	d := dnSetPersistence{d: ddb, c: e}
-	c := &dnSetContent{
-		parser: getParserForFormat(f.Spec.Pull.HTTP.Format),
-	}
-	g := &dnSetGNSHandler{}
-	if f.Spec.GlobalNetworkSet != nil {
-		g.enabled = true
-	}
-	p := &httpPuller{
-		configMapClient: configMapClient,
-		secretsClient:   secretsClient,
-		client:          client,
-		feed:            f.DeepCopy(),
-		needsUpdate:     true,
-		persistence:     d,
-		content:         c,
-		gnsHandler:      g,
+
+	dn := dnSetHandler{
+		parser:          getParserForFormat(f.Spec.Pull.HTTP.Format),
+		database:        ddb,
+		dnSetController: e,
 	}
 
-	p.period = util.ParseFeedDuration(p.feed)
+	if f.Spec.GlobalNetworkSet != nil {
+		dn.gnsEnabled = true
+	}
+	p := NewHttpPuller(configMapClient, secretsClient, client, f.DeepCopy(), true, dn)
 
 	return p
 }

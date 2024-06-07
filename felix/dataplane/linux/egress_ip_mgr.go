@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2024 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -914,8 +914,10 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 		workloadChangedToStopUsingEgress := workloadChanged && newEgressRulesIsEmpty && !oldEgressRulesWasEmpty
 		workloadChangedToUseDifferentEgress := workloadChanged && !newEgressRulesIsEmpty &&
 			!oldEgressRulesWasEmpty && !equalEgressPolicies(workload.EgressGatewayRules, oldWorkload.EgressGatewayRules)
+		workloadChangedToUseNewAddr := workloadChanged && workloadAddrChanged(workload, oldWorkload)
 
-		if workloadDeletedWasUsingEgress || workloadChangedToStopUsingEgress || workloadChangedToUseDifferentEgress {
+		if workloadDeletedWasUsingEgress || workloadChangedToStopUsingEgress ||
+			workloadChangedToUseDifferentEgress || workloadChangedToUseNewAddr {
 			logCtx.Info("Processing workload - workload deleted or no longer using egress gateway.")
 			m.deleteWorkloadRuleAndTable(id, oldWorkload)
 			delete(m.activeWorkloads, id)
@@ -924,7 +926,8 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 		workloadCreatedUsingEgress := workloadCreated && !newEgressRulesIsEmpty
 		workloadChangedToStartUsingEgress := workloadChanged && !newEgressRulesIsEmpty && oldEgressRulesWasEmpty
 
-		if workloadCreatedUsingEgress || workloadChangedToStartUsingEgress || workloadChangedToUseDifferentEgress {
+		if workloadCreatedUsingEgress || workloadChangedToStartUsingEgress ||
+			workloadChangedToUseDifferentEgress || workloadChangedToUseNewAddr {
 			logCtx.Info("Processing workload - creating new route rules and table.")
 			err := m.createWorkloadRuleAndTable(id, workload)
 			if err != nil {
@@ -939,6 +942,12 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 	}
 
 	return lastErr
+}
+
+func workloadAddrChanged(n, o *proto.WorkloadEndpoint) bool {
+	nSet := set.FromArray(n.Ipv4Nets)
+	oSet := set.FromArray(o.Ipv4Nets)
+	return !nSet.Equals(oSet)
 }
 
 func equalEgressPolicies(p1, p2 []*proto.EgressGatewayRule) bool {

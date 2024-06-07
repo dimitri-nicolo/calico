@@ -321,13 +321,18 @@ func collectTigeraOperator(dir string) {
 	for _, resource := range []string{
 		"apiservers",
 		"applicationlayers",
+		"authentications.operator.tigera.io",
 		"compliances",
+		"egressgateways",
 		"installations",
 		"intrusiondetections",
 		"logcollectors",
 		"logstorages",
 		"managementclusterconnections",
 		"managers",
+		"monitors",
+		"packetcaptureapis",
+		"policyrecommendations",
 		"tigerastatuses",
 	} {
 		commands = append(commands, common.Cmd{

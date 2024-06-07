@@ -76,13 +76,13 @@
 
 - name: "Felix: Windows FV capz"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv-felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - "Felix: Build Windows binaries"
   task:
     prologue:
       commands:
-        - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv/report
+        - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv-felix/report
         - export AZURE_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID
         - export AZURE_TENANT_ID=$AZ_TENANT_ID
         - export AZURE_CLIENT_ID=$AZ_SP_ID
@@ -91,8 +91,8 @@
         - export AZURE_TENANT_ID_B64="$(echo -n "$AZ_TENANT_ID" | base64 | tr -d '\n')"
         - export AZURE_CLIENT_ID_B64="$(echo -n "$AZ_SP_ID" | base64 | tr -d '\n')"
         - export AZURE_CLIENT_SECRET_B64="$(echo -n "$AZ_SP_PASSWORD" | base64 | tr -d '\n')"
-        - export GCR_IO_PULL_SECRET="/home/semaphore/calico-private/process/testing/winfv/docker_cfg.json"
-        - export TSEE_TEST_LICENSE="/home/semaphore/calico-private/process/testing/winfv/infra/ee/license.yaml"
+        - export GCR_IO_PULL_SECRET="/home/semaphore/calico-private/process/testing/winfv-felix/docker_cfg.json"
+        - export TSEE_TEST_LICENSE="/home/semaphore/calico-private/process/testing/winfv-felix/infra/ee/license.yaml"
         - cd felix
     epilogue:
       always:

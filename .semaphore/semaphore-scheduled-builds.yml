@@ -91,6 +91,10 @@ promotions:
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push elasticsearch-metrics images
+    pipeline_file: push-images/elasticsearch-metrics.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push es-gateway images
     pipeline_file: push-images/es-gateway.yml
     auto_promote:
@@ -101,14 +105,6 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push firewall-integration images
     pipeline_file: push-images/firewall-integration.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push honeypod-controller images
-    pipeline_file: push-images/honeypod-controller.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push honeypod-prototype images
-    pipeline_file: push-images/honeypod-prototype.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push ingress-collector images
@@ -348,7 +344,7 @@ blocks:
 
 - name: "cni-plugin: Windows"
   run:
-    when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/process/testing/winfv-cni-plugin/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - cni-plugin
   task:
@@ -357,15 +353,17 @@ blocks:
         # Load the github access secrets.  First fix the permissions.
         - chmod 0600 ~/.keys/*
         - ssh-add ~/.keys/*
-        # Prepare aws configuration.
-        - pip install --upgrade --user awscli
-        - export REPORT_DIR=~/report
+        # Prepare azure configuration.
+        - az login --service-principal -u "${AZ_SP_ID}" -p "${AZ_SP_PASSWORD}" --tenant "${AZ_TENANT_ID}" --output none
+        - export AZURE_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID
+        - export AZURE_TENANT_ID=$AZ_TENANT_ID
+        - export AZURE_CLIENT_ID=$AZ_SP_ID
+        - export AZURE_CLIENT_SECRET=$AZ_SP_PASSWORD
+        - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv-cni-plugin/report
         - export LOGS_DIR=~/fv.log
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${CONTAINER_RUNTIME}-${SHORT_WORKFLOW_ID}
-        - export KEYPAIR_NAME=${CLUSTER_NAME}
-        - echo CLUSTER_NAME=${CLUSTER_NAME}
-        - sudo apt-get install -y putty-tools
+        - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${SHORT_WORKFLOW_ID}
+        - export SUFFIX=${CLUSTER_NAME}
         - cd cni-plugin
         - ../.semaphore/run-and-monitor build.log make bin/windows/calico.exe bin/windows/calico-ipam.exe bin/windows/win-fv.exe
     epilogue:
@@ -373,28 +371,20 @@ blocks:
         commands:
           - artifact push job ${REPORT_DIR} --destination semaphore/test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
           - artifact push job ${LOGS_DIR} --destination semaphore/logs --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
-          - aws ec2 delete-key-pair --key-name ${KEYPAIR_NAME} || true
-          - cd ~/calico-private/process/testing/winfv && NAME_PREFIX="${CLUSTER_NAME}" ./setup-fv.sh -q -u
+          - cd ~/calico-private/process/testing/winfv-cni-plugin/aso && make dist-clean
     env_vars:
       - name: SEMAPHORE_ARTIFACT_EXPIRY
         value: 2w
-      - name: AWS_DEFAULT_REGION
-        value: us-west-2
-      - name: MASTER_CONNECT_KEY_PUB
-        value: master_ssh_key.pub
-      - name: MASTER_CONNECT_KEY
-        value: master_ssh_key
-      - name: WIN_PPK_KEY
-        value: win_ppk_key
+      - name: AZURE_LOCATION
+        value: eastus2
+      - name: KUBE_VERSION
+        value: v1.29.4
     jobs:
       - name: Containerd - Windows FV
         execution_time_limit:
-          minutes: 120
+          minutes: 60
         commands:
           - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
-        env_vars:
-          - name: CONTAINERD_VERSION
-            value: 1.6.22
 - name: confd
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/confd/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -521,13 +511,13 @@ blocks:
 
 - name: "Felix: Windows FV capz"
   run:
-    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv-felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - "Felix: Build Windows binaries"
   task:
     prologue:
       commands:
-        - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv/report
+        - export REPORT_DIR=/home/semaphore/calico-private/process/testing/winfv-felix/report
         - export AZURE_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID
         - export AZURE_TENANT_ID=$AZ_TENANT_ID
         - export AZURE_CLIENT_ID=$AZ_SP_ID
@@ -536,8 +526,8 @@ blocks:
         - export AZURE_TENANT_ID_B64="$(echo -n "$AZ_TENANT_ID" | base64 | tr -d '\n')"
         - export AZURE_CLIENT_ID_B64="$(echo -n "$AZ_SP_ID" | base64 | tr -d '\n')"
         - export AZURE_CLIENT_SECRET_B64="$(echo -n "$AZ_SP_PASSWORD" | base64 | tr -d '\n')"
-        - export GCR_IO_PULL_SECRET="/home/semaphore/calico-private/process/testing/winfv/docker_cfg.json"
-        - export TSEE_TEST_LICENSE="/home/semaphore/calico-private/process/testing/winfv/infra/ee/license.yaml"
+        - export GCR_IO_PULL_SECRET="/home/semaphore/calico-private/process/testing/winfv-felix/docker_cfg.json"
+        - export TSEE_TEST_LICENSE="/home/semaphore/calico-private/process/testing/winfv-felix/infra/ee/license.yaml"
         - cd felix
     epilogue:
       always:
@@ -1027,6 +1017,26 @@ blocks:
       always:
         commands:
           - ../.semaphore/publish-artifacts
+- name: elasticsearch-metrics
+  run:
+    when: "true or change_in(['/*', '/elasticsearch-metrics/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd elasticsearch-metrics
+    jobs:
+      - name: elasticsearch-metrics tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: es-gateway
   run:
     when: "true or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1087,59 +1097,6 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Publish tigera/snort2 images
-  run:
-    when: "false or change_in(['/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
-  dependencies:
-    - Prerequisites
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-    jobs:
-      - name: Linux amd64
-        commands:
-          - make -C third_party/snort2 cd push-manifest ARCHES=amd64 CONFIRM=true
-
-- name: honeypod-controller
-  run:
-    when: "true or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/', '/third_party/snort2'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Publish tigera/snort2 images
-  task:
-    secrets:
-      - name: google-service-account-for-gcr
-    prologue:
-      commands:
-        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd honeypod-controller
-    jobs:
-      - name: honeypod-controller tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-- name: honeypod-prototype
-  run:
-    when: "true or change_in(['/*', '/honeypod-prototype/'])"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd honeypod-prototype
-    jobs:
-      - name: honeypod-prototype tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build image
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          # Only "make image" is available for honeypod.
-          - ../.semaphore/run-and-monitor build-$ARCH.log make image ARCH=$ARCH
 - name: ingress-collector
   run:
     when: "true or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

@@ -17,8 +17,7 @@ ARG UBI8_IMAGE
 
 # Use this build stage to build iptables rpm binaries.
 # We need to rebuild the iptables rpm because the prepackaged rpm does not have legacy iptables binaries.
-# We need to build runit because there aren't any rpms for it in CentOS or ubi repositories.
-FROM quay.io/centos/centos:stream8 as centos
+FROM almalinux:8 as almalinux
 
 ARG IPTABLES_VER
 ARG CENTOS_MIRROR_BASE_URL=http://vault.centos.org/8.1.1911
@@ -32,8 +31,6 @@ RUN dnf install -y 'dnf-command(config-manager)' && \
     dnf config-manager --set-enabled powertools && \
     # Install required packages for building rpms. yum-utils is not required but it gives us yum-builddep to easily install build deps.
     yum install -y rpm-build yum-utils make && \
-    # Need these to build runit.
-    yum install -y wget glibc-static gcc && \
     # Ensure security updates are installed.
     yum -y update-minimal --security --sec-severity=Important --sec-severity=Critical
 
@@ -86,17 +83,9 @@ ARG IPTABLES_VER
 RUN microdnf upgrade
 
 # Copy in our rpms
-COPY --from=centos  /root/rpmbuild/RPMS/x86_64/* /tmp/rpms/
+COPY --from=almalinux /root/rpmbuild/RPMS/x86_64/* /tmp/rpms/
 
-# Install the necessary packages, making sure that we're using only CentOS repos.
-# Since the ubi repos do not contain all the packages we need (they're missing conntrack-tools),
-# we're using CentOS repos for all our packages. Using packages from a single source (CentOS) makes
-# it less likely we'll run into package dependency version mismatches.
-COPY centos.repo /etc/yum.repos.d/
-
-RUN rm /etc/yum.repos.d/ubi.repo && \
-    touch /in-the-container && \
-    microdnf install \
+RUN microdnf install \
     # Don't install copious docs.
     --setopt=tsflags=nodocs \
     # Needed for iptables
@@ -110,23 +99,31 @@ RUN rm /etc/yum.repos.d/ubi.repo && \
     # Also needed (provides utilities for browsing procfs like ps)
     procps \
     iproute \
-    iproute-tc \
-    # Needed for conntrack
-    libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
-    conntrack-tools \
     # Needed for startup script
     which  \
     gawk  \
     # Needed for the cleanup script
-    findutils && \
-    microdnf clean all && \
-    # Install iptables via rpms. The libs must be force installed because the iptables source RPM has the release
-    # version '9.el8_0.1' while the existing iptables-libs (pulled in by the iputils package) has version '9.el8.1'.
-    rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.x86_64.rpm && \
+    findutils
+
+# Since the ubi repos do not contain all the packages we need (they're missing conntrack-tools),
+# we're using AlmaLinux repos for missing packages.
+COPY almalinux.repo /etc/yum.repos.d/almalinux.repo
+
+RUN microdnf --enablerepo=baseos install \
+    iproute-tc \
+    # Needed for conntrack
+    libnetfilter_cthelper libnetfilter_cttimeout libnetfilter_queue \
+    conntrack-tools
+
+# Install iptables via rpms. The libs must be force installed because the iptables source RPM has the release
+# version '1.8.8-6.el8' conflicts with iptables-libs (pulled in by the iputils package) '1.8.5-11.el8_9'.
+RUN rpm --force -i /tmp/rpms/iptables-libs-${IPTABLES_VER}.el8.x86_64.rpm && \
     rpm -i /tmp/rpms/iptables-${IPTABLES_VER}.el8.x86_64.rpm && \
     # Set alternatives
     alternatives --install /usr/sbin/iptables iptables /usr/sbin/iptables-legacy 1 && \
     alternatives --install /usr/sbin/ip6tables ip6tables /usr/sbin/ip6tables-legacy 1
+
+RUN microdnf clean all
 
 COPY bin/egressd-amd64 /egressd
 
@@ -135,8 +132,8 @@ RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
 # or any of its dependencies.
-COPY clean-up-filesystem.sh /
-RUN /clean-up-filesystem.sh
+COPY clean-up-filesystem.sh /clean-up-filesystem.sh
+RUN touch /in-the-container && /clean-up-filesystem.sh
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
 # that have been removed in our later layers.
