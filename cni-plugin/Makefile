@@ -148,14 +148,20 @@ $(DEPLOY_CONTAINER_FIPS_MARKER): Dockerfile build fetch-cni-bins
 
 CN_FLAGS=-ldflags "-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion=$(GIT_VERSION)"
 
-CONTAINERNETWORKING_PLUGINS_CREATED=.containernetworking-plugins.created
-$(CONTAINERNETWORKING_PLUGINS_CREATED):
+CONTAINERNETWORKING_PLUGINS_CREATED=.containernetworking-plugins-$(ARCH).created
+CONTAINERNETWORKING_PLUGINS_CLONED=.containernetworking-plugins.cloned
+
+$(CONTAINERNETWORKING_PLUGINS_CLONED):
 	git clone --single-branch https://github.com/projectcalico/containernetworking-plugins.git
+	touch $@
+
+$(CONTAINERNETWORKING_PLUGINS_CREATED): $(CONTAINERNETWORKING_PLUGINS_CLONED)
 	docker run -ti \
 		-v $(CURDIR)/containernetworking-plugins:/go/src/github.com/containernetworking/plugins:z \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) -w /go/src/github.com/containernetworking/plugins --rm $(CALICO_BUILD) \
 		/bin/sh -xe -c "\
 			GOFLAGS='-buildvcs=false' CGO_ENABLED=0 GOARCH=$(ARCH) ./build_linux.sh $(CN_FLAGS);"
+	mv containernetworking-plugins/bin containernetworking-plugins/bin-$(ARCH)
 	touch $@
 
 .PHONY: fetch-cni-bins
@@ -163,7 +169,7 @@ fetch-cni-bins: $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $
 
 $(BIN)/host-local $(BIN)/loopback $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth: $(CONTAINERNETWORKING_PLUGINS_CREATED)
 	-mkdir -p $(BIN)
-	cp containernetworking-plugins/bin/$(subst $(BIN)/,,$@) $@
+	cp containernetworking-plugins/bin-$(ARCH)/$(subst $(BIN)/,,$@) $@
 
 ###############################################################################
 # Unit Tests
