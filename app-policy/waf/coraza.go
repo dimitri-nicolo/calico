@@ -143,11 +143,11 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 	reqHeaders := httpReq.Headers
 	srcName, ok := reqHeaders["x-source-workload-name"]
 	if !ok {
-		log.Info("x-source-workload-name header not found")
+		log.Debug("x-source-workload-name header not found")
 	}
 	srcNamespace, ok := reqHeaders["x-source-workload-namespace"]
 	if !ok {
-		log.Info("x-source-workload-namespace header not found")
+		log.Debug("x-source-workload-namespace header not found")
 	}
 
 	tx := w.NewTransactionWithID(httpReq.Id)
