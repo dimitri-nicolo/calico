@@ -12,7 +12,7 @@ When upgrading Elasticsearch versions you MUST take note of the following:
 
 ### Update version and patch
 
-To update Elasticsearch version, update the `ELASTIC_VERSION` variable in the `metadata.mk`.
+To update Elasticsearch version, update the `ELASTIC_VERSION` variable in the `third_party/elasticsearch/Makefile`.
 
 To update Tigera customization patch, follow the next steps:
 

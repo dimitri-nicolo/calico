@@ -5,6 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/elasticsearch
 ELASTICSEARCH_IMAGE   ?=elasticsearch
 BUILD_IMAGES          ?=$(ELASTICSEARCH_IMAGE)
 
+ELASTIC_VERSION=7.17.21
 TINI_VERSION=0.19.0
 
 # required for ci/cd
