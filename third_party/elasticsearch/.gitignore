@@ -1,0 +1,3 @@
+.elasticsearch.created-*
+.elasticsearch.downloaded
+build/

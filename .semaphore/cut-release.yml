@@ -82,6 +82,10 @@ promotions:
     pipeline_file: ../egress-gateway/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Elasticsearch Release
+    pipeline_file: ../elasticsearch/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Elasticsearch Metrics Release
     pipeline_file: ../elasticsearch-metrics/.semaphore/cut-release.yml
     auto_promote:

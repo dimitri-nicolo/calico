@@ -42,6 +42,10 @@ promotions:
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push elasticsearch images
+    pipeline_file: push-images/elasticsearch.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push elasticsearch-metrics images
     pipeline_file: push-images/elasticsearch-metrics.yml
     auto_promote:
