@@ -56,6 +56,7 @@ var _ = Describe("Access Logs", func() {
 		accesslog.WithRequestHeader("x-cluster-id", "xClusterID"),
 		accesslog.WithRequestHeader("User-Agent", "userAgent"),
 		accesslog.WithRequestHeader("accept", "accept"),
+		accesslog.WithRequestHeader("impersonate-group", "impersonateGroup"),
 		accesslog.WithStandardJWTClaims(),
 		accesslog.WithStringJWTClaim("email", "username"),
 		accesslog.WithStringArrayJWTClaim("https://calicocloud.io/groups", "groups"),
@@ -118,6 +119,8 @@ var _ = Describe("Access Logs", func() {
 			request.Header.Set("x-cluster-id", clusterID)
 			request.Header.Set("authorization", userToken)
 			request.Header.Set("accept", "*/*")
+			request.Header.Set("Impersonate-Group", "group1")
+			request.Header.Add("Impersonate-Group", "group2")
 
 			response, err := httpClient.Do(request)
 			Expect(err).ToNot(HaveOccurred())
@@ -126,15 +129,16 @@ var _ = Describe("Access Logs", func() {
 			accessLog := flushAndReadLastAccessLog(accessLogger, logFile)
 			requireMessageMatches(test.AccessLogMessage{
 				Request: test.AccessLogRequest{
-					RemoteAddr: "127.0.0.1:",
-					Proto:      "HTTP/2.0",
-					Method:     http.MethodGet,
-					Host:       httpServer.Listener.Addr().String(),
-					Path:       successPath,
-					ClusterID:  clusterID,
-					UserAgent:  "Go-http-client/2.0",
-					Accept:     "*/*",
-					Auth:       expectedUserTokenAuth,
+					RemoteAddr:       "127.0.0.1:",
+					Proto:            "HTTP/2.0",
+					Method:           http.MethodGet,
+					Host:             httpServer.Listener.Addr().String(),
+					Path:             successPath,
+					ClusterID:        clusterID,
+					UserAgent:        "Go-http-client/2.0",
+					Accept:           "*/*",
+					ImpersonateGroup: "group1; group2",
+					Auth:             expectedUserTokenAuth,
 				},
 				Response: test.AccessLogResponse{
 					Status:       200,
@@ -285,6 +289,7 @@ func requireMessageMatches(expected, actual test.AccessLogMessage) {
 	Expect(actual.Request.UserAgent).To(Equal(expected.Request.UserAgent), "request.userAgent")
 	Expect(actual.Request.ClusterID).To(Equal(expected.Request.ClusterID), "request.clusterID")
 	Expect(actual.Request.Accept).To(Equal(expected.Request.Accept), "request.accept")
+	Expect(actual.Request.ImpersonateGroup).To(Equal(expected.Request.ImpersonateGroup), "request.impersonateGroup")
 	Expect(actual.Request.Auth).To(Equal(expected.Request.Auth), "request.auth")
 
 	Expect(actual.Response.Status).To(Equal(expected.Response.Status), "response.status")

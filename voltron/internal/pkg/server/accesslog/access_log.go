@@ -3,6 +3,7 @@ package accesslog
 import (
 	"crypto/tls"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/SermoDigital/jose/jwt"
@@ -153,8 +154,8 @@ func requestLogField(r *http.Request, cfg *config, requestTime time.Time, authTo
 	}
 	var headers []nv // using a slice rather than a map to keep a consistent field order in the output
 	for _, h := range cfg.requestHeaders {
-		if v := r.Header.Get(h.inputName); v != "" {
-			headers = append(headers, nv{name: h.logFieldName, value: v})
+		if v := r.Header.Values(h.inputName); len(v) > 0 {
+			headers = append(headers, nv{name: h.logFieldName, value: strings.Join(v, "; ")})
 		}
 	}
 

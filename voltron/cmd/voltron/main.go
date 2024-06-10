@@ -204,6 +204,8 @@ func main() {
 		logOpts := []accesslog.Option{
 			accesslog.WithRequestHeader(server.ClusterHeaderFieldCanon, "xClusterID"),
 			accesslog.WithRequestHeader("User-Agent", "userAgent"),
+			accesslog.WithRequestHeader("Impersonate-User", "impersonateUser"),
+			accesslog.WithRequestHeader("Impersonate-Group", "impersonateGroup"),
 			accesslog.WithErrorResponseBodyCaptureSize(250),
 		}
 
