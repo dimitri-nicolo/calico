@@ -20,14 +20,15 @@ type cacheKey struct {
 }
 
 type cacheEntry struct {
-	transactionID    string
-	destIP, srcIP    string
-	method, protocol string
-	srcPort, dstPort uint32
-	uri              map[string]int
-	rules            map[int]linseedv1.WAFRuleHit
-	count            int
-	action           string
+	transactionID         string
+	destIP, srcIP         string
+	method, protocol      string
+	srcPort, dstPort      uint32
+	uri                   map[string]int
+	rules                 map[int]linseedv1.WAFRuleHit
+	count                 int
+	action                string
+	srcName, srcNamespace string
 }
 
 type wafEventsPipeline struct {
@@ -42,6 +43,7 @@ type txHttpInfo struct {
 	uri, method, protocol string
 	srcPort, dstPort      uint32
 	action                string
+	srcName, srcNamespace string
 }
 
 func NewEventsPipeline(store policystore.PolicyStoreManager, cb eventCallbackFn) *wafEventsPipeline {
@@ -122,6 +124,8 @@ func (p *wafEventsPipeline) processTxHttpInfo(info *txHttpInfo) {
 	entry.srcPort = info.srcPort
 	entry.dstPort = info.dstPort
 	entry.action = info.action
+	entry.srcName = info.srcName
+	entry.srcNamespace = info.srcNamespace
 }
 
 func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog {
@@ -146,13 +150,12 @@ func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog 
 				"dst": dst,
 			}).Debug("Found endpoint keys")
 
-			srcNamespace, srcName := extractFirstWepNameAndNamespace(src)
 			dstNamespace, dstName := extractFirstWepNameAndNamespace(dst)
 
 			srcEp = &linseedv1.WAFEndpoint{
 				IP:           entry.srcIP,
-				PodName:      srcName,
-				PodNameSpace: srcNamespace,
+				PodName:      entry.srcName,
+				PodNameSpace: entry.srcNamespace,
 				PortNum:      int32(entry.srcPort),
 			}
 

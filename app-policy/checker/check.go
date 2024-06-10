@@ -187,6 +187,7 @@ func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest) statu
 		// possible future iteration: apply src egress policy
 		// return checkStore(store, src, req, withEgressProcessing{})
 		log.Debugf("allowing traffic to continue to its destination hop/next processing leg. (req: %s)", req.String())
+
 		return status.Status{Code: OK, Message: fmt.Sprintf("request %s passing through", req.String())}
 	}
 
