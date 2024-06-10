@@ -155,23 +155,61 @@ type UserPermissions struct {
 	Attrs    []authzv1.ResourceAttributes
 }
 
-func SetSubjectAccessReviewsReactor(fakeK8sCli *fake.Clientset, userPermissions ...UserPermissions) {
+// SetSubjectAccessReviewsReactor adds a reactor to your fake clientset that performs a SubjectAccessReview based on the provided user permissions.
+//
+// If the supplied namespace is not empty, this will add a LocalSubjectAccessReview reactor instead.
+func SetSubjectAccessReviewsReactor(fakeK8sCli *fake.Clientset, namesapce string, userPermissions ...UserPermissions) {
 	userMap := map[string][]authzv1.ResourceAttributes{}
 	for _, up := range userPermissions {
 		userMap[up.Username] = up.Attrs
 	}
-	fakeK8sCli.PrependReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		createAction, ok := action.(k8stesting.CreateAction)
-		Expect(ok).To(BeTrue())
-		review, ok := createAction.GetObject().(*authzv1.SubjectAccessReview)
-		Expect(ok).To(BeTrue())
-		Expect(review.Spec.ResourceAttributes).ToNot(BeNil(), "only ResourceAttributes supported currently")
 
-		permittedAttrs, ok := userMap[review.Spec.User]
-		Expect(ok).To(BeTrue(), "user unknown to subject access reviews reactor.", review.Spec.User)
+	useLocalSubjectAccessReview := namesapce != ""
+
+	resourceType := "subjectaccessreviews"
+	if useLocalSubjectAccessReview {
+		resourceType = "localsubjectaccessreviews"
+	}
+
+	getSubjectAccessReviewSpec := func(action k8stesting.Action) (authzv1.SubjectAccessReviewSpec, error) {
+		createAction, ok := action.(k8stesting.CreateAction)
+		if !ok {
+			return authzv1.SubjectAccessReviewSpec{}, fmt.Errorf("unexpected action type %T", action)
+		}
+
+		object := createAction.GetObject()
+
+		if useLocalSubjectAccessReview {
+			if review, ok := object.(*authzv1.LocalSubjectAccessReview); ok {
+				return review.Spec, nil
+			} else {
+				return authzv1.SubjectAccessReviewSpec{}, fmt.Errorf("unexpected object type %T", object)
+			}
+		} else {
+			if review, ok := object.(*authzv1.SubjectAccessReview); ok {
+				return review.Spec, nil
+			} else {
+				return authzv1.SubjectAccessReviewSpec{}, fmt.Errorf("unexpected object type %T", object)
+			}
+		}
+	}
+
+	fakeK8sCli.PrependReactor("create", resourceType, func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		spec, err := getSubjectAccessReviewSpec(action)
+		if err != nil {
+			return false, nil, fmt.Errorf("fake %s failed: %w", resourceType, err)
+		}
+		if spec.ResourceAttributes == nil {
+			return false, nil, fmt.Errorf("fake %s failed: only ResourceAttributes supported currently", resourceType)
+		}
+
+		permittedAttrs, ok := userMap[spec.User]
+		if !ok {
+			return false, nil, fmt.Errorf("user unknown to %s reactor: %s", spec.User, resourceType)
+		}
 
 		allowed := false
-		specAttrs := *review.Spec.ResourceAttributes
+		specAttrs := *spec.ResourceAttributes
 		for _, permittedAttr := range permittedAttrs {
 			if permittedAttr == specAttrs {
 				allowed = true
@@ -179,9 +217,15 @@ func SetSubjectAccessReviewsReactor(fakeK8sCli *fake.Clientset, userPermissions 
 			}
 		}
 
-		return true, &authzv1.SubjectAccessReview{Status: authzv1.SubjectAccessReviewStatus{
+		status := authzv1.SubjectAccessReviewStatus{
 			Allowed: allowed,
 			Denied:  !allowed,
-		}}, nil
+		}
+
+		if useLocalSubjectAccessReview {
+			return true, &authzv1.LocalSubjectAccessReview{Status: status}, nil
+		} else {
+			return true, &authzv1.SubjectAccessReview{Status: status}, nil
+		}
 	})
 }

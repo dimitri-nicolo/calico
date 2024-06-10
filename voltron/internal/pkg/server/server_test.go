@@ -175,7 +175,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			srvWg                 *sync.WaitGroup
 			srv                   *server.Server
 			defaultServer         *httptest.Server
-			mockAuthorize         *mock.Call
 		)
 
 		BeforeEach(func() {
@@ -187,7 +186,20 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					Name:   "jane@example.io",
 					Groups: []string{"developers"},
 				}, 0, nil)
-			mockAuthorize = mockAuthenticator.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+			testing.SetSubjectAccessReviewsReactor(fakeK8s, clusterNS,
+				testing.UserPermissions{
+					Username: janeBearerToken.UserName(),
+					Attrs: []authzv1.ResourceAttributes{
+						{
+							Verb:     "get",
+							Group:    "projectcalico.org",
+							Version:  "v3",
+							Resource: "managedclusters",
+							Name:     clusterA,
+						},
+					},
+				},
+			)
 
 			defaultServer = httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -224,7 +236,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				server.WithDefaultProxy(defaultProxy),
 				server.WithKubernetesAPITargets(k8sTargets),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 0),
+				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 0, auth.NewNamespacedRBACAuthorizer(fakeK8s, clusterNS)),
 			)
 		})
 
@@ -552,14 +564,12 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				})
 
 				It("should not send requests if not authorized on that managedcluster", func() {
-					mockAuthorize.Unset()
-					mockAuthorize.On("Authorize", mock.Anything, &authzv1.ResourceAttributes{
-						Verb:     "get",
-						Group:    "projectcalico.org",
-						Version:  "v3",
-						Resource: "managedclusters",
-						Name:     clusterA,
-					}, (*authzv1.NonResourceAttributes)(nil)).Return(false, nil)
+					testing.SetSubjectAccessReviewsReactor(fakeK8s, clusterNS,
+						testing.UserPermissions{
+							Username: janeBearerToken.UserName(),
+							Attrs:    []authzv1.ResourceAttributes{},
+						},
+					)
 					resp := clientHelloReq(httpsAddr, clusterA, http.StatusForbidden)
 					bits, err := io.ReadAll(resp.Body)
 					Expect(err).ToNot(HaveOccurred())
@@ -799,23 +809,25 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			Expect(err).NotTo(HaveOccurred())
 
 			testing.SetTokenReviewsReactor(fakeK8s, janeBearerToken, bobBearerToken)
-			testing.SetSubjectAccessReviewsReactor(fakeK8s,
+			testing.SetSubjectAccessReviewsReactor(fakeK8s, clusterNS,
 				testing.UserPermissions{
 					Username: janeBearerToken.UserName(),
 					Attrs: []authzv1.ResourceAttributes{
 						{
-							Verb:     "get",
-							Group:    "projectcalico.org",
-							Version:  "v3",
-							Resource: "managedclusters",
-							Name:     managedCluster1,
+							Verb:      "get",
+							Group:     "projectcalico.org",
+							Version:   "v3",
+							Resource:  "managedclusters",
+							Name:      managedCluster1,
+							Namespace: clusterNS,
 						},
 						{
-							Verb:     "get",
-							Group:    "projectcalico.org",
-							Version:  "v3",
-							Resource: "managedclusters",
-							Name:     managedCluster2,
+							Verb:      "get",
+							Group:     "projectcalico.org",
+							Version:   "v3",
+							Resource:  "managedclusters",
+							Name:      managedCluster2,
+							Namespace: clusterNS,
 						},
 					},
 				},
@@ -823,11 +835,12 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					Username: bobBearerToken.UserName(),
 					Attrs: []authzv1.ResourceAttributes{
 						{
-							Verb:     "get",
-							Group:    "projectcalico.org",
-							Version:  "v3",
-							Resource: "managedclusters",
-							Name:     managedCluster1,
+							Verb:      "get",
+							Group:     "projectcalico.org",
+							Version:   "v3",
+							Resource:  "managedclusters",
+							Name:      managedCluster1,
+							Namespace: clusterNS,
 						},
 					},
 				},
@@ -865,7 +878,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				server.WithKubernetesAPITargets(k8sTargets),
 				server.WithUnauthenticatedTargets([]string{"/metrics"}), // we want /metrics on the public server to reach the defaultProxy
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
-				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, authCacheTTL),
+				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, authCacheTTL, auth.NewNamespacedRBACAuthorizer(fakeK8s, clusterNS)),
 				server.WithInternalMetricsEndpointEnabled(true),
 				server.WithHTTPAccessLogging(
 					accesslog.WithPath(accessLogFile.Name()),
@@ -1105,7 +1118,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 			vfg := &voltronconfig.Config{TenantNamespace: clusterNS}
 			_, err = server.New(k8sAPI, fakeClient, config, *vfg, authenticator,
-				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 42*time.Second),
+				server.WithCheckManagedClusterAuthorizationBeforeProxy(true, 42*time.Second, auth.NewNamespacedRBACAuthorizer(fakeK8s, clusterNS)),
 			)
 			Expect(err).To(MatchError(MatchRegexp("configured cacheTTL of 42s exceeds maximum permitted of 20s")))
 		})

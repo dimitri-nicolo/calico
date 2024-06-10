@@ -204,9 +204,8 @@ func WithSNIServiceMap(serviceMap map[string]string) Option {
 	}
 }
 
-func WithCheckManagedClusterAuthorizationBeforeProxy(enabled bool, cacheTTL time.Duration) Option {
+func WithCheckManagedClusterAuthorizationBeforeProxy(enabled bool, cacheTTL time.Duration, authorizer auth.RBACAuthorizer) Option {
 	return func(s *Server) error {
-		var authorizer auth.RBACAuthorizer = s.authenticator
 		if enabled && cacheTTL > 0 {
 			if cacheTTL > AuthzCacheMaxTTL {
 				return fmt.Errorf("configured cacheTTL of %v exceeds maximum permitted of %v", cacheTTL, AuthzCacheMaxTTL)
