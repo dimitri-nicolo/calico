@@ -142,6 +142,10 @@ promotions:
     pipeline_file: ../key-cert-provisioner/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Kibana Release
+    pipeline_file: ../kibana/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Ingress Collector Release
     pipeline_file: ../ingress-collector/.semaphore/cut-release.yml
     auto_promote:

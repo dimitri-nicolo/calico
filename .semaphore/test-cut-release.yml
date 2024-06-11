@@ -138,6 +138,10 @@ promotions:
     pipeline_file: ../linseed/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Kibana Release
+    pipeline_file: ../kibana/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
 
   - name: Test Cut third-party Alertmanager Release
     pipeline_file: ../third_party/alertmanager/.semaphore/test-cut-release.yml
