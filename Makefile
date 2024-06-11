@@ -12,7 +12,7 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-KIBANA_VERSION = 7.17.18
+KIBANA_VERSION = 7.17.21
 
 # Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
 # accidentally enable the integration
@@ -53,7 +53,6 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
 	patch -d kibana -p1 < patches/0002-Reduce-all-platforms-to-linux-variants-only.patch
 	patch -d kibana -p1 < patches/0003-Support-UBI-arm64-builds.patch
-	patch -d kibana -p1 < patches/0004-Update-IP-dependency-to-patch-CVE.patch
 	touch $@
 
 # always register because build target will build images for all supported arches
