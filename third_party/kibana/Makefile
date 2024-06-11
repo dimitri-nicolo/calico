@@ -58,7 +58,7 @@ clean:
 KIBANA_IMAGE_MARKER=.kibana.created-$(ARCH)
 
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(VALIDARCHES))
+image-all: build $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 

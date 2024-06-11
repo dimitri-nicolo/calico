@@ -27,7 +27,7 @@ include ../lib.Makefile
 KIBANA_IMAGE_MARKER=.kibana.created-$(ARCH)
 
 .PHONY: image-all
-image-all: build $(addprefix sub-image-,$(VALIDARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
