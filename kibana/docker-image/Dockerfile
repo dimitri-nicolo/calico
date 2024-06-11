@@ -1,11 +1,11 @@
-ARG KIBANA_VERSION
 ARG QEMU_IMAGE
+ARG THIRD_PARTY_REGISTRY
 
 FROM ${QEMU_IMAGE} as qemu
 
 ARG TARGETARCH
 
-FROM docker.elastic.co/kibana/kibana-ubi:${KIBANA_VERSION}-${TARGETARCH} AS kibana
+FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v7.17.21 AS kibana
 
 COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
