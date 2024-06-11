@@ -13,7 +13,6 @@ K8S_VERSION=v1.28.10
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
-ELASTIC_VERSION=7.17.21
 ETCD_VERSION=v3.5.6
 HELM_VERSION=v3.11.3
 KINDEST_NODE_VERSION=v1.27.11
