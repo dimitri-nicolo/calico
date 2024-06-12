@@ -50,13 +50,26 @@ func TestDNSParser(t *testing.T) {
 		91, 81,
 	}
 
-	dnsPfxMap := dnsresolver.DNSPrefixMap()
-	dnsPfxMap.EnsureExists()
-	defer dnsPfxMap.Close()
+	ids := map[string]uint64{
+		"1":    1,
+		"2":    2,
+		"3":    3,
+		"123":  123,
+		"1234": 1234,
+		"666":  666,
+	}
 
-	dnsPfxMap.Update(dnsresolver.NewPfxKey("ubuntu.com").AsBytes(), dnsresolver.NewPfxValue(123).AsBytes())
-	dnsPfxMap.Update(dnsresolver.NewPfxKey("*.ubuntu.com").AsBytes(), dnsresolver.NewPfxValue(1234).AsBytes())
-	dnsPfxMap.Update(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes(), dnsresolver.NewPfxValue(1, 2, 3).AsBytes())
+	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
+		return ids[s]
+	})
+	defer tracker.Close()
+	Expect(err).NotTo(HaveOccurred())
+
+	tracker.Add("ubuntu.com", "123")
+	tracker.Add("*.ubuntu.com", "1234")
+	tracker.Add("archive.ubuntu.com", "1", "2", "3")
+	err = tracker.ApplyAllChanges()
+	Expect(err).NotTo(HaveOccurred())
 
 	runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
 		res, err := bpfrun(pktBytes)
@@ -68,10 +81,11 @@ func TestDNSParser(t *testing.T) {
 
 	})
 
-	ipsMap.Iter(func(k, v []byte) maps.IteratorAction {
+	err = tracker.Map().Iter(func(k, v []byte) maps.IteratorAction {
 		fmt.Println(ipsets.IPSetEntryFromBytes(k))
 		return maps.IterNone
 	})
+	Expect(err).NotTo(HaveOccurred())
 
 	for _, setID := range []uint64{1, 2, 3} {
 		_, err := ipsMap.Get(
@@ -103,7 +117,8 @@ func TestDNSParser(t *testing.T) {
 		110, 101, 115, 2, 99, 122, 0, 0, 1, 0, 1, 0, 0, 0, 30, 0, 4, 185, 17,
 		117, 45}
 
-	dnsPfxMap.Update(dnsresolver.NewPfxKey("*.idnes.cz").AsBytes(), dnsresolver.NewPfxValue(666, 3).AsBytes())
+	tracker.Add("*.idnes.cz", "666", "3")
+	tracker.ApplyAllChanges()
 
 	runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
 		res, err := bpfrun(pktBytes)
@@ -115,12 +130,13 @@ func TestDNSParser(t *testing.T) {
 
 	})
 
-	ipsMap.Iter(func(k, v []byte) maps.IteratorAction {
+	err = ipsMap.Iter(func(k, v []byte) maps.IteratorAction {
 		fmt.Println(ipsets.IPSetEntryFromBytes(k))
 		return maps.IterNone
 	})
+	Expect(err).NotTo(HaveOccurred())
 
-	_, err := ipsMap.Get(
+	_, err = ipsMap.Get(
 		ipsets.MakeBPFIPSetEntry(3, ip.CIDRFromStringNoErr("185.17.117.45/32").(ip.V4CIDR), 0, 0).AsBytes())
 	Expect(err).NotTo(HaveOccurred())
 	_, err = ipsMap.Get(

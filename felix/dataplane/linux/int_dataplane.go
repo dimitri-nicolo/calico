@@ -44,6 +44,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
 	bpfifstate "github.com/projectcalico/calico/felix/bpf/ifstate"
@@ -3309,6 +3310,13 @@ func startBPFDataplaneComponents(ipFamily proto.IPVersion,
 	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, bpfmaps.IpsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer)
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
+	tracker, err := dnsresolver.NewDomainTracker(func(id string) uint64 {
+		return ipSets.IDStringToUint64(id)
+	})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create BPF domain tracker.")
+	}
+	ipSetsMgr.AddDomainTracker(tracker)
 
 	if ipFamily == proto.IPVersion_IPV4 {
 		// Create an 'ipset' to represent trusted DNS servers.

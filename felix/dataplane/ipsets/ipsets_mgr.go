@@ -62,6 +62,9 @@ type IPSetsManager struct {
 
 	// IP set IDs that we don't process.
 	ignoredSetIds set.Set[string]
+	// domainTracker is an optional external component that tracks which domains are part
+	// of which ipset.
+	domainTracker IPSetsDomainTracker
 }
 
 type store interface {
@@ -71,7 +74,15 @@ type store interface {
 	GetDomainIPs(domain string) []string
 }
 
-func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
+type IPSetsDomainTracker interface {
+	Add(domain string, setIDs ...string)
+	Del(domain string, setIDs ...string)
+	ApplyAllChanges() error
+}
+
+func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int,
+	domainInfoStore store,
+) *IPSetsManager {
 	m := &IPSetsManager{
 		maxSize:         maxIPSetSize,
 		lg:              log.WithField("name", name),
@@ -92,6 +103,10 @@ func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int, do
 
 func (m *IPSetsManager) AddDataplane(dp IPSetsDataplane) {
 	m.dataplanes = append(m.dataplanes, dp)
+}
+
+func (m *IPSetsManager) AddDomainTracker(domainTracker IPSetsDomainTracker) {
+	m.domainTracker = domainTracker
 }
 
 func (m *IPSetsManager) GetIPSetType(setID string) (typ ipsets.IPSetType, err error) {
