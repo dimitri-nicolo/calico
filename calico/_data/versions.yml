@@ -59,7 +59,7 @@
       image: tigera/es-proxy
       version: master
     eck-kibana:
-      version: 7.17.18
+      version: 7.17.21
     kibana:
       image: tigera/kibana
       version: master
