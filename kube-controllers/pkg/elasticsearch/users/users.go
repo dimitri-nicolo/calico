@@ -450,7 +450,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 					Cluster: []string{"monitor"},
 					Indices: []elasticsearch.RoleIndex{{
 						Names:      []string{"*"},
-						Privileges: []string{"monitor"},
+						Privileges: []string{"monitor", "view_index_metadata"},
 					}},
 				},
 			}},
