@@ -544,7 +544,7 @@ var _ = Describe("ElasticseachUsers", func() {
 							Cluster: []string{"monitor"},
 							Indices: []elasticsearch.RoleIndex{{
 								Names:      []string{"*"},
-								Privileges: []string{"monitor"},
+								Privileges: []string{"monitor", "view_index_metadata"},
 							}},
 						},
 					}},
