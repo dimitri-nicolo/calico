@@ -7,11 +7,11 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"k8s.io/apimachinery/pkg/watch"
 
 	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type WebhookController struct {
