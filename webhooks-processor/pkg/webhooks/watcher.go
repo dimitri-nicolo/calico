@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	WebhooksWatcherTimeout = 1 * time.Minute
+	WebhooksWatcherTimeout    = 1 * time.Minute
+	WebhooksWatcherSleepOnErr = 5 * time.Second
 )
 
 type WebhookWatcherUpdater struct {
@@ -60,24 +61,22 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer logrus.Info("Webhook watcher is terminating")
 
-	logrus.Info("Watching for webhook definitions")
-
-	// watch for webhook updates to apply:
-	go func() {
-		for {
-			select {
-			case webhook := <-w.webhookUpdatesChan:
-				logEntry(webhook).Debug("Updating webhook")
-				if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
-					logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
-				}
-			case <-ctx.Done():
-				return
-			}
+	for {
+		if err := w.run(ctx); err != nil {
+			logrus.WithError(err).Error("Webhook watcher encountered an error")
 		}
-	}()
+		// delay before retrying
+		time.Sleep(WebhooksWatcherSleepOnErr)
+	}
+}
 
-	// watch for config map and secret updates:
+func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
+	// create a new context with cancel
+	// to ensure all watchers are stopped when this function exits
+	ctx, cancel := context.WithCancel(ptx)
+	defer cancel()
+
+	// initialize configmap and secret watchers
 	cmWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 			return w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
@@ -85,7 +84,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	})
 	if err != nil {
 		logrus.WithError(err).Error("Unable to watch ConfigMap resources")
-		return
+		return err
 	}
 	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
@@ -94,31 +93,32 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	})
 	if err != nil {
 		logrus.WithError(err).Error("Unable to watch Secret resources")
-		return
+		return err
 	}
-	go func() {
-		for ctx.Err() == nil {
-			select {
-			case event := <-cmWatcher.ResultChan():
-				w.controller.K8sEventsChan() <- event
-			case event := <-secretWatcher.ResultChan():
-				w.controller.K8sEventsChan() <- event
-			}
-		}
-	}()
 
-	// watch for webhook updates to process:
-	for ctx.Err() == nil {
-		watcherCtx, watcherCtxCancel := context.WithTimeout(ctx, WebhooksWatcherTimeout)
-		watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{})
-		if err != nil {
-			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
-			watcherCtxCancel()
-			return
+	// initialize webhook watcher
+	watcher, err := w.whClient.Watch(ctx, options.ListOptions{})
+	if err != nil {
+		logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
+		return err
+	}
+
+	logrus.Info("Watching for webhook definitions")
+	for {
+		select {
+		case webhook := <-w.webhookUpdatesChan:
+			logEntry(webhook).Debug("Updating webhook")
+			if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
+				logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
+			}
+		case configMapEvent := <-cmWatcher.ResultChan():
+			w.controller.K8sEventsChan() <- configMapEvent
+		case secretEvent := <-secretWatcher.ResultChan():
+			w.controller.K8sEventsChan() <- secretEvent
+		case webhookEvent := <-watcher.ResultChan():
+			w.controller.WebhookEventsChan() <- webhookEvent
+		case <-ctx.Done():
+			return nil
 		}
-		for event := range watcher.ResultChan() {
-			w.controller.WebhookEventsChan() <- event
-		}
-		watcherCtxCancel()
 	}
 }
