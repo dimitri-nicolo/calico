@@ -75,3 +75,6 @@ else ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 else
     THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci
 endif
+
+# Default branch prefix for release branches
+RELEASE_BRANCH_PREFIX ?= release-calient
