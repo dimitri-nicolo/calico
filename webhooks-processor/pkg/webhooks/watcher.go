@@ -56,8 +56,7 @@ func (w *WebhookWatcherUpdater) UpdatesChan() chan<- *api.SecurityEventWebhook {
 	return w.webhookUpdatesChan
 }
 
-func (w *WebhookWatcherUpdater) Run(ctx context.Context, ctxCancel context.CancelFunc, wg *sync.WaitGroup) {
-	defer ctxCancel()
+func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer logrus.Info("Webhook watcher is terminating")
 
