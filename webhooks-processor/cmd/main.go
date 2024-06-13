@@ -39,31 +39,38 @@ func main() {
 
 	config := webhooks.NewControllerConfig(webhooks.DefaultProviders(), events.FetchSecurityEventsFunc)
 
-	ctx, ctxCancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// init - webhook watcher and updater
 	webhookWatcherUpdater := webhooks.NewWebhookWatcherUpdater().
 		WithWebhooksClient(calicoClient.SecurityEventWebhook()).
 		WithK8sClient(k8sClient)
+	// init state
 	controllerState := webhooks.NewControllerState().
 		WithK8sClient(k8sClient).
 		WithConfig(config)
-	webhookController := webhooks.NewWebhookController().WithState(controllerState)
+	// init controller that uses state and watcher/updater
+	webhookController := webhooks.
+		NewWebhookController().
+		WithState(controllerState).
+		WithUpdater(webhookWatcherUpdater)
+	// wire up the watcher/updater and controller together
+	webhookWatcherUpdater = webhookWatcherUpdater.WithController(webhookController)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go webhookController.WithUpdater(webhookWatcherUpdater).Run(ctx, ctxCancel, &wg)
-	go webhookWatcherUpdater.WithController(webhookController).Run(ctx, ctxCancel, &wg)
+	go webhookWatcherUpdater.Run(ctx, cancel, &wg)
+	go webhookController.Run(ctx, cancel, &wg)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	select {
-	case s := <-sigChan:
-		logrus.WithField("signal", s).Info("OS signal received")
-		ctxCancel()
-	case <-ctx.Done():
-	}
+
+	s := <-sigChan
+	logrus.WithField("signal", s).Info("OS signal received")
+	cancel()
 
 	logrus.Info("Waiting for all components to terminate...")
 	wg.Wait()
-
 	logrus.Info("Goodbye!")
 }
