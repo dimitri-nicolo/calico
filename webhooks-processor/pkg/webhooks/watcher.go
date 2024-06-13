@@ -86,6 +86,7 @@ func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
 		logrus.WithError(err).Error("Unable to watch ConfigMap resources")
 		return err
 	}
+
 	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 			return w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
@@ -96,14 +97,10 @@ func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
 		return err
 	}
 
-	// initialize webhook watcher
-	watcher, err := w.whClient.Watch(ctx, options.ListOptions{})
-	if err != nil {
-		logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
-		return err
-	}
+	errorCh := make(chan error)
+	// start webhook watcher in its own retry loop goroutine
+	go w.webhookRetryWatcher(ctx, errorCh)
 
-	logrus.Info("Watching for webhook definitions")
 	for {
 		select {
 		case webhook := <-w.webhookUpdatesChan:
@@ -111,14 +108,36 @@ func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
 			if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
 				logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
 			}
+		// these watchers have their own retry mechanism. If they stop, they will be restarted, so keep watching
 		case configMapEvent := <-cmWatcher.ResultChan():
 			w.controller.K8sEventsChan() <- configMapEvent
 		case secretEvent := <-secretWatcher.ResultChan():
 			w.controller.K8sEventsChan() <- secretEvent
-		case webhookEvent := <-watcher.ResultChan():
-			w.controller.WebhookEventsChan() <- webhookEvent
+
+		// handle errors from watchers that do not have their own retry mechanism
+		case err := <-errorCh: // errors from webhook watcher
+			return err
 		case <-ctx.Done():
 			return nil
 		}
+	}
+}
+
+func (w *WebhookWatcherUpdater) webhookRetryWatcher(ptx context.Context, errorCh chan<- error) {
+	logrus.Info("webhook watcher is starting")
+	defer logrus.Info("webhook watcher is terminating")
+
+	ctx, cancel := context.WithCancel(ptx)
+	defer cancel()
+	watcher, err := w.whClient.Watch(ctx, options.ListOptions{})
+	if err != nil {
+		logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
+		errorCh <- err
+		return
+	}
+	// if watcher.Stop is called or if watcher encounters the error, ResultChan will be closed
+	// so it's fine to range over it
+	for webhookEvent := range watcher.ResultChan() {
+		w.controller.WebhookEventsChan() <- webhookEvent
 	}
 }
