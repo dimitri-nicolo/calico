@@ -729,8 +729,8 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	go func() {
 		testState.Running = true
 		wg.Add(2)
-		go webhookController.Run(ctx, testState.Stop, &wg)
-		go webhookWatcherUpdater.Run(ctx, testState.Stop, &wg)
+		go webhookController.Run(ctx, &wg)
+		go webhookWatcherUpdater.Run(ctx, &wg)
 		wg.Wait()
 		testState.Running = false
 	}()

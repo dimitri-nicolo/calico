@@ -60,8 +60,8 @@ func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go webhookWatcherUpdater.Run(ctx, cancel, &wg)
-	go webhookController.Run(ctx, cancel, &wg)
+	go webhookWatcherUpdater.Run(ctx, &wg)
+	go webhookController.Run(ctx, &wg)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
