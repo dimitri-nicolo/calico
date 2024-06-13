@@ -491,6 +491,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		// It is used to create dashboards and index-pattern in Kibana via a K8s job inside tigera-elasticsearch namespace
 		ElasticsearchUserNameDashboardsInstaller: {
 			DirectConnection: true,
+			FullName:         SystemUserFullName,
 			Username:         formatName(ElasticsearchUserNameDashboardsInstaller, clusterName, true, true),
 			Roles: []elasticsearch.Role{
 				{

@@ -699,6 +699,7 @@ func testElasticsearchUsers(privateUsers, publicUsers, expectedprivateUsers, exp
 		esUser, exists := privateUsers[expectedName]
 		Expect(exists).Should(BeTrue(), fmt.Sprintf("User %s does not exist", esUser.Username))
 		Expect(esUser.Username).Should(Equal(expectedUser.Username))
+		Expect(esUser.FullName).Should(Equal("system:serviceaccount"))
 
 		Expect(len(esUser.Roles)).Should(Equal(len(expectedUser.Roles)))
 
