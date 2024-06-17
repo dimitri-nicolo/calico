@@ -62,10 +62,13 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer logrus.Info("Webhook watcher is terminating")
 
 	for {
-		if ctx.Err() != nil {
-			// context cancelled. pack it up
+		select {
+		case <-ctx.Done():
+			// context is done, exit
 			return
+		default:
 		}
+
 		if err := w.run(ctx); err != nil {
 			logrus.WithError(err).Error("Webhook watcher encountered an error")
 		}
