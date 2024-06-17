@@ -6,7 +6,7 @@ execution_time_limit:
   hours: 8
 agent:
   machine:
-    type: e1-standard-2
+    type: f1-standard-2
     os_image: ubuntu2004
 auto_cancel:
   running:
@@ -36,8 +36,6 @@ global_job_config:
       - sudo systemctl stop docker
       - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
       - sudo systemctl start docker
-      # Free up space on the build machine.
-      - sudo rm -rf ~/{.kerl,.kiex,.phpbrew,.rbenv,.sbt} /opt/{apache-maven*,firefox*,scala} /usr/lib/jvm /usr/local/{aws2,phantomjs*}
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
       # Disable initramfs update to save space on the Semaphore VM (and we don't need it because we're not going to reboot).
       - sudo apt-get install -y -u crudini
@@ -237,7 +235,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -432,7 +430,7 @@ blocks:
       - name: test-customer-license
     agent:
       machine:
-        type: e1-standard-8
+        type: f1-standard-4
         os_image: ubuntu2004
     jobs:
       - name: sig-network conformance
@@ -449,7 +447,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -563,7 +561,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -662,7 +660,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -703,7 +701,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-8
+        type: f1-standard-4
         os_image: ubuntu2004
     secrets:
       # Mount a secret for pulling images from GCR, and a license for the k8s FVs
@@ -828,7 +826,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -890,7 +888,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -914,7 +912,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     secrets:
       - name: google-service-account-for-gcr
@@ -1053,7 +1051,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     secrets:
       - name: google-service-account-for-gcr
@@ -1232,7 +1230,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-2
+        type: f1-standard-2
         os_image: ubuntu2004
     prologue:
       commands:
@@ -1256,7 +1254,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-8
+        type: f1-standard-4
         os_image: ubuntu2004
     secrets:
       - name: google-service-account-for-gcr
@@ -1307,7 +1305,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-8
+        type: f1-standard-4
         os_image: ubuntu2004
     secrets:
       - name: google-service-account-for-gcr
@@ -1429,7 +1427,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -1611,7 +1609,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
@@ -1676,7 +1674,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     secrets:
       - name: google-service-account-for-gcr
@@ -1804,7 +1802,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     secrets:
       - name: google-service-account-for-gcr
@@ -1844,7 +1842,7 @@ blocks:
   task:
     agent:
       machine:
-        type: e1-standard-4
+        type: f1-standard-4
         os_image: ubuntu2004
     prologue:
       commands:
