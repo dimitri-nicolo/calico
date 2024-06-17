@@ -19,6 +19,14 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/webhooks"
 )
 
+func cancelOnSignals(cancel context.CancelFunc, signals ...os.Signal) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, signals...)
+	<-c
+	logrus.Info("signal received")
+	cancel()
+}
+
 func main() {
 	logrus.Info("Starting security events webhook processor...")
 
@@ -62,15 +70,7 @@ func main() {
 	wg.Add(2)
 	go webhookWatcherUpdater.Run(ctx, &wg)
 	go webhookController.Run(ctx, &wg)
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	s := <-sigChan
-	logrus.WithField("signal", s).Info("OS signal received")
-	cancel()
-
-	logrus.Info("Waiting for all components to terminate...")
+	go cancelOnSignals(cancel, syscall.SIGINT, syscall.SIGTERM)
 	wg.Wait()
 	logrus.Info("Goodbye!")
 }
