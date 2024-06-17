@@ -191,7 +191,11 @@ func main() {
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithSNIServiceMap(sniServiceMap),
-			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy, cfg.CheckManagedClusterAuthorizationCacheTTL),
+			server.WithCheckManagedClusterAuthorizationBeforeProxy(
+				cfg.CheckManagedClusterAuthorizationBeforeProxy,
+				cfg.CheckManagedClusterAuthorizationCacheTTL,
+				auth.NewNamespacedRBACAuthorizer(k8s, cfg.TenantNamespace),
+			),
 			server.WithTunnelInnerProxy(innerProxy),
 		)
 	}
@@ -200,6 +204,8 @@ func main() {
 		logOpts := []accesslog.Option{
 			accesslog.WithRequestHeader(server.ClusterHeaderFieldCanon, "xClusterID"),
 			accesslog.WithRequestHeader("User-Agent", "userAgent"),
+			accesslog.WithRequestHeader("Impersonate-User", "impersonateUser"),
+			accesslog.WithRequestHeader("Impersonate-Group", "impersonateGroup"),
 			accesslog.WithErrorResponseBodyCaptureSize(250),
 		}
 

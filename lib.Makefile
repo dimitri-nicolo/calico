@@ -1022,7 +1022,7 @@ ifdef EXPECTED_RELEASE_TAG
 		@echo "Failed to verify release tag$(comma) expected release version is $(EXPECTED_RELEASE_TAG)$(comma) actual is $(RELEASE_TAG)."\
 		&& exit 1)
 endif
-	$(eval NEXT_RELEASE_VERSION = $(shell echo "$(call git-release-tag-from-dev-tag)" | awk '{ split($0,tag,"-"); if (tag[2] ~ /^1\./) { split(tag[2],subver,"."); print tag[1]"-"subver[1]+1".0" } else { split(tag[1],ver,"."); print ver[1]"."ver[2]"."ver[3]+1 } }'))
+	$(eval NEXT_RELEASE_VERSION = $(shell echo "$(call git-release-tag-from-dev-tag)" | awk '{ split($$0,tag,"-"); if (tag[2] ~ /^1\./) { split(tag[2],subver,"."); print tag[1]"-"subver[1]".subver[2]+1" } else { split(tag[1],ver,"."); print ver[1]"."ver[2]"."ver[3]+1 } }'))
 ifndef IMAGE_ONLY
 	$(MAKE) maybe-tag-release maybe-push-release-tag\
 		RELEASE_TAG=$(RELEASE_TAG) BRANCH=$(RELEASE_BRANCH) DEV_TAG=$(DEV_TAG)
@@ -1142,8 +1142,8 @@ release-dev-image-arch-to-registry-%:
 # tag that empty commit with an incremented minor version of the previous dev tag for the next release.
 create-release-branch: var-require-one-of-CONFIRM-DRYRUN var-require-all-DEV_TAG_SUFFIX-RELEASE_BRANCH_PREFIX fetch-all
 	$(if $(filter-out $(RELEASE_BRANCH_BASE),$(call current-branch)),$(error create-release-branch must be called on $(RELEASE_BRANCH_BASE)),)
-	$(eval NEXT_RELEASE_VERSION := $(shell echo "$(call git-release-tag-from-dev-tag)" | awk '{ split($0,tag,"-"); if (tag[2] ~ /^1\./) { split(tag[2],subver,"."); print tag[1]"-"subver[1]+1".0" } else { split(tag[1],ver,"."); print ver[1]"."ver[2]"."ver[3]+1 } }'))
-	$(eval RELEASE_BRANCH_VERSION := $(shell echo "$(call git-release-tag-from-dev-tag)" | awk -F  "." '{print $$1"."$$2}'))
+	$(eval NEXT_RELEASE_VERSION := $(shell echo "$(call git-release-tag-from-dev-tag)" | awk '{ split($$0,tag,"-"); if (tag[2] ~ /^1\./) { split(tag[2],subver,"."); print tag[1]"-"subver[1]+1".0" } else { split(tag[1],ver,"."); print ver[1]"."ver[2]+1"."ver[3] } }'))
+	$(eval RELEASE_BRANCH_VERSION = $(shell echo "$(call git-release-tag-from-dev-tag)" | awk '{ split($$0,tag,"-"); split(tag[1],ver,"."); if (tag[2] ~ /^1\./) { split(tag[2],subver,"."); print ver[1]"."ver[2]"-"subver[1] } else { print ver[1]"."ver[2] } }'))
 	git checkout -B $(RELEASE_BRANCH_PREFIX)-$(RELEASE_BRANCH_VERSION) $(GIT_REMOTE)/$(RELEASE_BRANCH_BASE)
 	$(GIT) push $(GIT_REMOTE) $(RELEASE_BRANCH_PREFIX)-$(RELEASE_BRANCH_VERSION)
 	$(MAKE) dev-tag-next-release push-next-release-dev-tag\
@@ -1391,7 +1391,7 @@ help:
 ###############################################################################
 # Common functions for launching a local Elastic instance.
 ###############################################################################
-ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSION)
+ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(shell grep -o '^ELASTIC_VERSION=[0-9\.]*' $(REPO_ROOT)/third_party/elasticsearch/Makefile | cut -d "=" -f 2)
 
 ## Run elasticsearch as a container (tigera-elastic)
 .PHONY: run-elastic

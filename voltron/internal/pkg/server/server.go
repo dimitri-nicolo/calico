@@ -27,10 +27,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"

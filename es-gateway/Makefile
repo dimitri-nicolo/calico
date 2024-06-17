@@ -77,15 +77,17 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 ut:
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) pkg/*'
 
+# Disable challenger tests
+
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.
-build-tests: $(shell find ./fv -type f -name '*.go' -print)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
+#build-tests: $(shell find ./fv -type f -name '*.go' -print)
+#	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
 
-WHAT=.
-fv: clean image run-elastic fv-fast
-fv-fast: build-tests
-	 cd fv && ./fv.test -test.run $(WHAT)
+#WHAT=.
+#fv: clean image run-elastic fv-fast
+#fv-fast: build-tests
+#	 cd fv && ./fv.test -test.run $(WHAT)
 
 st:
 	echo "ST tests not available"

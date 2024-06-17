@@ -13,15 +13,14 @@ K8S_VERSION=v1.28.10
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
-ELASTIC_VERSION=7.17.18
 ETCD_VERSION=v3.5.6
 HELM_VERSION=v3.11.3
 KINDEST_NODE_VERSION=v1.27.11
 KINDEST_NODE_VERSION_DUAL_TOR=v1.24.7
 KIND_VERSION=v0.22.0
 PROTOC_VER=v0.1
-UBI8_VERSION=8.9
-UBI9_VERSION=9.3
+UBI8_VERSION=8.10
+UBI9_VERSION=9.4
 
 # Configuration for Semaphore integration.
 ORGANIZATION=tigera
@@ -76,3 +75,6 @@ else ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 else
     THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci
 endif
+
+# Default branch prefix for release branches
+RELEASE_BRANCH_PREFIX ?= release-calient

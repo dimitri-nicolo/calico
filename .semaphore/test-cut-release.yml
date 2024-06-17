@@ -82,6 +82,10 @@ promotions:
     pipeline_file: ../egress-gateway/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Elasticsearch Release
+    pipeline_file: ../elasticsearch/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut Elasticsearch Metrics Release
     pipeline_file: ../elasticsearch-metrics/.semaphore/test-cut-release.yml
     auto_promote:
@@ -132,6 +136,10 @@ promotions:
       when: "result = 'passed'"
   - name: Test Cut Linseed
     pipeline_file: ../linseed/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut Kibana Release
+    pipeline_file: ../kibana/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
 

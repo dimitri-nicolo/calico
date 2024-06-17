@@ -759,32 +759,40 @@ func (c *controller) reconcileSecretsForCluster(mc *v3.ManagedCluster, secretsTo
 		return nil
 	}
 
+	var secretErrors []error
 	for _, s := range secretsToCopy {
 		secret, err := c.managementK8sClient.CoreV1().Secrets(s.Namespace).Get(context.Background(), s.Name, metav1.GetOptions{})
 		if err != nil {
 			log.WithError(err).Errorf("Error retrieving secret %v in namespace %v", s.Name, s.Namespace)
-			return err
+			secretErrors = append(secretErrors, err)
+			continue
 		}
 
 		managedOperatorNS, err := utils.FetchOperatorNamespace(managedClient)
 		if err != nil {
 			log.WithError(err).Error("Unable to fetch managed cluster operator namespace")
-			return err
+			secretErrors = append(secretErrors, err)
+			continue
 		}
 
 		secret.ObjectMeta.Namespace = managedOperatorNS
 		if err = resource.WriteSecretToK8s(managedClient, resource.CopySecret(secret)); err != nil {
 			log.WithError(err).Error("Error writing secret to managed cluster")
-			return err
+			secretErrors = append(secretErrors, err)
+			continue
 		}
 		log.WithFields(logrus.Fields{
 			"name":      secret.Name,
 			"namespace": secret.Namespace,
 		}).Debug("Copied secret to managed cluster")
 	}
-	log.Debug("Successfully copied all secrets")
+	err := errors.Join(secretErrors...)
 
-	return nil
+	if err == nil {
+		log.Debug("Successfully copied all secrets")
+	}
+
+	return err
 }
 
 func (c *controller) tokenNameForService(service string) string {

@@ -42,6 +42,10 @@ promotions:
     pipeline_file: push-images/egress-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push elasticsearch images
+    pipeline_file: push-images/elasticsearch.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push elasticsearch-metrics images
     pipeline_file: push-images/elasticsearch-metrics.yml
     auto_promote:
@@ -68,6 +72,10 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push key-cert-provisioner images
     pipeline_file: push-images/key-cert-provisioner.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Push kibana images
+    pipeline_file: push-images/kibana.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push kube-controllers images

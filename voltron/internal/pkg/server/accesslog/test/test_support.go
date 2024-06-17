@@ -24,17 +24,18 @@ type AccessLogTLS struct {
 }
 
 type AccessLogRequest struct {
-	Time       time.Time     `json:"time"`
-	RemoteAddr string        `json:"remoteAddr"`
-	Proto      string        `json:"proto"`
-	Method     string        `json:"method"`
-	Host       string        `json:"host"`
-	Path       string        `json:"path"`
-	Query      string        `json:"query"`
-	ClusterID  string        `json:"xClusterID"`
-	UserAgent  string        `json:"userAgent"`
-	Accept     string        `json:"accept"`
-	Auth       AccessLogAuth `json:"auth"`
+	Time             time.Time     `json:"time"`
+	RemoteAddr       string        `json:"remoteAddr"`
+	Proto            string        `json:"proto"`
+	Method           string        `json:"method"`
+	Host             string        `json:"host"`
+	Path             string        `json:"path"`
+	Query            string        `json:"query"`
+	ClusterID        string        `json:"xClusterID"`
+	UserAgent        string        `json:"userAgent"`
+	Accept           string        `json:"accept"`
+	ImpersonateGroup string        `json:"impersonateGroup"`
+	Auth             AccessLogAuth `json:"auth"`
 }
 
 type AccessLogResponse struct {
