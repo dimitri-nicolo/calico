@@ -1,5 +1,4 @@
-{{ if .Values.compliance }}
-{{ if .Values.compliance.enabled }}
+{{ if and .Values.compliance .Values.compliance.enabled }}
 {{ $spec := omit .Values.compliance "enabled" }}
 
 apiVersion: operator.tigera.io/v1
@@ -9,5 +8,4 @@ metadata:
 spec:
 {{ $spec | toYaml | indent 2 }}
 
-{{ end }}
 {{ end }}
