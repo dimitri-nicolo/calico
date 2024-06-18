@@ -71,9 +71,10 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 		if err := w.run(ctx); err != nil {
 			logrus.WithError(err).Error("Webhook watcher encountered an error")
+			// delay before retrying
+			time.Sleep(WebhooksWatcherSleepOnErr)
 		}
-		// delay before retrying
-		time.Sleep(WebhooksWatcherSleepOnErr)
+
 	}
 }
 
@@ -104,7 +105,7 @@ func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
 		return err
 	}
 
-	errorCh := make(chan error)
+	errorCh := make(chan error, 1)
 	// start webhook watcher in its own retry loop goroutine
 	go w.webhookRetryWatcher(ctx, errorCh)
 
