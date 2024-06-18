@@ -61,28 +61,19 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer logrus.Info("Webhook watcher is terminating")
 
-	for {
-		select {
-		case <-ctx.Done():
-			// context is done, exit
-			return
-		default:
+	go func() {
+		for {
+			select {
+			case webhook := <-w.webhookUpdatesChan:
+				logEntry(webhook).Debug("Updating webhook")
+				if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
+					logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
+				}
+			case <-ctx.Done():
+				return
+			}
 		}
-
-		if err := w.run(ctx); err != nil {
-			logrus.WithError(err).Error("Webhook watcher encountered an error")
-			// delay before retrying
-			time.Sleep(WebhooksWatcherSleepOnErr)
-		}
-
-	}
-}
-
-func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
-	// create a new context with cancel
-	// to ensure all watchers are stopped when this function exits
-	ctx, cancel := context.WithCancel(ptx)
-	defer cancel()
+	}()
 
 	// initialize configmap and secret watchers
 	cmWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
@@ -92,7 +83,7 @@ func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
 	})
 	if err != nil {
 		logrus.WithError(err).Error("Unable to watch ConfigMap resources")
-		return err
+		return
 	}
 
 	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
@@ -102,7 +93,7 @@ func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
 	})
 	if err != nil {
 		logrus.WithError(err).Error("Unable to watch Secret resources")
-		return err
+		return
 	}
 
 	errorCh := make(chan error, 1)
@@ -121,12 +112,8 @@ func (w *WebhookWatcherUpdater) run(ptx context.Context) error {
 			w.controller.K8sEventsChan() <- configMapEvent
 		case secretEvent := <-secretWatcher.ResultChan():
 			w.controller.K8sEventsChan() <- secretEvent
-
-		// handle errors from watchers that do not have their own retry mechanism
-		case err := <-errorCh: // errors from webhook watcher
-			return err
 		case <-ctx.Done():
-			return nil
+			return
 		}
 	}
 }
