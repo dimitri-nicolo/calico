@@ -1,3 +1,4 @@
+{{ if .Values.compliance }}
 {{ if .Values.compliance.enabled }}
 {{ $spec := omit .Values.compliance "enabled" }}
 
@@ -8,4 +9,5 @@ metadata:
 spec:
 {{ $spec | toYaml | indent 2 }}
 
+{{ end }}
 {{ end }}
