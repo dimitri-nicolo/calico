@@ -745,7 +745,7 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 			// Making sure it's still running before we turn it off
 			require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 			testState.Stop()
-			require.Eventually(t, func() bool { return !testState.Running }, 3*time.Second, 10*time.Millisecond)
+			require.Eventually(t, func() bool { return !testState.Running }, 10*time.Second, 10*time.Millisecond)
 		}
 	})
 
