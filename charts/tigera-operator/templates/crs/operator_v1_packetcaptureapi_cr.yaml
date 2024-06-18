@@ -1,4 +1,4 @@
-{{ if .Values.packetCaptureAPI.enabled }}
+{{ if and .Values.packetCaptureAPI .Values.packetCaptureAPI.enabled }}
 {{ $spec := omit .Values.packetCaptureAPI "enabled" }}
 
 apiVersion: operator.tigera.io/v1
