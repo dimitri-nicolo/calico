@@ -119,7 +119,7 @@ func New(m maps.Map, ringSize int, opts ...Option) (Perf, error) {
 	}
 
 	// Create perf rings.
-	p.rings, err = p.openPerfRings(cpus, ringSize)
+	p.rings, err = p.openPerfRings(cpus, ringSize*1024*1024)
 	if err != nil {
 		return nil, err
 	}

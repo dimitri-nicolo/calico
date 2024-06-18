@@ -216,7 +216,7 @@ type Config struct {
 	BPFForceTrackPacketsFromIfaces     []string          `config:"iface-filter-slice;docker+"`
 	BPFDisableGROForIfaces             *regexp.Regexp    `config:"regexp;"`
 	BPFExcludeCIDRsFromNAT             []string          `config:"cidr-list;;"`
-	BPFExportBufferSizeBytes           int               `config:"int;1048576;non-zero"`
+	BPFExportBufferSizeMB              int               `config:"int;1;non-zero"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
 	FlowLogsCollectTcpStats     bool `config:"bool;false"`
