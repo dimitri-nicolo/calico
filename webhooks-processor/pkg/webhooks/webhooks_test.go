@@ -723,15 +723,21 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	webhookWatcherUpdater.WithController(webhookController)
 	testState.WebhooksCtrl = webhookController
 
+	var ctrWg sync.WaitGroup
+	var uptWg sync.WaitGroup
 	var ctx context.Context
-	wg := sync.WaitGroup{}
 	ctx, testState.Stop = context.WithCancel(context.Background())
+
+	ctrCtx, ctrCancel := context.WithCancel(ctx)
+
+	uptCtx, uptCancel := context.WithCancel(ctx)
 	go func() {
 		testState.Running = true
-		wg.Add(2)
-		go webhookController.Run(ctx, &wg)
-		go webhookWatcherUpdater.Run(ctx, &wg)
-		wg.Wait()
+		uptWg.Add(1)
+		go webhookWatcherUpdater.Run(uptCtx, &uptWg)
+		ctrWg.Add(1)
+		go webhookController.Run(ctrCtx, &ctrWg)
+		ctrWg.Wait()
 		testState.Running = false
 	}()
 
@@ -744,6 +750,12 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 		if testState.Stop != nil {
 			// Making sure it's still running before we turn it off
 			require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
+
+			uptCancel()
+			uptWg.Wait()
+			ctrCancel()
+			ctrWg.Wait()
+
 			testState.Stop()
 			require.Eventually(t, func() bool { return !testState.Running }, 10*time.Second, 10*time.Millisecond)
 		}
