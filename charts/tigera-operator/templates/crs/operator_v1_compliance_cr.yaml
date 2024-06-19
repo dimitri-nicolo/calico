@@ -1,4 +1,4 @@
-{{ if .Values.compliance.enabled }}
+{{ if and .Values.compliance .Values.compliance.enabled }}
 {{ $spec := omit .Values.compliance "enabled" }}
 
 apiVersion: operator.tigera.io/v1
