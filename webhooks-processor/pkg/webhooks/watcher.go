@@ -102,17 +102,13 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	for {
 		select {
-		case webhook := <-w.webhookUpdatesChan:
-			logEntry(webhook).Debug("Updating webhook")
-			if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
-				logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
-			}
 		// these watchers have their own retry mechanism. If they stop, they will be restarted, so keep watching
 		case configMapEvent := <-cmWatcher.ResultChan():
 			w.controller.K8sEventsChan() <- configMapEvent
 		case secretEvent := <-secretWatcher.ResultChan():
 			w.controller.K8sEventsChan() <- secretEvent
 		case <-ctx.Done():
+			logrus.Info()
 			return
 		}
 	}

@@ -25,7 +25,7 @@ type WebhookController struct {
 func NewWebhookController() *WebhookController {
 	watcher := new(WebhookController)
 	watcher.webhookEventsChan = make(chan calicoWatch.Event)
-	watcher.k8sEventsChan = make(chan watch.Event, 10)
+	watcher.k8sEventsChan = make(chan watch.Event)
 	return watcher
 }
 
