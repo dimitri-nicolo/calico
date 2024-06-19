@@ -751,6 +751,7 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 			// Making sure it's still running before we turn it off
 			require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 
+			// make sure the webhook updater and webhook controller exit in the correct order
 			uptCancel()
 			uptWg.Wait()
 			ctrCancel()
