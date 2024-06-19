@@ -17,7 +17,6 @@ package rules_test
 import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/felix/rules"
 	. "github.com/projectcalico/calico/felix/rules"
 
 	"fmt"
@@ -314,10 +313,10 @@ var _ = Describe("Static", func() {
 							Rules: []Rule{
 								// DNS response capture.
 								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-									Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+									Action: JumpAction{Target: "cali-log-dns"}},
 								// DNS request capture.
 								{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-									Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+									Action: JumpAction{Target: "cali-log-dns"}},
 								// Incoming host endpoint chains.
 								{Action: ClearMarkAction{Mark: 0xe1}},
 								{Match: Match().MarkClear(0x10),
@@ -340,10 +339,10 @@ var _ = Describe("Static", func() {
 								Rules: []Rule{
 									// DNS response capture.
 									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 									// DNS request capture.
 									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 
 									// Forward check chain.
 									{Action: ClearMarkAction{Mark: conf.IptablesMarkEndpoint}},
@@ -378,10 +377,10 @@ var _ = Describe("Static", func() {
 								Rules: []Rule{
 									// DNS response capture.
 									{Match: Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 									// DNS request capture.
 									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 
 									// Per-prefix workload jump rules.  Note use of goto so that we
 									// don't return here.
@@ -422,11 +421,11 @@ var _ = Describe("Static", func() {
 
 									// DNS request capture.
 									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 
 									// DNS response capture.
 									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
@@ -455,11 +454,11 @@ var _ = Describe("Static", func() {
 
 									// DNS request capture.
 									{Match: Match().Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 
 									// DNS response capture.
 									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
@@ -501,9 +500,9 @@ var _ = Describe("Static", func() {
 					})
 					It("should return only the expected filter chains", func() {
 						if kubeIPVSEnabled {
-							Expect(len(rr.StaticFilterTableChains(ipVersion))).To(Equal(8))
+							Expect(len(rr.StaticFilterTableChains(ipVersion))).To(Equal(9))
 						} else {
-							Expect(len(rr.StaticFilterTableChains(ipVersion))).To(Equal(6))
+							Expect(len(rr.StaticFilterTableChains(ipVersion))).To(Equal(7))
 						}
 					})
 
@@ -530,7 +529,7 @@ var _ = Describe("Static", func() {
 						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-failsafe-out")).To(Equal(expRawFailsafeOut))
 					})
 					It("should return only the expected raw chains", func() {
-						Expect(len(rr.StaticRawTableChains(ipVersion))).To(Equal(5))
+						Expect(len(rr.StaticRawTableChains(ipVersion))).To(Equal(6))
 					})
 					Describe("DNSMode is DNSPolicyModeDelayDNSResponse", func() {
 						BeforeEach(func() {
@@ -547,7 +546,7 @@ var _ = Describe("Static", func() {
 										Action: NfqueueWithBypassAction{QueueNum: 101}},
 									// DNS request capture.
 									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
-										Action: NflogAction{Group: 3, Prefix: "DNS", Size: -1}},
+										Action: JumpAction{Target: "cali-log-dns"}},
 									// Incoming host endpoint chains.
 									{Action: ClearMarkAction{Mark: 0xe1}},
 									{Match: Match().MarkClear(0x10),
@@ -1003,6 +1002,26 @@ var _ = Describe("Static", func() {
 				} else {
 					Expect(findChain(rr.StaticFilterTableChains(6), "cali-OUTPUT")).To(Equal(expOutputChainIPIPV6NoIPVS))
 				}
+			})
+			It("should include the expected dns-log chain", func() {
+				chains := rr.StaticFilterTableChains(4)
+				chain := findChain(chains, "cali-log-dns")
+				Expect(chain.Rules).To(Equal([]Rule{
+					{
+						Action: NflogAction{
+							Group:  NFLOGDomainGroup,
+							Prefix: DNSActionPrefix,
+							// Don't truncate the DNS packet when copying it to Felix.
+							Size: -1,
+						},
+					},
+					{
+						Action: SetMaskedMarkAction{
+							Mask: 0x400000,
+							Mark: 0x400000,
+						},
+					},
+				}))
 			})
 			It("IPv4: Should return expected NAT postrouting chain", func() {
 				Expect(rr.StaticNATPostroutingChains(4)).To(Equal([]*Chain{
@@ -1950,7 +1969,7 @@ var _ = Describe("Static", func() {
 			}
 		})
 
-		It("should include the expected NFLOG rules in the raw output chains", func() {
+		It("should include the expected rules in the raw output chains", func() {
 			caliRawPreRoutingChain := rr.StaticRawOutputChain(4, testNodelocalDNSBroadcastedIPs)
 			for _, serverPort := range testNodelocalDNSBroadcastedIPs {
 				Expect(caliRawPreRoutingChain.Rules).To(ContainElement(
@@ -1958,11 +1977,7 @@ var _ = Describe("Static", func() {
 						Match: Match().Protocol("udp").
 							SourcePorts(serverPort.Port).
 							SourceNet(serverPort.IP),
-						Action: NflogAction{
-							Group:  rules.NFLOGDomainGroup,
-							Prefix: rules.DNSActionPrefix,
-							Size:   -1,
-						},
+						Action: JumpAction{Target: "cali-log-dns"},
 					},
 				))
 				Expect(caliRawPreRoutingChain.Rules).To(ContainElement(
@@ -1970,14 +1985,31 @@ var _ = Describe("Static", func() {
 						Match: Match().Protocol("tcp").
 							SourcePorts(serverPort.Port).
 							SourceNet(serverPort.IP),
-						Action: NflogAction{
-							Group:  rules.NFLOGDomainGroup,
-							Prefix: rules.DNSActionPrefix,
-							Size:   -1,
-						},
+						Action: JumpAction{Target: "cali-log-dns"},
 					},
 				))
 			}
+		})
+
+		It("should include the expected dns-log chain", func() {
+			chains := rr.StaticRawTableChains(4)
+			chain := findChain(chains, "cali-log-dns")
+			Expect(chain.Rules).To(Equal([]Rule{
+				{
+					Action: NflogAction{
+						Group:  NFLOGDomainGroup,
+						Prefix: DNSActionPrefix,
+						// Don't truncate the DNS packet when copying it to Felix.
+						Size: -1,
+					},
+				},
+				{
+					Action: SetMaskedMarkAction{
+						Mask: 0x400000,
+						Mark: 0x400000,
+					},
+				},
+			}))
 		})
 
 		It("should include the expected NFLOG rules in the raw prerouting chains", func() {
@@ -1988,11 +2020,7 @@ var _ = Describe("Static", func() {
 						Match: Match().Protocol("udp").
 							DestPorts(serverPort.Port).
 							DestNet(serverPort.IP),
-						Action: NflogAction{
-							Group:  rules.NFLOGDomainGroup,
-							Prefix: rules.DNSActionPrefix,
-							Size:   -1,
-						},
+						Action: JumpAction{Target: "cali-log-dns"},
 					},
 				))
 				Expect(caliRawOutputChain.Rules).To(ContainElement(
@@ -2000,11 +2028,7 @@ var _ = Describe("Static", func() {
 						Match: Match().Protocol("tcp").
 							DestPorts(serverPort.Port).
 							DestNet(serverPort.IP),
-						Action: NflogAction{
-							Group:  rules.NFLOGDomainGroup,
-							Prefix: rules.DNSActionPrefix,
-							Size:   -1,
-						},
+						Action: JumpAction{Target: "cali-log-dns"},
 					},
 				))
 			}

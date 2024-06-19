@@ -438,7 +438,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			api.DNSPolicyModeDelayDeniedPacket,
 		} {
 			localMode := m
-			Context("with DNSPolicyMode explicity set to "+string(localMode), func() {
+			Context("with DNSPolicyMode explicitly set to "+string(localMode), func() {
 				BeforeEach(func() {
 					dnsMode = string(localMode)
 				})
@@ -453,7 +453,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 						var foundReq, foundResp, found100, found101 bool
 						for _, line := range strings.Split(iptablesSaveOutput, "\n") {
-							if strings.Contains(line, "--nflog-group 3") {
+							if strings.Contains(line, "-j cali-log-dns") {
 								if strings.Contains(line, "NEW") {
 									foundReq = true
 								}
@@ -488,7 +488,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				}
 
 				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeNoDelay {
-					It("has ingress and egress NFLOG DNS snooping rules and no NFQueue rules", func() {
+					It("has ingress and egress NFLOG DNS snooping rules and no NFQUEUE rules", func() {
 						// Should be 6 snooping NFLOG rules (ingress/egress for forward,output,input).
 						// Should be no nfqueue rules.
 						Eventually(checkIPTablesFunc(false, false), "10s", "1s").ShouldNot(HaveOccurred())
