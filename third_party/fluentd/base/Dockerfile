@@ -17,28 +17,25 @@ RUN gem install async-http -v 0.60.2 && \
        gem install fluentd -v ${FLUENTD_VERSION} && \
        gem install json -v 2.6.3 && \
        gem install oj -v 3.16.1 && \
-       gem install rexml -v 3.2.6 && \
-       gem install uri -v 0.12.2 && \
-       gem install time -v 0.1.1 && \
-       gem install cgi -v 0.2.2
+       gem install rexml -v 3.2.6
 
 # Calico Enterprise dependencies
-RUN gem install elasticsearch-api -v 7.17.10 && \
-       gem install elasticsearch-transport -v 7.17.10 && \
-       gem install elasticsearch-xpack -v 7.17.10 && \
-       gem install elasticsearch -v 7.17.10 && \
+RUN gem install elasticsearch-api -v 7.17.11 && \
+       gem install elasticsearch-transport -v 7.17.11 && \
+       gem install elasticsearch-xpack -v 7.17.11 && \
+       gem install elasticsearch -v 7.17.11 && \
        gem install fluent-plugin-cloudwatch-logs -v 0.14.3 && \
        gem install fluent-plugin-elasticsearch -v 5.4.3 && \
        gem install fluent-plugin-prometheus -v 2.1.0 && \
        gem install fluent-plugin-remote_syslog -v 1.1.0 && \
        gem install fluent-plugin-s3 -v 1.7.2 && \
        gem install fluent-plugin-splunk-hec -v 1.3.3 && \
-       gem install fluent-plugin-sumologic_output -v 1.8.0
+       gem install fluent-plugin-sumologic_output -v 1.9.0
 
 # cleanup
 RUN gem sources --clear-all
 RUN rm -fr /tmp/* /usr/local/share/gems/cache/*.gem
-RUN rm -fr /usr/local/share/gems/gems/fluentd-1.16.3/test/
+RUN rm -fr /usr/local/share/gems/gems/fluentd-${FLUENTD_VERSION}/test/
 
 RUN mkdir -p /fluentd/etc/output_bgp
 RUN mkdir -p /fluentd/etc/output_compliance_reports

@@ -15,17 +15,17 @@ ENV ROOT_DIR=c:
 # - Install Calico Enterprise dependencies
 RUN mklink /D c:\ruby c:\ruby31 && \
         setx /m path "c:\ruby\bin;%path%;" && \
-        gem install elasticsearch-api:7.17.10 && \
-        gem install elasticsearch-transport -v 7.17.10 && \
-        gem install elasticsearch-xpack -v 7.17.10 && \
-        gem install elasticsearch -v 7.17.10 && \
+        gem install elasticsearch-api:7.17.11 && \
+        gem install elasticsearch-transport -v 7.17.11 && \
+        gem install elasticsearch-xpack -v 7.17.11 && \
+        gem install elasticsearch -v 7.17.11 && \
         gem install fluent-plugin-cloudwatch-logs -v 0.14.3 && \
         gem install fluent-plugin-elasticsearch -v 5.4.3 && \
         gem install fluent-plugin-prometheus -v 2.1.0 && \
         gem install fluent-plugin-remote_syslog -v 1.1.0 && \
         gem install fluent-plugin-s3 -v 1.7.2 && \
         gem install fluent-plugin-splunk-hec -v 1.3.3 && \
-        gem install fluent-plugin-sumologic_output -v 1.8.0 && \
+        gem install fluent-plugin-sumologic_output -v 1.9.0 && \
         gem sources --clear-all
 
 RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc" && \
@@ -48,5 +48,5 @@ COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb
 # We are currently doing this because fluentd executed the http plugin from the standard library
 # instead the linseed plugin defined in rubyplugin folder
 # Upgrading to a newer ruby or fluentd will require a change to the commands below
-RUN powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby31\lib\ruby\gems\3.1.0\gems\fluentd-1.16.3-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb" && \
-        powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby\lib\ruby\gems\3.1.0\gems\fluentd-1.16.3-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb"
+RUN powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby31\lib\ruby\gems\3.1.0\gems\fluentd-1.16.5-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb" && \
+        powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby\lib\ruby\gems\3.1.0\gems\fluentd-1.16.5-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb"
