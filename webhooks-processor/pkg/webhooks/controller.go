@@ -48,6 +48,8 @@ func (c *WebhookController) K8sEventsChan() chan<- watch.Event {
 }
 
 func (c *WebhookController) Run(ctx context.Context, wg *sync.WaitGroup) {
+	defer close(c.k8sEventsChan)
+	defer close(c.webhookEventsChan)
 	defer wg.Done()
 	defer logrus.Info("Webhook controller is terminating")
 
