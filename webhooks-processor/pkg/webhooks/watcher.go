@@ -103,12 +103,15 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		// these watchers have their own retry mechanism. If they stop, they will be restarted, so keep watching
-		case configMapEvent := <-cmWatcher.ResultChan():
-			w.controller.K8sEventsChan() <- configMapEvent
-		case secretEvent := <-secretWatcher.ResultChan():
-			w.controller.K8sEventsChan() <- secretEvent
+		case configMapEvent, ok := <-cmWatcher.ResultChan():
+			if ok {
+				w.controller.K8sEventsChan() <- configMapEvent
+			}
+		case secretEvent, ok := <-secretWatcher.ResultChan():
+			if ok {
+				w.controller.K8sEventsChan() <- secretEvent
+			}
 		case <-ctx.Done():
-			logrus.Info()
 			return
 		}
 	}

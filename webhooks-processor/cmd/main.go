@@ -11,7 +11,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -22,7 +21,8 @@ import (
 
 func cancelOnSignals(cancel context.CancelFunc, ctrWg, uptWg *sync.WaitGroup, ctrCancel, uptCancel context.CancelFunc) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM...)
+	syscalls := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
+	signal.Notify(c, syscalls...)
 	<-c
 	logrus.Info("signal received")
 
@@ -63,8 +63,6 @@ func main() {
 
 	uptCtx, uptCancel := context.WithCancel(ctx)
 
-	k8sEventChan := make(chan watch.Event)
-
 	// init - webhook watcher and updater
 	webhookWatcherUpdater := webhooks.NewWebhookWatcherUpdater().
 		WithWebhooksClient(calicoClient.SecurityEventWebhook()).
@@ -77,8 +75,7 @@ func main() {
 	webhookController := webhooks.
 		NewWebhookController().
 		WithState(controllerState).
-		WithUpdater(webhookWatcherUpdater).
-		WithK8sEventChan(k8sEventChan)
+		WithUpdater(webhookWatcherUpdater)
 	// wire up the watcher/updater and controller together
 	webhookWatcherUpdater = webhookWatcherUpdater.WithController(webhookController)
 
