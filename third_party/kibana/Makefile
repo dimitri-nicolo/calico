@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/kibana
 KIBANA_IMAGE?=kibana-ubi
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-KIBANA_VERSION = 7.17.21
+KIBANA_VERSION = 7.17.22
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
@@ -32,6 +32,8 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
 	patch -d kibana -p1 < patches/0002-Reduce-all-platforms-to-linux-variants-only.patch
 	patch -d kibana -p1 < patches/0003-Support-UBI-arm64-builds.patch
+	patch -d kibana -p1 < patches/0004-Kibana-186491.patch
+	patch -d kibana -p1 < patches/0005-Bump-puppeteer-to-v22.11.2.patch
 	touch $@
 
 # always register because build target will build images for all supported arches
