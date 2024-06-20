@@ -2816,6 +2816,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			copy(*out, *in)
 		}
 	}
+	if in.BPFExportBufferSizeMB != nil {
+		in, out := &in.BPFExportBufferSizeMB, &out.BPFExportBufferSizeMB
+		*out = new(int)
+		**out = **in
+	}
 	if in.SyslogReporterEnabled != nil {
 		in, out := &in.SyslogReporterEnabled, &out.SyslogReporterEnabled
 		*out = new(bool)
