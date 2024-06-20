@@ -6,7 +6,6 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -19,7 +18,7 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/webhooks"
 )
 
-func cancelOnSignals(cancel context.CancelFunc, ctrWg, uptWg *sync.WaitGroup, ctrCancel, uptCancel context.CancelFunc) {
+func cancelOnSignals(cleanup func()) {
 	c := make(chan os.Signal, 1)
 	syscalls := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
 	signal.Notify(c, syscalls...)
@@ -28,12 +27,7 @@ func cancelOnSignals(cancel context.CancelFunc, ctrWg, uptWg *sync.WaitGroup, ct
 
 	// make sure the webhook updater and webhook controller exit in the correct order
 	// avoids webhook updater getting stuck writing to a channel, blocking and never terminating
-	uptCancel()
-	uptWg.Wait()
-	ctrCancel()
-	ctrWg.Wait()
-
-	cancel()
+	cleanup()
 }
 
 func main() {
@@ -56,12 +50,7 @@ func main() {
 
 	config := webhooks.NewControllerConfig(webhooks.DefaultProviders(), events.FetchSecurityEventsFunc)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ctrCtx, ctrCancel := context.WithCancel(ctx)
-
-	uptCtx, uptCancel := context.WithCancel(ctx)
+	ctx := context.Background()
 
 	// init - webhook watcher and updater
 	webhookWatcherUpdater := webhooks.NewWebhookWatcherUpdater().
@@ -79,14 +68,11 @@ func main() {
 	// wire up the watcher/updater and controller together
 	webhookWatcherUpdater = webhookWatcherUpdater.WithController(webhookController)
 
-	var ctrWg sync.WaitGroup
-	var uptWg sync.WaitGroup
-	uptWg.Add(1)
-	go webhookWatcherUpdater.Run(uptCtx, &uptWg)
-	ctrWg.Add(1)
-	go webhookController.Run(ctrCtx, &ctrWg)
+	// setup webhookController, webhookWatcherUpdater gorountines
+	// returns cleanup function to handle graceful termintation of gorountines
+	cleanup := webhooks.SetUp(ctx, webhookController, webhookWatcherUpdater)
 
-	go cancelOnSignals(cancel, &ctrWg, &uptWg, ctrCancel, uptCancel)
+	go cancelOnSignals(cleanup)
 
 	// break up wait group to terminate updater first then controller
 	// with 2 different child contexts
