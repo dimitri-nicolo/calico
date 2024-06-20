@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	WebhooksWatcherTimeout    = 1 * time.Minute
 	WebhooksWatcherSleepOnErr = 5 * time.Second
 )
 
