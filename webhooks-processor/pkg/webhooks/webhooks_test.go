@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -723,23 +722,15 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	webhookWatcherUpdater.WithController(webhookController)
 	testState.WebhooksCtrl = webhookController
 
-	var ctrWg sync.WaitGroup
-	var uptWg sync.WaitGroup
 	var ctx context.Context
 	ctx, testState.Stop = context.WithCancel(context.Background())
 
-	ctrCtx, ctrCancel := context.WithCancel(ctx)
-
-	uptCtx, uptCancel := context.WithCancel(ctx)
-	go func() {
-		testState.Running = true
-		uptWg.Add(1)
-		go webhookWatcherUpdater.Run(uptCtx, &uptWg)
-		ctrWg.Add(1)
-		go webhookController.Run(ctrCtx, &ctrWg)
-		ctrWg.Wait()
+	cancelFunc := SetUp(ctx, webhookController, webhookWatcherUpdater)
+	testState.Running = true
+	testState.Stop = func() {
+		cancelFunc()
 		testState.Running = false
-	}()
+	}
 
 	require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 
@@ -751,14 +742,11 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 			// Making sure it's still running before we turn it off
 			require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 
-			// make sure the webhook updater and webhook controller exit in the correct order
-			uptCancel()
-			uptWg.Wait()
-			ctrCancel()
-			ctrWg.Wait()
-
+			// make sure the webhook updater and webhook controller exit in the correct
 			testState.Stop()
+
 			require.Eventually(t, func() bool { return !testState.Running }, 10*time.Second, 10*time.Millisecond)
+
 		}
 	})
 

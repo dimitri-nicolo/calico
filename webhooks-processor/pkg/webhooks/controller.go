@@ -22,6 +22,26 @@ type WebhookController struct {
 	state             StateInterface
 }
 
+func SetUp(ctx context.Context, webhookController *WebhookController, webhookWatcherUpdater *WebhookWatcherUpdater) func() {
+	ctrCtx, ctrCancel := context.WithCancel(ctx)
+
+	uptCtx, uptCancel := context.WithCancel(ctx)
+
+	var ctrWg sync.WaitGroup
+	var uptWg sync.WaitGroup
+	uptWg.Add(1)
+	go webhookWatcherUpdater.Run(uptCtx, &uptWg)
+	ctrWg.Add(1)
+	go webhookController.Run(ctrCtx, &ctrWg)
+
+	return func() {
+		uptCancel()
+		uptWg.Wait()
+		ctrCancel()
+		ctrWg.Wait()
+	}
+}
+
 func NewWebhookController() *WebhookController {
 	watcher := new(WebhookController)
 	watcher.webhookEventsChan = make(chan calicoWatch.Event)
