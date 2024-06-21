@@ -38,9 +38,9 @@ GCR_LOGIN="[System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64S
 # - Build and push images
 CMD="powershell -Command \"tar xzf c:\\calico-private.tar.gz -C c:\\; cd c:\\calico-private; ${GCR_LOGIN}; git config core.filemode false;"
 if [[ "$BASE" == "true" ]]; then
-  CMD="${CMD} make -C third_party/fluentd/base cd CONFIRM=${CONFIRM} SEMAPHORE_GIT_REF_TYPE=${SEMAPHORE_GIT_REF_TYPE}"
+  CMD="${CMD} make -C third_party/fluentd-base cd CONFIRM=${CONFIRM} SEMAPHORE_GIT_REF_TYPE=${SEMAPHORE_GIT_REF_TYPE}"
 else
-  CMD="${CMD} make -C third_party/fluentd cd BRANCH_NAME=${BRANCH_NAME} CONFIRM=${CONFIRM} SEMAPHORE_GIT_REF_TYPE=${SEMAPHORE_GIT_REF_TYPE}"
+  CMD="${CMD} make -C fluentd cd BRANCH_NAME=${BRANCH_NAME} CONFIRM=${CONFIRM} SEMAPHORE_GIT_REF_TYPE=${SEMAPHORE_GIT_REF_TYPE}"
 fi
 
 # Loop over all host IPs. hosts.txt is created by the Windows host creation

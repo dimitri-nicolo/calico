@@ -1,4 +1,0 @@
-30c30
-<     CIPHERS_DEFAULT = "ALL:!aNULL:!eNULL:!SSLv2".freeze # OpenSSL >1.0.0 default
----
->     CIPHERS_DEFAULT = "TLSv1.2+FIPS+ECDH:!eNULL:!aNULL"

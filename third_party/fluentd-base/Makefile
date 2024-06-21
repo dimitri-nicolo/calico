@@ -1,6 +1,6 @@
 # Copyright 2024 Tigera Inc. All rights reserved.
 
-include ../../../metadata.mk
+include ../../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/fluentd-base
 
@@ -45,7 +45,7 @@ endif
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-include ../../../lib.Makefile
+include ../../lib.Makefile
 
 ###############################################################################
 # BUILD IMAGE
