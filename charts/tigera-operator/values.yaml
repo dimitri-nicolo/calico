@@ -138,12 +138,12 @@ podLabels: {}
 # Image and registry configuration for the tigera/operator pod.
 tigeraOperator:
   image: tigera/operator
-  version: v1.34.0
+  version: v1.34.1
   registry: quay.io
 calicoctl:
   enabled: false
   image: quay.io/tigera/calicoctl
-  tag: v3.19.0-2.0
+  tag: v3.19.1
   binPath: /bin
 techPreviewOptions:
   # set to name of desired apparmor policy for the calico-node container and

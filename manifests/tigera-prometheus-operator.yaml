@@ -47005,12 +47005,12 @@ spec:
       - name: tigera-pull-secret
       containers:
       - name: calico-prometheus-operator
-        image: quay.io/tigera/prometheus-operator:v3.19.0-2.0
+        image: quay.io/tigera/prometheus-operator:v3.19.1
         args:
           - --cluster-domain=cluster.local
           - --config-reloader-memory-request=50Mi
           - --namespaces=tigera-prometheus
-          - --prometheus-config-reloader=quay.io/tigera/prometheus-config-reloader:v3.19.0-2.0
+          - --prometheus-config-reloader=quay.io/tigera/prometheus-config-reloader:v3.19.1
         resources:
           requests:
             cpu: 100m

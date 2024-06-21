@@ -70,7 +70,7 @@ spec:
         - name: tigera-pull-secret
       containers:
         - name: tigera-panorama-controller
-          image: quay.io/tigera/firewall-integration:v3.19.0-2.0
+          image: quay.io/tigera/firewall-integration:v3.19.1
           imagePullPolicy: IfNotPresent
           env:
             - name: ENABLED_CONTROLLERS

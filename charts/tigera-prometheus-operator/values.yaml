@@ -14,7 +14,7 @@ installation:
   kubernetesProvider: ""
 prometheusOperator:
   image: quay.io/tigera/prometheus-operator
-  tag: v3.19.0-2.0
+  tag: v3.19.1
 prometheusConfigReloader:
   image: quay.io/tigera/prometheus-config-reloader
-  tag: v3.19.0-2.0
+  tag: v3.19.1
