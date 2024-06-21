@@ -561,7 +561,8 @@ func (b *eventsBackend) updateFieldValues(ctx context.Context, i api.ClusterInfo
 	if param != nil {
 		bucket, found := aggs.Terms(field)
 		if !found {
-			return fmt.Errorf("Could not find terms results for %s", field)
+			// If there is no event found, the aggregation result will not be provided, so we can skip updating the result
+			return nil
 		}
 
 		for _, item := range bucket.Buckets {

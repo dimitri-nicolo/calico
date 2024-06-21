@@ -577,7 +577,7 @@ func TestEventsStatistics(t *testing.T) {
 			Name:         "WAF Event",
 			Origin:       "waf-new-alert-rule-info",
 			Severity:     100,
-			Type:         "global_alert",
+			Type:         "waf",
 			Dismissed:    false,
 			Host:         "test-host",
 			AttackVector: "Network",
@@ -586,18 +586,14 @@ func TestEventsStatistics(t *testing.T) {
 			Mitigations:  &[]string{"Use WAF :)"},
 		},
 		{
-			Time:         v1.NewEventTimestamp(time.Date(2024, 2, 21, 11, 32, 55, 0, time.UTC).Unix()),
-			Description:  "A sample WAF Security Event",
-			Name:         "WAF Event",
-			Origin:       "waf-new-alert-rule-info",
-			Severity:     90,
-			Type:         "global_alert",
-			Dismissed:    false,
-			Host:         "test-host",
-			AttackVector: "Network",
-			MitreTactic:  "Access",
-			MitreIDs:     &[]string{"T1190"},
-			Mitigations:  &[]string{"Use WAF :)"},
+			Time:        v1.NewEventTimestamp(time.Date(2024, 2, 21, 11, 32, 55, 0, time.UTC).Unix()),
+			Description: "A sample global alert (not a Security Event)",
+			Name:        "sample global alert",
+			Origin:      "sample global alert",
+			Severity:    90,
+			Type:        "global_alert",
+			Dismissed:   false,
+			Host:        "test-host",
 		},
 	}
 
@@ -654,7 +650,8 @@ func TestEventsStatistics(t *testing.T) {
 		require.NoError(t, e)
 
 		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.name"), []string{
-			gjson.Parse(`{"value":"WAF Event","count":2}`).String(),
+			gjson.Parse(`{"value":"WAF Event","count":1}`).String(),
+			gjson.Parse(`{"value":"sample global alert","count":1}`).String(),
 			gjson.Parse(`{"value":"Proc File Access","count":1}`).String(),
 		})
 
@@ -680,16 +677,16 @@ func TestEventsStatistics(t *testing.T) {
 		require.Len(t, getJsonValues(string(bytes), "field_values.dest_name"), 0)
 
 		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.attack_vector"), []string{
-			gjson.Parse(`{"value":"Network","count":2}`).String(),
+			gjson.Parse(`{"value":"Network","count":1}`).String(),
 			gjson.Parse(`{"value":"Process","count":1}`).String(),
 		})
 
 		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.mitre_tactic"), []string{
-			gjson.Parse(`{"value":"Access","count":3}`).String(),
+			gjson.Parse(`{"value":"Access","count":2}`).String(),
 		})
 
 		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.mitre_ids"), []string{
-			gjson.Parse(`{"value":"T1190","count":2}`).String(),
+			gjson.Parse(`{"value":"T1190","count":1}`).String(),
 			gjson.Parse(`{"value":"T1003.007","count":1}`).String(),
 			gjson.Parse(`{"value":"T1057","count":1}`).String(),
 			gjson.Parse(`{"value":"T1083","count":1}`).String(),
@@ -738,6 +735,20 @@ func TestEventsStatistics(t *testing.T) {
 		{"date histogram with invalid selector", &v1.EventStatisticsParams{
 			SeverityHistograms: []v1.SeverityHistogramParam{{Name: "sample", Selector: "sévérité > 85"}},
 		}, true},
+		{"returns empty result when there are no matching events", &v1.EventStatisticsParams{
+			EventParams: v1.EventParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Date(2023, 1, 1, 10, 0, 0, 0, time.UTC),
+						To:   time.Date(2023, 2, 1, 10, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			FieldValues: &v1.FieldValuesParam{
+				SeverityValues: &v1.FieldValueParam{Count: true},
+				TypeValues:     &v1.FieldValueParam{Count: true},
+			},
+		}, false},
 	}
 
 	for _, tt := range tests {
@@ -784,9 +795,37 @@ func TestEventsStatistics(t *testing.T) {
 		require.NoError(t, e)
 
 		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.name"), []string{
-			gjson.Parse(`{"value":"WAF Event","count":2,"by_severity":[{"value":90,"count":1},{"value":100,"count":1}]}`).String(),
+			gjson.Parse(`{"value":"WAF Event","count":1,"by_severity":[{"value":100,"count":1}]}`).String(),
+			gjson.Parse(`{"value":"sample global alert","count":1,"by_severity":[{"value":90,"count":1}]}`).String(),
 			gjson.Parse(`{"value":"Proc File Access","count":1,"by_severity":[{"value":100,"count":1}]}`).String(),
 		})
+	})
+
+	RunAllModes(t, "Test Statistics with no events", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// No event added yet, index is most likely not created yet
+
+		params := &v1.EventStatisticsParams{}
+		params.LogSelectionParams = v1.LogSelectionParams{
+			Selector: "NOT dismissed = true",
+		}
+
+		// We can aggregate the severity for each unique event name
+		params.FieldValues = &v1.FieldValuesParam{
+			NameValues: &v1.FieldValueParam{
+				Count:           true,
+				GroupBySeverity: true,
+			},
+		}
+
+		r, e := b.Statistics(ctx, clusterInfo, params)
+		require.NoError(t, e)
+
+		bytes, e := json.Marshal(r)
+		require.NoError(t, e)
+
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.name"), []string{})
 	})
 
 	RunAllModes(t, "Test Date Histogram Aggregation (1 per day)", func(t *testing.T) {
@@ -870,17 +909,18 @@ func TestEventsStatistics(t *testing.T) {
 		require.Equal(t, int64(1), gjson.Get(string(bytes), "severity_histograms.low_medium_high_severity.0.value").Int())
 
 		// Check that we also got the events name values...
-		require.Equal(t, "WAF Event", gjson.Get(string(bytes), "field_values.name.0.value").String())
-		// We have 2 WAF Events
-		require.Equal(t, int64(2), gjson.Get(string(bytes), "field_values.name.0.count").Int())
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.name"), []string{
+			gjson.Parse(`{"value":"WAF Event","count":1}`).String(),
+			gjson.Parse(`{"value":"Proc File Access","count":1}`).String(),
+			gjson.Parse(`{"value":"sample global alert","count":1}`).String(),
+		})
 
 		// ... and types aggregated by severity values
-		// One of them has a severity of 90
-		require.Equal(t, int64(90), gjson.Get(string(bytes), "field_values.type.0.by_severity.0.value").Int())
-		require.Equal(t, int64(1), gjson.Get(string(bytes), "field_values.type.0.by_severity.0.count").Int())
-		// One of them has a severity of 100
-		require.Equal(t, int64(100), gjson.Get(string(bytes), "field_values.type.0.by_severity.1.value").Int())
-		require.Equal(t, int64(1), gjson.Get(string(bytes), "field_values.type.0.by_severity.1.count").Int())
+		require.ElementsMatch(t, getJsonValues(string(bytes), "field_values.type"), []string{
+			gjson.Parse(`{"value":"waf","count":1,"by_severity":[{"value":100,"count":1}]}`).String(),
+			gjson.Parse(`{"value":"runtime_security","count":1,"by_severity":[{"value":100,"count":1}]}`).String(),
+			gjson.Parse(`{"value":"global_alert","count":1,"by_severity":[{"value":90,"count":1}]}`).String(),
+		})
 	})
 }
 
