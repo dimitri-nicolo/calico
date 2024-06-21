@@ -1,6 +1,6 @@
 include ../../metadata.mk
 
-PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy
+PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoybinary
 
 ENVOYBINARY_IMAGE ?= envoybinary
 BUILD_IMAGES ?= $(ENVOYBINARY_IMAGE)

@@ -171,10 +171,6 @@ promotions:
     pipeline_file: ../third_party/eck-operator/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
-  - name: Cut third-party Envoy Release
-    pipeline_file: ../third_party/envoy/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
   - name: Cut third-party Fluentd Release
     pipeline_file: ../third_party/fluentd/.semaphore/cut-release.yml
     auto_promote:

@@ -1,6 +1,6 @@
 - name: Publish tigera/envoybinary images
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/envoy'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   task:
@@ -13,14 +13,14 @@
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/envoy
+        - cd third_party/envoybinary
     jobs:
       - name: Linux amd64
         commands:
           - ../../.semaphore/run-and-monitor build.log make cd ARCHES=amd64 CONFIRM=true
 - name: Publish tigera/envoybinary images - native arm64 runner
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/envoy'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   execution_time_limit:
@@ -34,14 +34,14 @@
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/envoy
+        - cd third_party/envoybinary
     jobs:
       - name: Linux arm64
         commands:
           - ../../.semaphore/run-and-monitor build-arm64.log make cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/envoybinary multi-arch manifests
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/envoy'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Publish tigera/envoybinary images
     - Publish tigera/envoybinary images - native arm64 runner
@@ -51,7 +51,7 @@
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/envoy
+        - cd third_party/envoybinary
     jobs:
       - name: Linux multi-arch manifests
         commands:

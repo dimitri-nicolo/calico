@@ -79,6 +79,7 @@ clean:
 	rm -f $(ENVOY_INIT_CONTAINER_CREATED)
 
 	-docker image rm -f $$(docker images $(L7_COLLECTOR_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(ENVOY_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(ENVOY_INIT_IMAGE) -a -q)
 
 ###############################################################################
