@@ -5,8 +5,16 @@ include ../metadata.mk
 PACKAGE_NAME ?= github.com/projectcalico/calico/fluentd
 
 FLUENTD_IMAGE ?= fluentd
-BUILD_IMAGES ?= $(FLUENTD_IMAGE)
 WINDOWS_IMAGE ?= $(FLUENTD_IMAGE)-windows
+
+# If this is a windows release build the windows image.  ARCHES will contain the values
+# in WINDOWS_VERSIONS (defined in metadata.mk), prefixed with "windows-".
+ifdef WINDOWS_RELEASE
+BUILD_IMAGES ?= $(WINDOWS_IMAGE)
+ARCHES ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
+else
+BUILD_IMAGES ?= $(FLUENTD_IMAGE)
+endif
 
 ##############################################################################
 # Include lib.Makefile before anything else
