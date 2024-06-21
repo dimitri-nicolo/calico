@@ -62,6 +62,10 @@ promotions:
     pipeline_file: push-images/firewall-integration.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push fluentd images
+    pipeline_file: push-images/fluentd.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push ingress-collector images
     pipeline_file: push-images/ingress-collector.yml
     auto_promote:
@@ -137,10 +141,6 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push third-party eck-operator images
     pipeline_file: push-images/third_party/eck-operator.yml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
-  - name: Push third-party fluentd images
-    pipeline_file: push-images/third_party/fluentd.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push third-party prometheus-operator images

@@ -1,5 +1,5 @@
 version: v1.0
-name: Test Cut Release
+name: Cut Release
 
 execution_time_limit:
   minutes: 30
@@ -18,10 +18,10 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - retry git fetch --unshallow
-      - cd third_party/fluentd
+      - cd fluentd
 
 blocks:
-  - name: Test Cut Release
+  - name: Cut Release
     task:
       secrets:
         - name: marvin-github-ssh-private-key
@@ -33,7 +33,7 @@ blocks:
           # Login to quay in order to push images to quay.
           - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
       jobs:
-        - name: Test Cut Release
+        - name: Cut Release
           commands:
             - make git-config CONFIRM=true
-            - DRYRUN=true bash ./.semaphore/scripts/cut-release.sh
+            - CONFIRM=true bash ./.semaphore/scripts/cut-release.sh
