@@ -66,6 +66,7 @@ promotions:
     pipeline_file: ../typha/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+
   - name: Cut calicoq Release
     pipeline_file: ../calicoq/.semaphore/cut-release.yml
     auto_promote:
@@ -82,12 +83,12 @@ promotions:
     pipeline_file: ../egress-gateway/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
-  - name: Cut Elasticsearch Release
-    pipeline_file: ../elasticsearch/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
   - name: Cut Elasticsearch Metrics Release
     pipeline_file: ../elasticsearch-metrics/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Elasticsearch Release
+    pipeline_file: ../elasticsearch/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut ES Gateway Release
@@ -102,40 +103,16 @@ promotions:
     pipeline_file: ../firewall-integration/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Fluentd Release
+    pipeline_file: ../fluentd/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Ingress Collector Release
+    pipeline_file: ../ingress-collector/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut IDS Controller Release
     pipeline_file: ../intrusion-detection-controller/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut License Agent Release
-    pipeline_file: ../license-agent/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut Packet Capture Release
-    pipeline_file: ../packetcapture/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut Policy Recommendation Release
-    pipeline_file: ../policy-recommendation/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut Queryserver Release
-    pipeline_file: ../ts-queryserver/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut Voltron Release
-    pipeline_file: ../voltron/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut Prometheus Service Release
-    pipeline_file: ../prometheus-service/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut Pod2daemon Release
-    pipeline_file: ../pod2daemon/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut Linseed Release
-    pipeline_file: ../linseed/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut Key-cert-provisioner Release
@@ -146,12 +123,40 @@ promotions:
     pipeline_file: ../kibana/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
-  - name: Cut Ingress Collector Release
-    pipeline_file: ../ingress-collector/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
   - name: Cut l7 Collector Release
     pipeline_file: ../l7-collector/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut License Agent Release
+    pipeline_file: ../license-agent/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Linseed Release
+    pipeline_file: ../linseed/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Packet Capture Release
+    pipeline_file: ../packetcapture/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Pod2daemon Release
+    pipeline_file: ../pod2daemon/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Policy Recommendation Release
+    pipeline_file: ../policy-recommendation/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Prometheus Service Release
+    pipeline_file: ../prometheus-service/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Queryserver Release
+    pipeline_file: ../ts-queryserver/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Voltron Release
+    pipeline_file: ../voltron/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut Webhooks Processor Release
@@ -169,10 +174,6 @@ promotions:
       when: "result = 'passed'"
   - name: Cut third-party ECK Operator Release
     pipeline_file: ../third_party/eck-operator/.semaphore/cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Cut third-party Fluentd Release
-    pipeline_file: ../third_party/fluentd/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut third-party Prometheus Operator Release

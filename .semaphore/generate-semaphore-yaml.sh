@@ -34,7 +34,7 @@ echo "blocks:" >>$out_file
 cat semaphore.yml.d/blocks/10-prerequisites.yml >>$out_file
 cat semaphore.yml.d/blocks/30-deep-packet-inspection.yml >>$out_file
 cat semaphore.yml.d/blocks/30-elasticsearch.yml >>$out_file
-cat semaphore.yml.d/blocks/50-fluentd.yml >>$out_file
+cat semaphore.yml.d/blocks/30-fluentd.yml >>$out_file
 
 sed -i "s/\${FORCE_RUN}/true/g" semaphore-third-party-builds.yml
 sed -i "s/\${WEEKLY_RUN}/true/g" semaphore-third-party-builds.yml
