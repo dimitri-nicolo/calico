@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import (
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -494,15 +495,13 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, cnx
 	return nil
 }
 
-const defaultTierName = "default"
-
 // ensureDefaultTierExists ensures that the "default" Tier exits in the datastore.
 // This is done by trying to create the default tier. If it doesn't exists, it
 // is created.  A error is returned if there is any error other than when the
 // default tier resource already exists.
 func (c client) ensureDefaultTierExists(ctx context.Context) error {
 	defaultTier := v3.NewTier()
-	defaultTier.ObjectMeta = metav1.ObjectMeta{Name: defaultTierName}
+	defaultTier.ObjectMeta = metav1.ObjectMeta{Name: names.DefaultTierName}
 	defaultTier.Spec = v3.TierSpec{}
 	if _, err := c.Tiers().Create(ctx, defaultTier, options.SetOptions{}); err != nil {
 		if _, ok := err.(cerrors.ErrorResourceAlreadyExists); !ok {

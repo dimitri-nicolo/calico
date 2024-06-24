@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -382,7 +382,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		td.Valid = true
 		td.OrderedPolicies = []PolKV{{Key: p2k, Value: p2}, {Key: p3k, Value: p3}}
 
-		ts := NewTierInfoSlice()
+		ts := newTierInfoSlice()
 		ts = append(ts, *t1, *td)
 
 		ed := ec.CreateEndpointData(hostEpWithNameKey, &hostEpWithName, ts)
@@ -488,7 +488,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			td.OrderedPolicies = []PolKV{{Key: sp3k, Value: sp3}, {Key: sp4k, Value: sp4}}
 
 			By("Creating the endpoint data")
-			ts := NewTierInfoSlice()
+			ts := newTierInfoSlice()
 			ts = append(ts, *t1, *td)
 
 			ed := ec.CreateEndpointData(localWlEpKey1, &localWlEp1, ts)
@@ -748,3 +748,7 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 		})
 	})
 })
+
+func newTierInfoSlice() []TierInfo {
+	return nil
+}

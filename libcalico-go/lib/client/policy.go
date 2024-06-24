@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/converter"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 )
 
 var (
-	defaultTierName = "default"
-	defaultTier     = api.Tier{
-		Metadata: api.TierMetadata{Name: defaultTierName},
+	defaultTier = api.Tier{
+		Metadata: api.TierMetadata{Name: names.DefaultTierName},
 	}
 )
 
@@ -143,13 +143,4 @@ func (h *policies) convertAPIToKVPair(a unversioned.Resource) (*model.KVPair, er
 // converter (embedded in the policies struct).
 func (h *policies) convertKVPairToAPI(d *model.KVPair) (unversioned.Resource, error) {
 	return h.ConvertKVPairToAPI(d)
-}
-
-// TierOrDefault returns the tier name, or the default if blank.
-func TierOrDefault(tier string) string {
-	if len(tier) == 0 {
-		return DefaultTierName
-	} else {
-		return tier
-	}
 }

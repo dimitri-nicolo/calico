@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
@@ -48,9 +49,9 @@ func (r tiers) Create(ctx context.Context, res *apiv3.Tier, opts options.SetOpti
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
-	if res.Name == defaultTierName && res.Spec.Order != nil {
+	if res.Name == names.DefaultTierName && res.Spec.Order != nil {
 		return nil, cerrors.ErrorOperationNotSupported{
-			Identifier: defaultTierName,
+			Identifier: names.DefaultTierName,
 			Operation:  "Create",
 			Reason:     "Default tier should have nil Order",
 		}
@@ -68,9 +69,9 @@ func (r tiers) Update(ctx context.Context, res *apiv3.Tier, opts options.SetOpti
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
-	if res.GetObjectMeta().GetName() == defaultTierName && res.Spec.Order != nil {
+	if res.GetObjectMeta().GetName() == names.DefaultTierName && res.Spec.Order != nil {
 		return nil, cerrors.ErrorOperationNotSupported{
-			Identifier: defaultTierName,
+			Identifier: names.DefaultTierName,
 			Operation:  "Update",
 			Reason:     "Cannot update the order of the default tier",
 		}
@@ -84,9 +85,9 @@ func (r tiers) Update(ctx context.Context, res *apiv3.Tier, opts options.SetOpti
 
 // Delete takes name of the Tier and deletes it. Returns an error if one occurs.
 func (r tiers) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.Tier, error) {
-	if name == defaultTierName {
+	if name == names.DefaultTierName {
 		return nil, cerrors.ErrorOperationNotSupported{
-			Identifier: defaultTierName,
+			Identifier: names.DefaultTierName,
 			Operation:  "Delete",
 			Reason:     "Cannot delete default tier",
 		}

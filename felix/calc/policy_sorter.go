@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -315,10 +315,6 @@ func NewTierInfo(name string) *TierInfo {
 		Policies:       make(map[model.PolicyKey]*model.Policy),
 		SortedPolicies: btree.NewG[PolKV](2, PolKVLess),
 	}
-}
-
-func NewTierInfoSlice() []TierInfo {
-	return nil
 }
 
 func (t TierInfo) String() string {
