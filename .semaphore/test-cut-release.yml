@@ -66,6 +66,7 @@ promotions:
     pipeline_file: ../typha/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+
   - name: Test Cut calicoq Release
     pipeline_file: ../calicoq/.semaphore/test-cut-release.yml
     auto_promote:
@@ -94,6 +95,10 @@ promotions:
     pipeline_file: ../firewall-integration/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Fluentd Release
+    pipeline_file: ../fluentd/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut Honeypod Controller Release
     pipeline_file: ../honeypod-controller/.semaphore/test-cut-release.yml
     auto_promote:
@@ -106,12 +111,40 @@ promotions:
     pipeline_file: ../intrusion-detection-controller/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Key-cert-provisioner Release
+    pipeline_file: ../key-cert-provisioner/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut Kibana Release
+    pipeline_file: ../kibana/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut l7 Collector Release
+    pipeline_file: ../l7-collector/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut License Agent Release
+    pipeline_file: ../license-agent/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut Linseed Release
+    pipeline_file: ../linseed/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut Packet Capture Release
     pipeline_file: ../packetcapture/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Pod2daemon Release
+    pipeline_file: ../pod2daemon/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut Policy Recommendation Release
     pipeline_file: ../policy-recommendation/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut Prometheus Service Release
+    pipeline_file: ../prometheus-service/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut Queryserver Release
@@ -122,20 +155,8 @@ promotions:
     pipeline_file: ../voltron/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
-  - name: Test Cut Prometheus Service Release
-    pipeline_file: ../prometheus-service/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut License Agent Release
-    pipeline_file: ../license-agent/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut Pod2daemon Release
-    pipeline_file: ../pod2daemon/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut Linseed
-    pipeline_file: ../linseed/.semaphore/test-cut-release.yml
+  - name: Test Cut Webhooks Processor Release
+    pipeline_file: ../webhooks-processor/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
 
@@ -143,16 +164,12 @@ promotions:
     pipeline_file: ../third_party/alertmanager/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
-  - name: Test Cut third-party Dex
+  - name: Test Cut third-party Dex Release
     pipeline_file: ../third_party/dex/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut third-party ECK Operator Release
     pipeline_file: ../third_party/eck-operator/.semaphore/test-cut-release.yml
-    auto_promote:
-      when: "result = 'passed'"
-  - name: Test Cut third-party Fluentd Release
-    pipeline_file: ../third_party/fluentd/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut third-party Prometheus Operator Release
