@@ -11,8 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
-	toolsWatch "k8s.io/client-go/tools/watch"
 
 	"github.com/sirupsen/logrus"
 
@@ -75,8 +73,8 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}()
 
 	// initialize configmap and secret watchers
-	var cmWatcher *toolsWatch.RetryWatcher
-	var secretWatcher *toolsWatch.RetryWatcher
+	var cmWatcher watch.Interface
+	var secretWatcher watch.Interface
 	var err error
 
 	errorCh := make(chan error, 1)
@@ -87,11 +85,8 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 		useConfigmaps, useSecret := w.checkWebhooksForConfigmapsAndSecret(ctx)
 
 		if useConfigmaps && cmWatcher == nil {
-			cmWatcher, err = toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					return w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
-				},
-			})
+			cmWatcher, err = w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
+
 			if err != nil {
 				logrus.WithError(err).Error("Unable to watch ConfigMap resources")
 				return
@@ -99,11 +94,8 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 		}
 
 		if useSecret && secretWatcher == nil {
-			secretWatcher, err = toolsWatch.NewRetryWatcher("1", &cache.ListWatch{
-				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-					return w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
-				},
-			})
+			secretWatcher, err = w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
+
 			if err != nil {
 				logrus.WithError(err).Error("Unable to watch Secret resources")
 				return
@@ -126,12 +118,12 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 		// disable configmap & secret watchers if no webhooks use configmaps or secrets
 		if !useConfigmaps && cmWatcher != nil {
-			cmWatcher.Done()
+			cmWatcher.Stop()
 			cmWatcher = nil
 		}
 
 		if !useSecret && secretWatcher != nil {
-			secretWatcher.Done()
+			secretWatcher.Stop()
 			secretWatcher = nil
 		}
 
