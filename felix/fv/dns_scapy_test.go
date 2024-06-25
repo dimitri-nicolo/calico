@@ -680,6 +680,62 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					})
 				})
 			})
+
+			Context("with a chain of DNS info for xyz.com while felix is restaring", func() {
+				BeforeEach(func() {
+					// We use the ping target container as a target IP for the workload to ping, so
+					// arrange for it to route back to the workload.
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", tc.Felixes[0].IP)
+
+					policy := api.NewGlobalNetworkPolicy()
+					policy.Name = "default-deny-egress"
+					policy.Spec.Selector = "all()"
+					policy.Spec.Egress = []api.Rule{{
+						Action: api.Deny,
+					}}
+					_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+					Expect(err).NotTo(HaveOccurred())
+
+					policy = api.NewGlobalNetworkPolicy()
+					policy.Name = "allow-xyz"
+					order := float64(20)
+					policy.Spec.Order = &order
+					policy.Spec.Selector = "all()"
+					policy.Spec.Egress = []api.Rule{
+						{
+							Action:      api.Allow,
+							Destination: api.EntityRule{Domains: []string{"xyz.com"}},
+						},
+					}
+					_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("workload can ping target after felix came up again", func() {
+					By("Stopping Felix")
+					triggerStartup := tc.Felixes[0].RestartWithDelayedStartup()
+
+					Eventually(func() []int { return tc.Felixes[0].GetPIDs("calico-felix") }, "5s", "330ms").Should(BeEmpty())
+
+					By("Sending DNS response")
+					// Create a chain of DNS info that maps xyz.com to that IP.
+					dnsServerSetup(scapyTrusted, true)
+					sendDNSResponses(scapyTrusted, []string{
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
+					})
+					scapyTrusted.Stdin.Close()
+
+					// Make sure the packet isnot seen by Felix
+					time.Sleep(1 * time.Second)
+
+					By("Starting Felix again")
+					triggerStartup()
+
+					Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
+				})
+			})
 		})
 	}
 })
