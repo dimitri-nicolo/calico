@@ -316,6 +316,7 @@ type Config struct {
 	DisableDNSPolicyPacketProcessor  bool
 
 	EnableDestDomainsByClient bool
+	ServiceLoopPrevention     string
 
 	LookPathOverride func(file string) (string, error)
 

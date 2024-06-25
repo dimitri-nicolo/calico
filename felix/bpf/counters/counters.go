@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	MaxCounterNumber    int = 14
+	MaxCounterNumber    int = 16
 	counterMapKeySize   int = 8
 	counterMapValueSize int = 8
 )
@@ -73,6 +73,7 @@ const (
 	DroppedUnauthSource
 	DroppedUnknownRoute
 	AcceptedByEgressGW
+	DroppedBlackholeRoute
 	// Add counters above this
 	AcceptedByXDP
 	WEPNotReady
@@ -157,6 +158,10 @@ var descriptions DescList = DescList{
 	{
 		Counter:  AcceptedByEgressGW,
 		Category: "Accepted", Caption: "by Egress gateways",
+	},
+	{
+		Counter:  DroppedBlackholeRoute,
+		Category: "Dropped", Caption: "packets hitting blackhole route",
 	},
 }
 
