@@ -124,7 +124,7 @@ const (
 // To avoid having to maintain rarely-used code paths, Felix handles updates to its
 // main config parameters by exiting and allowing itself to be restarted by the init
 // daemon.
-func Run(configFile string, gitVersion string, buildDate string, gitRevision string) {
+func Run(configFile string, gitVersion string, buildDate string, gitRevision string, opts ...config.Option) {
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.
 	logutils.ConfigureEarlyLogging()
@@ -269,6 +269,11 @@ configRetry:
 			log.WithError(err).Error("Failed to parse/validate configuration from datastore.")
 			time.Sleep(1 * time.Second)
 			continue configRetry
+		}
+
+		// As the last thing, use the options to set any overrides
+		for _, option := range opts {
+			option(configParams)
 		}
 
 		// List all IP pools and feed them into an EncapsulationCalculator to determine if

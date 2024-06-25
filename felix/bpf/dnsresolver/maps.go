@@ -141,3 +141,20 @@ func NewPfxValue(ipsets ...uint64) DNSPfxValue {
 
 	return v
 }
+
+type PfxMapMem map[DNSPfxKey]DNSPfxValue
+
+func PfxMapMemIter(m PfxMapMem) func(k, v []byte) {
+	ks := len(DNSPfxKey{})
+	vs := len(DNSPfxValue{})
+
+	return func(k, v []byte) {
+		var key DNSPfxKey
+		copy(key[:ks], k[:ks])
+
+		var val DNSPfxValue
+		copy(val[:vs], v[:vs])
+
+		m[key] = val
+	}
+}

@@ -20,7 +20,7 @@ import (
 
 type Option func(c *Config)
 
-func WithDNSDoNotWriteIPSets() {
+func WithDNSDoNotWriteIPSets() Option {
 	return func(c *Config) {
 		c.DNSDoNotWriteIPSets = true
 		log.Infof("Set config DNSDoNotWriteIPSets=true")

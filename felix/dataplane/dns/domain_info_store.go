@@ -591,6 +591,9 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC, latencyTimerC <-ch
 			prometheusInvalidPacketsInCount.Inc()
 			return
 		}
+
+		log.WithField("dns", dns).Debug("DNS payload")
+
 		if dns.OpCode != layers.DNSOpCodeQuery {
 			log.Debug("Ignoring non-Query DNS packet.")
 			prometheusNonQueryPacketsInCount.Inc()

@@ -61,13 +61,14 @@ CALI_MAP(cali_dns_data, 1,
 
 struct dnshdr {
 	__be16 id;
-	int qr:1;
-	int opcode:4;
-	int aa:1;
-	int tc:1;
-	int rd:1;
-	int reserved:3;
-	int rcode:4;
+	__u16 reserved:3,
+	      rcode:4,
+	      qr:1,
+	      opcode:4,
+	      aa:1,
+	      tc:1,
+	      rd:1,
+	      ra:1;
 	__be16 queries;
 	__be16 answers;
 	__be16 authority;
@@ -108,13 +109,13 @@ static CALI_BPF_INLINE void *dns_load_bytes(struct cali_tc_ctx *ctx, struct dns_
 	return NULL;
 }
 
-static CALI_BPF_INLINE unsigned int dns_skip_name(struct cali_tc_ctx *ctx, struct dns_scratch *scratch, int off)
+static CALI_BPF_INLINE int dns_skip_name(struct cali_tc_ctx *ctx, struct dns_scratch *scratch, int off)
 {
 	int size = ctx->skb->len - off;
 
 	if (size <= 0) {
 		CALI_DEBUG("DNS: read beyond the data\n");
-		return 0;
+		return -1;
 	}
 
 	if (size > DNS_NAME_LEN) {
@@ -122,17 +123,24 @@ static CALI_BPF_INLINE unsigned int dns_skip_name(struct cali_tc_ctx *ctx, struc
 	}
 
 	if (!dns_load_bytes(ctx, scratch, off, size)) {
-		return 0;
+		CALI_DEBUG("DNS: failed to load %s bytes at off %d\n", size, off);
+		return -1;
 	}
 
 	unsigned int i;
 
 	/* We could have jump from size to size over the labes, but verifier wouldn't be happy */
-	for (i = 1; i < DNS_SCRATCH_SIZE && scratch->buf[i] != 0; i++);
+	for (i = 0; i < DNS_SCRATCH_SIZE && scratch->buf[i] != 0; i++) {
+		if ((scratch->buf[i] & 0xc0) == 0xc0) {
+			CALI_DEBUG("DNS: pointer in name\n");
+			i++; /* skip the offset */
+			break;
+		}
+	}
 
 	if (i >= DNS_SCRATCH_SIZE) {
 		CALI_DEBUG("DNS: name too long\n");
-		return 0;
+		return -1;
 	}
 
 	return i; /* returns how many bytes were skipped */
@@ -143,7 +151,7 @@ static CALI_BPF_INLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scr
 	int size = ctx->skb->len - off;
 
 	if (size <= 0) {
-		CALI_DEBUG("DNS: read beyond the data\n");
+		CALI_DEBUG("DNS: read beyond the data len %d off %d\n", ctx->skb->len, off);
 		return false;
 	}
 
@@ -195,8 +203,8 @@ static long dns_process_answer(__u32 i, void *__ctx)
 
 	int bytes = dns_skip_name(ctx, scratch, off);
 
-	if (bytes == 0) {
-		CALI_DEBUG("DNS: failed skipping name in asnwer %d", i);
+	if (bytes == -1) {
+		CALI_DEBUG("DNS: failed skipping name in asnwer %d\n", i);
 		goto failed;
 	}
 
@@ -206,7 +214,7 @@ static long dns_process_answer(__u32 i, void *__ctx)
 	struct dns_rr *rr = (void *) scratch->buf;
 
 	if (!dns_load_bytes(ctx, scratch, off, sizeof(struct dns_rr))) {
-		CALI_DEBUG("DNS: failed to read rr in asnwer %d", i);
+		CALI_DEBUG("DNS: failed to read rr in asnwer %d\n", i);
 		goto failed;
 	}
 			
@@ -227,7 +235,11 @@ static long dns_process_answer(__u32 i, void *__ctx)
 		union ip_set_lpm_key k = {
 			.ip = {
 				.mask = (8 + len) * 8,
+#ifndef IPVER6
 				.addr = *(__u32*)scratch->ip,
+#else
+				.addr = {*(__u32*)scratch->ip},
+#endif
 			},
 		};
 
@@ -304,11 +316,13 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 
 	if (!dnshdr.qr) {
 		/* not interested in queries */
+		CALI_DEBUG("DNS: ignoring query.\n");
 		return;
 	}
 
 	if (dnshdr.rcode != 0) {
 		/* not interested in errors */
+		CALI_DEBUG("DNS: ignoring error 0x%x.\n", dnshdr.rcode);
 		return;
 	}
 
@@ -322,16 +336,16 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		return;
 	}
 
-	CALI_DEBUG("Queries: %d\n", dnshdr.queries);
+	CALI_DEBUG("DNS: Queries: %d\n", dnshdr.queries);
 
 	unsigned int answers = dnshdr.answers + dnshdr.authority + dnshdr.additional;
 	if (answers == 0) {
 		CALI_DEBUG("DNS: no answers or data in the response\n");
 	}
 
-	CALI_DEBUG("Answers: %d\n", dnshdr.answers);
-	CALI_DEBUG("Auth: %d\n", dnshdr.authority);
-	CALI_DEBUG("Add: %d\n", dnshdr.additional);
+	CALI_DEBUG("DNS: Answers: %d\n", dnshdr.answers);
+	CALI_DEBUG("DNS: Auth: %d\n", dnshdr.authority);
+	CALI_DEBUG("DNS: Add: %d\n", dnshdr.additional);
 
 	off += sizeof(struct dnshdr);
 	if (!dns_get_name(ctx, scratch, off)) {
@@ -339,7 +353,7 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		return;
 	}
 
-	CALI_DEBUG("name '%s' %d\n", scratch->name, scratch->name_len);
+	CALI_DEBUG("DNS: name '%s' %d\n", scratch->name, scratch->name_len);
 
 	off += scratch->name_len + 2; /* skip the size of the first label and last 0 */
 
@@ -350,7 +364,7 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		return;
 	}
 
-	CALI_DEBUG("type %d class %d\n", bpf_ntohs(q->qtype), bpf_ntohs(q->qclass));
+	CALI_DEBUG("DNS: type %d class %d\n", bpf_ntohs(q->qtype), bpf_ntohs(q->qclass));
 	
 	switch (bpf_ntohs(q->qclass)) {
 	case CLASS_IN:
@@ -377,8 +391,8 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 
 	struct dns_lpm_value *v = cali_dns_pfx_lookup_elem(&scratch->lpm_key);
 	if (v) {
-		CALI_DEBUG("HIT key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
-		CALI_DEBUG("count %d\n", v->count);
+		CALI_DEBUG("DNS: HIT key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
+		CALI_DEBUG("DNS: HIT sets count %d\n", v->count);
 	} else {
 		CALI_DEBUG("MISS key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
 		return;

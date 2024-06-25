@@ -541,6 +541,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DNSPacketsNfqueueSize:            configParams.DNSPacketsNfqueueSize,
 			DNSPacketsNfqueueMaxHoldDuration: configParams.DNSPacketsNfqueueMaxHoldDuration,
 			DebugDNSResponseDelay:            configParams.DebugDNSResponseDelay,
+			DNSDoNotWriteIPSets:              configParams.DNSDoNotWriteIPSets,
 		}
 		if k8sClientSet != nil {
 			dpConfig.KubeClientSet = k8sClientSet

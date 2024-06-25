@@ -143,3 +143,59 @@ func TestDNSParser(t *testing.T) {
 		ipsets.MakeBPFIPSetEntry(666, ip.CIDRFromStringNoErr("185.17.117.45/32").(ip.V4CIDR), 0, 0).AsBytes())
 	Expect(err).NotTo(HaveOccurred())
 }
+
+func TestDNSParserMicrosoftFV(t *testing.T) {
+	RegisterTestingT(t)
+
+	// DNS response to microsoft.com from 8.8.8.8 (from FV tests)
+	pktBytes := []byte{2, 66, 172, 18, 0, 4, 2, 66, 125, 90, 149, 238, 8, 0, 69,
+		0, 0, 150, 89, 187, 0, 0, 59, 17, 105, 118, 8, 8, 8, 8, 172, 18, 0, 4, 0,
+		53, 22, 23, 0, 130, 27, 57, 166, 145, 129, 128, 0, 1, 0, 5, 0, 0, 0, 1, 9,
+		109, 105, 99, 114, 111, 115, 111, 102, 116, 3, 99, 111, 109, 0, 0, 1, 0, 1,
+		192, 12, 0, 1, 0, 1, 0, 0, 2, 32, 0, 4, 20, 112, 250, 133, 192, 12, 0, 1, 0,
+		1, 0, 0, 2, 32, 0, 4, 20, 231, 239, 246, 192, 12, 0, 1, 0, 1, 0, 0, 2, 32,
+		0, 4, 20, 76, 201, 171, 192, 12, 0, 1, 0, 1, 0, 0, 2, 32, 0, 4, 20, 70, 246,
+		20, 192, 12, 0, 1, 0, 1, 0, 0, 2, 32, 0, 4, 20, 236, 44, 162, 0, 0, 41, 2,
+		0, 0, 0, 0, 0, 0, 0}
+
+	ids := map[string]uint64{
+		"545": 545,
+	}
+
+	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
+		return ids[s]
+	})
+	defer tracker.Close()
+	Expect(err).NotTo(HaveOccurred())
+
+	tracker.Add("microsoft.com", "545")
+	err = tracker.ApplyAllChanges()
+	Expect(err).NotTo(HaveOccurred())
+
+	runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
+		res, err := bpfrun(pktBytes)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
+
+		pktR := gopacket.NewPacket(res.dataOut, layers.LayerTypeEthernet, gopacket.Default)
+		fmt.Printf("pktR = %+v\n", pktR)
+	})
+
+	setID := uint64(545)
+
+	_, err = ipsMap.Get(
+		ipsets.MakeBPFIPSetEntry(setID, ip.CIDRFromStringNoErr("20.112.250.133/32").(ip.V4CIDR), 0, 0).AsBytes())
+	Expect(err).NotTo(HaveOccurred())
+	_, err = ipsMap.Get(
+		ipsets.MakeBPFIPSetEntry(setID, ip.CIDRFromStringNoErr("20.231.239.246/32").(ip.V4CIDR), 0, 0).AsBytes())
+	Expect(err).NotTo(HaveOccurred())
+	_, err = ipsMap.Get(
+		ipsets.MakeBPFIPSetEntry(setID, ip.CIDRFromStringNoErr("20.76.201.171/32").(ip.V4CIDR), 0, 0).AsBytes())
+	Expect(err).NotTo(HaveOccurred())
+	_, err = ipsMap.Get(
+		ipsets.MakeBPFIPSetEntry(setID, ip.CIDRFromStringNoErr("20.70.246.20/32").(ip.V4CIDR), 0, 0).AsBytes())
+	Expect(err).NotTo(HaveOccurred())
+	_, err = ipsMap.Get(
+		ipsets.MakeBPFIPSetEntry(setID, ip.CIDRFromStringNoErr("20.236.44.162/32").(ip.V4CIDR), 0, 0).AsBytes())
+	Expect(err).NotTo(HaveOccurred())
+}

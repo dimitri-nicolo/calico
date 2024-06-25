@@ -52,6 +52,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/ifstate"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/nat"
@@ -5259,6 +5260,13 @@ func dumpIfStateMap(felix *infrastructure.Felix) ifstate.MapMem {
 	im := ifstate.Map()
 	m := make(ifstate.MapMem)
 	dumpBPFMap(felix, im, ifstate.MapMemIter(m))
+	return m
+}
+
+func dumpDNSPfxMap(felix *infrastructure.Felix) dnsresolver.PfxMapMem {
+	im := dnsresolver.DNSPrefixMap()
+	m := make(dnsresolver.PfxMapMem)
+	dumpBPFMap(felix, im, dnsresolver.PfxMapMemIter(m))
 	return m
 }
 

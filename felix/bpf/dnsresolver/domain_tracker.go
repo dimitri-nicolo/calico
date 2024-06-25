@@ -20,6 +20,8 @@ package dnsresolver
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/cachingmap"
 )
@@ -56,6 +58,11 @@ func NewDomainTracker(strToUin64 func(string) uint64) (*DomainTracker, error) {
 }
 
 func (d *DomainTracker) Add(domain string, setIDs ...string) {
+	log.WithFields(log.Fields{
+		"domain": domain,
+		"setIDs": setIDs,
+	}).Debug("Add")
+
 	if len(setIDs) == 0 {
 		return
 	}
@@ -78,6 +85,8 @@ func (d *DomainTracker) Add(domain string, setIDs ...string) {
 		id64 := d.strToUin64(id)
 		if id64 != 0 {
 			exists[id64] = struct{}{}
+		} else {
+			log.Debugf("No uint64 id for string id '%s'", id)
 		}
 	}
 
@@ -91,6 +100,11 @@ func (d *DomainTracker) Add(domain string, setIDs ...string) {
 }
 
 func (d *DomainTracker) Del(domain string, setIDs ...string) {
+	log.WithFields(log.Fields{
+		"domain": domain,
+		"setIDs": setIDs,
+	}).Debug("Del")
+
 	if len(setIDs) == 0 {
 		return
 	}
