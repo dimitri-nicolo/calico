@@ -211,7 +211,7 @@ blocks:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: Publish tigera/fluentd-base images
   run:
-    when: "true or change_in(['/third_party/fluentd/base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   task:
@@ -227,10 +227,10 @@ blocks:
     jobs:
       - name: Linux amd64
         commands:
-          - make -C third_party/fluentd/base cd ARCHES=amd64 CONFIRM=true
+          - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
 - name: Publish tigera/fluentd-base images - native arm64 runner
   run:
-    when: "true or change_in(['/third_party/fluentd/base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   task:
@@ -245,10 +245,10 @@ blocks:
     jobs:
       - name: Linux arm64
         commands:
-          - make -C third_party/fluentd/base cd ARCHES=arm64 CONFIRM=true
+          - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/fluentd-base multi-arch manifests
   run:
-    when: "true or change_in(['/third_party/fluentd/base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "true or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Publish tigera/fluentd-base images
     - Publish tigera/fluentd-base images - native arm64 runner
@@ -261,11 +261,11 @@ blocks:
     jobs:
       - name: Linux multi-arch manifests
         commands:
-          - make -C third_party/fluentd/base push-manifest CONFIRM=true
+          - make -C third_party/fluentd-base push-manifest CONFIRM=true
 
 - name: fluentd
   run:
-    when: "true or change_in(['/third_party/fluentd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Publish tigera/fluentd-base multi-arch manifests
   task:
@@ -274,22 +274,22 @@ blocks:
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/fluentd
+        - cd fluentd
     jobs:
       - name: fluentd tests
         commands:
-          - ../../.semaphore/run-and-monitor ci.log make ci
+          - ../.semaphore/run-and-monitor ci.log make ci
       - name: Build binary
         matrix:
           - env_var: ARCH
             values:
               - arm64
         commands:
-          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 
 - name: Publish tigera/fluentd-base Windows images
   run:
-    when: "true or change_in(['/third_party/fluentd/base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   execution_time_limit:
@@ -310,7 +310,7 @@ blocks:
         - tar czf ~/windows-tf.tar.gz -C ~/process/testing/windows-instances .
         - artifact push job --expire-in 2w ~/windows-tf.tar.gz
         - popd
-        - cd third_party/fluentd
+        - cd fluentd
     epilogue:
       always:
         commands:
@@ -323,7 +323,7 @@ blocks:
           - BASE=true CONFIRM=true .semaphore/windows-cd.sh
 - name: Publish tigera/fluentd-base Windows multi-arch manifests
   run:
-    when: "true or change_in(['/third_party/fluentd/base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Publish tigera/fluentd-base Windows images
   task:
@@ -335,11 +335,11 @@ blocks:
     jobs:
       - name: Windows multi-arch manifests
         commands:
-          - make -C third_party/fluentd/base push-windows-manifest CONFIRM=true
+          - make -C third_party/fluentd-base push-windows-manifest CONFIRM=true
 
 - name: fluentd Windows
   run:
-    when: "true or change_in(['/third_party/fluentd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Publish tigera/fluentd-base Windows multi-arch manifests
   task:
@@ -352,8 +352,8 @@ blocks:
     prologue:
       commands:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
-        - cd third_party/fluentd
+        - cd fluentd
     jobs:
       - name: build windows image
         commands:
-          - ../../.semaphore/run-and-monitor build-windows.log make image-windows
+          - ../.semaphore/run-and-monitor build-windows.log make image-windows
