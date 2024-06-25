@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
+# Copyright (c) 2015-2024 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 # This ensures that testing of Felix in this repository is done in the same
 # userspace environment as it will be deployed in calico/node.
 
-FROM calico/bpftool:v5.3-${TARGETARCH} as bpftool
+FROM calico/bpftool:v7.4.0 as bpftool
 
 FROM debian:11-slim as source
 
