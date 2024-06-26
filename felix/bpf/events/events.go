@@ -39,6 +39,8 @@ const (
 	// TypeDNSEventL3 is like TypeDNSEvent but from a L3 device - i.e. one whose packets begin
 	// with the L3 header
 	TypeDNSEventL3 Type = 6
+	// TypePolicyVerdictV6 is emitted when a v6 policy program reaches a verdict
+	TypePolicyVerdictV6 Type = 7
 )
 
 func (t Type) String() string {
@@ -187,12 +189,8 @@ func (e ErrLostEvents) Num() int {
 }
 
 // ParsePolicyVerdict converts a bpf event data and converts to go structure
-func ParsePolicyVerdict(data []byte) PolicyVerdict {
+func ParsePolicyVerdict(data []byte, isIPv6 bool) PolicyVerdict {
 	fl := PolicyVerdict{
-		SrcAddr:        net.IP(data[0:4]),
-		DstAddr:        net.IP(data[32:36]),
-		PostNATDstAddr: net.IP(data[48:52]),
-		NATTunSrcAddr:  net.IP(data[64:68]),
 		PolicyRC:       state.PolicyResult(binary.LittleEndian.Uint32(data[84:88])),
 		SrcPort:        binary.LittleEndian.Uint16(data[88:90]),
 		DstPort:        binary.LittleEndian.Uint16(data[92:94]),
@@ -204,6 +202,18 @@ func ParsePolicyVerdict(data []byte) PolicyVerdict {
 
 	if fl.RulesHit > state.MaxRuleIDs {
 		fl.RulesHit = state.MaxRuleIDs
+	}
+
+	if isIPv6 {
+		fl.SrcAddr = net.IP(data[0:16])
+		fl.DstAddr = net.IP(data[32:48])
+		fl.PostNATDstAddr = net.IP(data[48:64])
+		fl.NATTunSrcAddr = net.IP(data[64:80])
+	} else {
+		fl.SrcAddr = net.IP(data[0:4])
+		fl.DstAddr = net.IP(data[32:36])
+		fl.PostNATDstAddr = net.IP(data[48:52])
+		fl.NATTunSrcAddr = net.IP(data[64:68])
 	}
 
 	off := 104

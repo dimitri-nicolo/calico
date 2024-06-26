@@ -4,6 +4,7 @@ package conntrack
 
 import (
 	"net"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -39,6 +40,7 @@ type InfoReader struct {
 	outC chan []collector.ConntrackInfo
 
 	bufferedConntrackInfo []collector.ConntrackInfo
+	ctLock                sync.Mutex
 }
 
 // NewInfoReader returns a new instance of InfoReader that can be used as a
@@ -132,6 +134,8 @@ func (r *InfoReader) makeConntrackInfo(key KeyInterface, val ValueInterface, dna
 }
 
 func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
+	r.ctLock.Lock()
+	defer r.ctLock.Unlock()
 	r.bufferedConntrackInfo = append(r.bufferedConntrackInfo, i)
 	if len(r.bufferedConntrackInfo) >= collector.ConntrackInfoBatchSize {
 		select {
@@ -146,6 +150,8 @@ func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
 
 // IterationStart is called and Scanner starts iterating over the conntrack table.
 func (r *InfoReader) IterationStart() {
+	r.ctLock.Lock()
+	defer r.ctLock.Unlock()
 	if r.cachedKTime == 0 || r.time.Since(r.goTimeOfLastKTimeLookup) > time.Second {
 		r.cachedKTime = r.time.KTimeNanos()
 		r.goTimeOfLastKTimeLookup = r.time.Now()
@@ -158,6 +164,8 @@ func (r *InfoReader) IterationStart() {
 
 // IterationEnd is called and Scanner ends iterating over the conntrack table.
 func (r *InfoReader) IterationEnd() {
+	r.ctLock.Lock()
+	defer r.ctLock.Unlock()
 	if len(r.bufferedConntrackInfo) > 0 {
 		select {
 		case r.outC <- r.bufferedConntrackInfo:
