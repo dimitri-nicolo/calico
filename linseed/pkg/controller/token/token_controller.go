@@ -510,6 +510,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 			}
 		case event := <-updateChan:
 			// updateChan triggers reconciliation of tokens and secrets, when a managed cluster is added or updated.
+			retry := retryUpdate[tokenEvent]
 			log := c.loggerForManagedCluster(event.mc)
 
 			// Ensure cluster exists before proceeding with the reconciliation.
@@ -524,6 +525,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 			hasPermission, err := c.supportNamespaceWatches(event.mc)
 			if err != nil {
 				log.WithError(err).Error("failed to check if namespace RBAC exist on the managed cluster")
+				retry(rc, event.mc.Name, *event, updateChan, stop)
 				continue
 			}
 
@@ -623,12 +625,10 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 				close(mcStopCh)
 				delete(c.informerStopChans, mcName)
 				logrus.WithField("name", mcName).Info("removed informer for the deleted managed cluster")
-			} else {
-				logrus.WithField("name", mcName).Warn("no informer found for the deleted managed cluster")
 			}
 
 			// Remove the entry from permissionMap.
-			if _, ok := c.informerStopChans[mcName]; ok {
+			if _, ok := c.permissionMap[mcName]; ok {
 				delete(c.permissionMap, mcName)
 				logrus.WithField("name", mcName).Info("removed permissionMap entry for the deleted managed cluster")
 			} else {
