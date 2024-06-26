@@ -450,7 +450,7 @@ func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kuber
 		// ip diagnostics
 		{
 			Info:     fmt.Sprintf("Collect iptables for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- iptables-save -c", namespace, podName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- iptables-legacy-save -c", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iptables-save.txt", curNodeDir),
 		},
 		{
