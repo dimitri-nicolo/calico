@@ -159,58 +159,6 @@ func (_m *MockClient) PutBulkSecurityEvent(data api.EventsData) error {
 	return r0
 }
 
-// PutSecurityEvent provides a mock function with given fields: ctx, data
-func (_m *MockClient) PutSecurityEvent(ctx context.Context, data api.EventsData) (*v7.IndexResponse, error) {
-	ret := _m.Called(ctx, data)
-
-	var r0 *v7.IndexResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, api.EventsData) (*v7.IndexResponse, error)); ok {
-		return rf(ctx, data)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, api.EventsData) *v7.IndexResponse); ok {
-		r0 = rf(ctx, data)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v7.IndexResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, api.EventsData) error); ok {
-		r1 = rf(ctx, data)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// PutSecurityEventWithID provides a mock function with given fields: ctx, data, id
-func (_m *MockClient) PutSecurityEventWithID(ctx context.Context, data api.EventsData, id string) (*v7.IndexResponse, error) {
-	ret := _m.Called(ctx, data, id)
-
-	var r0 *v7.IndexResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, api.EventsData, string) (*v7.IndexResponse, error)); ok {
-		return rf(ctx, data, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, api.EventsData, string) *v7.IndexResponse); ok {
-		r0 = rf(ctx, data, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v7.IndexResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, api.EventsData, string) error); ok {
-		r1 = rf(ctx, data, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // SearchCompositeAggregations provides a mock function with given fields: _a0, _a1, _a2
 func (_m *MockClient) SearchCompositeAggregations(_a0 context.Context, _a1 *CompositeAggregationQuery, _a2 CompositeAggregationKey) (<-chan *CompositeAggregationBucket, <-chan error) {
 	ret := _m.Called(_a0, _a1, _a2)

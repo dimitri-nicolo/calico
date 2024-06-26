@@ -69,8 +69,6 @@ type EventHandler interface {
 	// CreateEventsIndex is called by every component writing into events index if index doesn't exist.
 	CreateEventsIndex(ctx context.Context) error
 
-	PutSecurityEvent(ctx context.Context, data EventsData) (*elastic.IndexResponse, error)
-	PutSecurityEventWithID(ctx context.Context, data EventsData, id string) (*elastic.IndexResponse, error)
 	PutBulkSecurityEvent(data EventsData) error
 
 	BulkProcessorInitialize(ctx context.Context, afterFn elastic.BulkAfterFunc) error
