@@ -148,7 +148,7 @@ func New(
 		log.Info("Connecting to Elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
 			log.Info("Successfully connected to Elastic")
-			return &client{c, nil, indexSuffix, IndexSettings{strconv.Itoa(replicas), strconv.Itoa(shards), LifeCycle{}}}, nil
+			return &client{c, indexSuffix, IndexSettings{strconv.Itoa(replicas), strconv.Itoa(shards), LifeCycle{}}}, nil
 		}
 		log.WithError(err).WithField("attempts", retries-i).Warning("Elastic connect failed, retrying")
 		time.Sleep(retryInterval)
