@@ -35,34 +35,6 @@ func (_m *MockClient) Backend() *v7.Client {
 	return r0
 }
 
-// BulkProcessorClose provides a mock function with given fields:
-func (_m *MockClient) BulkProcessorClose() error {
-	ret := _m.Called()
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// BulkProcessorInitialize provides a mock function with given fields: ctx, afterFn
-func (_m *MockClient) BulkProcessorInitialize(ctx context.Context, afterFn v7.BulkAfterFunc) error {
-	ret := _m.Called(ctx, afterFn)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, v7.BulkAfterFunc) error); ok {
-		r0 = rf(ctx, afterFn)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // ClusterAlias provides a mock function with given fields: _a0
 func (_m *MockClient) ClusterAlias(_a0 string) string {
 	ret := _m.Called(_a0)
@@ -86,20 +58,6 @@ func (_m *MockClient) ClusterIndex(_a0 string, _a1 string) string {
 		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// CreateEventsIndex provides a mock function with given fields: ctx
-func (_m *MockClient) CreateEventsIndex(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
 	}
 
 	return r0
@@ -140,20 +98,6 @@ func (_m *MockClient) IndexTemplateName(index string) string {
 		r0 = rf(index)
 	} else {
 		r0 = ret.Get(0).(string)
-	}
-
-	return r0
-}
-
-// PutBulkSecurityEvent provides a mock function with given fields: data
-func (_m *MockClient) PutBulkSecurityEvent(data api.EventsData) error {
-	ret := _m.Called(data)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(api.EventsData) error); ok {
-		r0 = rf(data)
-	} else {
-		r0 = ret.Error(0)
 	}
 
 	return r0

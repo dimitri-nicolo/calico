@@ -48,7 +48,6 @@ type LifeCycle struct {
 
 type Client interface {
 	api.DNSLogReportHandler
-	api.EventHandler
 	ClusterIndex(string, string) string
 	ClusterAlias(string) string
 	IndexTemplateName(index string) string
