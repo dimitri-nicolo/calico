@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -33,9 +34,21 @@ func cancelOnSignals(cleanup func()) {
 func main() {
 	logrus.Info("Starting security events webhook processor...")
 
-	k8sConfig, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
-	if err != nil {
-		logrus.WithError(err).Fatal("Unable to obtain k8s configuration")
+	kubeconfig := os.Getenv("KUBECONFIG")
+	var k8sConfig *rest.Config
+	var err error
+	if kubeconfig == "" {
+		// creates the in-cluster k8sConfig
+		k8sConfig, err = rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// creates a k8sConfig from supplied kubeconfig
+		k8sConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			panic(err.Error())
+		}
 	}
 
 	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
@@ -73,7 +86,6 @@ func main() {
 	cleanup := webhooks.SetUp(ctx, webhookController, webhookWatcherUpdater)
 
 	go cancelOnSignals(cleanup)
-
 	// break up wait group to terminate updater first then controller
 	// with 2 different child contexts
 	logrus.Info("Goodbye!")
