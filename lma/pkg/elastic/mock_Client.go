@@ -387,22 +387,6 @@ func (_m *MockClient) SearchDNSLogs(ctx context.Context, filter *api.DNSLogsSele
 	return r0
 }
 
-// SearchSecurityEvents provides a mock function with given fields: ctx, start, end, filterData, allClusters
-func (_m *MockClient) SearchSecurityEvents(ctx context.Context, start *time.Time, end *time.Time, filterData []api.EventsSearchFields, allClusters bool) <-chan *api.EventResult {
-	ret := _m.Called(ctx, start, end, filterData, allClusters)
-
-	var r0 <-chan *api.EventResult
-	if rf, ok := ret.Get(0).(func(context.Context, *time.Time, *time.Time, []api.EventsSearchFields, bool) <-chan *api.EventResult); ok {
-		r0 = rf(ctx, start, end, filterData, allClusters)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan *api.EventResult)
-		}
-	}
-
-	return r0
-}
-
 type mockConstructorTestingTNewMockClient interface {
 	mock.TestingT
 	Cleanup(func())
