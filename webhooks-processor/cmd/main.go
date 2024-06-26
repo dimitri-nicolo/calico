@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -19,7 +20,8 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/webhooks"
 )
 
-func cancelOnSignals(cleanup func()) {
+func cancelOnSignals(cleanup func(), wg *sync.WaitGroup) {
+	defer wg.Done()
 	c := make(chan os.Signal, 1)
 	syscalls := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
 	signal.Notify(c, syscalls...)
@@ -85,7 +87,10 @@ func main() {
 	// returns cleanup function to handle graceful termintation of gorountines
 	cleanup := webhooks.SetUp(ctx, webhookController, webhookWatcherUpdater)
 
-	go cancelOnSignals(cleanup)
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go cancelOnSignals(cleanup, wg)
+	wg.Wait()
 	// break up wait group to terminate updater first then controller
 	// with 2 different child contexts
 	logrus.Info("Goodbye!")
