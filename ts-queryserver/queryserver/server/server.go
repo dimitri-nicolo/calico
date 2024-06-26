@@ -14,14 +14,16 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers"
-	handler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
+	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
 )
 
 type Server struct {
-	authHandler handler.AuthHandler
+	authhandler authhandler.AuthHandler
+	authorizer  auth.Authorizer
 	cfg         *apiconfig.CalicoAPIConfig
 	k8sClient   kubernetes.Interface
 	servercfg   *config.Config
@@ -36,10 +38,12 @@ func NewServer(
 	k8sClient kubernetes.Interface,
 	cfg *apiconfig.CalicoAPIConfig,
 	servercfg *config.Config,
-	authHandler handler.AuthHandler,
+	authenticator authhandler.AuthHandler,
+	authorizer auth.Authorizer,
 ) *Server {
 	return &Server{
-		authHandler: authHandler,
+		authhandler: authenticator,
+		authorizer:  authorizer,
 		cfg:         cfg,
 		k8sClient:   k8sClient,
 		servercfg:   servercfg,
@@ -56,19 +60,19 @@ func (s *Server) Start() error {
 	}
 
 	sm := http.NewServeMux()
-	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh), s.servercfg)
-	sm.HandleFunc("/endpoints", s.authHandler.AuthenticationHandler(qh.Endpoints, handler.MethodPOST))
-	sm.HandleFunc("/endpoints/", s.authHandler.AuthenticationHandler(qh.Endpoint, handler.MethodGET))
-	sm.HandleFunc("/policies", s.authHandler.AuthenticationHandler(qh.Policies, handler.MethodGET))
-	sm.HandleFunc("/policies/", s.authHandler.AuthenticationHandler(qh.Policy, handler.MethodGET))
-	sm.HandleFunc("/nodes", s.authHandler.AuthenticationHandler(qh.Nodes, handler.MethodGET))
-	sm.HandleFunc("/nodes/", s.authHandler.AuthenticationHandler(qh.Node, handler.MethodGET))
-	sm.HandleFunc("/summary", s.authHandler.AuthenticationHandler(qh.Summary, handler.MethodGET))
-	sm.HandleFunc("/metrics", s.authHandler.AuthenticationHandler(qh.Metrics, handler.MethodGET))
+	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh), s.servercfg, s.authorizer)
+	sm.HandleFunc("/endpoints", s.authhandler.AuthenticationHandler(qh.Endpoints, authhandler.MethodPOST))
+	sm.HandleFunc("/endpoints/", s.authhandler.AuthenticationHandler(qh.Endpoint, authhandler.MethodGET))
+	sm.HandleFunc("/policies", s.authhandler.AuthenticationHandler(qh.Policies, authhandler.MethodGET))
+	sm.HandleFunc("/policies/", s.authhandler.AuthenticationHandler(qh.Policy, authhandler.MethodGET))
+	sm.HandleFunc("/nodes", s.authhandler.AuthenticationHandler(qh.Nodes, authhandler.MethodGET))
+	sm.HandleFunc("/nodes/", s.authhandler.AuthenticationHandler(qh.Node, authhandler.MethodGET))
+	sm.HandleFunc("/summary", s.authhandler.AuthenticationHandler(qh.Summary, authhandler.MethodGET))
+	sm.HandleFunc("/metrics", s.authhandler.AuthenticationHandler(qh.Metrics, authhandler.MethodGET))
 	sm.HandleFunc("/version", handlers.VersionHandler)
 
 	lic := handlers.License{Client: c}
-	sm.HandleFunc("/license", s.authHandler.AuthenticationHandler(lic.LicenseHandler, handler.MethodGET))
+	sm.HandleFunc("/license", s.authhandler.AuthenticationHandler(lic.LicenseHandler, authhandler.MethodGET))
 
 	s.server = &http.Server{
 		Addr:      s.servercfg.ListenAddr,

@@ -64,7 +64,7 @@ var _ = Describe("Queryserver query auth test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		stopCh := make(chan struct{})
-		qh = query.NewQuery(client.NewQueryInterface(fakeK8sCli, c, stopCh), nil)
+		qh = query.NewQuery(client.NewQueryInterface(fakeK8sCli, c, stopCh), nil, nil)
 	})
 
 	It("returns a valid handler", func() {

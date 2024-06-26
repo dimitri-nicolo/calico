@@ -67,7 +67,7 @@ var _ = Describe("Queryserver query tests", func() {
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 			w := httptest.NewRecorder()
 
-			q := NewQuery(&qi, nil)
+			q := NewQuery(&qi, nil, nil)
 			q.Metrics(w, r)
 
 			resp := w.Result()
@@ -85,7 +85,7 @@ var _ = Describe("Queryserver query tests", func() {
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 			w := httptest.NewRecorder()
 
-			q := NewQuery(&qi, nil)
+			q := NewQuery(&qi, nil, nil)
 			q.Metrics(w, r)
 
 			resp := w.Result()
@@ -103,7 +103,7 @@ var _ = Describe("Queryserver query tests", func() {
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 			w := httptest.NewRecorder()
 
-			q := NewQuery(&qi, nil)
+			q := NewQuery(&qi, nil, nil)
 			q.Metrics(w, r)
 
 			resp := w.Result()

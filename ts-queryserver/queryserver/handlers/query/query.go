@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/SermoDigital/jose/jws"
+	log "github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -27,6 +26,7 @@ import (
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 )
 
@@ -87,13 +87,14 @@ type Query interface {
 	Metrics(w http.ResponseWriter, r *http.Request)
 }
 
-func NewQuery(qi client.QueryInterface, cfg *config.Config) Query {
-	return &query{cfg: cfg, qi: qi}
+func NewQuery(qi client.QueryInterface, cfg *config.Config, authz authhandler.Authorizer) Query {
+	return &query{cfg: cfg, qi: qi, authorizer: authz}
 }
 
 type query struct {
-	cfg *config.Config
-	qi  client.QueryInterface
+	cfg        *config.Config
+	qi         client.QueryInterface
+	authorizer authhandler.Authorizer
 }
 
 func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
@@ -262,6 +263,12 @@ func (q *query) Endpoint(w http.ResponseWriter, r *http.Request) {
 //   - fields: list of fields to be returned in the resultset (if not passed all fields will be returned).
 //     exmaple: fields=id,name,namespace (this will only return id, name, and namespace for each policy in the resultset)
 func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
+	permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), authhandler.PolicyAuthReviewAttrList)
+	if err != nil {
+		q.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
 	endpoints, err := getEndpoints(r)
 	if err != nil {
 		q.writeError(w, err, http.StatusBadRequest)
@@ -311,10 +318,17 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		Page:          page,
 		Sort:          q.getSort(r),
 		FieldSelector: fieldSelector,
+		Permissions:   permissions,
 	}, false)
 }
 
 func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
+	permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), authhandler.PolicyAuthReviewAttrList)
+	if err != nil {
+		q.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
 	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
 	if len(urlParts) != numURLSegmentsWithName {
 		q.writeError(w, ErrorInvalidPolicyURL, http.StatusBadRequest)
@@ -326,7 +340,8 @@ func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q.runQuery(w, r, client.QueryPoliciesReq{
-		Policy: policy,
+		Policy:      policy,
+		Permissions: permissions,
 	}, true)
 }
 

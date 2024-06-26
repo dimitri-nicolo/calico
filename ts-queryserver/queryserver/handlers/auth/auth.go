@@ -7,9 +7,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/lma/pkg/auth"
-
 	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apiserver/pkg/endpoints/request"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 type HTTPMethod string
@@ -72,6 +73,8 @@ func (ah *authHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpM
 			}
 			return
 		}
+
+		req = req.WithContext(request.WithUser(req.Context(), usr))
 
 		// Authorization.
 		// TODO(dimitri): Replace simple with query result authorization [EV-2033].

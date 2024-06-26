@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 )
 
 // TODO (rlb):  These data types are basically focussed on the requirements of the web server
@@ -95,6 +96,9 @@ type QueryPoliciesReq struct {
 	Page          *Page
 	Sort          *Sort
 	FieldSelector map[string]bool
+
+	// Authorization
+	Permissions auth.Permission
 }
 
 type QueryPoliciesResp struct {

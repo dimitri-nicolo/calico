@@ -3,6 +3,7 @@ package fv
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,7 +31,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
 	queryhdr "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
@@ -64,8 +67,10 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 			fakeK8sClient := fake.NewSimpleClientset()
 			mh := &mockHandler{}
 
+			authz := &mockAuthorizer{}
+
 			By("Starting the queryserver")
-			srv := server.NewServer(fakeK8sClient, &config, servercfg, mh)
+			srv := server.NewServer(fakeK8sClient, &config, servercfg, mh, authz)
 			err = srv.Start()
 			Expect(err).NotTo(HaveOccurred())
 			defer srv.Stop()
@@ -404,6 +409,22 @@ func (mh *mockHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpM
 
 		handlerFunc.ServeHTTP(w, req)
 	}
+}
+
+type mockAuthorizer struct {
+}
+
+type mockPermissions struct {
+}
+
+func (p *mockPermissions) IsAuthorized(res api.Resource, verbs []string) bool {
+	return true
+}
+
+func (authz *mockAuthorizer) PerformUserAuthorizationReview(ctx context.Context,
+	authReviewattributes []apiv3.AuthorizationReviewResourceAttributes) (auth.Permission, error) {
+
+	return &mockPermissions{}, nil
 }
 
 // TODO(rlb):

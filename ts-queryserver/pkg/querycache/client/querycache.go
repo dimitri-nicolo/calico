@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/strings/slices"
@@ -21,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/cache"
@@ -405,6 +408,15 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				Identifier: req.Policy,
 			}
 		}
+
+		if !req.Permissions.IsAuthorized(p.GetResource(), []string{"get", "list"}) {
+			return nil, errors.ErrorOperationNotSupported{
+				Operation:  "Get",
+				Identifier: req.Policy,
+				Reason:     "User does not have required permissions to access this resource.",
+			}
+		}
+
 		return &QueryPoliciesResp{
 			Count: 1,
 			Items: []Policy{
@@ -486,7 +498,27 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				log.Info("Filter out matched policy")
 				continue
 			}
-			items = append(items, *c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector))
+			// if policy is not of type native kubernetes and tier is not default, check authorization to tier resource.
+			if p.GetResource().GetObjectKind().GroupVersionKind().Group == "networking.k8s.io" && p.GetTier() != names.DefaultTierName {
+				tierResource := apiv3.Tier{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Tier",
+						APIVersion: "projectcalico.org",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: p.GetTier(),
+					},
+				}
+
+				if !req.Permissions.IsAuthorized(interface{}(tierResource).(api.Resource), []string{"get", "list"}) {
+					continue
+				}
+			}
+
+			// check authorization to the policy resource.
+			if req.Permissions.IsAuthorized(p.GetResource(), []string{"get", "list"}) {
+				items = append(items, *c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector))
+			}
 		}
 	}
 
