@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 package elastic
 
@@ -48,7 +48,6 @@ type LifeCycle struct {
 
 type Client interface {
 	api.DNSLogReportHandler
-	api.EventHandler
 	ClusterIndex(string, string) string
 	ClusterAlias(string) string
 	IndexTemplateName(index string) string
@@ -64,7 +63,6 @@ type Client interface {
 // client implements the Client interface.
 type client struct {
 	*elastic.Client
-	bulkProcessor *elastic.BulkProcessor
 	indexSuffix   string
 	indexSettings IndexSettings
 }
@@ -150,119 +148,13 @@ func New(
 		log.Info("Connecting to Elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
 			log.Info("Successfully connected to Elastic")
-			return &client{c, nil, indexSuffix, IndexSettings{strconv.Itoa(replicas), strconv.Itoa(shards), LifeCycle{}}}, nil
+			return &client{c, indexSuffix, IndexSettings{strconv.Itoa(replicas), strconv.Itoa(shards), LifeCycle{}}}, nil
 		}
 		log.WithError(err).WithField("attempts", retries-i).Warning("Elastic connect failed, retrying")
 		time.Sleep(retryInterval)
 	}
 	log.Errorf("Unable to connect to Elastic after %d retries", retries)
 	return nil, err
-}
-
-func (c *client) ensureIndexExistsWithRetry(index string, template IndexTemplate, lifecycleEnabled bool) error {
-	// If multiple threads attempt to create the index at the same time we can end up with errors during the creation
-	// which don't seem to match sensible error codes. Let's just add a retry mechanism and retry the creation a few
-	// times.
-	var err error
-	for i := 0; i < createIndexMaxRetries; i++ {
-		if err = c.ensureIndexExists(index, template, lifecycleEnabled); err == nil {
-			break
-		}
-		time.Sleep(createIndexRetryInterval)
-	}
-
-	if err != nil {
-		return fmt.Errorf("unable to create index: %v", err)
-	}
-
-	return err
-}
-
-func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate, lifecycleEnabled bool) error {
-	ctx := context.Background()
-	templateName := c.IndexTemplateName(indexPrefix)
-	clog := log.WithField("indexPrefix", indexPrefix)
-	aliasName := c.ClusterAlias(indexPrefix)
-	var indexName string
-	if lifecycleEnabled {
-		indexName = fmt.Sprintf("<%s%s-{now/s{yyyyMMdd}}-000000>", aliasName, applicationName)
-	} else {
-		indexName = c.ClusterIndex(indexPrefix, applicationName)
-	}
-
-	// If current template in Elasticsearch doesn't match with expected template or if there is no existing template,
-	// create/update the template. ILM performs rollover to create new index with updated mapping if there is an existing index.
-	currentTemplate, err := c.IndexGetTemplate(templateName).Do(ctx)
-	if err != nil {
-		if er, ok := err.(*elastic.Error); ok {
-			if er.Status != 404 {
-				clog.Warnf("failed to get index template %#v", err)
-				return err
-			}
-		} else {
-			clog.WithError(err).Warn("failed to parse elasticsearch error")
-			return err
-		}
-	}
-
-	if currentTemplate == nil ||
-		!reflect.DeepEqual(currentTemplate[templateName].Settings, template.Settings) ||
-		!reflect.DeepEqual(currentTemplate[templateName].Mappings, template.Mappings) {
-		clog.Info("creating or updating index template")
-		_, err := c.IndexPutTemplate(templateName).BodyJson(template).Do(ctx)
-		if err != nil {
-			clog.WithError(err).Warn("failed to update index template")
-			return err
-		}
-	}
-
-	// Check if index exists.
-	exists, err := c.IndexExists(aliasName).Do(ctx)
-	if err != nil {
-		clog.WithError(err).Warn("failed to check if index exists")
-		return err
-	}
-
-	// Return if index exists
-	if exists {
-		clog.Info("indexPrefix already exists")
-
-		// Update mappings in the index template won't be reflected on the existing index.
-		// For indices that have lifecycle enabled, we leave old logs as they were,
-		// and write the code to reinterpret them. If lifecycle isn't enabled, events index
-		// only atm, we need to update the mappings for existing index manually.
-		if !lifecycleEnabled {
-			if err := c.MaybeUpdateIndexMapping(indexName, template.Mappings); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	// Create index.
-	clog.Info("index doesn't exist, creating...")
-	aliasJson := "{\"" + aliasName + "\": { \"is_write_index\": true } }"
-	createIndex, err := c.
-		CreateIndex(indexName).
-		BodyJson(map[string]interface{}{
-			"aliases": json.RawMessage(aliasJson),
-		}).
-		Do(ctx)
-	if err != nil {
-		if elastic.IsConflict(err) {
-			clog.Info("indexPrefix already exists")
-			return nil
-		}
-		clog.WithError(err).Warn("failed to create indexPrefix")
-		return err
-	}
-
-	// Check if acknowledged
-	if !createIndex.Acknowledged {
-		clog.Warn("indexPrefix creation has not yet been acknowledged")
-	}
-	clog.Infof("index %s successfully created!", indexName)
-	return nil
 }
 
 func (c *client) ClusterAlias(index string) string {
