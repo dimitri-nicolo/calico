@@ -66,10 +66,6 @@ type EventResult struct {
 }
 
 type EventHandler interface {
-	// EventsIndexExists checks if index exists, all components sending data to elasticsearch should
-	// check if Events index exists during startup.
-	EventsIndexExists(ctx context.Context) (bool, error)
-
 	// CreateEventsIndex is called by every component writing into events index if index doesn't exist.
 	CreateEventsIndex(ctx context.Context) error
 
@@ -77,14 +73,6 @@ type EventHandler interface {
 	PutSecurityEventWithID(ctx context.Context, data EventsData, id string) (*elastic.IndexResponse, error)
 	PutBulkSecurityEvent(data EventsData) error
 
-	DismissSecurityEvent(ctx context.Context, index, id string) (*elastic.UpdateResponse, error)
-	DismissBulkSecurityEvent(index, id string) error
-
-	DeleteSecurityEvent(ctx context.Context, index, id string) (*elastic.DeleteResponse, error)
-	DeleteBulkSecurityEvent(index, id string) error
-
 	BulkProcessorInitialize(ctx context.Context, afterFn elastic.BulkAfterFunc) error
-	BulkProcessorInitializeWithFlush(ctx context.Context, afterFn elastic.BulkAfterFunc, bulkActions int) error
-	BulkProcessorFlush() error
 	BulkProcessorClose() error
 }

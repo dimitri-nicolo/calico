@@ -49,20 +49,6 @@ func (_m *MockClient) BulkProcessorClose() error {
 	return r0
 }
 
-// BulkProcessorFlush provides a mock function with given fields:
-func (_m *MockClient) BulkProcessorFlush() error {
-	ret := _m.Called()
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // BulkProcessorInitialize provides a mock function with given fields: ctx, afterFn
 func (_m *MockClient) BulkProcessorInitialize(ctx context.Context, afterFn v7.BulkAfterFunc) error {
 	ret := _m.Called(ctx, afterFn)
@@ -70,20 +56,6 @@ func (_m *MockClient) BulkProcessorInitialize(ctx context.Context, afterFn v7.Bu
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, v7.BulkAfterFunc) error); ok {
 		r0 = rf(ctx, afterFn)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// BulkProcessorInitializeWithFlush provides a mock function with given fields: ctx, afterFn, bulkActions
-func (_m *MockClient) BulkProcessorInitializeWithFlush(ctx context.Context, afterFn v7.BulkAfterFunc, bulkActions int) error {
-	ret := _m.Called(ctx, afterFn, bulkActions)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, v7.BulkAfterFunc, int) error); ok {
-		r0 = rf(ctx, afterFn, bulkActions)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -133,86 +105,6 @@ func (_m *MockClient) CreateEventsIndex(ctx context.Context) error {
 	return r0
 }
 
-// DeleteBulkSecurityEvent provides a mock function with given fields: index, id
-func (_m *MockClient) DeleteBulkSecurityEvent(index string, id string) error {
-	ret := _m.Called(index, id)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(index, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// DeleteSecurityEvent provides a mock function with given fields: ctx, index, id
-func (_m *MockClient) DeleteSecurityEvent(ctx context.Context, index string, id string) (*v7.DeleteResponse, error) {
-	ret := _m.Called(ctx, index, id)
-
-	var r0 *v7.DeleteResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*v7.DeleteResponse, error)); ok {
-		return rf(ctx, index, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *v7.DeleteResponse); ok {
-		r0 = rf(ctx, index, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v7.DeleteResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, index, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// DismissBulkSecurityEvent provides a mock function with given fields: index, id
-func (_m *MockClient) DismissBulkSecurityEvent(index string, id string) error {
-	ret := _m.Called(index, id)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(index, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// DismissSecurityEvent provides a mock function with given fields: ctx, index, id
-func (_m *MockClient) DismissSecurityEvent(ctx context.Context, index string, id string) (*v7.UpdateResponse, error) {
-	ret := _m.Called(ctx, index, id)
-
-	var r0 *v7.UpdateResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*v7.UpdateResponse, error)); ok {
-		return rf(ctx, index, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *v7.UpdateResponse); ok {
-		r0 = rf(ctx, index, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v7.UpdateResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, index, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Do provides a mock function with given fields: ctx, s
 func (_m *MockClient) Do(ctx context.Context, s *v7.SearchService) (*v7.SearchResult, error) {
 	ret := _m.Called(ctx, s)
@@ -232,30 +124,6 @@ func (_m *MockClient) Do(ctx context.Context, s *v7.SearchService) (*v7.SearchRe
 
 	if rf, ok := ret.Get(1).(func(context.Context, *v7.SearchService) error); ok {
 		r1 = rf(ctx, s)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// EventsIndexExists provides a mock function with given fields: ctx
-func (_m *MockClient) EventsIndexExists(ctx context.Context) (bool, error) {
-	ret := _m.Called(ctx)
-
-	var r0 bool
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (bool, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) bool); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}

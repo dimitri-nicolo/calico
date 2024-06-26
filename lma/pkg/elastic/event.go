@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -13,13 +13,6 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
-
-var eventDismissDoc map[string]bool = map[string]bool{"dismissed": true}
-
-func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
-	alias := c.ClusterAlias(EventsIndex)
-	return c.IndexExists(alias).Do(ctx)
-}
 
 var (
 	EventsIndex = "tigera_secure_ee_events"
@@ -79,26 +72,10 @@ func (c *client) PutSecurityEvent(ctx context.Context, data api.EventsData) (*el
 	return c.Index().Index(alias).BodyString(string(b)).Do(ctx)
 }
 
-// DismissSecurityEvent sets the dismissed field to true for an event by id.
-func (c *client) DismissSecurityEvent(ctx context.Context, index, id string) (*elastic.UpdateResponse, error) {
-	return c.Update().Index(index).Id(id).Doc(eventDismissDoc).Do(ctx)
-}
-
-// DeleteSecurityEvent deletes the event by id.
-func (c *client) DeleteSecurityEvent(ctx context.Context, index, id string) (*elastic.DeleteResponse, error) {
-	return c.Delete().Index(index).Id(id).Do(ctx)
-}
-
 // BulkProcessorInitialize creates a bulk processor service and sets default flush size and BulkAfterFunc that
 // needs to be executed after bulk request is committed.
 func (c *client) BulkProcessorInitialize(ctx context.Context, afterFn elastic.BulkAfterFunc) error {
 	return c.bulkProcessorInit(ctx, afterFn, api.AutoBulkFlush)
-}
-
-// BulkProcessorInitialize creates a bulk processor service and sets given flush size and BulkAfterFunc that
-// needs to be executed after bulk request is committed.
-func (c *client) BulkProcessorInitializeWithFlush(ctx context.Context, afterFn elastic.BulkAfterFunc, bulkActions int) error {
-	return c.bulkProcessorInit(ctx, afterFn, bulkActions)
 }
 
 func (c *client) bulkProcessorInit(ctx context.Context, afterFn elastic.BulkAfterFunc, bulkActions int) error {
@@ -128,37 +105,6 @@ func (c *client) PutBulkSecurityEvent(data api.EventsData) error {
 	r := elastic.NewBulkIndexRequest().Index(alias).Doc(string(b))
 	c.bulkProcessor.Add(r)
 	return nil
-}
-
-// DismissBulkSecurityEvent adds the event dismissal request to bulk processor service,
-// the data is flushed either automatically to Elasticsearch when the document count reaches BulkActions, or
-// when bulk processor service is closed.
-func (c *client) DismissBulkSecurityEvent(index, id string) error {
-	if c.bulkProcessor == nil {
-		return fmt.Errorf("BulkProcessor not initialized")
-	}
-
-	r := elastic.NewBulkUpdateRequest().Index(index).Id(id).Doc(eventDismissDoc)
-	c.bulkProcessor.Add(r)
-	return nil
-}
-
-// DeleteBulkSecurityEvent adds the event deleting request to bulk processor service,
-// the data is flushed either automatically to Elasticsearch when the document count reaches BulkActions, or
-// when bulk processor service is closed.
-func (c *client) DeleteBulkSecurityEvent(index, id string) error {
-	if c.bulkProcessor == nil {
-		return fmt.Errorf("BulkProcessor not initalized")
-	}
-
-	r := elastic.NewBulkDeleteRequest().Index(index).Id(id)
-	c.bulkProcessor.Add(r)
-	return nil
-}
-
-// BulkProcessorFlush is called to manually flush the pending requests in bulk processor service
-func (c *client) BulkProcessorFlush() error {
-	return c.bulkProcessor.Flush()
 }
 
 // BulkProcessorClose flushes the pending requests in bulk processor service and closes it.
