@@ -152,7 +152,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			By("putting document into index and verifying it exists", func() {
 				data.Origin = "new_events_index_00"
-				_, err = elasticClientManagement.PutSecurityEventWithID(ctx, data, "sample_id_test_542")
+				_, err = putSecurityEventWithID(ctx, elasticClientManagement, data, "sample_id_test_542")
 				Expect(err).ShouldNot(HaveOccurred())
 				// wait for put to reflect
 				time.Sleep(5 * time.Second)
@@ -173,7 +173,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			data.Origin = "01_test_lma"
 
 			By("inserting data into Elasticsearch for management cluster", func() {
-				_, err := elasticClientManagement.PutSecurityEventWithID(ctx, data, "sample_id_01_01")
+				_, err := putSecurityEventWithID(ctx, elasticClientManagement, data, "sample_id_01_01")
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -194,7 +194,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			data.Origin = "02_test_lma"
 
 			By("inserting data into Elasticsearch", func() {
-				_, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, "sample_id_01_02")
+				_, err := putSecurityEventWithID(ctx, elasticClientManaged, data, "sample_id_01_02")
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -206,7 +206,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			By("updating data in existing security event", func() {
 				data.Origin = "02_test_lma_updated"
-				_, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, "sample_id_01_02")
+				_, err := putSecurityEventWithID(ctx, elasticClientManaged, data, "sample_id_01_02")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				for op := range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
@@ -218,7 +218,7 @@ var _ = Describe("Elasticsearch events index", func() {
 		It("should not return error for missing ID while adding events", func() {
 			data.Origin = "03_test_lma"
 			By("inserting data into Elasticsearch", func() {
-				_, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, "")
+				_, err := putSecurityEventWithID(ctx, elasticClientManaged, data, "")
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -233,7 +233,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			data.Origin = "04_test_lma"
 
 			By("inserting data into Elasticsearch", func() {
-				_, err := elasticClientManagement.PutSecurityEvent(ctx, data)
+				_, err := putSecurityEvent(ctx, elasticClientManagement, data)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -419,4 +419,28 @@ func constructEventLogsQuery(start *time.Time, end *time.Time, filterData []api.
 	}
 
 	return elastic.NewBoolQuery().Must(queries...)
+}
+
+func putSecurityEvent(ctx context.Context, c Client, data api.EventsData) (*elastic.IndexResponse, error) {
+	alias := c.ClusterAlias(EventsIndex)
+
+	// Marshall the api.EventsData to ignore empty values
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.WithError(err).Error("failed to marshall")
+		return nil, err
+	}
+	return c.Backend().Index().Index(alias).BodyString(string(b)).Do(ctx)
+}
+
+func putSecurityEventWithID(ctx context.Context, c Client, data api.EventsData, id string) (*elastic.IndexResponse, error) {
+	alias := c.ClusterAlias(EventsIndex)
+
+	// Marshall the api.EventsData to ignore empty values
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.WithError(err).Error("failed to marshall")
+		return nil, err
+	}
+	return c.Backend().Index().Index(alias).Id(id).BodyString(string(b)).Do(ctx)
 }

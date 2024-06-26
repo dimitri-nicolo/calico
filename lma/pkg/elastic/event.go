@@ -43,35 +43,6 @@ func (c *client) CreateEventsIndex(ctx context.Context) error {
 	return nil
 }
 
-// PutSecurityEventWithID adds the given data into events index for the given id.
-// If id is empty, Elasticsearch generates one.
-// This function can be used to send same events multiple time without creating duplicate
-// entries in Elasticsearch as long as the id remains the same.
-func (c *client) PutSecurityEventWithID(ctx context.Context, data api.EventsData, id string) (*elastic.IndexResponse, error) {
-	alias := c.ClusterAlias(EventsIndex)
-
-	// Marshall the api.EventsData to ignore empty values
-	b, err := json.Marshal(data)
-	if err != nil {
-		log.WithError(err).Error("failed to marshall")
-		return nil, err
-	}
-	return c.Index().Index(alias).Id(id).BodyString(string(b)).Do(ctx)
-}
-
-// PutSecurityEvent adds the given data into events index.
-func (c *client) PutSecurityEvent(ctx context.Context, data api.EventsData) (*elastic.IndexResponse, error) {
-	alias := c.ClusterAlias(EventsIndex)
-
-	// Marshall the api.EventsData to ignore empty values
-	b, err := json.Marshal(data)
-	if err != nil {
-		log.WithError(err).Error("failed to marshall")
-		return nil, err
-	}
-	return c.Index().Index(alias).BodyString(string(b)).Do(ctx)
-}
-
 // BulkProcessorInitialize creates a bulk processor service and sets default flush size and BulkAfterFunc that
 // needs to be executed after bulk request is committed.
 func (c *client) BulkProcessorInitialize(ctx context.Context, afterFn elastic.BulkAfterFunc) error {
