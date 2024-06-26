@@ -2,13 +2,17 @@ package elastic_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	. "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -153,7 +157,7 @@ var _ = Describe("Elasticsearch events index", func() {
 				// wait for put to reflect
 				time.Sleep(5 * time.Second)
 
-				for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, true) {
+				for op := range searchSecurityEvents(ctx, elasticClientManagement, nil, nil, nil, true) {
 					compareEventData(op, data)
 				}
 			})
@@ -174,13 +178,13 @@ var _ = Describe("Elasticsearch events index", func() {
 			})
 
 			By("querying data from Elasticsearch for a management cluster", func() {
-				for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, true) {
+				for op := range searchSecurityEvents(ctx, elasticClientManagement, nil, nil, nil, true) {
 					compareEventData(op, data)
 				}
 			})
 
 			By("querying data from Elasticsearch for managed cluster", func() {
-				for range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
 					Fail("Elastic query returned data when not expected.")
 				}
 			})
@@ -195,7 +199,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			})
 
 			By("querying data from the Elasticsearch", func() {
-				for op := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for op := range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
 					compareEventData(op, data)
 				}
 			})
@@ -205,7 +209,7 @@ var _ = Describe("Elasticsearch events index", func() {
 				_, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, "sample_id_01_02")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				for op := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for op := range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
 					compareEventData(op, data)
 				}
 			})
@@ -219,7 +223,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			})
 
 			By("Verifying the inserted data in Elasticsearch", func() {
-				for op := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for op := range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
 					compareEventData(op, data)
 				}
 			})
@@ -234,13 +238,13 @@ var _ = Describe("Elasticsearch events index", func() {
 			})
 
 			By("Verifying the inserted data in Elasticsearch", func() {
-				for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for op := range searchSecurityEvents(ctx, elasticClientManagement, nil, nil, nil, false) {
 					compareEventData(op, data)
 				}
 			})
 
 			By("Verifying the data inserted in management cluster index is not in managed index", func() {
-				for range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
 					Fail("Elastic query returned data when not expected.")
 				}
 			})
@@ -269,7 +273,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			Eventually(func() int {
 				eventCount := 0
-				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for res := range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
 					eventCount++
 					Expect(res.Err).ShouldNot(HaveOccurred())
 				}
@@ -300,7 +304,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			Eventually(func() int {
 				eventCount := 0
-				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				for res := range searchSecurityEvents(ctx, elasticClientManaged, nil, nil, nil, false) {
 					eventCount++
 					Expect(res.Err).ShouldNot(HaveOccurred())
 				}
@@ -321,4 +325,98 @@ func compareEventData(actual *api.EventResult, expected api.EventsData) {
 	Expect(actual.Description).Should(Equal(expected.Description))
 	Expect(actual.Origin).Should(Equal(expected.Origin))
 	Expect(actual.SourceIP).Should(Equal(expected.SourceIP))
+}
+
+const (
+	resultBucketSize = 1000
+)
+
+// searchSecurityEvents is now only used by the above test code.  Ideally the test code should be
+// updated to use Linseed, but that hasn't happened yet and so we still have this implementation to
+// search using LMA and Elastic directly.
+func searchSecurityEvents(ctx context.Context, c Client, start, end *time.Time, filterData []api.EventsSearchFields, allClusters bool) <-chan *api.EventResult {
+	resultChan := make(chan *api.EventResult, resultBucketSize)
+	var index string
+	if allClusters {
+		// When allClusters is true use wildcard to query all events index instead of alias to
+		// cover older managed clusters that do not use alias for events index.
+		index = api.EventIndexWildCardPattern
+	} else {
+		index = c.ClusterAlias(EventsIndex)
+	}
+	queries := constructEventLogsQuery(start, end, filterData)
+	go func() {
+		defer close(resultChan)
+		scroll := c.Backend().Scroll(index).
+			Size(DefaultPageSize).
+			Query(queries).
+			Sort(api.EventTime, true)
+
+		// Issue the query to Elasticsearch and send results out through the resultsChan.
+		// We only terminate the search if when there are no more results to scroll through.
+		for {
+			log.Debug("Issuing alerts search query")
+			res, err := scroll.Do(ctx)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.WithError(err).Error("Failed to search alert logs")
+
+				resultChan <- &api.EventResult{Err: err}
+				return
+			}
+			if res == nil {
+				err = fmt.Errorf("search expected results != nil; got nil")
+			} else if res.Hits == nil {
+				err = fmt.Errorf("search expected results.Hits != nil; got nil")
+			} else if len(res.Hits.Hits) == 0 {
+				err = fmt.Errorf("search expected results.Hits.Hits > 0; got 0")
+			}
+			if err != nil {
+				log.WithError(err).Warn("Unexpected results from alert logs search")
+				resultChan <- &api.EventResult{Err: err}
+				return
+			}
+			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
+
+			// Pushes the search results into the channel.
+			for _, hit := range res.Hits.Hits {
+				var a api.EventsData
+				if err := json.Unmarshal(hit.Source, &a); err != nil {
+					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
+					continue
+				}
+				resultChan <- &api.EventResult{EventsData: &a, ID: hit.Id}
+			}
+		}
+	}()
+
+	return resultChan
+}
+
+func constructEventLogsQuery(start *time.Time, end *time.Time, filterData []api.EventsSearchFields) elastic.Query {
+	queries := []elastic.Query{}
+	for _, data := range filterData {
+		innerQ := []elastic.Query{}
+		v := reflect.ValueOf(data)
+		values := make([]interface{}, v.NumField())
+		for i := 0; i < v.NumField(); i++ {
+			innerQ = append(innerQ, elastic.NewMatchQuery(v.Field(i).String(), values[i]))
+		}
+		queries = append(queries, elastic.NewBoolQuery().Must(innerQ...))
+	}
+
+	if start != nil || end != nil {
+		rangeQuery := elastic.NewRangeQuery(api.EventTime)
+		if start != nil {
+			rangeQuery = rangeQuery.From(*start)
+		}
+		if end != nil {
+			rangeQuery = rangeQuery.To(*end)
+		}
+		queries = append(queries, rangeQuery)
+	}
+
+	return elastic.NewBoolQuery().Must(queries...)
 }

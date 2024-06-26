@@ -5,9 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"reflect"
-	"time"
 
 	_ "embed"
 
@@ -170,93 +167,4 @@ func (c *client) BulkProcessorClose() error {
 		return err
 	}
 	return c.bulkProcessor.Close()
-}
-
-// SearchSecurityEvents is deprecated and should no longer be used. Instead, clients should query events using the Linseed API.
-// The only remaining user of this function is Honeypod. When Honeypod is switched to Linseed, this function should be removed.
-func (c *client) SearchSecurityEvents(ctx context.Context, start, end *time.Time, filterData []api.EventsSearchFields, allClusters bool) <-chan *api.EventResult {
-	resultChan := make(chan *api.EventResult, resultBucketSize)
-	var index string
-	if allClusters {
-		// When allClusters is true use wildcard to query all events index instead of alias to
-		// cover older managed clusters that do not use alias for events index.
-		index = api.EventIndexWildCardPattern
-	} else {
-		index = c.ClusterAlias(EventsIndex)
-	}
-	queries := constructEventLogsQuery(start, end, filterData)
-	go func() {
-		defer close(resultChan)
-		scroll := c.Scroll(index).
-			Size(DefaultPageSize).
-			Query(queries).
-			Sort(api.EventTime, true)
-
-		// Issue the query to Elasticsearch and send results out through the resultsChan.
-		// We only terminate the search if when there are no more results to scroll through.
-		for {
-			log.Debug("Issuing alerts search query")
-			res, err := scroll.Do(ctx)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				log.WithError(err).Error("Failed to search alert logs")
-
-				resultChan <- &api.EventResult{Err: err}
-				return
-			}
-			if res == nil {
-				err = fmt.Errorf("search expected results != nil; got nil")
-			} else if res.Hits == nil {
-				err = fmt.Errorf("search expected results.Hits != nil; got nil")
-			} else if len(res.Hits.Hits) == 0 {
-				err = fmt.Errorf("search expected results.Hits.Hits > 0; got 0")
-			}
-			if err != nil {
-				log.WithError(err).Warn("Unexpected results from alert logs search")
-				resultChan <- &api.EventResult{Err: err}
-				return
-			}
-			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
-
-			// Pushes the search results into the channel.
-			for _, hit := range res.Hits.Hits {
-				var a api.EventsData
-				if err := json.Unmarshal(hit.Source, &a); err != nil {
-					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
-					continue
-				}
-				resultChan <- &api.EventResult{EventsData: &a, ID: hit.Id}
-			}
-		}
-	}()
-
-	return resultChan
-}
-
-func constructEventLogsQuery(start *time.Time, end *time.Time, filterData []api.EventsSearchFields) elastic.Query {
-	queries := []elastic.Query{}
-	for _, data := range filterData {
-		innerQ := []elastic.Query{}
-		v := reflect.ValueOf(data)
-		values := make([]interface{}, v.NumField())
-		for i := 0; i < v.NumField(); i++ {
-			innerQ = append(innerQ, elastic.NewMatchQuery(v.Field(i).String(), values[i]))
-		}
-		queries = append(queries, elastic.NewBoolQuery().Must(innerQ...))
-	}
-
-	if start != nil || end != nil {
-		rangeQuery := elastic.NewRangeQuery(api.EventTime)
-		if start != nil {
-			rangeQuery = rangeQuery.From(*start)
-		}
-		if end != nil {
-			rangeQuery = rangeQuery.To(*end)
-		}
-		queries = append(queries, rangeQuery)
-	}
-
-	return elastic.NewBoolQuery().Must(queries...)
 }

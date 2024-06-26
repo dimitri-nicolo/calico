@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 )
@@ -83,8 +82,6 @@ type EventHandler interface {
 
 	DeleteSecurityEvent(ctx context.Context, index, id string) (*elastic.DeleteResponse, error)
 	DeleteBulkSecurityEvent(index, id string) error
-
-	SearchSecurityEvents(ctx context.Context, start, end *time.Time, filterData []EventsSearchFields, allClusters bool) <-chan *EventResult
 
 	BulkProcessorInitialize(ctx context.Context, afterFn elastic.BulkAfterFunc) error
 	BulkProcessorInitializeWithFlush(ctx context.Context, afterFn elastic.BulkAfterFunc, bulkActions int) error
