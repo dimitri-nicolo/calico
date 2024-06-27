@@ -128,6 +128,15 @@ func (p *wafEventsPipeline) processTxHttpInfo(info *txHttpInfo) {
 	entry.srcNamespace = info.srcNamespace
 }
 
+func firstNonEmpty(v ...string) string {
+	for _, s := range v {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
 func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog {
 	var srcEp, dstEp *linseedv1.WAFEndpoint
 	p.store.Read(
@@ -151,11 +160,16 @@ func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog 
 			}).Debug("Found endpoint keys")
 
 			dstNamespace, dstName := extractFirstWepNameAndNamespace(dst)
+			srcNamespaceFromCache, srcNameFromCache := extractFirstWepNameAndNamespace(src)
+
+			// prioritize the info from the cache
+			srcName := firstNonEmpty(srcNameFromCache, entry.srcName)
+			srcNamespace := firstNonEmpty(srcNamespaceFromCache, entry.srcNamespace)
 
 			srcEp = &linseedv1.WAFEndpoint{
 				IP:           entry.srcIP,
-				PodName:      entry.srcName,
-				PodNameSpace: entry.srcNamespace,
+				PodName:      srcName,
+				PodNameSpace: srcNamespace,
 				PortNum:      int32(entry.srcPort),
 			}
 
