@@ -14,11 +14,10 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/informers"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
-
-	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/golang-jwt/jwt/v4"
@@ -215,7 +214,9 @@ func WithNamespace(ns string) ControllerOption {
 }
 
 func NewController(opts ...ControllerOption) (Controller, error) {
-	c := &controller{}
+	c := &controller{
+		permissionMap: make(map[string]bool),
+	}
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
 			return nil, err
@@ -301,6 +302,9 @@ type controller struct {
 	linseedTokenTargetNamespaces []string
 
 	initialReconciliationDelay *time.Duration
+
+	// permissionMap tracks whether the managed cluster has permissions for Linseed to watch namespaces.
+	permissionMap map[string]bool
 }
 
 type ReconcileAction int
@@ -329,20 +333,16 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	// Make channels for sending updates.
 	updateChan := make(chan *tokenEvent, 100)
 	secretChan := make(chan *corev1.Secret, 100)
+	deleteChan := make(chan string, 100)
 	defer close(updateChan)
 	defer close(secretChan)
+	defer close(deleteChan)
 
 	managedClusterHandler := cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			if mc, ok := obj.(*v3.ManagedCluster); ok {
-				// Stop the informers when the managed clusters get deleted.
-				if mcStopCh, ok := c.informerStopChans[mc.Name]; ok {
-					close(mcStopCh)
-					delete(c.informerStopChans, mc.Name)
-					logrus.WithField("name", mc.Name).Info("removed informer for the deleted managed cluster")
-				} else {
-					logrus.WithField("name", mc.Name).Warn("no informer found for the deleted managed cluster")
-				}
+				// Populate the deleteChan to remove the managed cluster entry from informerStopChans and permissionMap.
+				deleteChan <- mc.Name
 			}
 		},
 		AddFunc: func(obj interface{}) {
@@ -423,6 +423,7 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 		stopCh,
 		updateChan,
 		secretChan,
+		deleteChan,
 		mcInformer,
 	)
 }
@@ -463,7 +464,7 @@ func retryUpdate[T corev1.Secret | tokenEvent](rc *retryCalculator, id string, o
 	}()
 }
 
-func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEvent, secretChan chan *corev1.Secret, mcInformer cache.SharedIndexInformer) {
+func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEvent, secretChan chan *corev1.Secret, deleteChan chan string, mcInformer cache.SharedIndexInformer) {
 	defer logrus.Info("Token manager shutting down")
 
 	// reconcileChan handles reconcilation of tokens and secrets.
@@ -509,6 +510,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 			}
 		case event := <-updateChan:
 			// updateChan triggers reconciliation of tokens and secrets, when a managed cluster is added or updated.
+			retry := retryUpdate[tokenEvent]
 			log := c.loggerForManagedCluster(event.mc)
 
 			// Ensure cluster exists before proceeding with the reconciliation.
@@ -518,31 +520,41 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 				continue
 			}
 
-			if _, exist := c.informerStopChans[event.mc.Name]; exist {
-				// Queue ManagedCluster for reconciling tokens and secrets.
-				reconcileChan <- &tokenEvent{
-					mc: event.mc,
-				}
-				continue
-			}
-
-			// Create managed cluster informer if it does not exist.
-			// This would trigger reconciliation of tokens for all relevant namespaces.
-			namespaceInformer, err := c.createInformer(event.mc, reconcileChan)
+			// Workaround to handle version skew where older managed clusters (<=3.19) might lack RBAC permissions to watch namespaces.
+			// TODO: cleanup this workaround around the 3.22 release.
+			hasPermission, err := c.supportNamespaceWatches(event.mc)
 			if err != nil {
-				log.WithError(err).Error("failed to create namespace Informer for cluster")
+				log.WithError(err).Error("failed to check if namespace RBAC exist on the managed cluster")
+				retry(rc, event.mc.Name, *event, updateChan, stop)
 				continue
 			}
-			// Track the informers to clean up when the managed cluster is deleted.
-			mcStopCh := make(chan struct{})
-			c.informerStopChans[event.mc.Name] = mcStopCh
-			go namespaceInformer.Run(mcStopCh)
 
-			// Trigger reconciliation of secrets.
-			reconcileChan <- &tokenEvent{
-				mc:              event.mc,
-				reconcileAction: ReconcileSecrets,
+			newEvent := &tokenEvent{
+				mc: event.mc,
 			}
+
+			// Check if the managed cluster has the required RBAC for Linseed to access its namespaces.
+			if hasPermission {
+				if _, exist := c.informerStopChans[event.mc.Name]; !exist {
+					// Create managed cluster informer if it does not exist.
+					// This would trigger reconciliation of tokens for all relevant namespaces.
+					namespaceInformer, err := c.createInformer(event.mc, reconcileChan)
+					if err != nil {
+						log.WithError(err).Error("failed to create namespace Informer for cluster")
+						continue
+					}
+					// Track the informers to clean up when the managed cluster is deleted.
+					mcStopCh := make(chan struct{})
+					c.informerStopChans[event.mc.Name] = mcStopCh
+					go namespaceInformer.Run(mcStopCh)
+
+					// The informer creation will handle token reconciliation within the managed clusters.
+					// Now trigger an event to reconcile only the secrets.
+					newEvent.reconcileAction = ReconcileSecrets
+				}
+			}
+
+			reconcileChan <- newEvent
 
 		case event := <-reconcileChan:
 			retry := retryUpdate[tokenEvent]
@@ -605,6 +617,22 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 					log.WithError(err).Error("failed to reconcile secrets for cluster")
 					retry(rc, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name), *secret, secretChan, stop)
 				}
+			}
+
+		case mcName := <-deleteChan:
+			// Stop the informers when the managed clusters get deleted.
+			if mcStopCh, ok := c.informerStopChans[mcName]; ok {
+				close(mcStopCh)
+				delete(c.informerStopChans, mcName)
+				logrus.WithField("name", mcName).Info("removed informer for the deleted managed cluster")
+			}
+
+			// Remove the entry from permissionMap.
+			if _, ok := c.permissionMap[mcName]; ok {
+				delete(c.permissionMap, mcName)
+				logrus.WithField("name", mcName).Info("removed permissionMap entry for the deleted managed cluster")
+			} else {
+				logrus.WithField("name", mcName).Warn("no entry found in permissionMap for the deleted managed cluster")
 			}
 		}
 	}
@@ -698,16 +726,19 @@ func (c *controller) reconcileTokensForCluster(mc *v3.ManagedCluster, managedCli
 			continue
 		}
 
-		// Check if the namespace exists before copying the token.
-		exists, err := namespaceExists(managedClient, user.Namespace)
-		if err != nil {
-			log.WithError(err).Error("error checking namespace exists")
-			tokenErrors = append(tokenErrors, err)
-			continue
-		}
-		if !exists {
-			log.Warn("Manged cluster does not have the Namespace:", user.Namespace)
-			continue
+		// Skip the namespace check if Linseed does not have the required permissions to watch the managed cluster's namespace.
+		if c.permissionMap[mc.Name] {
+			// Check if the namespace exists before copying the token.
+			exists, err := namespaceExists(managedClient, user.Namespace)
+			if err != nil {
+				log.WithError(err).Error("error checking namespace exists")
+				tokenErrors = append(tokenErrors, err)
+				continue
+			}
+			if !exists {
+				log.Warn("Manged cluster does not have the Namespace:", user.Namespace)
+				continue
+			}
 		}
 
 		// First, check if token exists. If it does, we don't need to do anything.
@@ -997,4 +1028,25 @@ func (c *controller) isRelevantNamespace(namespace string) bool {
 		}
 	}
 	return false
+}
+
+func (c *controller) supportNamespaceWatches(mc *v3.ManagedCluster) (bool, error) {
+	managedClient, err := c.factory.Impersonate(c.impersonationInfo).NewClientSetForApplication(mc.Name)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = managedClient.CoreV1().Namespaces().Get(context.Background(), resource.ComplianceNamespace, metav1.GetOptions{})
+	if err != nil && !k8serrors.IsNotFound(err) {
+		if k8serrors.IsForbidden(err) {
+			// Managed clusters older than v3.20 will not have the required RBAC for Linseed to fetch namespaces.
+			c.permissionMap[mc.Name] = false
+			return false, nil
+		}
+		return false, fmt.Errorf("error fetch namespace from the managed cluster: %w", err)
+	}
+
+	// If we do not encounter a "Forbidden error", then the managed cluster is version 3.20 or later and has the required RBAC for Linseed to fetch namespaces.
+	c.permissionMap[mc.Name] = true
+	return true, nil
 }
