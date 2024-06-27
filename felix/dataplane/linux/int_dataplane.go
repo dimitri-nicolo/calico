@@ -2039,25 +2039,28 @@ func (d *InternalDataplane) Start() {
 	// Start the domain info store (for periodically saving DNS info).
 	d.domainInfoStore.Start()
 
-	// Use nfnetlink to capture DNS packets.
-	stopChannel := make(chan struct{})
-	if err := nfnetlink.SubscribeDNS(
-		int(rules.NFLOGDomainGroup),
-		65535,
-		func(data []byte, timestamp uint64) {
-			d.domainInfoStore.MsgChannel() <- dns.DataWithTimestamp{
-				Data:      data,
-				Timestamp: timestamp,
-			}
-		},
-		stopChannel); err != nil {
-		log.WithError(err).Error("failed to subscribe DNS")
+	if !d.config.BPFEnabled {
+		// Use nfnetlink to capture DNS packets.
+		stopChannel := make(chan struct{})
+		if err := nfnetlink.SubscribeDNS(
+			int(rules.NFLOGDomainGroup),
+			65535,
+			func(data []byte, timestamp uint64) {
+				d.domainInfoStore.MsgChannel() <- dns.DataWithTimestamp{
+					Data:      data,
+					Timestamp: timestamp,
+				}
+			},
+			stopChannel); err != nil {
+			log.WithError(err).Error("failed to subscribe DNS")
+		}
 	}
 
 	// Start the packet processors if configured.
 	if d.dnsDeniedPacketProcessor != nil {
 		d.dnsDeniedPacketProcessor.Start()
 	}
+
 	if d.dnsResponsePacketProcessor != nil {
 		d.dnsResponsePacketProcessor.Start()
 	}
@@ -2067,6 +2070,7 @@ func (d *InternalDataplane) Stop() {
 	if d.dnsDeniedPacketProcessor != nil {
 		d.dnsDeniedPacketProcessor.Stop()
 	}
+
 	if d.dnsResponsePacketProcessor != nil {
 		d.dnsResponsePacketProcessor.Stop()
 	}
