@@ -34,7 +34,6 @@ type MockClock struct{}
 func (MockClock) NowRFC3339() string { return []string{"2022-01-01T00:00:00Z"}[0] }
 
 var _ = Describe("RecommendationEngine", func() {
-
 	const (
 		newSelector = `!(projectcalico.org/name starts with 'tigera-') && ` +
 			`!(projectcalico.org/name starts with 'calico-') && ` +

@@ -187,7 +187,7 @@ var (
 	tcp       = numorstring.ProtocolFromStringV1("tcp")
 	expected1 = []*model.KVPair{
 		{
-			Key: model.PolicyKey{Name: "default/knp.default.test.policy", Tier: "default"},
+			Key: model.PolicyKey{Tier: "default", Name: "default/knp.default.test.policy"},
 			Value: &model.Policy{
 				Namespace:      "default",
 				Order:          &testDefaultPolicyOrder,

@@ -4,7 +4,6 @@
 #
 # Example: --set-file imagePullSecrets.gcr=./pull-secret.json
 imagePullSecrets: {}
-
 installation:
   enabled: true
   variant: TigeraSecureEnterprise
@@ -15,10 +14,8 @@ installation:
   #
   # Example: --set installation.imagePullSecrets[0].name=my-existing-secret
   imagePullSecrets: []
-
 apiServer:
   enabled: true
-
 # When enabled a subchart called tigera-prometheus-operator will be installed.
 # Set the tags and subchart to false if you want to bring your own Prometheus
 # operator to your cluster.
@@ -29,45 +26,36 @@ tigera-prometheus-operator:
   enabled: true
 tags:
   tigera-prometheus-operator: true
-
 intrusionDetection:
   enabled: true
-
 logCollector:
   enabled: true
-
 logStorage:
   enabled: true
   nodes:
     count: 1
-
 manager:
   enabled: true
-
 monitor:
   enabled: true
 
 policyRecommendation:
   enabled: true
 
-#compliance:
-#  enabled: false
+# compliance:
+#   enabled: false
 
-#packetCaptureAPI:
-#  enabled: false
+# packetCaptureAPI:
+#   enabled: false
 
 authentication:
   enabled: false
-
 applicationLayer:
   enabled: false
-
 amazonCloudIntegration:
   enabled: false
-
 defaultFelixConfiguration:
   enabled: false
-
 # MCM configuration options.
 # Management cluster.
 managementCluster:
@@ -83,13 +71,11 @@ managementCluster:
     annotations:
       - key:
         value:
-
 managedClusters:
   enabled: false
   clusters:
-  - name:
-    certificate:
-
+    - name:
+      certificate:
 # Managed cluster.
 managementClusterConnection:
   enabled: false
@@ -108,11 +94,9 @@ managementClusterConnection:
     tls:
       crt:
       key:
-
 # Optional configuration for setting custom BGP templates where
 # key is the filename of the template and value is the contents of the template.
 bgp: {}
-
 certs:
   node:
     key:
@@ -138,7 +122,6 @@ certs:
   compliance:
     key:
     cert:
-
 # Resource requests and limits for the tigera/operator pod.
 resources: {}
 
@@ -147,46 +130,36 @@ additionalLabels: {}
 
 # Tolerations for the tigera/operator pod.
 tolerations:
-- effect: NoExecute
-  operator: Exists
-- effect: NoSchedule
-  operator: Exists
-
+  - effect: NoExecute
+    operator: Exists
+  - effect: NoSchedule
+    operator: Exists
 # NodeSelector for the tigera/operator pod.
 nodeSelector:
   kubernetes.io/os: linux
-
 # Affinity for the tigera/operator pod.
 affinity: {}
-
 # PriorityClassName for the tigera/operator pod.
 priorityClassName: ""
-
 # Custom annotations for the tigera/operator pod.
 podAnnotations: {}
-
 # Custom labels for the tigera/operator pod.
 podLabels: {}
-
 # Image and registry configuration for the tigera/operator pod.
 tigeraOperator:
   image: tigera/operator
   version: master
   registry: quay.io
-
 calicoctl:
   enabled: false
   image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl
   tag: master
   binPath: /bin
-
 techPreviewOptions:
   # set to name of desired apparmor policy for the calico-node container and
   # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
   nodeApparmorPolicyName: ""
-
 kubeletVolumePluginPath: /var/lib/kubelet
-
 # Optionally configure the host and port used to access the Kubernetes API server.
 kubernetesServiceEndpoint:
   host: ""
