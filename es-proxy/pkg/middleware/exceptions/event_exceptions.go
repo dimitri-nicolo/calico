@@ -138,16 +138,10 @@ func (q *QueryExceptionData) Store(key string, value string) {
 		q.Name = value
 	case "source_namespace":
 		q.SourceNamespace = value
-	case "dest_namespace":
-		q.DestNamespace = value
 	case "source_name":
 		q.SourceName = value
-	case "dest_name":
-		q.DestName = value
 	case "source_name_aggr":
 		q.SourceNameAggr = value
-	case "dest_name_aggr":
-		q.DestNameAggr = value
 	default:
 		q.HasUnexpectedData = true
 	}
@@ -158,12 +152,6 @@ func (q *QueryExceptionData) Pod() (pod string) {
 	if len(pod) == 0 {
 		pod = q.SourceNameAggr
 	}
-	if q.Type == "waf" {
-		pod = q.DestName
-		if len(pod) == 0 {
-			pod = q.DestNameAggr
-		}
-	}
 	return pod
 }
 
@@ -172,11 +160,7 @@ func (q *QueryExceptionData) UseNameAggr() bool {
 }
 
 func (q *QueryExceptionData) Namespace() (ns string) {
-	ns = q.SourceNamespace
-	if q.Type == "waf" {
-		ns = q.DestNamespace
-	}
-	return ns
+	return q.SourceNamespace
 }
 
 // Traverses a query.Query (obtained by parsing a selector) and extract
@@ -244,18 +228,11 @@ func extractQueryExceptionData(o interface{}, d *QueryExceptionData) {
 }
 
 func getNamespaceSelector(e *v1.EventException) string {
-	key := "source_namespace"
-	if e.Type == "waf" {
-		key = "dest_namespace"
-	}
-	return fmt.Sprintf("%s='%s'", key, e.Namespace)
+	return fmt.Sprintf("%s='%s'", "source_namespace", e.Namespace)
 }
 
 func getPodSelector(e *v1.EventException) string {
 	key := "source_name"
-	if e.Type == "waf" {
-		key = "dest_name"
-	}
 	if e.UseNameAggr {
 		key = fmt.Sprintf("%s_aggr", key)
 	}

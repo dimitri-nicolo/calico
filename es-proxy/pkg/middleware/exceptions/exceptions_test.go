@@ -164,10 +164,23 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(exceptions[0].Namespace).To(Equal(""))
 		})
 
+		It("Old WAF event exception", func() {
+			ae := v3.NewAlertException()
+			ae.Name = "created-with-kubectl"
+			ae.Spec.Selector = "type='waf' AND name='WAF Event' AND dest_namespace='hipster-shop' AND dest_name='test-pod'"
+			_, err := fae.Create(ctx, ae, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			exceptions, err := ee.List(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exceptions[0].HasUnexpectedData).To(Equal(true))
+			Expect(exceptions[0].Namespace).To(Equal(""))
+		})
+
 		It("Incomplete AlertException, but containing expected data (although in a weird format) will not be flagged as having unexpected data", func() {
 			ae := v3.NewAlertException()
 			ae.Name = "we-are-too-nice"
-			ae.Spec.Selector = "type='waf' AND dest_namespace IN {'hipster-shop'}"
+			ae.Spec.Selector = "type='waf' AND source_namespace IN {'hipster-shop'}"
 			_, err := fae.Create(ctx, ae, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -193,14 +206,14 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(exceptions[0].Namespace).To(Equal("def*"))
 		})
 
-		It("WAF Event uses destination info", func() {
+		It("WAF Event uses source info", func() {
 			newException, err := ee.Create(ctx, &v1.EventException{Type: "waf", Event: "WAF Event", Namespace: "hipster-shop", Pod: "test-pod"})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(newException.ID).NotTo(BeEmpty())
 			alertException, err := fae.Get(ctx, newException.ID, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(alertException.Spec.Selector).To(Equal("type='waf' AND name='WAF Event' AND dest_namespace='hipster-shop' AND dest_name='test-pod'"))
+			Expect(alertException.Spec.Selector).To(Equal("type='waf' AND name='WAF Event' AND source_namespace='hipster-shop' AND source_name='test-pod'"))
 		})
 
 		It("GTF Event uses source info", func() {
@@ -220,7 +233,7 @@ var _ = Describe("Exceptions middleware tests", func() {
 			Expect(newException.ID).NotTo(BeEmpty())
 			alertException, err := fae.Get(ctx, newException.ID, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(alertException.Spec.Selector).To(Equal("type='waf' AND name='WAF Event' AND dest_namespace='hipster-shop' AND dest_name IN {'test-deployment-*'}"))
+			Expect(alertException.Spec.Selector).To(Equal("type='waf' AND name='WAF Event' AND source_namespace='hipster-shop' AND source_name IN {'test-deployment-*'}"))
 		})
 
 		It("Can List Pod name containing '*'", func() {
@@ -230,16 +243,6 @@ var _ = Describe("Exceptions middleware tests", func() {
 			exceptions, err := ee.List(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exceptions[0].Pod).To(Equal("test-deployment-*"))
-		})
-
-		It("Pod name can refer to DestNameAggr", func() {
-			newException, err := ee.Create(ctx, &v1.EventException{Type: "waf", Event: "WAF Event", Namespace: "hipster-shop", Pod: "test-deployment-*", UseNameAggr: true})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(newException.ID).NotTo(BeEmpty())
-			alertException, err := fae.Get(ctx, newException.ID, metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(alertException.Spec.Selector).To(Equal("type='waf' AND name='WAF Event' AND dest_namespace='hipster-shop' AND dest_name_aggr IN {'test-deployment-*'}"))
 		})
 
 		It("Pod name can refer to SourceNameAggr", func() {
