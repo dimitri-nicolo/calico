@@ -316,6 +316,7 @@ type Config struct {
 	DisableDNSPolicyPacketProcessor  bool
 
 	EnableDestDomainsByClient bool
+	ServiceLoopPrevention     string
 
 	LookPathOverride func(file string) (string, error)
 
@@ -865,6 +866,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 		}
 		tc.CleanUpProgramsAndPins()
+		removeBPFSpecialDevices()
 	} else {
 		// In BPF mode we still use iptables for raw egress policy, but we
 		// filter the IP sets that we render to the dataplane.  Set an empty
