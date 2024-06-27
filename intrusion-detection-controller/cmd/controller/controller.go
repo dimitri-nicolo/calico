@@ -14,7 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
@@ -46,13 +46,13 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/version"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 const (
@@ -225,20 +225,41 @@ func main() {
 	var anomalyTrainingController, anomalyDetectionController controller.Controller
 
 	if enableAlerts {
+		if cfg.TenantNamespace == "" {
+			// Initialize controllers to clean up cron jobs for anomaly detection
+			anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet, TigeraIntrusionDetectionNamespace)
+			anomalyDetectionController = anomalydetection.NewADJobDetectionController(kubeClientSet, TigeraIntrusionDetectionNamespace)
 
-		// Initialize controllers to clean up cron jobs for anomaly detection
-		anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet, TigeraIntrusionDetectionNamespace)
-		anomalyDetectionController = anomalydetection.NewADJobDetectionController(kubeClientSet, TigeraIntrusionDetectionNamespace)
+			// This will manage global alerts inside the management cluster
+			managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.TenantNamespace)
+			healthPingers = append(healthPingers, &alertHealthPinger)
 
-		// This will manage global alerts inside the management cluster
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.TenantNamespace)
-		healthPingers = append(healthPingers, &alertHealthPinger)
+			// This will manage all waf logs inside the management cluster
+			wafEventController = waf.NewWafAlertController(linseedClient, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
+		}
 
-		// This will manage all waf logs inside the management cluster
-		wafEventController = waf.NewWafAlertController(linseedClient, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
+		// Initialize the client factory. If the tenant namespace is set, we need to impersonate the
+		// service account in the tenant namespace.
+		clientFactory := lmak8s.NewClientSetFactory(cfg.MultiClusterForwardingCA,
+			cfg.MultiClusterForwardingEndpoint,
+		)
+
+		// Create the managed cluster controller. Each managed cluster will have its own
+		// global alert and waf controllers
+		if cfg.TenantNamespace != "" {
+			// We need to set the impersonation before passing the clientFactory to the managed cluster
+			// controller in order to make sure we use this service account when calling managed cluster
+			// in a multi-tenant setup. Inside a multi-tenant management setup, we want to be able to use
+			// the tenant's service account when querying the management cluster
+			impersonationInfo := user.DefaultInfo{
+				Name:   "system:serviceaccount:tigera-intrusion-detection:intrusion-detection-controller",
+				Groups: []string{},
+			}
+			clientFactory = clientFactory.Impersonate(&impersonationInfo)
+		}
 
 		// This controller will monitor managed cluster updated from K8S and create a NewGlobalAlertController per managed cluster
-		managedClusterController = managedcluster.NewManagedClusterController(calicoClientSet, linseedClient, kubeClientSet, client, TigeraIntrusionDetectionNamespace, util.ManagedClusterClient(k8sConfig, cfg.MultiClusterForwardingEndpoint, cfg.MultiClusterForwardingCA), cfg.TenantID, cfg.TenantNamespace)
+		managedClusterController = managedcluster.NewManagedClusterController(clientFactory, calicoClientSet, linseedClient, kubeClientSet, client, TigeraIntrusionDetectionNamespace, cfg.TenantID, cfg.TenantNamespace)
 	}
 
 	f := forwarder.NewEventForwarder(e)
@@ -264,18 +285,21 @@ func main() {
 			}
 
 			if enableAlerts {
-				anomalyTrainingController.Run(ctx)
-				defer anomalyTrainingController.Close()
-				anomalyDetectionController.Run(ctx)
-				defer anomalyDetectionController.Close()
+				if cfg.TenantNamespace == "" {
+					anomalyTrainingController.Run(ctx)
+					defer anomalyTrainingController.Close()
+					anomalyDetectionController.Run(ctx)
+					defer anomalyDetectionController.Close()
+
+					managementAlertController.Run(ctx)
+					defer managementAlertController.Close()
+
+					wafEventController.Run(ctx)
+					defer wafEventController.Close()
+				}
 
 				managedClusterController.Run(ctx)
 				defer managedClusterController.Close()
-				managementAlertController.Run(ctx)
-				defer managementAlertController.Close()
-
-				wafEventController.Run(ctx)
-				defer wafEventController.Close()
 			}
 
 			if enableForwarding {
@@ -292,11 +316,13 @@ func main() {
 			}
 
 			if enableAlerts {
-				anomalyTrainingController.Close()
-				anomalyDetectionController.Close()
+				if cfg.TenantNamespace == "" {
+					anomalyTrainingController.Close()
+					anomalyDetectionController.Close()
+					managementAlertController.Close()
+				}
 
 				managedClusterController.Close()
-				managementAlertController.Close()
 			}
 
 			if enableForwarding {

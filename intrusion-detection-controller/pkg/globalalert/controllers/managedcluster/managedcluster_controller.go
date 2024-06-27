@@ -18,36 +18,37 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // managedClusterController is responsible for watching ManagedCluster resource.
 type managedClusterController struct {
-	lsClient               client.Client
-	tenantID               string
-	calicoCLI              calicoclient.Interface
-	createManagedCalicoCLI func(string) (calicoclient.Interface, error)
-	cancel                 context.CancelFunc
-	worker                 worker.Worker
+	lsClient         client.Client
+	tenantID         string
+	calicoCLI        calicoclient.Interface
+	clientSetFactory lmak8s.ClientSetFactory
+	cancel           context.CancelFunc
+	worker           worker.Worker
 }
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
 // returns another health.Pinger that monitors health of GlobalAlertController in each of the managed cluster.
-func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient client.Client, k8sClient kubernetes.Interface, client ctrlclient.WithWatch, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error), tenantID, tenantNamespace string) controller.Controller {
+func NewManagedClusterController(clientSetFactory lmak8s.ClientSetFactory, calicoCLI calicoclient.Interface, lsClient client.Client, k8sClient kubernetes.Interface, client ctrlclient.WithWatch, namespace string, tenantID, tenantNamespace string) controller.Controller {
 	m := &managedClusterController{
-		lsClient:               lsClient,
-		calicoCLI:              calicoCLI,
-		createManagedCalicoCLI: createManagedCalicoCLI,
-		tenantID:               tenantID,
+		lsClient:         lsClient,
+		calicoCLI:        calicoCLI,
+		clientSetFactory: clientSetFactory,
+		tenantID:         tenantID,
 	}
 
 	// Create worker to watch ManagedCluster resource
 	m.worker = worker.New(&managedClusterReconciler{
-		createManagedCalicoCLI:          m.createManagedCalicoCLI,
 		namespace:                       namespace,
 		lsClient:                        lsClient,
 		managementCalicoCLI:             m.calicoCLI,
+		clientSetFactory:                clientSetFactory,
 		client:                          client,
 		k8sClient:                       k8sClient,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
@@ -56,7 +57,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lsClient clie
 	})
 
 	m.worker.AddWatch(
-		cache.NewListWatchFromClient(m.calicoCLI.ProjectcalicoV3().RESTClient(), "managedclusters", "", fields.Everything()),
+		cache.NewListWatchFromClient(m.calicoCLI.ProjectcalicoV3().RESTClient(), "managedclusters", tenantNamespace, fields.Everything()),
 		&v3.ManagedCluster{})
 
 	log.Info("creating a new managed cluster controller")
