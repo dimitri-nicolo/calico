@@ -949,3 +949,49 @@ func assertManagedConfiguration(managedk8sCli, managementK8sCli kubernetes.Inter
 		"shards":      expectedESConfigMap.Data["shards"],
 	}))
 }
+
+var _ = Describe("test user hash function", func() {
+	It("should detect changes in role definitions", func() {
+		createUser := func() elasticsearch.User {
+			return elasticsearch.User{
+				Username: "a",
+				Password: "b",
+				FullName: "c",
+				Roles: []elasticsearch.Role{
+					{
+						Name: "d",
+						Definition: &elasticsearch.RoleDefinition{
+							Cluster: []string{"e"},
+							Indices: []elasticsearch.RoleIndex{
+								{
+									Names:      []string{"f"},
+									Privileges: []string{"g"},
+								},
+							},
+							Applications: []elasticsearch.Application{
+								{
+									Application: "h",
+									Resources:   []string{"i"},
+									Privileges:  []string{"j"},
+								},
+							},
+						},
+					},
+				},
+				DirectConnection: false,
+			}
+		}
+		u1 := createUser()
+		u2 := createUser()
+		r := reconciler{}
+		hash1, err := r.calculateUserChangeHash(u1)
+		Expect(err).NotTo(HaveOccurred())
+		hash2, err := r.calculateUserChangeHash(u2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(hash1).To(Equal(hash2))
+		u2.Roles[0].Definition.Indices[0].Privileges = append(u2.Roles[0].Definition.Indices[0].Privileges, "new-privilege")
+		hash2, err = r.calculateUserChangeHash(u2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(hash1).NotTo(Equal(hash2))
+	})
+})
