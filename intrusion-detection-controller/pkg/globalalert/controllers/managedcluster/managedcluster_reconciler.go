@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -34,7 +35,7 @@ type managedClusterReconciler struct {
 	k8sClient                       kubernetes.Interface
 	managementCalicoCLI             calicoclient.Interface
 	client                          ctrlclient.WithWatch
-	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
+	clientSetFactory                lmak8s.ClientSetFactory
 	alertNameToAlertControllerState map[string]alertControllerState
 	tenantNamespace                 string
 }
@@ -93,9 +94,10 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 // and sends the health.Pinger of this new GlobalAlertController managedClusterController to run liveness probe.
 func (r *managedClusterReconciler) startManagedClusterAlertController(name string) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	managedCLI, err := r.createManagedCalicoCLI(name)
+	// Create clientSet for application for the managed cluster indexed by the clusterID.
+	clientSet, err := r.clientSetFactory.NewClientSetForApplication(name)
 	if err != nil {
-		log.WithError(err).Debug("Error creating client for managed cluster.")
+		log.WithError(err).Errorf("failed to create application client for cluster: %s", name)
 		cancel()
 		return err
 	}
@@ -105,7 +107,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
 	// This will create global alerts per managed cluster
-	alertController, _ := alert.NewGlobalAlertController(managedCLI, r.lsClient, r.k8sClient, clusterName, r.tenantID, r.namespace, r.tenantNamespace)
+	alertController, _ := alert.NewGlobalAlertController(clientSet, r.lsClient, r.k8sClient, clusterName, r.tenantID, r.namespace, r.tenantNamespace)
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,
