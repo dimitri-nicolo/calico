@@ -1,6 +1,6 @@
 - name: calicoctl
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE'})"
   dependencies:
     - Prerequisites
   task:

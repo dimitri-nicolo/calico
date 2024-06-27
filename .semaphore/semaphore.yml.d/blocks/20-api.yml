@@ -1,6 +1,6 @@
 - name: API
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE'})"
   execution_time_limit:
     minutes: 30
   dependencies:
