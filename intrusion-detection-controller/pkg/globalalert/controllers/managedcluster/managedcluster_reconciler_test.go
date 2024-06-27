@@ -3,13 +3,17 @@ package managedcluster
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
+	fakeK8s "k8s.io/client-go/kubernetes/fake"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 var _ = Describe("Managed Cluster Reconcile", func() {
@@ -23,16 +27,17 @@ var _ = Describe("Managed Cluster Reconcile", func() {
 	)
 
 	BeforeEach(func() {
-		k8sConfig, err := rest.InClusterConfig()
-		if err != nil {
-			k8sConfig = &rest.Config{}
-		}
 		mockClient := waf.NewMockClient()
-		calicoctl := util.ManagedClusterClient(k8sConfig, "", "")
+		mockLmaK8sClientSet := lmak8s.MockClientSet{}
+		mockLmaK8sClientFactory := &lmak8s.MockClientSetFactory{}
+		mockLmaK8sClientFactory.On("NewClientSetForApplication", mock.Anything).Return(&mockLmaK8sClientSet, nil)
+		mockLmaK8sClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
+		mockLmaK8sClientSet.On("CoreV1").Return(fakeK8s.NewSimpleClientset().CoreV1())
+
 		mcr = managedClusterReconciler{
 			client:                          MockClientWithWatch{},
 			alertNameToAlertControllerState: map[string]alertControllerState{},
-			createManagedCalicoCLI:          calicoctl,
+			clientSetFactory:                mockLmaK8sClientFactory,
 			lsClient:                        mockClient,
 		}
 
