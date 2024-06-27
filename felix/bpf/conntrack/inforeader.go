@@ -4,7 +4,6 @@ package conntrack
 
 import (
 	"net"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,19 +39,18 @@ type InfoReader struct {
 	outC chan []collector.ConntrackInfo
 
 	bufferedConntrackInfo []collector.ConntrackInfo
-	ctLock                sync.Mutex
 }
 
 // NewInfoReader returns a new instance of InfoReader that can be used as a
 // EntryScannerSynced with Scanner and as ConntrackInfoReader with
 // collector.Collector.
-func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface) *InfoReader {
+func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface, collectorCtInfoReader *CollectorCtInfoReader) *InfoReader {
 	r := &InfoReader{
 		timeouts: timeouts,
 		dsr:      dsr,
 		time:     time,
 
-		outC: make(chan []collector.ConntrackInfo, 1000),
+		outC: collectorCtInfoReader.outC,
 	}
 
 	if r.time == nil {
@@ -134,8 +132,6 @@ func (r *InfoReader) makeConntrackInfo(key KeyInterface, val ValueInterface, dna
 }
 
 func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
-	r.ctLock.Lock()
-	defer r.ctLock.Unlock()
 	r.bufferedConntrackInfo = append(r.bufferedConntrackInfo, i)
 	if len(r.bufferedConntrackInfo) >= collector.ConntrackInfoBatchSize {
 		select {
@@ -150,8 +146,6 @@ func (r *InfoReader) pushOut(i collector.ConntrackInfo) {
 
 // IterationStart is called and Scanner starts iterating over the conntrack table.
 func (r *InfoReader) IterationStart() {
-	r.ctLock.Lock()
-	defer r.ctLock.Unlock()
 	if r.cachedKTime == 0 || r.time.Since(r.goTimeOfLastKTimeLookup) > time.Second {
 		r.cachedKTime = r.time.KTimeNanos()
 		r.goTimeOfLastKTimeLookup = r.time.Now()
@@ -164,8 +158,6 @@ func (r *InfoReader) IterationStart() {
 
 // IterationEnd is called and Scanner ends iterating over the conntrack table.
 func (r *InfoReader) IterationEnd() {
-	r.ctLock.Lock()
-	defer r.ctLock.Unlock()
 	if len(r.bufferedConntrackInfo) > 0 {
 		select {
 		case r.outC <- r.bufferedConntrackInfo:
@@ -193,10 +185,20 @@ func (r *InfoReader) IterationEnd() {
 	}
 }
 
+type CollectorCtInfoReader struct {
+	outC chan []collector.ConntrackInfo
+}
+
+func NewCollectorCtInfoReader() *CollectorCtInfoReader {
+	return &CollectorCtInfoReader{
+		outC: make(chan []collector.ConntrackInfo, 1000),
+	}
+}
+
 // Start is called by collector to start consuming data.
-func (r *InfoReader) Start() error { return nil }
+func (c *CollectorCtInfoReader) Start() error { return nil }
 
 // ConntrackInfoChan returns a channel for collector to consume data.
-func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
-	return r.outC
+func (c *CollectorCtInfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
+	return c.outC
 }

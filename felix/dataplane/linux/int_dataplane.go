@@ -1147,23 +1147,31 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 			collectorPacketInfoReader = policyEventListener
 
-			conntrackInfoReader := conntrack.NewInfoReader(
-				config.BPFConntrackTimeouts,
-				config.BPFNodePortDSREnabled,
-				nil,
-			)
+			collectorCtInfoReader := conntrack.NewCollectorCtInfoReader()
 			// We must add the collectorConntrackInfoReader before
 			// conntrack.LivenessScanner as we want to see expired connections and the
 			// liveness scanner would remove them for us.
 			if conntrackScannerV4 != nil {
-				conntrackScannerV4.AddFirstUnlocked(conntrackInfoReader)
+				conntrackInfoReaderV4 := conntrack.NewInfoReader(
+					config.BPFConntrackTimeouts,
+					config.BPFNodePortDSREnabled,
+					nil,
+					collectorCtInfoReader,
+				)
+				conntrackScannerV4.AddFirstUnlocked(conntrackInfoReaderV4)
 			}
 			if conntrackScannerV6 != nil {
-				conntrackScannerV6.AddFirstUnlocked(conntrackInfoReader)
+				conntrackInfoReaderV6 := conntrack.NewInfoReader(
+					config.BPFConntrackTimeouts,
+					config.BPFNodePortDSREnabled,
+					nil,
+					collectorCtInfoReader,
+				)
+				conntrackScannerV6.AddFirstUnlocked(conntrackInfoReaderV6)
 			}
 
 			log.Info("BPF: ConntrackInfoReader added to conntrackScanner")
-			collectorConntrackInfoReader = conntrackInfoReader
+			collectorConntrackInfoReader = collectorCtInfoReader
 		}
 
 		if conntrackScannerV4 != nil {
