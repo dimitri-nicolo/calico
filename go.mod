@@ -46,6 +46,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-ini/ini v1.67.0
+	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-kit/log v0.2.1
 	github.com/go-openapi/runtime v0.26.2
 	github.com/go-sql-driver/mysql v1.8.1
@@ -245,7 +246,6 @@ require (
 	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.1
 	github.com/go-ldap/ldap/v3 v3.4.6 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
