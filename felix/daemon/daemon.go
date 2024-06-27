@@ -813,10 +813,10 @@ configRetry:
 
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.
-	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
+	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans, healthAggregator)
 }
 
-func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.Cmd, stopSignalChans []chan<- *sync.WaitGroup) {
+func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.Cmd, stopSignalChans []chan<- *sync.WaitGroup, healthAggregator *health.HealthAggregator) {
 	// Ask the runtime to tell us if we get a term/int signal.
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
@@ -858,6 +858,10 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 	}
 	logCxt := log.WithField("reason", reason)
 	logCxt.Warn("Felix is shutting down")
+
+	if healthAggregator != nil {
+		healthAggregator.NotifyShutdown()
+	}
 
 	// Keep draining the report channel so that other goroutines don't block on the channel.
 	go func() {

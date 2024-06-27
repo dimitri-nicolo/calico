@@ -15,11 +15,16 @@
 package health_test
 
 import (
+	"fmt"
+	"net"
+	"os"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
@@ -253,3 +258,130 @@ var _ = Describe("Health timeouts", func() {
 		})
 	})
 })
+
+const (
+	notifySocket = "/tmp/healthaggr"
+)
+
+var _ = Describe("systemd health checks", func() {
+
+	var (
+		aggregator *health.HealthAggregator
+	)
+
+	log.SetLevel(log.DebugLevel)
+
+	messageChan := make(chan string)
+
+	notifySource := func(source string, detail string) {
+		switch source {
+		case SOURCE1:
+			aggregator.Report(source, &health.HealthReport{Ready: true, Detail: detail})
+		case SOURCE2:
+			aggregator.Report(source, &health.HealthReport{Live: true, Ready: true, Detail: detail})
+		}
+	}
+
+	BeforeEach(func() {
+		err := os.Setenv("NOTIFY_SOCKET", notifySocket)
+		Expect(err).NotTo(HaveOccurred())
+		readyToGetSocketMessage(messageChan)
+	})
+
+	Context("with ready reports", func() {
+
+		BeforeEach(func() {
+			aggregator = health.NewHealthAggregator()
+			Eventually(messageChan, 1*time.Second).Should(Receive(Equal("RELOADING=1")))
+
+			// One reporter with zero timeout, which means its reports do not expire.
+			aggregator.RegisterReporter(SOURCE1, &health.HealthReport{Live: true, Ready: true}, 0)
+			notifySource(SOURCE1, "")
+		})
+
+		It("is ready", func() {
+			Expect(aggregator.Summary().Ready).To(BeTrue())
+			// Ready message will be sent in 10 seconds, assert on 12 seconds to avoid flakiness.
+			Eventually(messageChan, 12*time.Second).Should(Receive(Equal("READY=1")))
+		})
+	})
+
+	Context("with live reports", func() {
+
+		reportLive := true
+
+		BeforeEach(func() {
+			// Set watchDog timeout to 10s.
+			err := os.Setenv("WATCHDOG_USEC", "10000000")
+			Expect(err).NotTo(HaveOccurred())
+			err = os.Setenv("WATCHDOG_PID", fmt.Sprintf("%d", os.Getpid()))
+			Expect(err).NotTo(HaveOccurred())
+
+			aggregator = health.NewHealthAggregator()
+			Eventually(messageChan, 1*time.Second).Should(Receive(Equal("RELOADING=1")))
+
+			// One reporter with 100ms timeout.
+			aggregator.RegisterReporter(SOURCE2, &health.HealthReport{Live: true, Ready: true}, 1*time.Second)
+
+			notifySource(SOURCE2, "")
+
+			go func() {
+				for {
+					if reportLive {
+						// Keep us alive.
+						notifySource(SOURCE2, "")
+						time.Sleep(500 * time.Millisecond)
+					}
+				}
+			}()
+		})
+
+		It("is live", func() {
+			Expect(aggregator.Summary().Ready).To(BeTrue())
+			Expect(aggregator.Summary().Live).To(BeTrue())
+
+			// Should receive live messages consistently.
+			Eventually(messageChan, 6*time.Second).Should(Receive(Equal("WATCHDOG=1")))
+			Eventually(messageChan, 6*time.Second).Should(Receive(Equal("WATCHDOG=1")))
+			Eventually(messageChan, 6*time.Second).Should(Receive(Equal("WATCHDOG=1")))
+
+			// Should not receive any live messages.
+			reportLive = false
+			Eventually(messageChan, 12*time.Second).ShouldNot(Receive(Equal("WATCHDOG=1")))
+		})
+	})
+})
+
+func readyToGetSocketMessage(c chan<- string) {
+	os.Remove(notifySocket) // remove any previous socket file
+
+	addr, err := net.ResolveUnixAddr("unixgram", notifySocket)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := net.ListenUnixgram("unixgram", addr)
+	Expect(err).NotTo(HaveOccurred())
+
+	log.Info("Listening on notify socket ...")
+
+	// Create a buffer for incoming data.
+	buf := make([]byte, 64)
+
+	// Handle the connection in a separate goroutine.
+	go func(conn net.Conn) {
+		defer conn.Close()
+
+		for {
+			// Read data from the connection.
+			n, err := conn.Read(buf)
+			if err != nil {
+				log.WithError(err).Panic("Reading from systemd unix socket connection error")
+			}
+			message := string(buf[0:n])
+
+			log.Infof("Got message from unix socket: %s\n", message)
+
+			c <- message
+		}
+
+	}(conn)
+}

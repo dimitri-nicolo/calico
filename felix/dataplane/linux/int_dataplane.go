@@ -1516,9 +1516,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.HealthAggregator != nil {
 		log.Info("Registering to report health.")
 		timeout := config.WatchdogTimeout
-		if timeout < healthInterval*2 {
-			log.Warnf("Dataplane watchdog timeout (%v) too low, defaulting to %v", timeout, healthInterval*2)
-			timeout = healthInterval * 2
+		if config.HealthAggregator.SystemdWatchDogEnabled() {
+			// Systemd timeout value has the higher priority.
+			timeout = config.HealthAggregator.GetSystemdWatchDogTimeout()
+			if timeout < healthInterval*2 {
+				log.Panicf("Systemd watchdog timeout (%v) too low, it should be longer than %v", timeout, healthInterval*2)
+			}
+		} else {
+			if timeout < healthInterval*2 {
+				log.Warnf("Dataplane watchdog timeout (%v) too low, defaulting to %v", timeout, healthInterval*2)
+				timeout = healthInterval * 2
+			}
 		}
 		config.HealthAggregator.RegisterReporter(
 			healthName,

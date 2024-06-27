@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/olekukonko/tablewriter"
 	log "github.com/sirupsen/logrus"
 )
@@ -168,6 +170,21 @@ type HealthAggregator struct {
 
 	// Track whether we have ever previously reported as ready overall.
 	everReady bool
+
+	// Indicate if systemd health probe is enabled.
+	systemdProbe bool
+
+	// Notify socket passed from systemd.
+	systemdNotifySocket string
+
+	// Timeout value set by systemd service unit. Value of zero indicates that watch dog is disabled.
+	systemdWatchDogTimeout time.Duration
+
+	// Indicate ready notification has been sent to systemd since we only need to do it once.
+	systemdReadySent bool
+
+	// Channel used when the process is told to be shut down.
+	shutdownChan chan struct{}
 }
 
 // RegisterReporter registers a reporter with a HealthAggregator.  The aggregator uses NAME to
@@ -177,6 +194,13 @@ type HealthAggregator struct {
 func (aggregator *HealthAggregator) RegisterReporter(name string, reports *HealthReport, timeout time.Duration) {
 	aggregator.mutex.Lock()
 	defer aggregator.mutex.Unlock()
+
+	systemdWatchDogTimeout := aggregator.systemdWatchDogTimeout
+	if systemdWatchDogTimeout != 0 && systemdWatchDogTimeout < timeout {
+		log.Warnf("%s watchdog timeout (%v) too high, defaulting to systemd watchdog timeout %v", name, timeout, systemdWatchDogTimeout)
+		timeout = systemdWatchDogTimeout
+	}
+
 	aggregator.reporters[name] = &reporterState{
 		name:      name,
 		reports:   *reports,
@@ -184,6 +208,7 @@ func (aggregator *HealthAggregator) RegisterReporter(name string, reports *Healt
 		latest:    HealthReport{Live: true},
 		timestamp: time.Now(),
 	}
+
 	return
 }
 
@@ -236,6 +261,7 @@ func NewHealthAggregator() *HealthAggregator {
 		lastReport:   &HealthReport{},
 		reporters:    map[string]*reporterState{},
 		httpServeMux: http.NewServeMux(),
+		shutdownChan: make(chan struct{}),
 	}
 	aggregator.httpServeMux.HandleFunc("/readiness", func(rsp http.ResponseWriter, req *http.Request) {
 		log.Debug("GET /readiness")
@@ -247,6 +273,29 @@ func NewHealthAggregator() *HealthAggregator {
 		summary := aggregator.Summary()
 		genResponse(rsp, "live", summary.Live, summary.Detail)
 	})
+
+	// Check if systemd health probe is enabled.
+	notifySocket := os.Getenv("NOTIFY_SOCKET")
+	if notifySocket != "" {
+		aggregator.systemdNotifySocket = notifySocket
+
+		_, err := daemon.SdNotify(false, daemon.SdNotifyReloading)
+		if err != nil {
+			log.WithError(err).Panic("Failed to notify systemd on reloading")
+			return aggregator
+		}
+		aggregator.systemdProbe = true
+
+		timeout, err := daemon.SdWatchdogEnabled(false)
+		if err != nil {
+			log.WithError(err).Panic("Failed to check systemd watchdog")
+			return aggregator
+		}
+		aggregator.systemdWatchDogTimeout = timeout
+
+		aggregator.runSystemdServer()
+	}
+
 	return aggregator
 }
 
@@ -407,4 +456,85 @@ func (aggregator *HealthAggregator) getHTTPServer() *http.Server {
 	aggregator.mutex.Lock()
 	defer aggregator.mutex.Unlock()
 	return aggregator.httpServer
+}
+
+func (aggregator *HealthAggregator) NotifyShutdown() {
+	if aggregator.systemdReadySent {
+		aggregator.shutdownChan <- struct{}{}
+		log.Info("Notify shutdown to systemd")
+	}
+}
+
+func (aggregator *HealthAggregator) SystemdShowInfo() {
+	if aggregator.SystemdWatchDogEnabled() {
+		log.Infof("systemd health probe: Enabled, WatchDog: Enabled, timeout interval: %v, Socket: %s, ready-sent: %t",
+			aggregator.systemdWatchDogTimeout, aggregator.systemdNotifySocket, aggregator.systemdReadySent)
+	} else {
+		log.Infof("systemd health probe: Enabled, WatchDog: Disabled, Socket: %s, ready-sent: %t", aggregator.systemdNotifySocket, aggregator.systemdReadySent)
+	}
+}
+
+func (aggregator *HealthAggregator) SystemdWatchDogEnabled() bool {
+	return aggregator.systemdWatchDogTimeout != 0
+}
+
+func (aggregator *HealthAggregator) GetSystemdWatchDogTimeout() time.Duration {
+	return aggregator.systemdWatchDogTimeout
+}
+
+func (aggregator *HealthAggregator) runSystemdServer() {
+	aggregator.mutex.Lock()
+	defer aggregator.mutex.Unlock()
+
+	log.Info("Started systemd health reporting server routine.")
+
+	if !aggregator.systemdProbe {
+		log.Panic("Should not start systemd probe server if systemd probe is disabled.")
+	}
+
+	// if WatchDog is disabled we still need to check ready status and send it out if it is true, but we only need to do it once.
+	readyTicker := time.NewTicker(10 * time.Second)
+	readyChan := readyTicker.C
+
+	var liveChan <-chan time.Time
+	if aggregator.SystemdWatchDogEnabled() {
+		// It is recommended to send live message in every half the time interval that is specified in the $WATCHDOG_USEC environment variable.
+		liveChan = time.NewTicker(aggregator.systemdWatchDogTimeout / 2).C
+	}
+
+	go func() {
+		for {
+			select {
+			case <-aggregator.shutdownChan:
+				if _, err := daemon.SdNotify(false, daemon.SdNotifyStopping); err != nil {
+					log.WithError(err).Error("Failed to notify systemd on stopping")
+				} else {
+					log.Info("Sent shutdown to systemd successfully.")
+				}
+			case <-readyChan:
+				aggregator.SystemdShowInfo()
+				summary := aggregator.Summary()
+				if !aggregator.systemdReadySent && summary.Ready {
+					if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+						log.WithError(err).Error("Failed to notify systemd on ready")
+					} else {
+						// Don't send READY=1 again.
+						log.Info("Sent ready to systemd successfully.")
+						aggregator.systemdReadySent = true
+						readyTicker.Stop()
+						readyChan = nil
+					}
+				}
+			case <-liveChan:
+				summary := aggregator.Summary()
+				if summary.Live {
+					if _, err := daemon.SdNotify(false, daemon.SdNotifyWatchdog); err != nil {
+						log.WithError(err).Error("Failed to notify systemd on WatchDog")
+					} else {
+						log.Info("Sent live to systemd successfully.")
+					}
+				}
+			}
+		}
+	}()
 }
