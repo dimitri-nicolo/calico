@@ -512,6 +512,9 @@ func (c *reconciler) calculateUserChangeHash(user elasticsearch.User) (string, e
 	obj := []interface{}{c.esHash, c.ownerReference, user.FullName, EsUserCredentialsSchemaVersion}
 	for _, role := range user.Roles {
 		obj = append(obj, role.Name)
+		if role.Definition != nil {
+			obj = append(obj, *role.Definition)
+		}
 	}
 	return utils.GenerateTruncatedHash(obj, 24)
 }
