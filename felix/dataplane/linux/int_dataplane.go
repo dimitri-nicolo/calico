@@ -1145,21 +1145,38 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if config.Collector != nil && bpfEventPoller != nil {
 			policyEventListener := events.NewCollectorPolicyListener(config.LookupsCache)
 			bpfEventPoller.Register(events.TypePolicyVerdict, policyEventListener.EventHandler)
+			if config.BPFIpv6Enabled {
+				bpfEventPoller.Register(events.TypePolicyVerdictV6, policyEventListener.EventHandler)
+			}
 			log.Info("BPF: Registered events sink for TypePolicyVerdict")
 
 			collectorPacketInfoReader = policyEventListener
 
-			conntrackInfoReader := conntrack.NewInfoReader(
-				config.BPFConntrackTimeouts,
-				config.BPFNodePortDSREnabled,
-				nil,
-			)
+			collectorCtInfoReader := conntrack.NewCollectorCtInfoReader()
 			// We must add the collectorConntrackInfoReader before
 			// conntrack.LivenessScanner as we want to see expired connections and the
 			// liveness scanner would remove them for us.
-			conntrackScannerV4.AddFirstUnlocked(conntrackInfoReader)
+			if conntrackScannerV4 != nil {
+				conntrackInfoReaderV4 := conntrack.NewInfoReader(
+					config.BPFConntrackTimeouts,
+					config.BPFNodePortDSREnabled,
+					nil,
+					collectorCtInfoReader,
+				)
+				conntrackScannerV4.AddFirstUnlocked(conntrackInfoReaderV4)
+			}
+			if conntrackScannerV6 != nil {
+				conntrackInfoReaderV6 := conntrack.NewInfoReader(
+					config.BPFConntrackTimeouts,
+					config.BPFNodePortDSREnabled,
+					nil,
+					collectorCtInfoReader,
+				)
+				conntrackScannerV6.AddFirstUnlocked(conntrackInfoReaderV6)
+			}
+
 			log.Info("BPF: ConntrackInfoReader added to conntrackScanner")
-			collectorConntrackInfoReader = conntrackInfoReader
+			collectorConntrackInfoReader = collectorCtInfoReader
 		}
 
 		if conntrackScannerV4 != nil {

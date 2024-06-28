@@ -12,4 +12,5 @@
 #define EVENT_PROCESS_PATH      5
 #define EVENT_DNS_L3            6
 
+#define EVENT_POLICY_VERDICT_V6    7
 #endif /* __CALI_EVENTS_TYPE_H__ */
