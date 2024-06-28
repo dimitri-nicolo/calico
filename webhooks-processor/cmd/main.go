@@ -91,7 +91,6 @@ func main() {
 	wg.Add(1)
 	go cancelOnSignals(cleanup, wg)
 	wg.Wait()
-	// break up wait group to terminate updater first then controller
-	// with 2 different child contexts
+
 	logrus.Info("Goodbye!")
 }
