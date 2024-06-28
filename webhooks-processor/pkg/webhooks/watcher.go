@@ -58,10 +58,12 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer logrus.Info("Webhook watcher is terminating")
 
+	webhookUpdates := make(chan *api.SecurityEventWebhook)
+
 	go func() {
 		for {
 			select {
-			case webhook := <-w.webhookUpdatesChan:
+			case webhook := <-webhookUpdates:
 				logEntry(webhook).Debug("Updating webhook")
 				if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
 					logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
@@ -76,13 +78,23 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	var cmWatcher watch.Interface
 	var secretWatcher watch.Interface
 	var err error
+	var useSecret, useConfigmaps bool
 
 	errorCh := make(chan error, 1)
 	// start webhook watcher in its own retry loop goroutine
 	go w.webhookRetryWatcher(ctx, errorCh)
 
 	for {
-		useConfigmaps, useSecret := w.checkWebhooksForConfigmapsAndSecret(ctx)
+
+		select {
+		case webhook := <-w.webhookUpdatesChan:
+			webhookUpdates <- webhook
+			useConfigmaps, useSecret = w.checkWebhooksForConfigmapsAndSecret(ctx)
+		case <-ctx.Done():
+			return
+		case err = <-errorCh:
+			logrus.Debug(err)
+		}
 
 		if useConfigmaps && cmWatcher == nil {
 			cmWatcher, err = w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
@@ -127,12 +139,6 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 			secretWatcher = nil
 		}
 
-		select {
-		case <-ctx.Done():
-			return
-		case err = <-errorCh:
-			logrus.Debug(err)
-		}
 	}
 }
 

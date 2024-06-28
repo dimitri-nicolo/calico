@@ -23,6 +23,8 @@ type WebhookController struct {
 }
 
 func SetUp(ctx context.Context, webhookController *WebhookController, webhookWatcherUpdater *WebhookWatcherUpdater) func() {
+	// break up wait group to terminate updater first then controller
+	// with 2 different child contexts
 	ctrCtx, ctrCancel := context.WithCancel(ctx)
 
 	uptCtx, uptCancel := context.WithCancel(ctx)
