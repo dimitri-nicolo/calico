@@ -1,6 +1,6 @@
 - name: cni-plugin
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '${SEMAPHORE_GIT_COMMIT_RANGE}'})"
+    when: "${FORCE_RUN} or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
@@ -24,7 +24,7 @@
 
 - name: "cni-plugin: Windows"
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/process/testing/winfv-cni-plugin/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '${SEMAPHORE_GIT_COMMIT_RANGE}'})"
+    when: "${FORCE_RUN} or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/process/testing/winfv-cni-plugin/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - cni-plugin
   task:
