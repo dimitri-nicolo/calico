@@ -71,7 +71,7 @@ INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
 TEST_CONTAINER_NAME_VER?=latest
 TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
 
-TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc' | -name '*.tmp' )
+TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc' ! -name '*.tmp' )
 
 # Variables controlling the image
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
