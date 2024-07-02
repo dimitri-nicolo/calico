@@ -489,6 +489,7 @@ func (u *userCalculator) getMatches(verb Verb, res apiResource, subresource stri
 
 			return matches
 		} else if res.isManagedCluster() {
+			log.Debug("Return gettable ManagedClusters")
 			// Special case ManagedCluster gets - we always expand get across all ManagedCluster resources, so include all configured ManagedClusters.
 			for _, managedCluster := range u.getGettableManagedClusters() {
 				match.ManagedCluster = managedCluster.Name
@@ -770,6 +771,12 @@ func (u *userCalculator) getGettableUISettingsGroups() []types.NamespacedName {
 // names. This is only used in certain cases because expanding by name could be an expensive operation.
 func (u *userCalculator) expandResourceByName(names []types.NamespacedName, verb Verb, res apiResource) (rs []types.NamespacedName) {
 	for _, name := range names {
+		log.Debugf("check RBAC for resource %v", name)
+		rules := u.getClusterRules()
+		if name.Namespace != "" {
+			log.Debugf("Include namespace rules for %v", name)
+			rules = append(rules, u.getNamespacedRules()[name.Namespace]...)
+		}
 		if rbac_auth.RulesAllow(authorizer.AttributesRecord{
 			Verb:            string(verb),
 			APIGroup:        res.APIGroup,
@@ -777,9 +784,10 @@ func (u *userCalculator) expandResourceByName(names []types.NamespacedName, verb
 			Name:            name.Name,
 			Namespace:       name.Namespace,
 			ResourceRequest: true,
-		}, u.getClusterRules()...) {
+		}, rules...) {
 			rs = append(rs, name)
 		}
+
 	}
 
 	log.Debugf("expandClusterResourceByName returns %v", rs)
