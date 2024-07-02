@@ -1087,6 +1087,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.FlowLogsCollectTcpStats,
 			config.HealthAggregator,
 			dataplaneFeatures,
+			podMTU,
 		)
 
 		if err != nil {
