@@ -16,6 +16,10 @@
 # This ensures that testing of Felix in this repository is done in the same
 # userspace environment as it will be deployed in calico/node.
 
+ARG QEMU_IMAGE
+
+FROM ${QEMU_IMAGE} as qemu
+
 FROM calico/bpftool:v7.4.0 as bpftool
 
 FROM debian:11-slim as source
