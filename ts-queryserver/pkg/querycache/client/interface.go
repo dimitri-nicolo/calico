@@ -146,7 +146,10 @@ type QueryEndpointsReqBody struct {
 	Sort          *Sort    `json:"sort,omitempty" validate:"omitempty"`
 }
 
-// QueryEndpointsReq is the intenal struct. Endpoints request.body --> QueryEndpointsReqBody --> QueryEndpointReq
+// QueryEndpointsReq is the internal struct. Endpoints request.body --> QueryEndpointsReqBody --> QueryEndpointReq
+// if any member is added / removed / changed in this struct, also update:
+// 1. QueryEndpointsRequestBody struct defined above
+// 2. getQueryServerRequestParams in es-proxy/pkg/middleware/endpoints_aggregation.go as needed.
 type QueryEndpointsReq struct {
 	// Queries
 	Policy              model.Key
