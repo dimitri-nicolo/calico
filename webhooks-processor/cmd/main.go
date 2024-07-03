@@ -65,7 +65,8 @@ func main() {
 
 	config := webhooks.NewControllerConfig(webhooks.DefaultProviders(), events.FetchSecurityEventsFunc)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// init - webhook watcher and updater
 	webhookWatcherUpdater := webhooks.NewWebhookWatcherUpdater().
