@@ -13,7 +13,14 @@ export WINDOWS_SERVER_VERSION="${WINDOWS_SERVER_VERSION:="windows-2022"}"
 export AZURE_CONTROL_PLANE_MACHINE_TYPE="${AZURE_CONTROL_PLANE_MACHINE_TYPE:="Standard_D4s_v3"}"
 export AZURE_NODE_MACHINE_TYPE="${AZURE_NODE_MACHINE_TYPE:="Standard_D4s_v3"}"
 
-export KUBE_VERSION="${KUBE_VERSION:="v1.28.11"}"
+# Get KINDEST_NODE_VERSION variable from metadata.mk, default to a value if it cannot be found
+SCRIPT_CURRENT_DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+METADATAMK=${SCRIPT_CURRENT_DIR}/../../../../metadata.mk
+if [ -f ${METADATAMK} ]; then
+    KUBE_VERSION=$(grep KINDEST_NODE_VERSION= ${METADATAMK} | cut -d "=" -f 2)
+else
+    KUBE_VERSION=v1.27.11
+fi
 export CLUSTER_API_VERSION="${CLUSTER_API_VERSION:="v1.6.3"}"
 export AZURE_PROVIDER_VERSION="${AZURE_PROVIDER_VERSION:="v1.13.2"}"
 export KIND_VERSION="${KIND_VERSION:="v0.22.0"}"

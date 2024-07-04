@@ -28,11 +28,14 @@ cp ~/secrets/docker_cfg.json docker_cfg.json
 
 cp -r ~/$SEMAPHORE_GIT_DIR/libcalico-go/config/crd ./infra/ee/crd
 cp ~/secrets/license.yaml ./infra/ee/license.yaml
-
+EXIT_CODE=0
 if [[ $FV_PROVISIONER == "capz" ]]; then
   export KUBE_VERSION="$K8S_VERSION"
   mkdir -p /home/semaphore/report
   /bin/bash -x ./setup-fv-capz.sh -q | tee /home/semaphore/report/fv-capz.log
+  if [[ ${PIPESTATUS[0]} != 0 ]]; then
+    EXIT_CODE=${PIPESTATUS[0]}
+  fi
   compgen -G ./report/*.log > /dev/null && cp ./report/*.log /home/semaphore/report
 fi
 ls -ltr ./report
@@ -57,7 +60,7 @@ for log_file in /home/semaphore/fv.log/*.log; do
 done;
 
 # Search for error code file
-if [ -f /home/semaphore/calico-private/process/testing/winfv-felix/report/error-codes ];
+if [[ -f /home/semaphore/calico-private/process/testing/winfv-felix/report/error-codes || $EXIT_CODE != 0 ]];
 then
     echo "Windows FV returned error(s)."
     exit 1
