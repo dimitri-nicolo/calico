@@ -33,6 +33,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
@@ -679,11 +680,15 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					return 0, err
 				}
 				var mapMeta struct {
-					ID int `json:"id"`
+					ID    int    `json:"id"`
+					Error string `json:"error"`
 				}
 				err = json.Unmarshal([]byte(out), &mapMeta)
 				if err != nil {
 					return 0, err
+				}
+				if mapMeta.Error != "" {
+					return 0, errors.New(mapMeta.Error)
 				}
 				return mapMeta.ID, nil
 			}
@@ -694,7 +699,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					var err error
 					mapID, err = getMapIDByPath(felix, filename)
 					return err
-				}, "10s").ShouldNot(HaveOccurred())
+				}, "5s").ShouldNot(HaveOccurred())
 				return mapID
 			}
 
