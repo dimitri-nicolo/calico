@@ -33,7 +33,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
@@ -86,7 +85,7 @@ var _ = describeBPFTests(withTunnel("ipip"), withProto("udp"), withConnTimeLoadB
 var _ = describeBPFTests(withTunnel("ipip"), withProto("tcp"))
 var _ = describeBPFTests(withTunnel("ipip"), withProto("udp"))
 var _ = describeBPFTests(withProto("tcp"), withDSR())
-var _ = describeBPFTests(withProto("udp"), withDSR())
+var _ = describeBPFTests(withProto("udp"), withDSR(), withIPFamily(6))
 var _ = describeBPFTests(withTunnel("ipip"), withProto("tcp"), withDSR())
 var _ = describeBPFTests(withTunnel("ipip"), withProto("udp"), withDSR())
 var _ = describeBPFTests(withTunnel("wireguard"), withProto("tcp"))
@@ -183,6 +182,31 @@ const expectedRouteDump = `10.65.0.0/16: remote in-pool nat-out
 FELIX_0/32: local host
 FELIX_1/32: remote host
 FELIX_2/32: remote host`
+
+const expectedRouteDumpV6 = `111:222::1/128: local host
+111:222::1:1/128: remote host
+111:222::2:1/128: remote host
+FELIX_0/128: local host
+FELIX_1/128: remote host
+FELIX_2/128: remote host
+dead:beef::/64: remote in-pool nat-out
+dead:beef::1:0/122: remote workload in-pool nat-out nh FELIX_1
+dead:beef::2/128: local workload in-pool nat-out idx -
+dead:beef::2:0/122: remote workload in-pool nat-out nh FELIX_2
+dead:beef::3/128: local workload in-pool nat-out idx -`
+
+const expectedRouteDumpV6DSR = `111:222::1/128: local host
+111:222::1:1/128: remote host
+111:222::2:1/128: remote host
+FELIX_0/128: local host
+FELIX_1/128: remote host
+FELIX_2/128: remote host
+beaf::/64: remote no-dsr
+dead:beef::/64: remote in-pool nat-out
+dead:beef::1:0/122: remote workload in-pool nat-out nh FELIX_1
+dead:beef::2/128: local workload in-pool nat-out idx -
+dead:beef::2:0/122: remote workload in-pool nat-out nh FELIX_2
+dead:beef::3/128: local workload in-pool nat-out idx -`
 
 const expectedRouteDumpWithTunnelAddr = `10.65.0.0/16: remote in-pool nat-out
 10.65.0.2/32: local workload in-pool nat-out idx -
@@ -383,8 +407,8 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			options.ExternalIPs = true
 			options.ExtraEnvVars["FELIX_BPFExtToServiceConnmark"] = "0x80"
 			options.ExtraEnvVars["FELIX_HEALTHENABLED"] = "true"
+			options.ExtraEnvVars["FELIX_BPFDSROptoutCIDRs"] = "245.245.0.0/16,beaf::dead/64"
 			if !testOpts.ipv6 {
-				options.ExtraEnvVars["FELIX_BPFDSROptoutCIDRs"] = "245.245.0.0/16"
 				options.ExtraEnvVars["FELIX_HEALTHHOST"] = "0.0.0.0"
 			} else {
 				options.ExtraEnvVars["FELIX_IPV6SUPPORT"] = "true"
@@ -439,6 +463,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					felix.Exec("conntrack", "-L")
 					felix.Exec("calico-bpf", "policy", "dump", "cali8d1e69e5f89", "all", "--asm")
 					if testOpts.ipv6 {
+						felix.Exec("conntrack", "-L", "-f", "ipv6")
 						felix.Exec("ip6tables-save", "-c")
 						felix.Exec("ip", "-6", "link")
 						felix.Exec("ip", "-6", "addr")
@@ -654,15 +679,11 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					return 0, err
 				}
 				var mapMeta struct {
-					ID    int    `json:"id"`
-					Error string `json:"error"`
+					ID int `json:"id"`
 				}
 				err = json.Unmarshal([]byte(out), &mapMeta)
 				if err != nil {
 					return 0, err
-				}
-				if mapMeta.Error != "" {
-					return 0, errors.New(mapMeta.Error)
 				}
 				return mapMeta.ID, nil
 			}
@@ -673,7 +694,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					var err error
 					mapID, err = getMapIDByPath(felix, filename)
 					return err
-				}, "5s").ShouldNot(HaveOccurred())
+				}, "10s").ShouldNot(HaveOccurred())
 				return mapID
 			}
 
@@ -1313,10 +1334,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			}
 
 			It("should have correct routes", func() {
-				if testOpts.ipv6 {
-					// XXX
-					return
-				}
 				tunnelAddr := ""
 				tunnelAddrFelix1 := ""
 				tunnelAddrFelix2 := ""
@@ -1324,19 +1341,36 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				if testOpts.dsr {
 					expectedRoutes = expectedRouteDumpDSR
 				}
-				switch {
-				case tc.Felixes[0].ExpectedIPIPTunnelAddr != "":
-					tunnelAddr = tc.Felixes[0].ExpectedIPIPTunnelAddr
-					tunnelAddrFelix1 = tc.Felixes[1].ExpectedIPIPTunnelAddr
-					tunnelAddrFelix2 = tc.Felixes[2].ExpectedIPIPTunnelAddr
-				case tc.Felixes[0].ExpectedVXLANTunnelAddr != "":
-					tunnelAddr = tc.Felixes[0].ExpectedVXLANTunnelAddr
-					tunnelAddrFelix1 = tc.Felixes[1].ExpectedVXLANTunnelAddr
-					tunnelAddrFelix2 = tc.Felixes[2].ExpectedVXLANTunnelAddr
-				case tc.Felixes[0].ExpectedWireguardTunnelAddr != "":
-					tunnelAddr = tc.Felixes[0].ExpectedWireguardTunnelAddr
-					tunnelAddrFelix1 = tc.Felixes[1].ExpectedWireguardTunnelAddr
-					tunnelAddrFelix2 = tc.Felixes[2].ExpectedWireguardTunnelAddr
+				if testOpts.ipv6 {
+					switch {
+					case tc.Felixes[0].ExpectedVXLANV6TunnelAddr != "":
+						tunnelAddr = tc.Felixes[0].ExpectedVXLANV6TunnelAddr
+						tunnelAddrFelix1 = tc.Felixes[1].ExpectedVXLANV6TunnelAddr
+						tunnelAddrFelix2 = tc.Felixes[2].ExpectedVXLANV6TunnelAddr
+					case tc.Felixes[0].ExpectedWireguardV6TunnelAddr != "":
+						tunnelAddr = tc.Felixes[0].ExpectedWireguardV6TunnelAddr
+						tunnelAddrFelix1 = tc.Felixes[1].ExpectedWireguardV6TunnelAddr
+						tunnelAddrFelix2 = tc.Felixes[2].ExpectedWireguardV6TunnelAddr
+					}
+					expectedRoutes = expectedRouteDumpV6
+					if testOpts.dsr {
+						expectedRoutes = expectedRouteDumpV6DSR
+					}
+				} else {
+					switch {
+					case tc.Felixes[0].ExpectedIPIPTunnelAddr != "":
+						tunnelAddr = tc.Felixes[0].ExpectedIPIPTunnelAddr
+						tunnelAddrFelix1 = tc.Felixes[1].ExpectedIPIPTunnelAddr
+						tunnelAddrFelix2 = tc.Felixes[2].ExpectedIPIPTunnelAddr
+					case tc.Felixes[0].ExpectedVXLANTunnelAddr != "":
+						tunnelAddr = tc.Felixes[0].ExpectedVXLANTunnelAddr
+						tunnelAddrFelix1 = tc.Felixes[1].ExpectedVXLANTunnelAddr
+						tunnelAddrFelix2 = tc.Felixes[2].ExpectedVXLANTunnelAddr
+					case tc.Felixes[0].ExpectedWireguardTunnelAddr != "":
+						tunnelAddr = tc.Felixes[0].ExpectedWireguardTunnelAddr
+						tunnelAddrFelix1 = tc.Felixes[1].ExpectedWireguardTunnelAddr
+						tunnelAddrFelix2 = tc.Felixes[2].ExpectedWireguardTunnelAddr
+					}
 				}
 
 				if tunnelAddr != "" {
@@ -1347,7 +1381,13 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				}
 
 				dumpRoutes := func() string {
-					out, err := tc.Felixes[0].ExecOutput("calico-bpf", "routes", "dump")
+					out := ""
+					var err error
+					if testOpts.ipv6 {
+						out, err = tc.Felixes[0].ExecOutput("calico-bpf", "routes", "-6", "dump")
+					} else {
+						out, err = tc.Felixes[0].ExecOutput("calico-bpf", "routes", "dump")
+					}
 					if err != nil {
 						return fmt.Sprint(err)
 					}
@@ -1365,13 +1405,25 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						l = strings.ReplaceAll(l, felixIP(2), "FELIX_2")
 						l = idxRE.ReplaceAllLiteralString(l, "idx -")
 						if tunnelAddr != "" {
-							l = strings.ReplaceAll(l, tunnelAddr+"/32", "FELIX_0_TNL/32")
+							if testOpts.ipv6 {
+								l = strings.ReplaceAll(l, tunnelAddr+"/128", "FELIX_0_TNL/128")
+							} else {
+								l = strings.ReplaceAll(l, tunnelAddr+"/32", "FELIX_0_TNL/32")
+							}
 						}
 						if tunnelAddrFelix1 != "" {
-							l = strings.ReplaceAll(l, tunnelAddrFelix1+"/32", "FELIX_1_TNL/32")
+							if testOpts.ipv6 {
+								l = strings.ReplaceAll(l, tunnelAddrFelix1+"/128", "FELIX_1_TNL/128")
+							} else {
+								l = strings.ReplaceAll(l, tunnelAddrFelix1+"/32", "FELIX_1_TNL/32")
+							}
 						}
 						if tunnelAddrFelix2 != "" {
-							l = strings.ReplaceAll(l, tunnelAddrFelix2+"/32", "FELIX_2_TNL/32")
+							if testOpts.ipv6 {
+								l = strings.ReplaceAll(l, tunnelAddrFelix2+"/128", "FELIX_2_TNL/128")
+							} else {
+								l = strings.ReplaceAll(l, tunnelAddrFelix2+"/32", "FELIX_2_TNL/32")
+							}
 						}
 						filteredLines = append(filteredLines, l)
 					}
@@ -4242,8 +4294,16 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 							It("should get port unreachable via node1->node0 fwd", func() {
 								tcpdump := externalClient.AttachTCPDump("any")
 								tcpdump.SetLogEnabled(true)
-								matcher := fmt.Sprintf("IP %s > %s: ICMP %s udp port %d unreachable",
-									felixIP(1), containerIP(externalClient), felixIP(1), npPort)
+
+								var matcher string
+
+								if testOpts.ipv6 {
+									matcher = fmt.Sprintf("IP6 %s > %s: ICMP6, destination unreachable, unreachable port, %s udp port %d",
+										felixIP(1), containerIP(externalClient), felixIP(1), npPort)
+								} else {
+									matcher = fmt.Sprintf("IP %s > %s: ICMP %s udp port %d unreachable",
+										felixIP(1), containerIP(externalClient), felixIP(1), npPort)
+								}
 								tcpdump.AddMatcher("ICMP", regexp.MustCompile(matcher))
 								tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
 								defer tcpdump.Stop()
@@ -4303,7 +4363,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 										tgtWorkload.IP, w[1][1].IP, felixIP(1), npPort)
 								}
 								tcpdump.AddMatcher("ICMP", regexp.MustCompile(matcher))
-								tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", "icmp")
+								tcpdump.Start(testOpts.protocol, "port", strconv.Itoa(int(npPort)), "or", icmpProto)
 							}
 							defer tcpdump.Stop()
 
@@ -4487,6 +4547,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 		Describe("with BPF disabled to begin with", func() {
 			var pc *PersistentConnection
+			var err error
 
 			BeforeEach(func() {
 				options.TestManagesBPF = true
@@ -4500,6 +4561,21 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				pol.Spec.Egress = []api.Rule{{Action: "Allow"}}
 				pol.Spec.Selector = "all()"
 				pol = createPolicy(pol)
+				out := ""
+				rulesProgrammed := func() bool {
+					if testOpts.ipv6 {
+						out, err = tc.Felixes[0].ExecOutput("ip6tables-save", "-t", "filter")
+					} else {
+						out, err = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+					}
+					Expect(err).NotTo(HaveOccurred())
+					if strings.Count(out, "default.policy-1") == 0 {
+						return false
+					}
+					return true
+				}
+				Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
+					"Expected iptables rules to appear on the correct felix instances")
 
 				pc = nil
 			})
@@ -4519,15 +4595,14 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					fc.Spec.BPFEnabled = &bpfEnabled
 					_, err := calicoClient.FelixConfigurations().Update(context.Background(), fc, options2.SetOptions{})
 					Expect(err).NotTo(HaveOccurred())
-					return
+				} else {
+					// Fall back on creating it...
+					fc = api.NewFelixConfiguration()
+					fc.Name = "default"
+					fc.Spec.BPFEnabled = &bpfEnabled
+					fc, err = calicoClient.FelixConfigurations().Create(context.Background(), fc, options2.SetOptions{})
+					Expect(err).NotTo(HaveOccurred())
 				}
-
-				// Fall back on creating it...
-				fc = api.NewFelixConfiguration()
-				fc.Name = "default"
-				fc.Spec.BPFEnabled = &bpfEnabled
-				fc, err = calicoClient.FelixConfigurations().Create(context.Background(), fc, options2.SetOptions{})
-				Expect(err).NotTo(HaveOccurred())
 
 				// Wait for BPF to be active.
 				ensureAllNodesBPFProgramsAttached(tc.Felixes)
@@ -4541,7 +4616,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				log.Info("Pongs received")
 			}
 
-			if testOpts.protocol == "tcp" && testOpts.dsr {
+			if testOpts.protocol == "tcp" && (testOpts.dsr || testOpts.ipv6) {
 				verifyConnectivityWhileEnablingBPF := func(from, to *workload.Workload) {
 					By("Starting persistent connection")
 					pc = from.StartPersistentConnection(to.IP, 8055, workload.PersistentConnectionOpts{
@@ -5179,9 +5254,9 @@ func dumpIfStateMap(felix *infrastructure.Felix) ifstate.MapMem {
 	return m
 }
 
-func ensureAllNodesBPFProgramsAttached(felixes []*infrastructure.Felix) {
+func ensureAllNodesBPFProgramsAttached(felixes []*infrastructure.Felix, ifacesExtra ...string) {
 	for _, felix := range felixes {
-		ensureBPFProgramsAttachedOffset(2, felix)
+		ensureBPFProgramsAttachedOffset(2, felix, ifacesExtra...)
 	}
 }
 

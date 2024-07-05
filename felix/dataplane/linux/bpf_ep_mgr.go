@@ -368,8 +368,9 @@ type bpfEndpointManager struct {
 	polNameToMatchIDs map[string]set.Set[polprog.RuleMatchID]
 	dirtyRules        set.Set[polprog.RuleMatchID]
 
-	natInIdx  int
-	natOutIdx int
+	natInIdx    int
+	natOutIdx   int
+	bpfIfaceMTU int
 
 	// CaliEnt features below
 
@@ -449,6 +450,7 @@ func NewTestEpMgr(
 		false,
 		nil,
 		nil,
+		1500,
 	)
 }
 
@@ -474,6 +476,7 @@ func newBPFEndpointManager(
 	enableTcpStats bool,
 	healthAggregator *health.HealthAggregator,
 	dataplanefeatures *environment.Features,
+	bpfIfaceMTU int,
 ) (*bpfEndpointManager, error) {
 	if livenessCallback == nil {
 		livenessCallback = func() {}
@@ -652,6 +655,7 @@ func newBPFEndpointManager(
 			}
 		}
 
+		m.bpfIfaceMTU = bpfIfaceMTU
 		if err := m.dp.ensureBPFDevices(); err != nil {
 			return nil, fmt.Errorf("ensure BPF devices: %w", err)
 		} else {
@@ -3281,6 +3285,7 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 	if err != nil {
 		la := netlink.NewLinkAttrs()
 		la.Name = bpfInDev
+		la.MTU = m.bpfIfaceMTU
 		nat := &netlink.Veth{
 			LinkAttrs: la,
 			PeerName:  bpfOutDev,
@@ -3293,6 +3298,7 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 			return fmt.Errorf("missing %s after add: %w", bpfInDev, err)
 		}
 	}
+
 	if state := bpfin.Attrs().OperState; state != netlink.OperUp {
 		log.WithField("state", state).Info(bpfInDev)
 		if err := netlink.LinkSetUp(bpfin); err != nil {
@@ -3308,6 +3314,15 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 		if err := netlink.LinkSetUp(bpfout); err != nil {
 			return fmt.Errorf("failed to set %s up: %w", bpfOutDev, err)
 		}
+	}
+
+	err = netlink.LinkSetMTU(bpfin, m.bpfIfaceMTU)
+	if err != nil {
+		return fmt.Errorf("failed to set MTU to %d on %s: %w", m.bpfIfaceMTU, bpfInDev, err)
+	}
+	err = netlink.LinkSetMTU(bpfout, m.bpfIfaceMTU)
+	if err != nil {
+		return fmt.Errorf("failed to set MTU to %d on %s: %w", m.bpfIfaceMTU, bpfOutDev, err)
 	}
 
 	m.natInIdx = bpfin.Attrs().Index

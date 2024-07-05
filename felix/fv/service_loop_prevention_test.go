@@ -376,6 +376,18 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ service loop prevention; wi
 			}
 		})
 
+		for _, felix := range tc.Felixes {
+			if BPFMode() {
+				Eventually(func() string {
+					return bpfDumpRoutesV4(felix)
+				}, "10s", "1s").Should(ContainSubstring("10.96.0.0/17: blackhole-drop"))
+			} else {
+				Eventually(getCIDRBlockRules(felix, "iptables-save"), "8s", "0.5s").Should(ConsistOf(
+					MatchRegexp("-A cali-cidr-block -d 10\\.96\\.0\\.0/17 .* -j DROP"),
+				))
+			}
+		}
+
 		By("test that we don't get a routing loop")
 		tryRoutingLoop(false, 1)
 

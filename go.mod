@@ -26,7 +26,7 @@ require (
 	github.com/caimeo/iniflags v0.0.0-20171110233946-ef4ae6c5cd79
 	github.com/container-storage-interface/spec v1.9.0
 	// keep track of versions used in https://github.com/projectcalico/containernetworking-plugins
-	github.com/containernetworking/cni v1.1.1
+	github.com/containernetworking/cni v1.2.1
 	github.com/containernetworking/plugins v1.1.1
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6
 	github.com/corazawaf/coraza/v3 v3.0.4
@@ -188,7 +188,7 @@ require (
 	github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Masterminds/semver/v3 v3.2.0 // indirect
+	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect

@@ -48,7 +48,7 @@ const (
 // Separate const block to avoid conflicts when merging from OS.
 const (
 	numPrivateOnlyFelixConfigs = 108
-	numBaseFelixConfigs        = 138
+	numBaseFelixConfigs        = 140
 )
 
 var _ = FDescribe("Test the generic configuration update processor and the concrete implementations", func() {
