@@ -1,6 +1,6 @@
 - name: Publish tigera/fluentd-base images
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   task:
@@ -19,7 +19,7 @@
           - make -C third_party/fluentd-base cd ARCHES=amd64 CONFIRM=true
 - name: Publish tigera/fluentd-base images - native arm64 runner
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   task:
@@ -37,7 +37,7 @@
           - make -C third_party/fluentd-base cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/fluentd-base multi-arch manifests
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Publish tigera/fluentd-base images
     - Publish tigera/fluentd-base images - native arm64 runner
@@ -54,7 +54,7 @@
 
 - name: fluentd
   run:
-    when: "${FORCE_RUN} or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE'})"
+    when: "${FORCE_RUN} or change_in(['/fluentd', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Publish tigera/fluentd-base multi-arch manifests
   task:
@@ -78,7 +78,7 @@
 
 - name: Publish tigera/fluentd-base Windows images
   run:
-    when: "${WEEKLY_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Prerequisites
   execution_time_limit:
@@ -112,7 +112,7 @@
           - BASE=true CONFIRM=true .semaphore/windows-cd.sh
 - name: Publish tigera/fluentd-base Windows multi-arch manifests
   run:
-    when: "${WEEKLY_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
     - Publish tigera/fluentd-base Windows images
   task:
@@ -128,7 +128,7 @@
 
 - name: fluentd Windows
   run:
-    when: "${FORCE_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE'})"
+    when: "${FORCE_RUN} or change_in(['/fluentd/', '/third_party/fluentd-base'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Publish tigera/fluentd-base Windows multi-arch manifests
   task:
