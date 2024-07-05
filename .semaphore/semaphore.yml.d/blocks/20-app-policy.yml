@@ -1,6 +1,6 @@
 - name: app-policy
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE'})"
+    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
@@ -18,7 +18,7 @@
 
 - name: app-policy - native arm64 runner
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE'})"
+    when: "${FORCE_RUN} or change_in(['/*', '/app-policy/', '/felix/', '/libcalico-go/lib/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - app-policy
   task:
