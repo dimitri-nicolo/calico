@@ -299,7 +299,7 @@ func peerToHostPort(peer *envoyauthz.AttributeContext_Peer) (host string, port u
 
 func extractFirstWepNameAndNamespace(weps []proto.WorkloadEndpointID) (string, string) {
 	if len(weps) == 0 {
-		return "-", "-"
+		return "", ""
 	}
 
 	wepName := weps[0].WorkloadId
@@ -308,5 +308,5 @@ func extractFirstWepNameAndNamespace(weps []proto.WorkloadEndpointID) (string, s
 		return parts[0], parts[1]
 	}
 
-	return wepName, "-"
+	return wepName, ""
 }
