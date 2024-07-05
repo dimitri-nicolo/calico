@@ -7,11 +7,12 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"k8s.io/apimachinery/pkg/watch"
 
 	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
+
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type WebhookController struct {
@@ -19,6 +20,28 @@ type WebhookController struct {
 	k8sEventsChan     chan watch.Event
 	updater           WebhookUpdaterInterface
 	state             StateInterface
+}
+
+func SetUp(ctx context.Context, webhookController *WebhookController, webhookWatcherUpdater *WebhookWatcherUpdater) func() {
+	// break up wait group to terminate updater first then controller
+	// with 2 different child contexts
+	ctrCtx, ctrCancel := context.WithCancel(ctx)
+
+	uptCtx, uptCancel := context.WithCancel(ctx)
+
+	var ctrWg sync.WaitGroup
+	var uptWg sync.WaitGroup
+	uptWg.Add(1)
+	go webhookWatcherUpdater.Run(uptCtx, &uptWg)
+	ctrWg.Add(1)
+	go webhookController.Run(ctrCtx, &ctrWg)
+
+	return func() {
+		uptCancel()
+		uptWg.Wait()
+		ctrCancel()
+		ctrWg.Wait()
+	}
 }
 
 func NewWebhookController() *WebhookController {
@@ -46,8 +69,9 @@ func (c *WebhookController) K8sEventsChan() chan<- watch.Event {
 	return c.k8sEventsChan
 }
 
-func (c *WebhookController) Run(ctx context.Context, ctxCancel context.CancelFunc, wg *sync.WaitGroup) {
-	defer ctxCancel()
+func (c *WebhookController) Run(ctx context.Context, wg *sync.WaitGroup) {
+	defer close(c.k8sEventsChan)
+	defer close(c.webhookEventsChan)
 	defer wg.Done()
 	defer logrus.Info("Webhook controller is terminating")
 
