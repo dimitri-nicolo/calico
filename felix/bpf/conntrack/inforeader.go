@@ -44,13 +44,13 @@ type InfoReader struct {
 // NewInfoReader returns a new instance of InfoReader that can be used as a
 // EntryScannerSynced with Scanner and as ConntrackInfoReader with
 // collector.Collector.
-func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface) *InfoReader {
+func NewInfoReader(timeouts Timeouts, dsr bool, time timeshim.Interface, collectorCtInfoReader *CollectorCtInfoReader) *InfoReader {
 	r := &InfoReader{
 		timeouts: timeouts,
 		dsr:      dsr,
 		time:     time,
 
-		outC: make(chan []collector.ConntrackInfo, 1000),
+		outC: collectorCtInfoReader.outC,
 	}
 
 	if r.time == nil {
@@ -185,10 +185,20 @@ func (r *InfoReader) IterationEnd() {
 	}
 }
 
+type CollectorCtInfoReader struct {
+	outC chan []collector.ConntrackInfo
+}
+
+func NewCollectorCtInfoReader() *CollectorCtInfoReader {
+	return &CollectorCtInfoReader{
+		outC: make(chan []collector.ConntrackInfo, 1000),
+	}
+}
+
 // Start is called by collector to start consuming data.
-func (r *InfoReader) Start() error { return nil }
+func (c *CollectorCtInfoReader) Start() error { return nil }
 
 // ConntrackInfoChan returns a channel for collector to consume data.
-func (r *InfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
-	return r.outC
+func (c *CollectorCtInfoReader) ConntrackInfoChan() <-chan []collector.ConntrackInfo {
+	return c.outC
 }

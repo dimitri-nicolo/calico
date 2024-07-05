@@ -42,7 +42,12 @@ func NewCollectorPolicyListener(lc *calc.LookupsCache) *CollectorPolicyListener 
 
 // EventHandler can be registered as a sink/callback to consume the event.
 func (c *CollectorPolicyListener) EventHandler(e Event) {
-	pv := ParsePolicyVerdict(e.Data())
+	var pv PolicyVerdict
+	if e.Type() == TypePolicyVerdict {
+		pv = ParsePolicyVerdict(e.Data(), false)
+	} else if e.Type() == TypePolicyVerdictV6 {
+		pv = ParsePolicyVerdict(e.Data(), true)
+	}
 	c.inC <- pv
 }
 

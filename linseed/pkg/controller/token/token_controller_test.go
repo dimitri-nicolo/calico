@@ -13,40 +13,35 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	k8stesting "k8s.io/client-go/testing"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
 	"github.com/SermoDigital/jose/jws"
-
-	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"github.com/stretchr/testify/require"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
-
+	"k8s.io/client-go/kubernetes"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	k8stesting "k8s.io/client-go/testing"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/linseed/pkg/controller/token"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 
-	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"k8s.io/client-go/kubernetes"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 var (

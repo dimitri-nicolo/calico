@@ -1106,6 +1106,64 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p2).To(Equal(p))
 	})
+
+	Context("Multi-tenant", func() {
+		BeforeEach(func() {
+			mock = &rbacmock.MockClient{
+				Roles:               map[string][]rbac_v1.PolicyRule{},
+				RoleBindings:        map[string][]string{},
+				ClusterRoles:        map[string][]rbac_v1.PolicyRule{},
+				ClusterRoleBindings: []string{},
+				Namespaces:          []string{"tenant-A", "tenant-B"},
+				ManagedClusters:     []types.NamespacedName{{Name: "cluster1", Namespace: "tenant-A"}, {Name: "cluster2", Namespace: "tenant-B"}},
+			}
+			calc = NewCalculator(mock, mock, mock, mock, mock, mock, mock, 0)
+			myUser = &user.DefaultInfo{
+				Name:   "my-user",
+				UID:    "abcde",
+				Groups: []string{},
+				Extra:  map[string][]string{},
+			}
+		})
+
+		It("managed clusters", func() {
+			Context("wildcard access", func() {
+				mock.ClusterRoleBindings = []string{
+					"watch-ManagedClusters",
+				}
+				mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+					"watch-ManagedClusters": {{
+						Verbs:     []string{"watch"},
+						Resources: []string{"managedclusters"},
+						APIGroups: []string{"projectcalico.org"},
+					}},
+				}
+				res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(res).To(HaveKey(resourceManagedClusters))
+				Expect(res[resourceManagedClusters]).To(haveMatchAllForVerbs(VerbWatch), "watch matches all")
+			})
+
+			Context("individual access", func() {
+				mock.RoleBindings = map[string][]string{
+					"tenant-A": {"watch-ManagedClusters"},
+					"tenant-B": {"watch-ManagedClusters"},
+				}
+				mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+					"watch-ManagedClusters": {{
+						Verbs:         []string{"watch"},
+						Resources:     []string{"managedclusters"},
+						APIGroups:     []string{"projectcalico.org"},
+						ResourceNames: []string{"cluster1"},
+					}},
+				}
+				res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{resourceManagedClusters, AllVerbs}})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(res).To(HaveKey(resourceManagedClusters))
+				Expect(res[resourceManagedClusters]).To(haveOnlyMatchesForVerbs([]Match{{ManagedCluster: "cluster1", Namespace: "tenant-A"}}, VerbWatch))
+			})
+		})
+	})
 })
 
 func haveMatchAllForVerbs(expectedVerbs ...Verb) gomegatypes.GomegaMatcher {

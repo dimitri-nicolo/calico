@@ -31,14 +31,16 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 	LegDstSrc := conntrack.Leg{}
 
 	var (
-		reader   *conntrack.InfoReader
-		mockTime *mocktime.MockTime
+		reader                *conntrack.InfoReader
+		mockTime              *mocktime.MockTime
+		collectorCtInfoReader *conntrack.CollectorCtInfoReader
 	)
 
 	BeforeEach(func() {
 		mockTime = mocktime.New()
 		Expect(mockTime.KTimeNanos()).To(BeNumerically("==", now))
-		reader = conntrack.NewInfoReader(timeouts, false, mockTime)
+		collectorCtInfoReader = conntrack.NewCollectorCtInfoReader()
+		reader = conntrack.NewInfoReader(timeouts, false, mockTime, collectorCtInfoReader)
 	})
 
 	DescribeTable("forward entries",
@@ -46,7 +48,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 			reader.IterationStart()
 			reader.Check(k, v, nil)
 			reader.IterationEnd()
-			got := <-reader.ConntrackInfoChan()
+			got := <-collectorCtInfoReader.ConntrackInfoChan()
 
 			Expect(got[0]).To(Equal(expected))
 		},

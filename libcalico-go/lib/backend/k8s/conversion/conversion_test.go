@@ -192,6 +192,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "nodeA",
@@ -341,6 +342,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "nodeA",
@@ -483,6 +485,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName: "nodeA",
@@ -554,6 +557,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -582,6 +586,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -609,6 +614,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -639,6 +645,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -667,6 +674,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -699,6 +707,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -728,6 +737,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/allowedSourcePrefixes": "[\"8.8.8.8/32\",\"1.1.1.0/24\"]",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -751,6 +761,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/allowedSourcePrefixes": "[\"\"]",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -773,6 +784,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/allowedSourcePrefixes": "[\"gumbo\"]",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -795,6 +807,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/allowedSourcePrefixes": "[\"1.1.1.1/16\"]",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -817,6 +830,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/podIP": "foobar",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -837,6 +851,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/podIPs": "foobar",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -854,6 +869,7 @@ var _ = Describe("Test Pod conversion", func() {
 				Name:            "podA",
 				Namespace:       "default",
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -880,6 +896,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -906,6 +923,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/podIP": "",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -936,6 +954,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"cni.projectcalico.org/podIP": "",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -965,6 +984,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"arbitrary": "annotation",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -994,6 +1014,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"arbitrary": "annotation",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:   "nodeA",
@@ -1022,6 +1043,7 @@ var _ = Describe("Test Pod conversion", func() {
 						"cni.projectcalico.org/podIP": "192.168.0.1",
 					},
 					ResourceVersion: "1234",
+					UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 				},
 				Spec: kapiv1.PodSpec{
 					NodeName:   "nodeA",
@@ -1145,6 +1167,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:           "nodeA",
@@ -1219,6 +1242,7 @@ var _ = Describe("Test Pod conversion", func() {
 					"labelB": "valueB",
 				},
 				ResourceVersion: "1234",
+				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 			},
 			Spec: kapiv1.PodSpec{
 				NodeName:           "nodeA",

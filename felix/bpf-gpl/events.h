@@ -38,7 +38,11 @@ static CALI_BPF_INLINE void event_tcp_stats(struct cali_tc_ctx *ctx, struct even
 
 static CALI_BPF_INLINE void event_flow_log(struct cali_tc_ctx *ctx)
 {
+#ifndef IPVER6
 	ctx->state->eventhdr.type = EVENT_POLICY_VERDICT,
+#else
+	ctx->state->eventhdr.type = EVENT_POLICY_VERDICT_V6,
+#endif
 	ctx->state->eventhdr.len = offsetof(struct cali_tc_state, rule_ids) + sizeof(__u64) * MAX_RULE_IDS;
 
 	/* Due to stack space limitations, the begining of the state is structured as the

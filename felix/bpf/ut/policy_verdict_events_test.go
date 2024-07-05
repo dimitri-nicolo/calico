@@ -164,7 +164,7 @@ func TestPolicyVerdictEvents(t *testing.T) {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(evnt.Type()).To(Equal(events.TypePolicyVerdict))
 
-			fl := events.ParsePolicyVerdict(evnt.Data())
+			fl := events.ParsePolicyVerdict(evnt.Data(), false)
 
 			Expect(fl.SrcAddr.Equal(ipv4.SrcIP)).To(BeTrue())
 			Expect(fl.DstAddr.Equal(ipv4.DstIP)).To(BeTrue())
