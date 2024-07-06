@@ -1,6 +1,6 @@
 # Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
 
-FROM scratch as source
+FROM scratch AS source
 
 ARG TARGETARCH
 

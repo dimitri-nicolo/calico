@@ -4,7 +4,7 @@ ARG THIRD_PARTY_REGISTRY
 
 FROM ${THIRD_PARTY_REGISTRY}/snort:v3.1.81.0-mod AS snort
 
-FROM scratch as source
+FROM scratch AS source
 
 ARG TARGETARCH
 

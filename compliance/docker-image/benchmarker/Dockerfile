@@ -2,9 +2,9 @@
 
 ARG QEMU_IMAGE
 
-FROM ${QEMU_IMAGE} as qemu
+FROM ${QEMU_IMAGE} AS qemu
 
-FROM alpine:3 as builder
+FROM alpine:3 AS builder
 
 ARG K8S_VERSION
 ARG KUBE_BENCH_VERSION
@@ -24,7 +24,7 @@ RUN curl -sfL https://github.com/aquasecurity/kube-bench/archive/refs/tags/${KUB
 RUN curl -sfL https://dl.k8s.io/release/${K8S_VERSION}/bin/linux/${TARGETARCH}/kubectl -o /usr/bin/kubectl && \
 	chmod 755 /usr/bin/kubectl
 
-FROM scratch as source
+FROM scratch AS source
 
 ARG TARGETARCH
 
