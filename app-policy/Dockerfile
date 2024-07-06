@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM alpine:3 as builder
+FROM alpine:3 AS builder
 
 RUN mkdir -p /var/run/dikastes
 
-FROM scratch as source
+FROM scratch AS source
 
 ARG BIN_DIR
 ARG TARGETARCH

@@ -14,9 +14,9 @@
 
 ARG UBI8_IMAGE
 
-FROM ${UBI8_IMAGE} as ubi
+FROM ${UBI8_IMAGE} AS ubi
 
-FROM scratch as source
+FROM scratch AS source
 
 ARG TARGETARCH
 ARG BIN_DIR
