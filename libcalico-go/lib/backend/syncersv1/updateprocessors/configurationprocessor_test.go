@@ -45,10 +45,11 @@ const (
 	wireguardMarker = "*WIREGUARDMARKER*"
 )
 
-// Separate const block to avoid conflicts when merging from OS.
 const (
-	numPrivateOnlyFelixConfigs = 108
-	numBaseFelixConfigs        = 140
+	// numBaseFelixConfigs should match the OS value.
+	numBaseFelixConfigs = 139
+	// Add private-only fields to this count.
+	numPrivateOnlyFelixConfigs = 110
 )
 
 var _ = FDescribe("Test the generic configuration update processor and the concrete implementations", func() {
