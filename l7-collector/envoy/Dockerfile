@@ -2,7 +2,7 @@ ARG QEMU_IMAGE
 ARG THIRD_PARTY_REGISTRY
 ARG UBI9_IMAGE
 
-FROM ${QEMU_IMAGE} as qemu
+FROM ${QEMU_IMAGE} AS qemu
 
 FROM ${UBI9_IMAGE} AS ubi
 
@@ -10,11 +10,11 @@ COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 RUN microdnf install -y shadow-utils
 
-FROM envoyproxy/envoy:v1.29.0 as envoy
+FROM envoyproxy/envoy:v1.29.0 AS envoy
 
 FROM ${THIRD_PARTY_REGISTRY}/envoybinary:v1.29.0 AS envoybinary
 
-FROM scratch as source
+FROM scratch AS source
 
 # dependencies
 COPY --from=ubi /bin/sh /bin/sh

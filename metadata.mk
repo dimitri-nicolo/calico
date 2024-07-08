@@ -64,6 +64,10 @@ WINDOWS_HPC_VERSION ?= v1.0.0
 # The Windows versions used as base for Calico Windows images
 WINDOWS_VERSIONS ?= 1809 ltsc2022
 
+# The CNI plugin code that will be cloned and rebuilt with this repo's go-build image
+# whenever the cni-plugin image is created.
+CNI_VERSION=v1.1.1-calico+go-1.22.5
+
 # THIRD_PARTY_REGISTRY configures the third-party registry that serves intermediate base image
 # for some Calico Enterprise components. They are never released directly to public.
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), branch)

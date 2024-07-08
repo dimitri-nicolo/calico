@@ -2,7 +2,7 @@ ARG THIRD_PARTY_REGISTRY
 
 FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v7.17.22 AS elastic
 
-FROM scratch as source
+FROM scratch AS source
 
 ARG TARGETARCH
 

@@ -1,8 +1,8 @@
 ARG QEMU_IMAGE
 
-FROM ${QEMU_IMAGE} as qemu
+FROM ${QEMU_IMAGE} AS qemu
 
-FROM alpine:3 as builder
+FROM alpine:3 AS builder
 
 COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 

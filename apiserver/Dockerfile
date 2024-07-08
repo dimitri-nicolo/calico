@@ -1,6 +1,6 @@
 # Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-FROM scratch as source
+FROM scratch AS source
 
 ARG BIN_DIR
 ARG TARGETARCH

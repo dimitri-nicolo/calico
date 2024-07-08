@@ -21,39 +21,30 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/pkg/profile"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/projectcalico/calico/typha/pkg/tlsutils"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/usage"
-
-	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
-
-	"k8s.io/apiserver/pkg/authentication/user"
-
-	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
-	restclient "k8s.io/client-go/rest"
-
 	log "github.com/sirupsen/logrus"
+
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
 	"k8s.io/apimachinery/pkg/runtime"
+	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
@@ -68,6 +59,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/service"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/serviceaccount"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/usage"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/status"
@@ -75,12 +67,14 @@ import (
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/debugserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
 	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
+	"github.com/projectcalico/calico/typha/pkg/tlsutils"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -313,12 +307,13 @@ func main() {
 		}
 
 		go func() {
-			http.Handle("/metrics", promhttp.Handler())
+			mux := http.NewServeMux()
+			mux.Handle("/metrics", promhttp.Handler())
 			if cert == "" || certKey == "" {
 				log.Infof("Serve http prometheus metrics")
-				err := http.ListenAndServe(fmt.Sprintf(":%d", runCfg.PrometheusPort), nil)
+				err := http.ListenAndServe(fmt.Sprintf(":%d", runCfg.PrometheusPort), mux)
 				if err != nil {
-					log.WithError(err).Fatal("Failed to serve http prometheus metrics")
+					log.WithError(err).Fatal("Failed to serve prometheus metrics")
 				}
 			} else {
 				if caFile != "" {
@@ -342,15 +337,7 @@ func main() {
 	}
 
 	if runCfg.DebugProfilePort != 0 {
-		// Run a webserver to expose memory profiling.
-		setPathOption := profile.ProfilePath("/profiles")
-		defer profile.Start(profile.CPUProfile, profile.MemProfile, setPathOption).Stop()
-		go func() {
-			err := http.ListenAndServe(fmt.Sprintf(":%d", runCfg.DebugProfilePort), nil)
-			if err != nil {
-				log.WithError(err).Fatal("Failed to start debug profiling")
-			}
-		}()
+		debugserver.StartDebugPprofServer("0.0.0.0", int(runCfg.DebugProfilePort))
 	}
 
 	// Run the controllers. This runs until a config change triggers a restart
@@ -542,7 +529,7 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		return nil, err
 	}
 
-	baseTLSConfig := tls.NewTLSConfig()
+	baseTLSConfig := calicotls.NewTLSConfig()
 	tlsClient.MaxVersion = baseTLSConfig.MaxVersion
 	tlsClient.MinVersion = baseTLSConfig.MinVersion
 	tlsClient.CipherSuites = baseTLSConfig.CipherSuites
