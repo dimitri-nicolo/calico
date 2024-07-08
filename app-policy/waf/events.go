@@ -159,12 +159,16 @@ func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog 
 				"dst": dst,
 			}).Debug("Found endpoint keys")
 
-			dstNamespace, dstName := extractFirstWepNameAndNamespace(dst)
 			srcNamespaceFromCache, srcNameFromCache := extractFirstWepNameAndNamespace(src)
+			dstNamespaceFromCache, dstNameFromCache := extractFirstWepNameAndNamespace(dst)
 
-			// prioritize the info from the cache
-			srcName := firstNonEmpty(srcNameFromCache, entry.srcName)
-			srcNamespace := firstNonEmpty(srcNamespaceFromCache, entry.srcNamespace)
+			// prioritize src info from the cache, then use the info from the entry.
+			// use "-" for empty values as that is a special value for ES log entries
+			srcName := firstNonEmpty(srcNameFromCache, entry.srcName, "-")
+			srcNamespace := firstNonEmpty(srcNamespaceFromCache, entry.srcNamespace, "-")
+
+			dstName := firstNonEmpty(dstNameFromCache, "-")
+			dstNamespace := firstNonEmpty(dstNamespaceFromCache, "-")
 
 			srcEp = &linseedv1.WAFEndpoint{
 				IP:           entry.srcIP,
