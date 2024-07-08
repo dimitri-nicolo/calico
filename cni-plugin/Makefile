@@ -66,6 +66,7 @@ clean: clean-windows
 	rm -rf config/ dist/
 	-docker image rm -f $$(docker images $(CNI_PLUGIN_IMAGE) -a -q)
 	rm -rf containernetworking-plugins .containernetworking-plugins-*
+	rm -rf flannel-cni-plugin .flannel-cni-plugin-*
 
 clean-windows: clean-windows-builder
 	rm -rf $(WINDOWS_BIN) $(WINDOWS_DIST)
@@ -193,7 +194,7 @@ ut-datastore:
 	-v $(CERTS_PATH):/home/user/certs \
 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 			cd  /go/src/$(PACKAGE_NAME) && \
-			ginkgo -cover -r -skipPackage pkg/install,containernetworking-plugins $(GINKGO_ARGS)'
+			ginkgo -cover -r -skipPackage pkg/install,containernetworking-plugins,flannel-cni-plugin $(GINKGO_ARGS)'
 
 ut-etcd: run-k8s-controller-manager build $(BIN)/host-local
 	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3
