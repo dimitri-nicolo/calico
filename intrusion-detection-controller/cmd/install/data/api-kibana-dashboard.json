@@ -88,7 +88,7 @@
     "type": "dashboard",
     "version": "WzEyLDFd",
     "attributes": {
-      "title": "Calico Enterprise Flow Logs",
+      "title": "Calico Flow Logs",
       "hits": 0,
       "description": "",
       "panelsJSON": "[{\"embeddableConfig\":{},\"gridData\":{\"x\":25,\"y\":0,\"w\":23,\"h\":15,\"i\":\"1\"},\"id\":\"b02bbe00-c119-11e8-b274-fbb68ba254a6\",\"panelIndex\":\"1\",\"title\":\"Flow Filtering\",\"type\":\"visualization\",\"version\":\"6.4.1\"},{\"embeddableConfig\":{},\"gridData\":{\"x\":0,\"y\":0,\"w\":25,\"h\":15,\"i\":\"2\"},\"id\":\"f2b70030-c11a-11e8-b274-fbb68ba254a6\",\"panelIndex\":\"2\",\"title\":\"Number of Flows\",\"type\":\"visualization\",\"version\":\"6.4.1\"},{\"gridData\":{\"x\":0,\"y\":15,\"w\":48,\"h\":19,\"i\":\"4\"},\"version\":\"6.4.1\",\"panelIndex\":\"4\",\"type\":\"search\",\"id\":\"af013dc0-c8da-11e8-97f7-15a796350190\",\"embeddableConfig\":{},\"title\":\"Flow Logs\"}]",
@@ -173,7 +173,7 @@
     "type": "dashboard",
     "version": "WzE2LDFd",
     "attributes": {
-      "title": "Calico Enterprise Audit Logs",
+      "title": "Calico Audit Logs",
       "hits": 0,
       "description": "",
       "panelsJSON": "[{\"embeddableConfig\":{},\"gridData\":{\"h\":9,\"i\":\"1\",\"w\":48,\"x\":0,\"y\":0},\"id\":\"4de4f080-c11a-11e8-b274-fbb68ba254a6\",\"panelIndex\":\"1\",\"type\":\"visualization\",\"version\":\"6.4.1\"},{\"embeddableConfig\":{},\"gridData\":{\"h\":21,\"i\":\"2\",\"w\":48,\"x\":0,\"y\":9},\"id\":\"92b22970-c8dc-11e8-97f7-15a796350190\",\"panelIndex\":\"2\",\"type\":\"search\",\"version\":\"6.4.1\"}]",

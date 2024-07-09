@@ -154,7 +154,7 @@
       "optionsJSON": "{\"useMargins\":true,\"hidePanelTitles\":false}",
       "panelsJSON": "[{\"version\":\"7.3.2\",\"type\":\"search\",\"gridData\":{\"x\":0,\"y\":15,\"w\":48,\"h\":16,\"i\":\"1\"},\"panelIndex\":\"1\",\"embeddableConfig\":{\"enhancements\":{}},\"panelRefName\":\"panel_1\"},{\"version\":\"7.3.2\",\"type\":\"visualization\",\"gridData\":{\"x\":32,\"y\":0,\"w\":16,\"h\":15,\"i\":\"2\"},\"panelIndex\":\"2\",\"embeddableConfig\":{\"enhancements\":{}},\"panelRefName\":\"panel_2\"},{\"version\":\"7.3.2\",\"type\":\"visualization\",\"gridData\":{\"x\":0,\"y\":0,\"w\":18,\"h\":15,\"i\":\"3\"},\"panelIndex\":\"3\",\"embeddableConfig\":{\"enhancements\":{}},\"panelRefName\":\"panel_3\"},{\"version\":\"7.3.2\",\"type\":\"visualization\",\"gridData\":{\"x\":18,\"y\":0,\"w\":14,\"h\":15,\"i\":\"4\"},\"panelIndex\":\"4\",\"embeddableConfig\":{\"enhancements\":{}},\"panelRefName\":\"panel_4\"}]",
       "timeRestore": false,
-      "title": "Calico Enterprise Tor-VPN Logs",
+      "title": "Calico Tor-VPN Logs",
       "version": 1
     },
     "coreMigrationVersion": "7.17.5",
