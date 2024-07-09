@@ -252,6 +252,16 @@ func (m nftMatch) NotConntrackState(stateNames string) generictables.MatchCriter
 	return m
 }
 
+func (m nftMatch) ConntrackOrigDstPort(port uint16) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("ct original proto-dst %v", port))
+	return m
+}
+
+func (m nftMatch) ConntrackOrigDst(dst string) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("ct original daddr %v", dst))
+	return m
+}
+
 func (m nftMatch) Protocol(name string) generictables.MatchCriteria {
 	if m.proto != "" {
 		logrus.WithField("protocol", m.proto).Fatal("Protocol already set")

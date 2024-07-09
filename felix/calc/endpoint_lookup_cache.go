@@ -27,12 +27,10 @@ const (
 	endpointDataTTLAfterMarkedAsRemovedSeconds = 2 * config.DefaultConntrackPollingInterval
 )
 
-var (
-	gaugeEndpointCacheLength = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "felix_collector_lookupcache_endpoints",
-		Help: "Total number of entries currently residing in the endpoints lookup cache.",
-	})
-)
+var gaugeEndpointCacheLength = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "felix_collector_lookupcache_endpoints",
+	Help: "Total number of entries currently residing in the endpoints lookup cache.",
+})
 
 func init() {
 	prometheus.MustRegister(gaugeEndpointCacheLength)

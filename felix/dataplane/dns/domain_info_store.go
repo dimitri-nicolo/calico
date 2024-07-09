@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package dns
 
 // Component interactions with the DomainInfoStore.
 //
@@ -412,7 +412,7 @@ func (s *DomainInfoStore) Start() {
 	}
 
 	// Ensure that the directory for the persistent file exists.
-	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {
+	if err := os.MkdirAll(path.Dir(s.saveFile), 0o755); err != nil {
 		log.WithError(err).Fatal("Failed to create persistent file dir")
 	}
 

@@ -24,10 +24,8 @@ import (
 	"github.com/projectcalico/calico/felix/stringutils"
 )
 
-func gotoEndpointChain(pfx, name string) Action {
-	return GotoAction{
-		Target: EndpointChainName(pfx, name),
-	}
+func (r *DefaultRuleRenderer) gotoEndpointChain(pfx, name string) generictables.Action {
+	return r.GoTo(EndpointChainName(pfx, name, r.maxNameLength))
 }
 
 func (r *DefaultRuleRenderer) WorkloadDispatchChains(
@@ -41,7 +39,7 @@ func (r *DefaultRuleRenderer) WorkloadDispatchChains(
 	}
 
 	// If there is no policy at all for a workload endpoint, we don't allow any traffic through it.
-	endRules := r.DropRules(Match(), "Unknown interface")
+	endRules := r.DropRules(r.NewMatch(), "Unknown interface")
 	return r.interfaceNameDispatchChains(
 		names,
 		WorkloadFromEndpointPfx,
@@ -50,7 +48,7 @@ func (r *DefaultRuleRenderer) WorkloadDispatchChains(
 		ChainToWorkloadDispatch,
 		endRules,
 		endRules,
-		gotoEndpointChain,
+		r.gotoEndpointChain,
 	)
 }
 
@@ -100,17 +98,17 @@ func (r *DefaultRuleRenderer) WorkloadInterfaceAllowChains(
 func (r *DefaultRuleRenderer) WorkloadRPFDispatchChains(
 	ipVersion uint8,
 	gatewayInterfaceNames []string,
-) []*Chain {
+) []*generictables.Chain {
 	log.WithField("numGateways", len(gatewayInterfaceNames)).Debug("Rendering workload RPF dispatch chains")
 
 	// Send workload traffic to a specific chain to skip the rpf check for some workloads
-	eofRules := []Rule{{
+	eofRules := []generictables.Rule{{
 		// Check if from-wl traffic should skip rpf
-		Action: JumpAction{Target: ChainRpfSkip},
+		Action: r.Jump(ChainRpfSkip),
 	}}
 	// By default, use RPF to prevent a workload from spoofing its source IP.
 	eofRules = append(eofRules,
-		r.RPFilter(ipVersion, 0, 0, r.OpenStackSpecialCasesEnabled, false)...)
+		r.RPFilter(ipVersion, 0, 0, r.OpenStackSpecialCasesEnabled)...)
 
 	// We can reuse WorkloadFromEndpointPfx and ChainFromWorkloadDispatch here because these
 	// chains are going into the raw table, where that prefix and chain name aren't otherwise
@@ -124,9 +122,7 @@ func (r *DefaultRuleRenderer) WorkloadRPFDispatchChains(
 		eofRules,
 		nil,
 		// For gateway interfaces, simply return (from ChainFromWorkloadDispatch).
-		func(pfx, name string) Action {
-			return ReturnAction{}
-		},
+		func(pfx, name string) generictables.Action { return r.Return() },
 	)
 }
 
@@ -257,7 +253,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			"",
 			fromEndRules,
 			toEndRules,
-			gotoEndpointChain,
+			r.gotoEndpointChain,
 		)
 	}
 
@@ -270,7 +266,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			ChainDispatchToHostEndpoint,
 			fromEndRules,
 			toEndRules,
-			gotoEndpointChain,
+			r.gotoEndpointChain,
 		)
 	}
 
@@ -283,7 +279,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			ChainDispatchToHostEndpoint,
 			fromEndRules,
 			toEndRules,
-			gotoEndpointChain,
+			r.gotoEndpointChain,
 		)
 	}
 
@@ -296,7 +292,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			ChainDispatchToHostEndpoint,
 			fromEndRules,
 			toEndRules,
-			gotoEndpointChain,
+			r.gotoEndpointChain,
 		),
 		r.interfaceNameDispatchChains(
 			names,
@@ -306,7 +302,7 @@ func (r *DefaultRuleRenderer) hostDispatchChains(
 			ChainDispatchToHostEndpointForward,
 			fromEndForwardRules,
 			toEndForwardRules,
-			gotoEndpointChain,
+			r.gotoEndpointChain,
 		)...,
 	)
 }
@@ -319,7 +315,7 @@ func (r *DefaultRuleRenderer) interfaceNameDispatchChains(
 	dispatchToEndpointChainName string,
 	fromEndRules []generictables.Rule,
 	toEndRules []generictables.Rule,
-	perEndpointFn func(pfx, name string) Action,
+	perEndpointFn func(pfx, name string) generictables.Action,
 ) (chains []*generictables.Chain) {
 	log.WithField("ifaceNames", names).Debug("Rendering endpoint dispatch chains")
 

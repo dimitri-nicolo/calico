@@ -65,7 +65,7 @@ func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []generict
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + r.wildcard
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Match:  r.NewMatch().InInterface(ifaceMatch),
 				Action: r.Jump(ChainFromWorkloadDispatch),
 			},
@@ -74,9 +74,9 @@ func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []generict
 
 	// Accept packet if policies above set ACCEPT mark.
 	rules = append(rules,
-		Rule{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept), // CASEY TODO
-			Action:  r.IptablesFilterAllowAction,                         // CASEY TODO
+		generictables.Rule{
+			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Action:  r.filterAllowAction,
 			Comment: []string{"Policy explicitly accepted packet."},
 		},
 	)
@@ -92,7 +92,7 @@ func (r *DefaultRuleRenderer) tproxyOutputPolicyRules(ipVersion uint8) []generic
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + r.wildcard
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Match:  r.NewMatch().OutInterface(ifaceMatch),
 				Action: r.Jump(ChainToWorkloadDispatch),
 			},
@@ -114,7 +114,7 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*generi
 	}
 	if r.TPROXYModeEnabled() && !r.BPFEnabled {
 		result = append(result,
-			&Chain{
+			&generictables.Chain{
 				Name:  ChainFilterInputTProxy,
 				Rules: r.tproxyInputPolicyRules(ipVersion),
 			})
@@ -126,7 +126,7 @@ func (r *DefaultRuleRenderer) acceptAlreadyAccepted() []generictables.Rule {
 	return []generictables.Rule{
 		{
 			Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
-			Action: r.IptablesFilterAllowAction,
+			Action: r.filterAllowAction,
 		},
 	}
 }
@@ -264,7 +264,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *gene
 		// for further processing.
 		generictables.Rule{
 			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
-			Action:  r.IptablesFilterAllowAction,
+			Action:  r.filterAllowAction,
 			Comment: []string{"Policy explicitly accepted packet."},
 		},
 	)
@@ -321,10 +321,10 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 	if r.TPROXYModeEnabled() {
 		mark := r.IptablesMarkProxy
 		inputRules = append(inputRules,
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Police packets towards proxy"},
 				Match:   r.NewMatch().MarkMatchesWithMask(mark, mark),
-				Action:  JumpAction{Target: ChainFilterInputTProxy},
+				Action:  r.Jump(ChainFilterInputTProxy),
 			},
 		)
 	}
@@ -355,12 +355,12 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 				Match: r.NewMatch().ProtocolNum(ProtoIPIP).
 					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					DestAddrType(generictables.AddrTypeLocal),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPIP packets from Calico hosts"},
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoIPIP), fmt.Sprintf("%s IPIP packets from non-Calico hosts", r.IptablesFilterDenyAction()))...,
+			r.DropRules(r.NewMatch().ProtocolNum(ProtoIPIP), fmt.Sprintf("%s IPIP packets from non-Calico hosts", r.IptablesFilterDenyAction()))...,
 		)
 	}
 
@@ -370,29 +370,29 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 		// number for ESP packets rather than its name because the name is not guaranteed to be known by the kernel.
 		// For IKE packets, only port 500 is used since there can be no NAT between the hosts.
 		inputRules = append(inputRules,
-			Rule{
+			generictables.Rule{
 				Match: r.NewMatch().ProtocolNum(ProtoESP).
 					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
-					DestAddrType(AddrTypeLocal),
-				Action:  r.IptablesFilterAllowAction,
+					DestAddrType(generictables.AddrTypeLocal),
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPSec ESP packets from Calico hosts"},
 			},
 		)
 		inputRules = append(inputRules,
-			Rule{
+			generictables.Rule{
 				Match: r.NewMatch().ProtocolNum(ProtoUDP).
 					DestPorts(PortIKE).
 					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
-					DestAddrType(AddrTypeLocal),
-				Action:  r.IptablesFilterAllowAction,
+					DestAddrType(generictables.AddrTypeLocal),
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPSec IKEv2 packets from Calico hosts"},
 			},
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoESP), fmt.Sprintf("%s IPSec ESP packets from non-Calico hosts", r.IptablesFilterDenyAction()))...,
+			r.DropRules(r.NewMatch().ProtocolNum(ProtoESP), fmt.Sprintf("%s IPSec ESP packets from non-Calico hosts", r.IptablesFilterDenyAction()))...,
 		)
 		inputRules = append(inputRules,
-			r.DropRules(Match().ProtocolNum(ProtoUDP).DestPorts(PortIKE),
+			r.DropRules(r.NewMatch().ProtocolNum(ProtoUDP).DestPorts(PortIKE),
 				fmt.Sprintf("%s IPSec IKE packets from non-Calico hosts", r.IptablesFilterDenyAction()))...,
 		)
 	}
@@ -406,7 +406,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 					DestPorts(uint16(r.Config.VXLANPort)).
 					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllVXLANSourceNets)).
 					DestAddrType(generictables.AddrTypeLocal),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPv4 VXLAN packets from allowed hosts"},
 			},
 			generictables.Rule{
@@ -428,7 +428,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 					DestPorts(uint16(r.Config.VXLANPort)).
 					SourceIPSet(r.IPSetConfigV6.NameForMainIPSet(IPSetIDAllVXLANSourceNets)).
 					DestAddrType(generictables.AddrTypeLocal),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPv6 VXLAN packets from allowed hosts"},
 			},
 			generictables.Rule{
@@ -441,26 +441,26 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 		)
 	}
 
-	inputRules = append(inputRules, r.FilterInputChainAllowWG(ipVersion, r.Config, r.IptablesFilterAllowAction)...)
+	inputRules = append(inputRules, r.FilterInputChainAllowWG(ipVersion, r.Config, r.filterAllowAction)...)
 
 	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
 		// Auto-allow VXLAN traffic destined to egress.calico.
 		// Such traffic has destination of the local host and expected udp port.
 		// Therefore we need to explicitly accept it in INPUT chain.
 		inputRules = append(inputRules,
-			Rule{
+			generictables.Rule{
 				Match: r.NewMatch().ProtocolNum(ProtoUDP).
 					DestPorts(uint16(r.Config.EgressIPVXLANPort)).
-					DestAddrType(AddrTypeLocal),
-				Action:  r.IptablesFilterAllowAction,
+					DestAddrType(generictables.AddrTypeLocal),
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow VXLAN UDP traffic to egress clients"},
 			},
 		)
 		// Auto-allow egress gateways health probes.
-		inputRules = append(inputRules, Rule{
-			Match: r.NewMatch().ProtocolNum(ProtoTCP).DestAddrType(AddrTypeLocal).SourceIPPortSet(
+		inputRules = append(inputRules, generictables.Rule{
+			Match: r.NewMatch().ProtocolNum(ProtoTCP).DestAddrType(generictables.AddrTypeLocal).SourceIPPortSet(
 				r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllEGWHealthPorts)),
-			Action:  r.IptablesFilterAllowAction,
+			Action:  r.filterAllowAction,
 			Comment: []string{"Accept egress gateway health port probe traffic"},
 		})
 
@@ -508,7 +508,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 		},
 		generictables.Rule{
 			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
-			Action:  r.IptablesFilterAllowAction,
+			Action:  r.filterAllowAction,
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
 	)
@@ -552,7 +552,7 @@ func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *generi
 	var rules []generictables.Rule
 
 	if ipVersion == 6 {
-		rules = r.ICMPv6Filter(r.IptablesFilterAllowAction)
+		rules = r.ICMPv6Filter(r.filterAllowAction)
 	}
 
 	if r.OpenStackSpecialCasesEnabled {
@@ -569,7 +569,7 @@ func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *generi
 					Protocol("tcp").
 					DestNet(r.OpenStackMetadataIP.String()).
 					DestPorts(r.OpenStackMetadataPort),
-				Action: r.IptablesFilterAllowAction,
+				Action: r.filterAllowAction,
 			})
 		}
 
@@ -589,13 +589,13 @@ func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *generi
 					Protocol("udp").
 					SourcePorts(dhcpSrcPort).
 					DestPorts(dhcpDestPort),
-				Action: r.IptablesFilterAllowAction,
+				Action: r.filterAllowAction,
 			},
 			generictables.Rule{
 				Match: r.NewMatch().
 					Protocol("udp").
 					DestPorts(dnsDestPort),
-				Action: r.IptablesFilterAllowAction,
+				Action: r.filterAllowAction,
 			},
 		)
 	}
@@ -756,19 +756,19 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string, ipVersion uint8) *g
 	}
 }
 
-func (r *DefaultRuleRenderer) filterFromHEP(ipVersion uint8) []Rule {
-	return []Rule{
+func (r *DefaultRuleRenderer) filterFromHEP(ipVersion uint8) []generictables.Rule {
+	return []generictables.Rule{
 		{
 			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
 			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
 			// Similarly, the IPsec bit is used across multiple tables.
-			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)},
+			Action: r.ClearMark(r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)),
 		},
 		{
 			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
 			// was not accepted in a previous raw or pre-DNAT chain.
 			Match:  r.NewMatch().MarkClear(r.IptablesMarkAccept),
-			Action: JumpAction{Target: ChainDispatchFromHostEndPointForward},
+			Action: r.Jump(ChainDispatchFromHostEndPointForward),
 		},
 	}
 }
@@ -776,7 +776,7 @@ func (r *DefaultRuleRenderer) filterFromHEP(ipVersion uint8) []Rule {
 func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*generictables.Chain {
 	rules := []generictables.Rule{}
 
-	// Rules for filter forward chains dispatches the packet to our dispatch chains if it is going
+	// generictables.Rules for filter forward chains dispatches the packet to our dispatch chains if it is going
 	// to/from an interface that we're responsible for.  Note: the dispatch chains represent "allow"
 	// by returning to this chain for further processing; this is required to handle traffic that
 	// is going between endpoints on the same host.  In that case we need to apply the egress policy
@@ -838,7 +838,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*gene
 	}}
 }
 
-func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []Rule) {
+func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []generictables.Rule) {
 	for _, server := range r.DNSTrustedServers {
 		if (ipVersion == 4) && strings.Contains(server.IP, ":") {
 			continue
@@ -846,7 +846,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 		if (ipVersion == 6) && !strings.Contains(server.IP, ":") {
 			continue
 		}
-		var baseMatch MatchCriteria
+		var baseMatch generictables.MatchCriteria
 		if ifaceMatch != "" {
 			// DNS response FORWARD/OUTPUT to Calico-networked client workload: match on workload prefix.
 			baseMatch = r.NewMatch().OutInterface(ifaceMatch)
@@ -857,18 +857,18 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 		if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && r.Config.DNSPacketsNfqueueID != 0 {
 			// We are delaying the DNS response by queueing the response packet.
 			rules = append(rules,
-				Rule{
+				generictables.Rule{
 					Match: baseMatch.Protocol("udp").
 						ConntrackState("ESTABLISHED").
 						ConntrackOrigDstPort(server.Port).
 						ConntrackOrigDst(server.IP),
-					Action: NfqueueWithBypassAction{QueueNum: r.Config.DNSPacketsNfqueueID},
+					Action: r.NfqueueWithBypass(r.Config.DNSPacketsNfqueueID),
 				},
 			)
 		} else {
 			// We are not delaying the DNS response, so just add an NFLOG rule to snoop responses.
 			rules = append(rules,
-				Rule{
+				generictables.Rule{
 					Match: baseMatch.Protocol("udp").
 						ConntrackState("ESTABLISHED").
 						ConntrackOrigDstPort(server.Port).
@@ -888,7 +888,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 
 // Similar rules for snooping DNS requests, which we do only so that we can access the timestamp on
 // each request and hence calculate the latency of each DNS request/response pair.
-func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []Rule) {
+func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []generictables.Rule) {
 	for _, server := range r.DNSTrustedServers {
 		if (ipVersion == 4) && strings.Contains(server.IP, ":") {
 			continue
@@ -896,7 +896,7 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 		if (ipVersion == 6) && !strings.Contains(server.IP, ":") {
 			continue
 		}
-		var baseMatch MatchCriteria
+		var baseMatch generictables.MatchCriteria
 		if ifaceMatch != "" {
 			// DNS request FORWARD/INPUT from a Calico-networked client workload: match on workload prefix.
 			baseMatch = r.NewMatch().InInterface(ifaceMatch)
@@ -905,7 +905,7 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 			baseMatch = r.NewMatch()
 		}
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Match: baseMatch.Protocol("udp").
 					ConntrackState("NEW").
 					ConntrackOrigDstPort(server.Port).
@@ -928,7 +928,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardAppendRules() []generictables.R
 	return []generictables.Rule{
 		{
 			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
-			Action:  r.IptablesFilterAllowAction,
+			Action:  r.filterAllowAction,
 			Comment: []string{"Policy explicitly accepted packet."},
 		},
 		// Set IptablesMarkAccept bit here, to indicate to our mangle-POSTROUTING chain that this is
@@ -952,7 +952,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*gener
 
 	if r.TPROXYModeEnabled() && !r.BPFEnabled {
 		result = append(result,
-			&Chain{
+			&generictables.Chain{
 				Name:  ChainFilterOutputTProxy,
 				Rules: r.tproxyOutputPolicyRules(ipVersion),
 			})
@@ -966,13 +966,13 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 
 	if r.TPROXYModeEnabled() {
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Police packets from proxy"},
 				// Atm any traffic from local host that does not have a local source.
 				// XXX that would not work well for nodeports if we let proxy to use local
 				// XXX source instead of passing it through MASQUERADE
-				Match:  r.NewMatch().NotSrcAddrType(AddrTypeLocal, false),
-				Action: JumpAction{Target: ChainFilterOutputTProxy},
+				Match:  r.NewMatch().NotSrcAddrType(generictables.AddrTypeLocal, false),
+				Action: r.Jump(ChainFilterOutputTProxy),
 			},
 		)
 	}
@@ -1031,7 +1031,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 				Match: r.NewMatch().ProtocolNum(ProtoIPIP).
 					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					SrcAddrType(generictables.AddrTypeLocal, false),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPIP packets to other Calico hosts"},
 			},
 		)
@@ -1047,7 +1047,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 					DestPorts(uint16(r.Config.VXLANPort)).
 					SrcAddrType(generictables.AddrTypeLocal, false).
 					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllVXLANSourceNets)),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPv4 VXLAN packets to other allowed hosts"},
 			},
 		)
@@ -1057,22 +1057,22 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 		// When Egress IP is enabled, auto-allow VXLAN traffic to egress gateways with source IP
 		// as host IP.
 		match := r.NewMatch().ProtocolNum(ProtoUDP)
-		match = match.SrcAddrType(AddrTypeLocal, false)
+		match = match.SrcAddrType(generictables.AddrTypeLocal, false)
 		match = match.
 			DestPorts(
 				uint16(r.Config.EgressIPVXLANPort), // egress.calico
 			)
-		rules = append(rules, Rule{
+		rules = append(rules, generictables.Rule{
 			Match:   match,
-			Action:  r.IptablesFilterAllowAction,
+			Action:  r.filterAllowAction,
 			Comment: []string{"Accept VXLAN UDP traffic from egress clients"},
 		})
 
 		// Auto-allow HTTP traffic to the egress gateways health ports.
-		rules = append(rules, Rule{
-			Match: r.NewMatch().ProtocolNum(ProtoTCP).SrcAddrType(AddrTypeLocal, false).DestIPPortSet(
+		rules = append(rules, generictables.Rule{
+			Match: r.NewMatch().ProtocolNum(ProtoTCP).SrcAddrType(generictables.AddrTypeLocal, false).DestIPPortSet(
 				r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllEGWHealthPorts)),
-			Action:  r.IptablesFilterAllowAction,
+			Action:  r.filterAllowAction,
 			Comment: []string{"Accept egress gateway health port probe traffic"},
 		})
 	}
@@ -1087,7 +1087,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 					DestPorts(uint16(r.Config.VXLANPort)).
 					SrcAddrType(generictables.AddrTypeLocal, false).
 					DestIPSet(r.IPSetConfigV6.NameForMainIPSet(IPSetIDAllVXLANSourceNets)),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPv6 VXLAN packets to other allowed hosts"},
 			},
 		)
@@ -1098,22 +1098,22 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 		// it's too easy to make a host policy that blocks IPSec traffic, resulting in very confusing
 		// connectivity problems.
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Match: r.NewMatch().ProtocolNum(ProtoESP).
 					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
-					SrcAddrType(AddrTypeLocal, false),
-				Action:  r.IptablesFilterAllowAction,
+					SrcAddrType(generictables.AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPSec ESP packets to other Calico hosts"},
 			},
 		)
 
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Match: r.NewMatch().ProtocolNum(ProtoUDP).
 					DestPorts(PortIKE).
 					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
-					SrcAddrType(AddrTypeLocal, false),
-				Action:  r.IptablesFilterAllowAction,
+					SrcAddrType(generictables.AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow IPSec IKE packets to other Calico hosts"},
 			},
 		)
@@ -1130,7 +1130,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 					// Note that we do not need to limit the destination hosts to Calico nodes because allowed peers are
 					// programmed separately
 					SrcAddrType(generictables.AddrTypeLocal, false),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow outgoing IPv4 Wireguard packets"},
 			},
 		)
@@ -1147,7 +1147,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 					// Note that we do not need to limit the destination hosts to Calico nodes because allowed peers are
 					// programmed separately
 					SrcAddrType(generictables.AddrTypeLocal, false),
-				Action:  r.IptablesFilterAllowAction,
+				Action:  r.filterAllowAction,
 				Comment: []string{"Allow outgoing IPv6 Wireguard packets"},
 			},
 		)
@@ -1177,7 +1177,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 		},
 		generictables.Rule{
 			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
-			Action:  r.IptablesFilterAllowAction,
+			Action:  r.filterAllowAction,
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
 	)
@@ -1221,33 +1221,30 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*gene
 	}}
 
 	if ipVersion == 4 && r.EgressIPEnabled {
-		var egressRules []Rule
+		var egressRules []generictables.Rule
 
 		// Set mark on first packet from a pod to destinations other than pod or host.
 		egressRules = append(egressRules,
-			Rule{
+			generictables.Rule{
 				Match: r.NewMatch().
 					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
 					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
 					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)),
-				Action: SetMaskedMarkAction{
-					Mark: r.IptablesMarkEgress,
-					Mask: r.IptablesMarkEgress,
-				},
+				Action:  r.SetMaskedMark(r.IptablesMarkEgress, r.IptablesMarkEgress),
 				Comment: []string{"Set mark for egress packet"},
 			},
 		)
 
 		// Save mark to connmark which is used to be restored for subsequent packets in the same connection.
 		egressRules = append(egressRules,
-			Rule{
+			generictables.Rule{
 				Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkEgress),
-				Action:  SaveConnMarkAction{SaveMask: r.IptablesMarkEgress},
+				Action:  r.SaveConnMark(r.IptablesMarkEgress),
 				Comment: []string{"Save mark for egress connection"},
 			},
 		)
 
-		chains = append(chains, &Chain{Name: ChainNATPreroutingEgress, Rules: egressRules})
+		chains = append(chains, &generictables.Chain{Name: ChainNATPreroutingEgress, Rules: egressRules})
 	}
 
 	return chains
@@ -1356,7 +1353,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		// Prerouting chain for egress ip
 		// Restore ConnMark for pod traffic.
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Match:   r.NewMatch().SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)),
 				Action:  r.RestoreConnMark(r.IptablesMarkEgress),
 				Comment: []string{"Restore connmark for pod traffic"},
@@ -1419,29 +1416,29 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			{
 				Comment: []string{"Accept packets destined to proxy on existing connection"},
 				Match:   r.NewMatch().MarkMatchesWithMask(mark, mark),
-				Action:  r.Accept(), // No further processing to match TPROXY behavior.
+				Action:  r.Allow(), // No further processing to match TPROXY behavior.
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyEstabl, Rules: tproxyEstablRules})
+		chains = append(chains, &generictables.Chain{Name: ChainManglePreroutingTProxyEstabl, Rules: tproxyEstablRules})
 
-		tproxyRules := []Rule{
+		tproxyRules := []generictables.Rule{
 			{
 				Comment: []string{"Mark the connection so that subsequent packets go to proxy"},
-				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+				Action:  r.SetConnmark(mark, mark),
 			},
 			{
 				Comment: []string{"Divert the TCP connection to proxy"},
 				Match:   r.NewMatch().Protocol("tcp"),
-				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort)},
+				Action:  r.TProxy(mark, mark, uint16(r.TPROXYPort)),
 			},
 			{
 				Comment: []string{"Unmark non-proxied"},
-				Action:  SetConnMarkAction{Mark: 0, Mask: mark},
+				Action:  r.SetConnmark(0, mark),
 			},
 		}
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxySvc, Rules: tproxyRules})
+		chains = append(chains, &generictables.Chain{Name: ChainManglePreroutingTProxySvc, Rules: tproxyRules})
 
 		nameForIPSet := func(ipsetID string) string {
 			if ipVersion == 4 {
@@ -1451,29 +1448,29 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			}
 		}
 
-		chains = append(chains, &Chain{
+		chains = append(chains, &generictables.Chain{
 			Name: ChainManglePreroutingTProxySelect,
-			Rules: []Rule{
+			Rules: []generictables.Rule{
 				{
 					Comment: []string{"Proxy selected services"},
 					Match:   r.NewMatch().DestIPPortSet(nameForIPSet(tproxydefs.ServiceIPsIPSet)),
-					Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
+					Action:  r.Jump(ChainManglePreroutingTProxySvc),
 				},
 				{
 					Comment: []string{"Proxy selected pods"},
 					Match: r.NewMatch().
 						Protocol("tcp").
 						DestIPSet(nameForIPSet(tproxydefs.ApplicationLayerPolicyIPSet)),
-					Action: JumpAction{Target: ChainManglePreroutingTProxySvc},
+					Action: r.Jump(ChainManglePreroutingTProxySvc),
 				},
 				{
 					Comment: []string{"Proxy selected nodeports"},
 					Match: r.NewMatch().
 						Protocol("tcp").
-						DestAddrType(AddrTypeLocal).
+						DestAddrType(generictables.AddrTypeLocal).
 						// We use a single port ipset for both V4 and V6
 						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet(tproxydefs.NodePortsIPSet)),
-					Action: JumpAction{Target: ChainManglePreroutingTProxyNP},
+					Action: r.Jump(ChainManglePreroutingTProxyNP),
 				},
 			},
 		})
@@ -1481,72 +1478,72 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		tproxyRules = nil
 
 		if r.KubernetesProvider == config.ProviderEKS && r.EKSPrimaryENI != "" {
-			tproxyRules = []Rule{{
+			tproxyRules = []generictables.Rule{{
 				Comment: []string{"Set the EKS nodeport mark that we bypass"},
 				Match: r.NewMatch().
 					InInterface(r.EKSPrimaryENI).
-					DestAddrTypeLimitIfaceIn(AddrTypeLocal),
-				Action: SetConnMarkAction{Mark: 0x80, Mask: 0x80},
+					DestAddrTypeLimitIfaceIn(generictables.AddrTypeLocal),
+				Action: r.SetConnmark(0x80, 0x80),
 			}}
 		}
 
 		tproxyRules = append(tproxyRules,
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Divert the TCP connection to proxy"},
-				Match:   r.NewMatch().Protocol("tcp").DestAddrType(AddrTypeLocal),
-				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+				Match:   r.NewMatch().Protocol("tcp").DestAddrType(generictables.AddrTypeLocal),
+				Action:  r.TProxy(mark, mark, uint16(r.TPROXYPort+1)),
 			},
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Divert the TCP connection to proxy"},
-				Match:   r.NewMatch().Protocol("udp").DestAddrType(AddrTypeLocal),
-				Action:  TProxyAction{Mark: mark, Mask: mark, Port: uint16(r.TPROXYPort + 1)},
+				Match:   r.NewMatch().Protocol("udp").DestAddrType(generictables.AddrTypeLocal),
+				Action:  r.TProxy(mark, mark, uint16(r.TPROXYPort+1)),
 			},
 		)
 
-		chains = append(chains, &Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
+		chains = append(chains, &generictables.Chain{Name: ChainManglePreroutingTProxyNP, Rules: tproxyRules})
 
 		upMark := r.TPROXYUpstreamConnMark
 
-		rules := []Rule{
+		rules := []generictables.Rule{
 			{
 				// Proxied connections for regular services do not have
 				// local source nor destination. This is how we can easily
 				// identify the upstream part and mark it.
 				Comment: []string{"Mark any non-local connection as local for return"},
-				Action:  SetConnMarkAction{Mark: mark, Mask: mark},
+				Action:  r.SetConnmark(mark, mark),
 			},
 			{
 				Comment: []string{"Save tproxy upstream mark in conntrack if set"},
 				// XXX use the same mark in conntrack for now
 				Match:  r.NewMatch().MarkMatchesWithMask(upMark, upMark),
-				Action: SetConnMarkAction{Mark: upMark, Mask: upMark},
+				Action: r.SetConnmark(upMark, upMark),
 			},
 			{
 				// Proxied connections that are pod-to-self need to be masqueraded
 				Comment: []string{"MASQ proxied pod-service-self"},
 				Match:   r.NewMatch().SourceDestSet(nameForIPSet(tproxydefs.PodSelf)),
-				Action:  SetMaskedMarkAction{Mark: r.KubeMasqueradeMark, Mask: r.KubeMasqueradeMark},
+				Action:  r.SetMaskedMark(r.KubeMasqueradeMark, r.KubeMasqueradeMark),
 			},
 		}
 
 		if r.KubernetesProvider == config.ProviderEKS {
-			rules = append(rules, Rule{
+			rules = append(rules, generictables.Rule{
 				Comment: []string{"Restore EKS nodeport routing mark"},
-				Action:  RestoreConnMarkAction{RestoreMask: 0x80},
+				Action:  r.RestoreConnMark(0x80),
 			})
 		}
 
-		chains = append(chains, &Chain{
+		chains = append(chains, &generictables.Chain{
 			Name:  ChainMangleOutputTProxy,
 			Rules: rules,
 		})
 
-		rules = []Rule{
+		rules = []generictables.Rule{
 			{
 				Comment: []string{"Restore tproxy upstream mark in conntrack if not set"},
 				// XXX use the same mark in conntrack for now
 				Match:  r.NewMatch().MarkClear(upMark),
-				Action: RestoreConnMarkAction{RestoreMask: upMark},
+				Action: r.RestoreConnMark(upMark),
 			},
 			{
 				// If it is upstream and from local address, it means it is
@@ -1554,11 +1551,11 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				// to the proxy on the local host.
 				Comment: []string{"If upstream and from local address, accept it"},
 				Match:   r.NewMatch().MarkMatchesWithMask(upMark, upMark).ConntrackState("RELATED,ESTABLISHED"),
-				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
+				Action:  r.Jump(ChainManglePreroutingTProxyEstabl),
 			},
 		}
 
-		chains = append(chains, &Chain{
+		chains = append(chains, &generictables.Chain{
 			Name:  ChainMangleOutputTProxyHostNet,
 			Rules: rules,
 		})
@@ -1581,10 +1578,10 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *gene
 	// First check if the connection is being proxied.
 	if r.TPROXYModeEnabled() {
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Check if should be proxied when established"},
 				Match:   r.NewMatch().ConntrackState("RELATED,ESTABLISHED"),
-				Action:  JumpAction{Target: ChainManglePreroutingTProxyEstabl},
+				Action:  r.Jump(ChainManglePreroutingTProxyEstabl),
 			},
 		)
 	}
@@ -1635,7 +1632,7 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *gene
 
 	if r.TPROXYModeEnabled() {
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Check if it is a new connection to be proxied"},
 				Action:  r.Jump(ChainManglePreroutingTProxySelect),
 			},
@@ -1653,20 +1650,20 @@ func (r *DefaultRuleRenderer) StaticMangleOutputChain(ipVersion uint8) *generict
 
 	if r.TPROXYModeEnabled() {
 		rules = append(rules,
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Process non-local connections as proxied"},
-				Match:   r.NewMatch().NotSrcAddrType(AddrTypeLocal, false),
+				Match:   r.NewMatch().NotSrcAddrType(generictables.AddrTypeLocal, false),
 				Action:  r.Jump(ChainMangleOutputTProxy),
 			},
-			Rule{
+			generictables.Rule{
 				Comment: []string{"Check local connections for host networked workloads"},
-				Match:   r.NewMatch().SrcAddrType(AddrTypeLocal, false),
+				Match:   r.NewMatch().SrcAddrType(generictables.AddrTypeLocal, false),
 				Action:  r.Jump(ChainMangleOutputTProxyHostNet),
 			},
 		)
 	}
 
-	return &Chain{
+	return &generictables.Chain{
 		Name:  ChainMangleOutput,
 		Rules: rules,
 	}
@@ -1760,8 +1757,6 @@ func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*genericta
 		r.WireguardIncomingMarkChain(),
 		r.StaticRawOutputChain(0, nil),
 	}
-
-	return staticRawChains
 }
 
 func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
@@ -1923,7 +1918,7 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 	}
 
 	if ipVersion == 4 && r.IptablesMarkIPsec != 0 {
-		rules = append(rules, Rule{
+		rules = append(rules, generictables.Rule{
 			Match:  r.NewMatch().MarkSingleBitSet(markFromWorkload),
 			Action: r.SetMark(r.IptablesMarkIPsec),
 		})
@@ -1951,7 +1946,7 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 		// spoof but privileged containers and VMs can.
 		//
 		rules = append(rules,
-			r.RPFilter(ipVersion, markFromWorkload, markFromWorkload, r.OpenStackSpecialCasesEnabled, false)...)
+			r.RPFilter(ipVersion, markFromWorkload, markFromWorkload, r.OpenStackSpecialCasesEnabled)...)
 	}
 
 	rules = append(rules,
@@ -1976,7 +1971,7 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 }
 
 // RPFilter returns rules that implement RPF
-func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled, acceptLocal bool) []generictables.Rule {
+func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled bool) []generictables.Rule {
 	rules := make([]generictables.Rule, 0, 2)
 
 	// For OpenStack, allow DHCP v4 packets with source 0.0.0.0.  These must be allowed before
@@ -2019,7 +2014,7 @@ func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openS
 		// Match on mark to check we're coming from a workload interface.
 		baseMatch = baseMatch.MarkMatchesWithMask(mark, mask)
 	}
-	rules = append(rules, r.DropRules(baseMatch.RPFCheckFailed(acceptLocal))...)
+	rules = append(rules, r.DropRules(baseMatch.RPFCheckFailed())...)
 
 	return rules
 }
@@ -2064,11 +2059,11 @@ func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *generictables.Chain 
 	}
 }
 
-func (r *DefaultRuleRenderer) nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs []config.ServerPort) []Rule {
-	rules := []Rule{}
+func (r *DefaultRuleRenderer) nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs []config.ServerPort) []generictables.Rule {
+	rules := []generictables.Rule{}
 
 	for _, server := range nodeLocalDNSAddrs {
-		dnsLocalIPRule := []Rule{
+		dnsLocalIPRule := []generictables.Rule{
 			{
 				Match: r.NewMatch().Protocol("udp").
 					DestPorts(server.Port).
@@ -2120,7 +2115,7 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, nodeLoca
 		rules = append(rules, []generictables.Rule{
 			{
 				Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
-				Action: r.Accept(),
+				Action: r.Allow(),
 			},
 		}...)
 	} else {
@@ -2131,7 +2126,7 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, nodeLoca
 			},
 			{
 				Match:  r.NewMatch().MarkMatchesWithMask(tcBypassMark, 0xffffffff),
-				Action: r.Accept(),
+				Action: r.Allow(),
 			},
 		}...)
 	}
@@ -2142,10 +2137,10 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, nodeLoca
 	}
 }
 
-func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config.ServerPort) []Rule {
-	rules := []Rule{}
+func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config.ServerPort) []generictables.Rule {
+	rules := []generictables.Rule{}
 	for _, server := range nodeLocalDNSAddrs {
-		dnsLocalIPRule := []Rule{
+		dnsLocalIPRule := []generictables.Rule{
 			{
 				Match: r.NewMatch().Protocol("udp").
 					SourcePorts(server.Port).
@@ -2181,12 +2176,12 @@ func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config
 //
 // If the original drop rules have MatchCriteria the matchCriteria is combined with the existing MatchCritera on the
 // rule.
-func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, comments ...string) []Rule {
-	rules := []Rule{}
+func (r DefaultRuleRenderer) DropRules(matchCriteria generictables.MatchCriteria, comments ...string) []generictables.Rule {
+	rules := []generictables.Rule{}
 
 	for _, rule := range r.dropRules {
 		if matchCriteria != nil {
-			rule.Match = Combine(rule.Match, matchCriteria)
+			rule.Match = r.CombineMatches(rule.Match, matchCriteria)
 		}
 		rule.Comment = comments
 		rules = append(rules, rule)
@@ -2197,12 +2192,12 @@ func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, comments ...
 
 // NfqueueRuleDelayDeniedPacket combines the matchCritera and comments given in the function parameters to the delay-denied packet
 // nfqueue rule calculated when the DefaultRenderer was constructed.
-func (r DefaultRuleRenderer) NfqueueRuleDelayDeniedPacket(matchCriteria MatchCriteria, comments ...string) *Rule {
+func (r DefaultRuleRenderer) NfqueueRuleDelayDeniedPacket(matchCriteria generictables.MatchCriteria, comments ...string) *generictables.Rule {
 	if r.nfqueueRuleDelayDeniedPacket != nil {
 		nfqueueRule := *r.nfqueueRuleDelayDeniedPacket
 
 		if matchCriteria != nil {
-			nfqueueRule.Match = Combine(nfqueueRule.Match, matchCriteria)
+			nfqueueRule.Match = r.CombineMatches(nfqueueRule.Match, matchCriteria)
 		}
 		nfqueueRule.Comment = comments
 

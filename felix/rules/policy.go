@@ -117,6 +117,7 @@ func (r *DefaultRuleRenderer) StagedPolicyNoMatchRule(dir RuleDir, name string) 
 		Action: r.Nflog(
 			nflogGroup,
 			CalculateNoMatchPolicyNFLOGPrefixStr(dir, name),
+			0,
 		),
 	}
 }
@@ -437,8 +438,8 @@ func (r *matchBlockBuilder) AppendDestIPSetMatchBlock(ipsetNames ...string) {
 	// Render the per-ipset rules.
 	for _, ipsetName := range ipsetNames {
 		r.Rules = append(r.Rules, generictables.Rule{
-			Match:  r.NewMatch().DestIPSet(ipsetName),
-			Action: r.SetMark(markToSet),
+			Match:  r.newMatch().DestIPSet(ipsetName),
+			Action: r.actions.SetMark(markToSet),
 		})
 	}
 
@@ -581,7 +582,7 @@ func SplitPortList(ports []*proto.PortRange) (splits [][]*proto.PortRange) {
 // the match given and actions calculated are combined into the returned set of rules.
 func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	pRule *proto.Rule,
-	match iptables.MatchCriteria,
+	match generictables.MatchCriteria,
 	owner RuleOwnerType,
 	dir RuleDir,
 	idx int,
@@ -627,6 +628,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 				Action: r.Nflog(
 					nflogGroup,
 					CalculateNFLOGPrefixStr(RuleActionAllow, owner, dir, idx, name),
+					0,
 				),
 			})
 		}
@@ -647,6 +649,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 				Action: r.Nflog(
 					nflogGroup,
 					CalculateNFLOGPrefixStr(RuleActionPass, owner, dir, idx, name),
+					0,
 				),
 			})
 		}
@@ -671,6 +674,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 				Action: r.Nflog(
 					nflogGroup,
 					CalculateNFLOGPrefixStr(RuleActionDeny, owner, dir, idx, name),
+					0,
 				),
 			})
 		}

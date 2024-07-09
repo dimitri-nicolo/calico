@@ -32,6 +32,15 @@ type ActionFactory interface {
 	Masq(toPorts string) Action
 	SetConnmark(mark, mask uint32) Action
 	Reject(with RejectWith) Action
+
+	// Enterprise only actions.
+	Nflog(group uint16, prefix string, size int) Action
+	Nfqueue(queue int64) Action
+	NfqueueWithBypass(queue int64) Action
+	SaveConnMark(saveMask uint32) Action
+	RestoreConnMark(restoreMask uint32) Action
+	Checksum() Action
+	TProxy(mark, mask uint32, port uint16) Action
 }
 
 type RejectWith string

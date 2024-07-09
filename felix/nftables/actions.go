@@ -110,6 +110,34 @@ func (s *actionSet) SetConnmark(mark, mask uint32) generictables.Action {
 	}
 }
 
+func (a *actionSet) Nflog(group uint16, prefix string, size int) generictables.Action {
+	panic("not implemented") // CASEY TODO: Implement
+}
+
+func (s *actionSet) Nfqueue(queue int64) generictables.Action {
+	panic("not implemented") // CASEY TODO: Implement
+}
+
+func (s *actionSet) NfqueueWithBypass(queue int64) generictables.Action {
+	panic("not implemented") // CASEY TODO: Implement
+}
+
+func (s *actionSet) SaveConnMark(saveMask uint32) generictables.Action {
+	return SaveConnMarkAction{SaveMask: saveMask}
+}
+
+func (s *actionSet) RestoreConnMark(restoreMask uint32) generictables.Action {
+	return RestoreConnMarkAction{RestoreMask: restoreMask}
+}
+
+func (s *actionSet) Checksum() generictables.Action {
+	panic("not implemented") // CASEY TODO: Implement
+}
+
+func (s *actionSet) TProxy(mark, mask uint32, port uint16) generictables.Action {
+	panic("not implemented") // CASEY TODO: Implement
+}
+
 type Referrer interface {
 	ReferencedChain() string
 }

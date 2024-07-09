@@ -95,6 +95,42 @@ func (s *actionFactory) SetConnmark(mark, mask uint32) generictables.Action {
 	}
 }
 
+func (s *actionFactory) Nflog(group uint16, prefix string, size int) generictables.Action {
+	return NflogAction{
+		Group:  group,
+		Prefix: prefix,
+		Size:   size,
+	}
+}
+
+func (s *actionFactory) Nfqueue(queue int64) generictables.Action {
+	return NfqueueAction{QueueNum: queue}
+}
+
+func (s *actionFactory) NfqueueWithBypass(queue int64) generictables.Action {
+	return NfqueueWithBypassAction{QueueNum: queue}
+}
+
+func (s *actionFactory) SaveConnMark(saveMask uint32) generictables.Action {
+	return SaveConnMarkAction{SaveMask: saveMask}
+}
+
+func (s *actionFactory) RestoreConnMark(restoreMask uint32) generictables.Action {
+	return RestoreConnMarkAction{RestoreMask: restoreMask}
+}
+
+func (s *actionFactory) Checksum() generictables.Action {
+	return ChecksumAction{}
+}
+
+func (s *actionFactory) TProxy(mark, mask uint32, port uint16) generictables.Action {
+	return TProxyAction{
+		Mark: mark,
+		Mask: mask,
+		Port: port,
+	}
+}
+
 type Referrer interface {
 	ReferencedChain() string
 }

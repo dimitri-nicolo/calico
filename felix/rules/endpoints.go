@@ -296,7 +296,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawEgressChain(
 func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 	ifaceName string,
 	untrackedTiers []TierPolicyGroups,
-) []*Chain {
+) []*generictables.Chain {
 	log.WithField("ifaceName", ifaceName).Debugf("Rendering raw (untracked) host endpoint chain. - untrackedTiers %+v", untrackedTiers)
 	return []*generictables.Chain{
 		// Chain for traffic _to_ the endpoint.
@@ -410,7 +410,7 @@ func (r *DefaultRuleRenderer) PolicyGroupToIptablesChains(group *PolicyGroup) []
 			seenNonStagedPolThisStride = false
 		}
 
-		var match MatchCriteria
+		var match generictables.MatchCriteria
 		if i%returnStride == 0 || !seenNonStagedPolThisStride {
 			// Optimisation, we're the first rule in a block, immediately after
 			// start of chain or a RETURN rule, or, there are no non-staged
@@ -454,7 +454,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	nflogGroup uint16,
 	dir RuleDir,
 	policyType string,
-	allowAction Action,
+	allowAction generictables.Action,
 	allowVXLANEncap bool,
 	allowIPIPEncap bool,
 	isEgressGateway bool,
@@ -510,31 +510,31 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	endOfChainDropComment := fmt.Sprintf("%s if no profiles matched", r.IptablesFilterDenyAction())
 	if !r.BPFEnabled && ipVersion == 4 && isEgressGateway {
 		programEgwRule := func(ipset string) {
-			baseMatch := func(proto uint8) MatchCriteria {
+			baseMatch := func(proto uint8) generictables.MatchCriteria {
 				if dir == RuleDirIngress {
-					return Match().ProtocolNum(proto).SourceIPSet(r.IPSetConfigV4.
+					return r.NewMatch().ProtocolNum(proto).SourceIPSet(r.IPSetConfigV4.
 						NameForMainIPSet(ipset))
 				} else {
-					return Match().ProtocolNum(proto).DestIPSet(r.IPSetConfigV4.
+					return r.NewMatch().ProtocolNum(proto).DestIPSet(r.IPSetConfigV4.
 						NameForMainIPSet(ipset))
 				}
 			}
 
 			rules = append(rules,
-				Rule{
+				generictables.Rule{
 					Match: baseMatch(ProtoUDP).
 						DestPorts(
 							uint16(r.Config.EgressIPVXLANPort), // egress.calico
 						),
-					Action:  AcceptAction{},
+					Action:  r.Allow(),
 					Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 				},
 			)
 			if dir == RuleDirIngress && egwHealthPort != 0 {
 				rules = append(rules,
-					Rule{
+					generictables.Rule{
 						Match:   baseMatch(ProtoTCP).DestPorts(egwHealthPort),
-						Action:  AcceptAction{},
+						Action:  r.Allow(),
 						Comment: []string{"Accept readiness probes for egress gateways"},
 					},
 				)
@@ -665,9 +665,9 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					//
 					// For untracked and pre-DNAT rules, we don't do that because there may be
 					// normal rules still to be applied to the packet in the filter table.
-					rules = append(rules, Rule{
+					rules = append(rules, generictables.Rule{
 						Match:  r.NewMatch().MarkClear(r.IptablesMarkPass),
-						Action: r.Nflog(nflogGroup, CalculateEndOfTierDropNFLOGPrefixStr(dir, tier.Name)),
+						Action: r.Nflog(nflogGroup, CalculateEndOfTierDropNFLOGPrefixStr(dir, tier.Name), 0),
 					})
 
 					rules = append(rules, r.DropRules(r.NewMatch().MarkClear(r.IptablesMarkPass), fmt.Sprintf("%s if no policies passed packet", r.IptablesFilterDenyAction()))...)
@@ -675,9 +675,9 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					// If we do not require an end of tier drop (i.e. because all of the policies in the tier are
 					// staged), then add an end of tier pass nflog action so that we can at least track that we
 					// would hit end of tier drop. This simplifies the processing in the collector.
-					rules = append(rules, Rule{
+					rules = append(rules, generictables.Rule{
 						Match:  r.NewMatch().MarkClear(r.IptablesMarkPass),
-						Action: r.Nflog(nflogGroup, CalculateEndOfTierPassNFLOGPrefixStr(dir, tier.Name)),
+						Action: r.Nflog(nflogGroup, CalculateEndOfTierPassNFLOGPrefixStr(dir, tier.Name), 0),
 					})
 				}
 			}
@@ -715,7 +715,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		}
 
 		if !isEgressGateway { // We don't support DNS policy on EGWs so no point in queueing.
-			nfqueueRule := r.NfqueueRuleDelayDeniedPacket(Match(), endOfChainDropComment)
+			nfqueueRule := r.NfqueueRuleDelayDeniedPacket(r.NewMatch(), endOfChainDropComment)
 			if nfqueueRule != nil {
 				rules = append(rules, *nfqueueRule)
 			}
@@ -730,12 +730,12 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
 		// No profile matched the packet: drop it.
 		// if dropIfNoProfilesMatched {
-		rules = append(rules, Rule{
+		rules = append(rules, generictables.Rule{
 			Match:  r.NewMatch(),
-			Action: r.Nflog(nflogGroup, CalculateNoMatchProfileNFLOGPrefixStr(dir)),
+			Action: r.Nflog(nflogGroup, CalculateNoMatchProfileNFLOGPrefixStr(dir), 0),
 		})
 
-		rules = append(rules, r.DropRules(Match(), endOfChainDropComment)...)
+		rules = append(rules, r.DropRules(r.NewMatch(), endOfChainDropComment)...)
 	}
 
 	return &generictables.Chain{

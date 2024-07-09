@@ -347,7 +347,7 @@ type RuleRenderer interface {
 	SNATsToIptablesChains(snats map[string]string) []*generictables.Chain
 	BlockedCIDRsToIptablesChains(cidrs []string, ipVersion uint8) []*generictables.Chain
 
-	RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled, acceptLocal bool) []generictables.Rule
+	RPFilter(ipVersion uint8, mark, mask uint32, openStackSpecialCasesEnabled bool) []generictables.Rule
 
 	WireguardIncomingMarkChain() *generictables.Chain
 
@@ -369,7 +369,8 @@ type DefaultRuleRenderer struct {
 	blockCIDRAction          generictables.Action
 	iptablesFilterDenyAction generictables.Action
 
-	NewMatch func() generictables.MatchCriteria
+	NewMatch       func() generictables.MatchCriteria
+	CombineMatches func(m1, m2 generictables.MatchCriteria) generictables.MatchCriteria
 
 	// wildcard is the symbol to use for wildcard matches.
 	wildcard string
@@ -584,6 +585,7 @@ func NewRenderer(config Config) RuleRenderer {
 		}
 		return iptables.Match()
 	}
+	combineMatches := iptables.Combine
 
 	// First, what should we do when packets are not accepted.
 	var iptablesFilterDenyAction generictables.Action
@@ -618,7 +620,7 @@ func NewRenderer(config Config) RuleRenderer {
 		log.Warn("Action on drop set to ACCEPT.  Calico security is disabled!")
 		dropRules = append(dropRules, generictables.Rule{
 			Match:  newMatchFn(),
-			Action: actions.Accept(),
+			Action: actions.Allow(),
 		})
 	} else {
 		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket && config.IptablesMarkDNSPolicy != 0x0 {
@@ -706,6 +708,7 @@ func NewRenderer(config Config) RuleRenderer {
 		iptablesFilterDenyAction:     iptablesFilterDenyAction,
 		wildcard:                     wildcard,
 		maxNameLength:                maxNameLength,
+		CombineMatches:               combineMatches,
 	}
 }
 

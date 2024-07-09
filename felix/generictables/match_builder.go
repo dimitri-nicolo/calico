@@ -18,7 +18,14 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 )
 
+type EnterpriseMatchCriteria interface {
+	ConntrackOrigDstPort(port uint16) MatchCriteria
+	ConntrackOrigDst(ip string) MatchCriteria
+}
+
 type MatchCriteria interface {
+	EnterpriseMatchCriteria
+
 	Render() string
 	String() string
 	MarkClear(mark uint32) MatchCriteria

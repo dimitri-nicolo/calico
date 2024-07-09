@@ -8,7 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/dns"
 	"github.com/projectcalico/calico/felix/nfqueue"
 	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
 )
@@ -85,7 +85,7 @@ type PacketProcessor interface {
 }
 
 func New(
-	queueID uint16, queueLength uint32, maxHoldDuration time.Duration, domainInfoStore *common.DomainInfoStore,
+	queueID uint16, queueLength uint32, maxHoldDuration time.Duration, domainInfoStore *dns.DomainInfoStore,
 ) PacketProcessor {
 	options := []nfqueue.Option{
 		nfqueue.OptMaxQueueLength(queueLength),
@@ -138,7 +138,7 @@ func (p *packetProcessor) DebugKillCurrentNfqueueConnection() error {
 }
 
 type handler struct {
-	domainInfoStore *common.DomainInfoStore
+	domainInfoStore *dns.DomainInfoStore
 }
 
 func (h *handler) OnPacket(packet nfqueue.Packet) {
@@ -146,7 +146,7 @@ func (h *handler) OnPacket(packet nfqueue.Packet) {
 	if packet.Timestamp != nil {
 		timestamp = uint64(packet.Timestamp.UnixNano())
 	}
-	h.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
+	h.domainInfoStore.MsgChannel() <- dns.DataWithTimestamp{
 		Data:      packet.Payload,
 		Timestamp: timestamp,
 		Callback:  packet.Release,

@@ -38,9 +38,12 @@ func Match() generictables.MatchCriteria {
 // Combine creates a copy of m1 and appends the values of m2 to the copy, creating a new MatchCritera with the values
 // of m1 and m2.
 func Combine(m1, m2 generictables.MatchCriteria) generictables.MatchCriteria {
-	cp := make(MatchCriteria, len(m1))
-	copy(cp, m1)
-	return append(cp, m2...)
+	m1p := m1.(matchCriteria)
+	m2p := m2.(matchCriteria)
+
+	cp := make(matchCriteria, len(m1p))
+	copy(cp, m1p)
+	return append(cp, m2p...)
 }
 
 func (m matchCriteria) Render() string {
@@ -127,10 +130,6 @@ func (m matchCriteria) RPFCheckPassed(acceptLocal bool) generictables.MatchCrite
 	return ret
 }
 
-func (m matchCriteria) OutInterface(ifaceMatch string) generictables.MatchCriteria {
-	return append(m, fmt.Sprintf("--out-interface %s", ifaceMatch))
-}
-
 func (m matchCriteria) RPFCheckFailed() generictables.MatchCriteria {
 	ret := append(m, "-m rpfilter --invert --validmark")
 	return ret
@@ -164,7 +163,7 @@ func (m matchCriteria) DestAddrType(addrType generictables.AddrType) generictabl
 	return append(m, fmt.Sprintf("-m addrtype --dst-type %s", addrType))
 }
 
-func (m matchCriteria) DestAddrTypeLimitIfaceIn(addrType AddrType) generictables.MatchCriteria {
+func (m matchCriteria) DestAddrTypeLimitIfaceIn(addrType generictables.AddrType) generictables.MatchCriteria {
 	return append(m, fmt.Sprintf("-m addrtype --dst-type %s --limit-iface-in", addrType))
 }
 
