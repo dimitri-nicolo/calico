@@ -39,9 +39,11 @@ export RAND=$(tr -dc a-z0-9 </dev/urandom | head -c 4; echo)
 export WIN_NODE_COUNT=1
 
 function shutdown_cluster(){
+  EXIT_CODE=$?
   make -C $CAPZ_LOCATION delete-cluster
   # Clear trap
   trap - EXIT
+  exit "$EXIT_CODE"
 }
 
 trap shutdown_cluster EXIT
