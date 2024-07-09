@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -17,15 +18,45 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 )
 
 const (
 	ConfigVarNamespace      = "tigera-intrusion-detection"
 	WebhookLabelsAnnotation = "webhooks.projectcalico.org/labels"
+	WebhookTestAnnotation   = "webhooks.projectcalico.org/testEvent"
 	ConditionHealthy        = "Healthy"
 	ConditionHealthyDesc    = "the webhook is healthy"
 	ConditionLastFetch      = "EventsFetched"
 	ConditionLastFetchDesc  = ""
+)
+
+var (
+	webhookTestFireLabels = map[string]string{
+		"webhook-label": "this is just a webhook test",
+	}
+	webhookTestPayloads = map[string]lsApi.Event{
+		"waf": {
+			Description:  "Webhook Test Message",
+			Time:         lsApi.NewEventTimestamp(0),
+			Origin:       "webhook test fire",
+			AttackVector: "webhook-test-fire",
+			Severity:     10,
+			MitreIDs:     &[]string{"mitre ID1", "mitre ID2"},
+			MitreTactic:  "mitre tactic description",
+			Mitigations:  &[]string{"possible mitigation", "and another possible mitigation"},
+		},
+		"gtf": {
+			Description:  "Webhook Test Message",
+			Time:         lsApi.NewEventTimestamp(0),
+			Origin:       "webhook test fire",
+			AttackVector: "webhook-test-fire",
+			Severity:     10,
+			MitreIDs:     &[]string{"mitre ID1", "mitre ID2"},
+			MitreTactic:  "mitre tactic description",
+			Mitigations:  &[]string{"possible mitigation", "and another possible mitigation"},
+		},
+	}
 )
 
 func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.SecurityEventWebhook) {
@@ -65,11 +96,16 @@ func (s *ControllerState) startNewInstance(ctx context.Context, webhook *api.Sec
 		s.updateWebhookHealth(webhook, "ConsumerConfigurationValidation", time.Now(), err)
 		return
 	}
+	if webhook.Spec.State == api.SecurityEventWebhookStateTest {
+		s.testFire(ctx, webhook, provider, config)
+		return
+	}
 
 	processFunc := provider.Process
 	if webhook.Spec.State == api.SecurityEventWebhookStateDebug {
 		processFunc = s.debugProcessFunc(webhook)
 	}
+
 	webhookCtx, cancelFunc := context.WithCancel(ctx)
 	webhookUpdateChan := make(chan *api.SecurityEventWebhook)
 	specHash := string(structhash.Md5(webhook.Spec, 1))
@@ -197,4 +233,38 @@ func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) Pr
 		logEntry(webhook).Info("Processing Security Events for a webhook in 'Debug' state")
 		return nil
 	}
+}
+
+func (s *ControllerState) testFire(ctx context.Context, webhook *api.SecurityEventWebhook, provider providers.Provider, config map[string]string) {
+	logEntry(webhook).Info("Test fire in progress...")
+	testEvent := s.selectTestEvent(webhook)
+	testEvent.Time = lsApi.NewEventDate(time.Now())
+	provider.Process(ctx, config, webhookTestFireLabels, testEvent)
+	webhook.Spec.State = api.SecurityEventWebhookStateEnabled
+	go func() {
+		s.outUpdatesChan <- webhook
+		logEntry(webhook).Info("Webhook has been re-enabled")
+	}()
+}
+
+func (s *ControllerState) selectTestEvent(webhook *api.SecurityEventWebhook) *lsApi.Event {
+	if testPayloadIndex, annotated := webhook.Annotations[WebhookTestAnnotation]; !annotated {
+		return s.selectRandomTestEvent()
+	} else if payload, validPayloadAnnotation := webhookTestPayloads[testPayloadIndex]; !validPayloadAnnotation {
+		return s.selectRandomTestEvent()
+	} else {
+		return &payload
+	}
+}
+
+func (s *ControllerState) selectRandomTestEvent() (payload *lsApi.Event) {
+	randomIndex := rand.Intn(len(webhookTestPayloads))
+	for _, testPayload := range webhookTestPayloads {
+		if randomIndex == 0 {
+			payload = &testPayload
+			break
+		}
+		randomIndex--
+	}
+	return
 }
