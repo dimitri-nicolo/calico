@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -42,5 +43,14 @@ func forwardConnection(srcConn net.Conn, dstCon net.Conn, wg *sync.WaitGroup) {
 }
 
 func isUseOfClosedNetworkErr(err error) bool {
+	if errors.Is(err, net.ErrClosed) {
+		return true
+	}
+	switch err := err.(type) {
+	case *net.OpError:
+		if strings.Contains(err.Err.Error(), "use of closed network connection") {
+			return true
+		}
+	}
 	return errors.Is(err, net.ErrClosed)
 }
