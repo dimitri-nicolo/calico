@@ -35,6 +35,7 @@ type IPSetsDataplane interface {
 	QueueResync()
 	ApplyUpdates(ipsetFilter func(ipSetName string) bool) set.Set[string]
 	ApplyDeletions() (reschedule bool)
+	SetFilter(neededIPSets set.Set[string])
 }
 
 // Except for domain IP sets, IPSetsManager simply passes through IP set updates from the datastore

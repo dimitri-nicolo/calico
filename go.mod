@@ -98,7 +98,6 @@ require (
 	github.com/onsi/gomega v1.33.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/pkg/profile v1.7.0
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus-community/elasticsearch_exporter v1.5.0
@@ -166,6 +165,7 @@ require (
 	modernc.org/memory v1.8.0
 	sigs.k8s.io/controller-runtime v0.15.3
 	sigs.k8s.io/kind v0.23.0
+	sigs.k8s.io/knftables v0.0.15
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -243,7 +243,6 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.14.1 // indirect
-	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-ldap/ldap/v3 v3.4.6 // indirect
@@ -463,4 +462,7 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.28.11
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.28.11
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.28.11
+
+	// Use an untagged knftables version that has changes we need.
+	sigs.k8s.io/knftables => sigs.k8s.io/knftables v0.0.17-0.20240627140917-8d2660d78107
 )

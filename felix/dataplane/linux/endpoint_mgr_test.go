@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -41,10 +42,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-var wlDispatchEmpty = []*iptables.Chain{
+var wlDispatchEmpty = []*generictables.Chain{
 	{
 		Name: "cali-to-wl-dispatch",
-		Rules: []iptables.Rule{
+		Rules: []generictables.Rule{
 			{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
@@ -54,7 +55,7 @@ var wlDispatchEmpty = []*iptables.Chain{
 	},
 	{
 		Name: "cali-from-wl-dispatch",
-		Rules: []iptables.Rule{
+		Rules: []generictables.Rule{
 			{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
@@ -64,7 +65,7 @@ var wlDispatchEmpty = []*iptables.Chain{
 	},
 	{
 		Name: "cali-from-endpoint-mark",
-		Rules: []iptables.Rule{
+		Rules: []generictables.Rule{
 			{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
@@ -74,7 +75,7 @@ var wlDispatchEmpty = []*iptables.Chain{
 	},
 	{
 		Name: "cali-set-endpoint-mark",
-		Rules: []iptables.Rule{
+		Rules: []generictables.Rule{
 			{
 				Match:   iptables.Match().InInterface("cali+"),
 				Action:  iptables.DropAction{},
@@ -86,6 +87,7 @@ var wlDispatchEmpty = []*iptables.Chain{
 				Comment: []string{"Unknown endpoint"},
 			},
 			{
+				Match:   iptables.Match(),
 				Action:  iptables.SetMaskedMarkAction{Mark: 0x0100, Mask: 0xff00},
 				Comment: []string{"Non-Cali endpoint mark"},
 			},
@@ -93,23 +95,23 @@ var wlDispatchEmpty = []*iptables.Chain{
 	},
 }
 
-var hostDispatchEmptyNormal = []*iptables.Chain{
+var hostDispatchEmptyNormal = []*generictables.Chain{
 	{
 		Name:  "cali-to-host-endpoint",
-		Rules: []iptables.Rule{},
+		Rules: []generictables.Rule{},
 	},
 	{
 		Name:  "cali-from-host-endpoint",
-		Rules: []iptables.Rule{},
+		Rules: []generictables.Rule{},
 	},
 }
 
-func rawDispatchEmptyNormal(ipVersion uint8) []*iptables.Chain {
+func rawDispatchEmptyNormal(ipVersion uint8) []*generictables.Chain {
 	if ipVersion == 4 {
-		return []*iptables.Chain{
+		return []*generictables.Chain{
 			{
 				Name: "cali-from-wl-dispatch",
-				Rules: []iptables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Action: iptables.JumpAction{Target: rules.ChainRpfSkip},
 					},
@@ -121,49 +123,49 @@ func rawDispatchEmptyNormal(ipVersion uint8) []*iptables.Chain {
 			},
 			{
 				Name:  "cali-to-host-endpoint",
-				Rules: []iptables.Rule{},
+				Rules: []generictables.Rule{},
 			},
 			{
 				Name:  "cali-from-host-endpoint",
-				Rules: []iptables.Rule{},
+				Rules: []generictables.Rule{},
 			},
 		}
 	} else {
-		return []*iptables.Chain{
+		return []*generictables.Chain{
 			{
 				Name:  "cali-to-host-endpoint",
-				Rules: []iptables.Rule{},
+				Rules: []generictables.Rule{},
 			},
 			{
 				Name:  "cali-from-host-endpoint",
-				Rules: []iptables.Rule{},
+				Rules: []generictables.Rule{},
 			},
 		}
 	}
 }
 
-var hostDispatchEmptyForward = []*iptables.Chain{
+var hostDispatchEmptyForward = []*generictables.Chain{
 	{
 		Name:  "cali-to-hep-forward",
-		Rules: []iptables.Rule{},
+		Rules: []generictables.Rule{},
 	},
 	{
 		Name:  "cali-from-hep-forward",
-		Rules: []iptables.Rule{},
+		Rules: []generictables.Rule{},
 	},
 }
 
-var fromHostDispatchEmpty = []*iptables.Chain{
+var fromHostDispatchEmpty = []*generictables.Chain{
 	{
 		Name:  "cali-from-host-endpoint",
-		Rules: []iptables.Rule{},
+		Rules: []generictables.Rule{},
 	},
 }
 
-var toHostDispatchEmpty = []*iptables.Chain{
+var toHostDispatchEmpty = []*generictables.Chain{
 	{
 		Name:  "cali-to-host-endpoint",
-		Rules: []iptables.Rule{},
+		Rules: []generictables.Rule{},
 	},
 }
 
@@ -179,25 +181,25 @@ var wlEPID2 = proto.WorkloadEndpointID{
 	EndpointId:     "endpoint-id-12",
 }
 
-func hostChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+func hostChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*generictables.Chain {
 	return append(chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "normal", false, iptables.AcceptAction{}),
 		chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "applyOnForward", false, iptables.AcceptAction{})...,
 	)
 }
 
-func mangleEgressChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+func mangleEgressChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*generictables.Chain {
 	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "normal", true, iptables.SetMarkAction{Mark: 0x8}, iptables.ReturnAction{})
 }
 
-func rawChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+func rawChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*generictables.Chain {
 	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "untracked", false, iptables.AcceptAction{})
 }
 
-func preDNATChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+func preDNATChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*generictables.Chain {
 	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, true, "preDNAT", false, iptables.AcceptAction{})
 }
 
-func wlChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+func wlChainsForIfaces(ipVersion uint8, ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*generictables.Chain {
 	return chainsForIfaces(ipVersion, ifaceTierNames, epMarkMapper, false, "normal", false, iptables.AcceptAction{})
 }
 
@@ -214,8 +216,8 @@ func chainsForIfaces(ipVersion uint8,
 	host bool,
 	tableKind string,
 	egressOnly bool,
-	allowActions ...iptables.Action,
-) []*iptables.Chain {
+	allowActions ...generictables.Action,
+) []*generictables.Chain {
 	const (
 		ProtoUDP          = 17
 		ProtoTCP          = 6
@@ -230,11 +232,11 @@ func chainsForIfaces(ipVersion uint8,
 		"tableKind": tableKind,
 	}).Debug("Calculating chains for interface")
 
-	chains := []*iptables.Chain{}
-	dispatchOut := []iptables.Rule{}
-	dispatchIn := []iptables.Rule{}
-	epMarkSet := []iptables.Rule{}
-	epMarkFrom := []iptables.Rule{}
+	chains := []*generictables.Chain{}
+	dispatchOut := []generictables.Rule{}
+	dispatchIn := []generictables.Rule{}
+	epMarkSet := []generictables.Rule{}
+	epMarkFrom := []generictables.Rule{}
 	hostOrWlLetter := "w"
 	hostOrWlDispatch := "wl-dispatch"
 	outPrefix := "cali-from-"
@@ -245,7 +247,7 @@ func chainsForIfaces(ipVersion uint8,
 	epMarkFromName := "cali-from-endpoint-mark"
 	epMarkSetOnePrefix := "cali-sm-"
 	epmarkFromPrefix := outPrefix[:6]
-	dropEncapRules := []iptables.Rule{
+	dropEncapRules := []generictables.Rule{
 		{
 			Match: iptables.Match().ProtocolNum(ProtoUDP).
 				DestPorts(uint16(VXLANPort)),
@@ -333,19 +335,19 @@ func chainsForIfaces(ipVersion uint8,
 			continue
 		}
 
-		outRules := []iptables.Rule{}
+		outRules := []generictables.Rule{}
 
 		if tableKind != "untracked" {
 			for _, allowAction := range allowActions {
 				outRules = append(outRules,
-					iptables.Rule{
+					generictables.Rule{
 						Match:  iptables.Match().ConntrackState("RELATED,ESTABLISHED"),
 						Action: allowAction,
 					},
 				)
 			}
 			if !isEgressGateway {
-				outRules = append(outRules, iptables.Rule{
+				outRules = append(outRules, generictables.Rule{
 					Match:  iptables.Match().ConntrackState("INVALID"),
 					Action: iptables.DropAction{},
 				})
@@ -353,18 +355,18 @@ func chainsForIfaces(ipVersion uint8,
 		}
 
 		if host && tableKind != "applyOnForward" {
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
 				Match:  iptables.Match(),
 				Action: iptables.JumpAction{Target: "cali-failsafe-out"},
 			})
 		}
-		outRules = append(outRules, iptables.Rule{
+		outRules = append(outRules, generictables.Rule{
 			Match:  iptables.Match(),
 			Action: iptables.ClearMarkAction{Mark: 0x98}, // IptablesMarkAccept + IptablesMarkDrop + IptablesMarkPass
 		})
 
 		if egress && ipVersion == 4 && isEgressGateway {
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
 				Match: iptables.Match().
 					ProtocolNum(ProtoUDP).
 					DestIPSet("cali40all-hosts-net").
@@ -372,7 +374,7 @@ func chainsForIfaces(ipVersion uint8,
 				Action:  iptables.AcceptAction{},
 				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
 				Match: iptables.Match().
 					ProtocolNum(ProtoUDP).
 					DestIPSet("cali40all-tunnel-net").
@@ -386,22 +388,22 @@ func chainsForIfaces(ipVersion uint8,
 			outRules = append(outRules, dropEncapRules...)
 		}
 		if egress && polName != "" && tierName != "" && tableKind == ifaceKind {
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.ClearMarkAction{Mark: 16},
 				Comment: []string{"Start of tier " + tierName},
 			})
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
 				Match:  iptables.Match().MarkClear(16),
 				Action: iptables.JumpAction{Target: "cali-po-" + tierName + polName},
 			})
 			if tableKind == "untracked" {
-				outRules = append(outRules, iptables.Rule{
+				outRules = append(outRules, generictables.Rule{
 					Match:  iptables.Match().MarkSingleBitSet(8),
 					Action: iptables.NoTrackAction{},
 				})
 			}
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
 				Match:   iptables.Match().MarkSingleBitSet(8),
 				Action:  iptables.ReturnAction{},
 				Comment: []string{"Return if policy accepted"},
@@ -410,7 +412,7 @@ func chainsForIfaces(ipVersion uint8,
 				// Only end with a drop rule in the filter chain.  In the raw chain,
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
-				outRules = append(outRules, []iptables.Rule{
+				outRules = append(outRules, []generictables.Rule{
 					{
 						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(16),
 						Action:  iptables.NfqueueAction{QueueNum: 100},
@@ -434,11 +436,13 @@ func chainsForIfaces(ipVersion uint8,
 		} else if tableKind == "applyOnForward" {
 			// Expect forwarded traffic to be allowed when there are no
 			// applicable policies.
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
+				Match:   iptables.Match(),
 				Action:  iptables.SetMarkAction{Mark: 8},
 				Comment: []string{"Allow forwarded traffic by default"},
 			})
-			outRules = append(outRules, iptables.Rule{
+			outRules = append(outRules, generictables.Rule{
+				Match:   iptables.Match(),
 				Action:  iptables.ReturnAction{},
 				Comment: []string{"Return for accepted forward traffic"},
 			})
@@ -447,14 +451,14 @@ func chainsForIfaces(ipVersion uint8,
 		if tableKind == "normal" {
 			if !isEgressGateway {
 				outRules = append(outRules,
-					iptables.Rule{
+					generictables.Rule{
 						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 						Action:  iptables.NfqueueAction{QueueNum: 100},
 						Comment: []string{"Drop if no profiles matched"},
 					},
 				)
 			}
-			outRules = append(outRules, []iptables.Rule{
+			outRules = append(outRules, []generictables.Rule{
 				{
 					Match: iptables.Match(),
 					Action: iptables.NflogAction{
@@ -470,19 +474,19 @@ func chainsForIfaces(ipVersion uint8,
 			}...)
 		}
 
-		inRules := []iptables.Rule{}
+		inRules := []generictables.Rule{}
 
 		if tableKind != "untracked" {
 			for _, allowAction := range allowActions {
 				inRules = append(inRules,
-					iptables.Rule{
+					generictables.Rule{
 						Match:  iptables.Match().ConntrackState("RELATED,ESTABLISHED"),
 						Action: allowAction,
 					},
 				)
 			}
 			if !isEgressGateway {
-				inRules = append(inRules, iptables.Rule{
+				inRules = append(inRules, generictables.Rule{
 					Match:  iptables.Match().ConntrackState("INVALID"),
 					Action: iptables.DropAction{},
 				})
@@ -490,34 +494,34 @@ func chainsForIfaces(ipVersion uint8,
 		}
 
 		if host && tableKind != "applyOnForward" {
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match:  iptables.Match(),
 				Action: iptables.JumpAction{Target: "cali-failsafe-in"},
 			})
 		}
-		inRules = append(inRules, iptables.Rule{
+		inRules = append(inRules, generictables.Rule{
 			Match:  iptables.Match(),
 			Action: iptables.ClearMarkAction{Mark: 0x98}, // IptablesMarkAccept + IptablesMarkDrop + IptablesMarkPass
 		})
 
 		if ingress && tierName != "" && tableKind == ifaceKind {
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.ClearMarkAction{Mark: 16},
 				Comment: []string{"Start of tier " + tierName},
 			})
 			// For untracked policy, we expect a tier with a policy in it.
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match:  iptables.Match().MarkClear(16),
 				Action: iptables.JumpAction{Target: "cali-pi-" + tierName + polName},
 			})
 			if tableKind == "untracked" {
-				inRules = append(inRules, iptables.Rule{
+				inRules = append(inRules, generictables.Rule{
 					Match:  iptables.Match().MarkSingleBitSet(8),
 					Action: iptables.NoTrackAction{},
 				})
 			}
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match:   iptables.Match().MarkSingleBitSet(8),
 				Action:  iptables.ReturnAction{},
 				Comment: []string{"Return if policy accepted"},
@@ -526,7 +530,7 @@ func chainsForIfaces(ipVersion uint8,
 				// Only end with a drop rule in the filter chain.  In the raw chain,
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
-				inRules = append(inRules, []iptables.Rule{
+				inRules = append(inRules, []generictables.Rule{
 					{
 						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(16),
 						Action:  iptables.NfqueueAction{QueueNum: 100},
@@ -550,18 +554,20 @@ func chainsForIfaces(ipVersion uint8,
 		} else if tableKind == "applyOnForward" {
 			// Expect forwarded traffic to be allowed when there are no
 			// applicable policies.
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
+				Match:   iptables.Match(),
 				Action:  iptables.SetMarkAction{Mark: 8},
 				Comment: []string{"Allow forwarded traffic by default"},
 			})
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
+				Match:   iptables.Match(),
 				Action:  iptables.ReturnAction{},
 				Comment: []string{"Return for accepted forward traffic"},
 			})
 		}
 
 		if ingress && ipVersion == 4 && isEgressGateway {
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match: iptables.Match().
 					ProtocolNum(ProtoUDP).
 					SourceIPSet("cali40all-hosts-net").
@@ -569,7 +575,7 @@ func chainsForIfaces(ipVersion uint8,
 				Action:  iptables.AcceptAction{},
 				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match: iptables.Match().
 					ProtocolNum(ProtoTCP).
 					SourceIPSet("cali40all-hosts-net").
@@ -577,7 +583,7 @@ func chainsForIfaces(ipVersion uint8,
 				Action:  iptables.AcceptAction{},
 				Comment: []string{"Accept readiness probes for egress gateways"},
 			})
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match: iptables.Match().
 					ProtocolNum(ProtoUDP).
 					SourceIPSet("cali40all-tunnel-net").
@@ -585,7 +591,7 @@ func chainsForIfaces(ipVersion uint8,
 				Action:  iptables.AcceptAction{},
 				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
-			inRules = append(inRules, iptables.Rule{
+			inRules = append(inRules, generictables.Rule{
 				Match: iptables.Match().
 					ProtocolNum(ProtoTCP).
 					SourceIPSet("cali40all-tunnel-net").
@@ -598,7 +604,7 @@ func chainsForIfaces(ipVersion uint8,
 		if tableKind == "normal" {
 			if !isEgressGateway {
 				inRules = append(inRules,
-					iptables.Rule{
+					generictables.Rule{
 						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
 						Action:  iptables.NfqueueAction{QueueNum: 100},
 						Comment: []string{"Drop if no profiles matched"},
@@ -609,7 +615,7 @@ func chainsForIfaces(ipVersion uint8,
 			if isEgressGateway {
 				dropComment = "Drop all other ingress traffic to egress gateway."
 			}
-			inRules = append(inRules, []iptables.Rule{
+			inRules = append(inRules, []generictables.Rule{
 				{
 					Match: iptables.Match(),
 					Action: iptables.NflogAction{
@@ -627,21 +633,21 @@ func chainsForIfaces(ipVersion uint8,
 
 		if tableKind == "preDNAT" {
 			chains = append(chains,
-				&iptables.Chain{
+				&generictables.Chain{
 					Name:  inPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
 					Rules: inRules,
 				},
 			)
 		} else {
 			chains = append(chains,
-				&iptables.Chain{
+				&generictables.Chain{
 					Name:  outPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
 					Rules: outRules,
 				},
 			)
 			if !egressOnly {
 				chains = append(chains,
-					&iptables.Chain{
+					&generictables.Chain{
 						Name:  inPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
 						Rules: inRules,
 					},
@@ -651,14 +657,14 @@ func chainsForIfaces(ipVersion uint8,
 
 		if host {
 			dispatchOut = append(dispatchOut,
-				iptables.Rule{
+				generictables.Rule{
 					Match:  iptables.Match().OutInterface(ifaceName),
 					Action: iptables.GotoAction{Target: outPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
 				},
 			)
 			if !egressOnly {
 				dispatchIn = append(dispatchIn,
-					iptables.Rule{
+					generictables.Rule{
 						Match:  iptables.Match().InInterface(ifaceName),
 						Action: iptables.GotoAction{Target: inPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
 					},
@@ -666,13 +672,13 @@ func chainsForIfaces(ipVersion uint8,
 			}
 		} else {
 			dispatchOut = append(dispatchOut,
-				iptables.Rule{
+				generictables.Rule{
 					Match:  iptables.Match().InInterface(ifaceName),
 					Action: iptables.GotoAction{Target: outPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
 				},
 			)
 			dispatchIn = append(dispatchIn,
-				iptables.Rule{
+				generictables.Rule{
 					Match:  iptables.Match().OutInterface(ifaceName),
 					Action: iptables.GotoAction{Target: inPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
 				},
@@ -681,23 +687,24 @@ func chainsForIfaces(ipVersion uint8,
 
 		if tableKind != "preDNAT" && tableKind != "untracked" && !egressOnly {
 			chains = append(chains,
-				&iptables.Chain{
+				&generictables.Chain{
 					Name: epMarkSetOnePrefix + ifaceName,
-					Rules: []iptables.Rule{
+					Rules: []generictables.Rule{
 						{
+							Match:  iptables.Match(),
 							Action: iptables.SetMaskedMarkAction{Mark: epMark, Mask: epMarkMapper.GetMask()},
 						},
 					},
 				},
 			)
 			epMarkSet = append(epMarkSet,
-				iptables.Rule{
+				generictables.Rule{
 					Match:  iptables.Match().InInterface(ifaceName),
 					Action: iptables.GotoAction{Target: epMarkSetOnePrefix + ifaceName},
 				},
 			)
 			epMarkFrom = append(epMarkFrom,
-				iptables.Rule{
+				generictables.Rule{
 					Match:  iptables.Match().MarkMatchesWithMask(epMark, epMarkMapper.GetMask()),
 					Action: iptables.GotoAction{Target: epmarkFromPrefix + hostOrWlLetter + "-" + ifaceName},
 				},
@@ -707,14 +714,14 @@ func chainsForIfaces(ipVersion uint8,
 
 	if !host {
 		dispatchOut = append(dispatchOut,
-			iptables.Rule{
+			generictables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
 				Comment: []string{"Unknown interface"},
 			},
 		)
 		dispatchIn = append(dispatchIn,
-			iptables.Rule{
+			generictables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
 				Comment: []string{"Unknown interface"},
@@ -724,34 +731,35 @@ func chainsForIfaces(ipVersion uint8,
 
 	if tableKind != "preDNAT" && tableKind != "untracked" && !egressOnly {
 		epMarkSet = append(epMarkSet,
-			iptables.Rule{
+			generictables.Rule{
 				Match:   iptables.Match().InInterface("cali+"),
 				Action:  iptables.DropAction{},
 				Comment: []string{"Unknown endpoint"},
 			},
-			iptables.Rule{
+			generictables.Rule{
 				Match:   iptables.Match().InInterface("tap+"),
 				Action:  iptables.DropAction{},
 				Comment: []string{"Unknown endpoint"},
 			},
-			iptables.Rule{
+			generictables.Rule{
+				Match:   iptables.Match(),
 				Action:  iptables.SetMaskedMarkAction{Mark: 0x0100, Mask: 0xff00},
 				Comment: []string{"Non-Cali endpoint mark"},
 			},
 		)
 		epMarkFrom = append(epMarkFrom,
-			iptables.Rule{
+			generictables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
 				Comment: []string{"Unknown interface"},
 			},
 		)
 		chains = append(chains,
-			&iptables.Chain{
+			&generictables.Chain{
 				Name:  epMarkSetName,
 				Rules: epMarkSet,
 			},
-			&iptables.Chain{
+			&generictables.Chain{
 				Name:  epMarkFromName,
 				Rules: epMarkFrom,
 			},
@@ -760,18 +768,18 @@ func chainsForIfaces(ipVersion uint8,
 
 	if tableKind == "untracked" {
 		chains = append(chains,
-			&iptables.Chain{
+			&generictables.Chain{
 				Name:  rules.ChainRpfSkip,
-				Rules: []iptables.Rule{},
+				Rules: []generictables.Rule{},
 			},
 		)
 	}
 
 	if tableKind == "untracked" && ipVersion == 4 {
 		chains = append(chains,
-			&iptables.Chain{
+			&generictables.Chain{
 				Name: "cali-from-wl-dispatch",
-				Rules: []iptables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Action: iptables.JumpAction{Target: rules.ChainRpfSkip},
 					},
@@ -786,21 +794,21 @@ func chainsForIfaces(ipVersion uint8,
 
 	if tableKind == "preDNAT" {
 		chains = append(chains,
-			&iptables.Chain{
+			&generictables.Chain{
 				Name:  inPrefix + hostOrWlDispatch,
 				Rules: dispatchIn,
 			},
 		)
 	} else {
 		chains = append(chains,
-			&iptables.Chain{
+			&generictables.Chain{
 				Name:  outPrefix + hostOrWlDispatch,
 				Rules: dispatchOut,
 			},
 		)
 		if !egressOnly {
 			chains = append(chains,
-				&iptables.Chain{
+				&generictables.Chain{
 					Name:  inPrefix + hostOrWlDispatch,
 					Rules: dispatchIn,
 				},
@@ -992,6 +1000,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				false,
 				"info",
 				true,
+				false,
 			)
 		})
 
@@ -1102,14 +1111,14 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		expectChainsFor := func(ipVersion uint8, names ...string) func() {
 			return func() {
-				filterTable.checkChains([][]*iptables.Chain{
+				filterTable.checkChains([][]*generictables.Chain{
 					wlDispatchEmpty,
 					hostChainsForIfaces(ipVersion, names, epMgr.epMarkMapper),
 				})
-				rawTable.checkChains([][]*iptables.Chain{
+				rawTable.checkChains([][]*generictables.Chain{
 					rawChainsForIfaces(ipVersion, names, epMgr.epMarkMapper),
 				})
-				mangleTable.checkChains([][]*iptables.Chain{
+				mangleTable.checkChains([][]*generictables.Chain{
 					preDNATChainsForIfaces(ipVersion, names, epMgr.epMarkMapper),
 					mangleEgressChainsForIfaces(ipVersion, names, epMgr.epMarkMapper),
 				})
@@ -1118,19 +1127,19 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		expectEmptyChains := func(ipVersion uint8) func() {
 			return func() {
-				filterTable.checkChains([][]*iptables.Chain{
+				filterTable.checkChains([][]*generictables.Chain{
 					wlDispatchEmpty,
 					hostDispatchEmptyNormal,
 					hostDispatchEmptyForward,
 				})
-				rawTable.checkChains([][]*iptables.Chain{
+				rawTable.checkChains([][]*generictables.Chain{
 					rawDispatchEmptyNormal(ipVersion),
 					{{
 						Name:  "cali-rpf-skip",
-						Rules: []iptables.Rule{},
+						Rules: []generictables.Rule{},
 					}},
 				})
-				mangleTable.checkChains([][]*iptables.Chain{
+				mangleTable.checkChains([][]*generictables.Chain{
 					fromHostDispatchEmpty,
 					toHostDispatchEmpty,
 				})
@@ -1770,12 +1779,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		expectWlChainsFor := func(ipVersion uint8, names ...string) func() {
 			return func() {
-				filterTable.checkChains([][]*iptables.Chain{
+				filterTable.checkChains([][]*generictables.Chain{
 					hostDispatchEmptyNormal,
 					hostDispatchEmptyForward,
 					wlChainsForIfaces(ipVersion, names, epMgr.epMarkMapper),
 				})
-				mangleTable.checkChains([][]*iptables.Chain{
+				mangleTable.checkChains([][]*generictables.Chain{
 					fromHostDispatchEmpty,
 					toHostDispatchEmpty,
 				})
@@ -2445,16 +2454,17 @@ func endpointManagerTests(ipVersion uint8) func() {
 							"/proc/sys/net/ipv4/conf/cali23456-cd/rp_filter": "0",
 						})
 					}
-					rawTable.checkChains([][]*iptables.Chain{
+					rawTable.checkChains([][]*generictables.Chain{
 						rawDispatchEmptyNormal(ipVersion),
 						{
-							&iptables.Chain{Name: rules.ChainRpfSkip, Rules: []iptables.Rule{
+							&generictables.Chain{Name: rules.ChainRpfSkip, Rules: []generictables.Rule{
 								{
 									Match:  iptables.Match().InInterface("cali23456-cd").SourceNet("8.8.8.8/32"),
 									Action: iptables.AcceptAction{},
 								},
 							}},
-						}})
+						},
+					})
 
 					By("Re-enabling rpf check on an existing workload")
 					workloadUpdate.Endpoint.AllowSpoofedSourcePrefixes = []string{}
@@ -2465,10 +2475,10 @@ func endpointManagerTests(ipVersion uint8) func() {
 							"/proc/sys/net/ipv4/conf/cali23456-cd/rp_filter": "1",
 						})
 					}
-					rawTable.checkChains([][]*iptables.Chain{
+					rawTable.checkChains([][]*generictables.Chain{
 						rawDispatchEmptyNormal(ipVersion),
 						{
-							&iptables.Chain{Name: rules.ChainRpfSkip, Rules: []iptables.Rule{}},
+							&generictables.Chain{Name: rules.ChainRpfSkip, Rules: []generictables.Rule{}},
 						},
 					})
 
@@ -2481,26 +2491,29 @@ func endpointManagerTests(ipVersion uint8) func() {
 							"/proc/sys/net/ipv4/conf/cali23456-cd/rp_filter": "0",
 						})
 					}
-					rawTable.checkChains([][]*iptables.Chain{
+					rawTable.checkChains([][]*generictables.Chain{
 						rawDispatchEmptyNormal(ipVersion),
 						{
-							&iptables.Chain{Name: rules.ChainRpfSkip, Rules: []iptables.Rule{
+							&generictables.Chain{Name: rules.ChainRpfSkip, Rules: []generictables.Rule{
 								{
 									Match:  iptables.Match().InInterface("cali23456-cd").SourceNet("8.8.8.8/32"),
 									Action: iptables.AcceptAction{},
-								}}},
-						}})
+								},
+							}},
+						},
+					})
 
 					By("Removing a workload with IP spoofing configured")
 					epMgr.OnUpdate(&proto.WorkloadEndpointRemove{
 						Id: &wlEPID1,
 					})
 					applyUpdates(epMgr)
-					rawTable.checkChains([][]*iptables.Chain{
+					rawTable.checkChains([][]*generictables.Chain{
 						rawDispatchEmptyNormal(ipVersion),
 						{
-							&iptables.Chain{Name: rules.ChainRpfSkip, Rules: []iptables.Rule{}},
-						}})
+							&generictables.Chain{Name: rules.ChainRpfSkip, Rules: []generictables.Rule{}},
+						},
+					})
 				})
 			})
 
@@ -2528,18 +2541,20 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 				It("should have expected chains", func() {
 					Expect(filterTable.currentChains["cali-tw-cali12345-ab"]).To(Equal(
-						&iptables.Chain{
+						&generictables.Chain{
 							Name: "cali-tw-cali12345-ab",
-							Rules: []iptables.Rule{{
+							Rules: []generictables.Rule{{
+								Match:   iptables.Match(),
 								Action:  iptables.DropAction{},
 								Comment: []string{"Endpoint admin disabled"},
 							}},
 						},
 					))
 					Expect(filterTable.currentChains["cali-fw-cali12345-ab"]).To(Equal(
-						&iptables.Chain{
+						&generictables.Chain{
 							Name: "cali-fw-cali12345-ab",
-							Rules: []iptables.Rule{{
+							Rules: []generictables.Rule{{
+								Match:   iptables.Match(),
 								Action:  iptables.DropAction{},
 								Comment: []string{"Endpoint admin disabled"},
 							}},
@@ -3889,7 +3904,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 //
 // Policy chain names in the default tier are stripped of the default/ prefix.
 // this makes it easier to share tests with OS.
-func extractGroups(dpChains map[string]*iptables.Chain, epChainName string) (groupChainNames []string, groups [][]string) {
+func extractGroups(dpChains map[string]*generictables.Chain, epChainName string) (groupChainNames []string, groups [][]string) {
 	Expect(dpChains).To(HaveKey(epChainName))
 	epChain := dpChains[epChainName]
 	for _, r := range epChain.Rules {
@@ -3914,7 +3929,7 @@ func removeDefaultTierPrefix(name string) string {
 	return strings.TrimPrefix(name, "default/")
 }
 
-func extractPolicyNamesFromJumps(chain *iptables.Chain) (pols []string) {
+func extractPolicyNamesFromJumps(chain *generictables.Chain) (pols []string) {
 	for _, r := range chain.Rules {
 		if ja, ok := r.Action.(iptables.JumpAction); ok {
 			pols = append(pols, removeDefaultTierPrefix(removePolChainNamePrefix(ja.Target)))

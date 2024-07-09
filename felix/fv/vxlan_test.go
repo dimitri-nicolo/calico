@@ -92,6 +92,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					if getDataStoreType(infra) == "etcdv3" && BPFMode() {
 						Skip("Skipping BPF tests for etcdv3 backend.")
 					}
+					if (NFTMode() || BPFMode()) && getDataStoreType(infra) == "etcdv3" {
+						Skip("Skipping NFT / BPF tests for etcdv3 backend.")
+					}
 
 					topologyOptions := createBaseTopologyOptions(vxlanMode, enableIPv6, routeSource, brokenXSum)
 					if infraFactories.IsRemoteSetup() {
@@ -166,8 +169,14 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				for _, c := range cs.GetProvisionedClusters() {
 					if CurrentGinkgoTestDescription().Failed {
 						for _, felix := range c.felixes {
-							felix.Exec("iptables-save", "-c")
-							felix.Exec("ipset", "list")
+
+							if NFTMode() {
+								logNFTDiags(felix)
+							} else {
+
+								felix.Exec("iptables-save", "-c")
+								felix.Exec("ipset", "list")
+							}
 							felix.Exec("ip", "r")
 							felix.Exec("ip", "a")
 						}
@@ -215,16 +224,27 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}, "10s", "100ms").Should(ContainSubstring("tx-checksumming: on"))
 				})
 			}
-			It("should use the --random-fully flag in the MASQUERADE rules", func() {
+			It("should fully randomize MASQUERADE rules", func() {
 				if cs.IsRemoteSetup() {
 					Skip("Skipping host configuration tests for remote cluster scenarios")
 				}
 				for _, c := range cs.GetActiveClusters() {
 					for _, felix := range c.felixes {
-						Eventually(func() string {
-							out, _ := felix.ExecOutput("iptables-save", "-c")
-							return out
-						}, "10s", "100ms").Should(ContainSubstring("--random-fully"))
+						if NFTMode() {
+							for _, felix := range felixes {
+								Eventually(func() string {
+									out, _ := felix.ExecOutput("nft", "list", "table", "calico")
+									return out
+								}, "10s", "100ms").Should(ContainSubstring("fully-random"))
+							}
+						} else {
+							for _, felix := range felixes {
+								Eventually(func() string {
+									out, _ := felix.ExecOutput("iptables-save", "-c")
+									return out
+								}, "10s", "100ms").Should(ContainSubstring("--random-fully"))
+							}
+						}
 					}
 				}
 			})
@@ -830,6 +850,8 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							if BPFMode() {
 								Eventually(f.BPFNumRemoteHostRoutes, waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount),
 									fmt.Sprintf("Expected felix %s to have %d host routes, got: %s", f.IP, baseIPSetMemberCount, f.BPFRoutes()))
+							} else if NFTMode() {
+								Eventually(f.NFTSetSizeFn("cali40all-vxlan-net"), "10s", "200ms").Should(Equal(len(felixes) - 1))
 							} else {
 								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
 							}
@@ -860,6 +882,8 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					if BPFMode() {
 						Eventually(cs.local.felixes[0].BPFNumRemoteHostRoutes, "10s", "200ms").Should(Equal(adjustedIPSetMemberCount),
 							fmt.Sprintf("Expected %d host routes, got:\n%s", adjustedIPSetMemberCount, cs.local.felixes[0].BPFRoutes()))
+					} else if NFTMode() {
+						Eventually(felixes[0].NFTSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(Equal(len(felixes) - 2))
 					} else {
 						Eventually(cs.local.felixes[0].IPSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(
 							Equal(adjustedIPSetMemberCount))
@@ -923,7 +947,11 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					for _, c := range cs.GetActiveClusters() {
 						for _, f := range c.felixes {
 							// Wait for Felix to set up the allow list.
-							Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
+							if NFTMode() {
+								Eventually(f.NFTSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(baseIPSetMemberCount)
+							} else {
+								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(baseIPSetMemberCount)
+							}
 						}
 						// Wait until dataplane has settled.
 						cc.ExpectSome(c.w[0], c.w[1])
@@ -945,14 +973,21 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				// BPF mode doesn't use the IP set.
 				if vxlanMode == api.VXLANModeAlways && !BPFMode() {
 					It("after manually removing third node from allow list should have expected connectivity", func() {
-						cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.local.felixes[2].IP)
-						if cs.ExpectRemoteConnectivity() {
-							cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.remote.felixes[2].IP)
-						}
-						if enableIPv6 {
-							cs.local.felixes[0].Exec("ipset", "del", "cali60all-vxlan-net", cs.local.felixes[2].IPv6)
+						if NFTMode() {
+							cs.local.felixes[0].Exec("nft", "delete", "element", "ip", "calico", "cali40all-vxlan-net", fmt.Sprintf("{ %s }", felixes[2].IP))
+							if enableIPv6 {
+								cs.local.felixes[0].Exec("nft", "delete", "element", "ip6", "calico", "cali60all-vxlan-net", fmt.Sprintf("{ %s }", felixes[2].IPv6))
+							}
+						} else {
+							cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.local.felixes[2].IP)
 							if cs.ExpectRemoteConnectivity() {
-								cs.local.felixes[0].Exec("ipset", "del", "cali60all-vxlan-net", cs.remote.felixes[2].IPv6)
+								cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.remote.felixes[2].IP)
+							}
+							if enableIPv6 {
+								cs.local.felixes[0].Exec("ipset", "del", "cali60all-vxlan-net", cs.local.felixes[2].IPv6)
+								if cs.ExpectRemoteConnectivity() {
+									cs.local.felixes[0].Exec("ipset", "del", "cali60all-vxlan-net", cs.remote.felixes[2].IPv6)
+								}
 							}
 						}
 

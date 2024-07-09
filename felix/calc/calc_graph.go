@@ -335,7 +335,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//                   |
 	//               <dataplane>
 	//
-	ipsetMemberIndex := labelindex.NewSelectorAndNamedPortIndex()
+	ipsetMemberIndex := labelindex.NewSelectorAndNamedPortIndex(conf.NFTablesMode == "Enabled")
 	ipsetMemberIndex.OnAlive = liveCallback
 	// Wire up the inputs to the IP set member index.
 	ipsetMemberIndex.RegisterWith(allUpdDispatcher)
@@ -363,6 +363,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		}
 		callbacks.OnIPSetRemoved(ipSet.UniqueID())
 	}
+
 	// Send the IP set member index's outputs to the dataplane.
 	ipsetMemberIndex.OnMemberAdded = func(ipSetID string, member labelindex.IPSetMember) {
 		if log.GetLevel() >= log.DebugLevel {
