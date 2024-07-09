@@ -52,5 +52,5 @@ func isUseOfClosedNetworkErr(err error) bool {
 			return true
 		}
 	}
-	return errors.Is(err, net.ErrClosed)
+	return false
 }
