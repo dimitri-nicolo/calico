@@ -33,28 +33,64 @@ const (
 
 var (
 	webhookTestFireLabels = map[string]string{
-		"webhook-label": "this is just a webhook test",
+		"webhook label": "this is a test event",
 	}
 	webhookTestPayloads = map[string]lsApi.Event{
 		"waf": {
-			Description:  "Webhook Test Message",
-			Time:         lsApi.NewEventTimestamp(0),
-			Origin:       "webhook test fire",
-			AttackVector: "webhook-test-fire",
-			Severity:     10,
-			MitreIDs:     &[]string{"mitre ID1", "mitre ID2"},
-			MitreTactic:  "mitre tactic description",
-			Mitigations:  &[]string{"possible mitigation", "and another possible mitigation"},
-		},
-		"gtf": {
-			Description:  "Webhook Test Message",
-			Time:         lsApi.NewEventTimestamp(0),
-			Origin:       "webhook test fire",
-			AttackVector: "webhook-test-fire",
-			Severity:     10,
-			MitreIDs:     &[]string{"mitre ID1", "mitre ID2"},
-			MitreTactic:  "mitre tactic description",
-			Mitigations:  &[]string{"possible mitigation", "and another possible mitigation"},
+			Description:  "[TEST] Traffic inside your cluster triggered Web Application Firewall rules",
+			Time:         lsApi.TimestampOrDate{},
+			Origin:       "Web Application Firewall",
+			AttackVector: "Network",
+			Severity:     80,
+			MitreIDs:     &[]string{"T1190"},
+			MitreTactic:  "Initial Access",
+			Mitigations: &[]string{
+				"This Web Application Firewall event is generated for the purpose of webhook testing, no action is required",
+				"Payload of this event is consistent with actuall expected payload when a similar event happens in your cluster",
+				"Review the source of this event - an attacker could be inside your cluster attempting to exploit your web application. Calico network policy can be used to block the connection if the activity is not expected",
+			},
+			Record: map[string]any{
+				"@timestamp": "2024-01-01T12:00:00.000000000Z",
+				"destination": map[string]string{
+					"hostname":  "",
+					"ip":        "10.244.151.190",
+					"name":      "frontend-7d56967868-drpjs",
+					"namespace": "online-boutique",
+					"port_num":  "8080",
+				},
+				"host":       "aks-agentpool-22979750-vmss000000",
+				"level":      "",
+				"method":     "GET",
+				"msg":        "WAF detected 2 violations [deny]",
+				"path":       "/test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user",
+				"protocol":   "HTTP/1.1",
+				"request_id": "460182972949411176",
+				"rules": []map[string]string{
+					{
+						"disruptive": "true",
+						"file":       "/etc/modsecurity-ruleset/@owasp_crs/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+						"id":         "942100",
+						"line":       "5195",
+						"message":    "SQL Injection Attack Detected via libinjection",
+						"severity":   "critical",
+					},
+					{
+						"disruptive": "true",
+						"file":       "/etc/modsecurity-ruleset/@owasp_crs/REQUEST-949-BLOCKING-EVALUATION.conf",
+						"id":         "949110",
+						"line":       "6946",
+						"message":    "Inbound Anomaly Score Exceeded (Total Score: 5)",
+						"severity":   "emergency",
+					},
+				},
+				"source": map[string]string{
+					"hostname":  "",
+					"ip":        "10.244.214.122",
+					"name":      "busybox",
+					"namespace": "online-boutique",
+					"port_num":  "33387",
+				},
+			},
 		},
 	}
 )
