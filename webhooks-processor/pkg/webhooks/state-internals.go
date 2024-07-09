@@ -32,9 +32,6 @@ const (
 )
 
 var (
-	webhookTestFireLabels = map[string]string{
-		"webhook label": "this is a test event",
-	}
 	webhookTestPayloads = map[string]lsApi.Event{
 		"waf": {
 			Description:  "[TEST] Traffic inside your cluster triggered Web Application Firewall rules",
@@ -275,7 +272,7 @@ func (s *ControllerState) testFire(ctx context.Context, webhook *api.SecurityEve
 	logEntry(webhook).Info("Test fire in progress...")
 	testEvent := s.selectTestEvent(webhook)
 	testEvent.Time = lsApi.NewEventDate(time.Now())
-	provider.Process(ctx, config, webhookTestFireLabels, testEvent)
+	provider.Process(ctx, config, s.extractLabels(*webhook), testEvent)
 	webhook.Spec.State = api.SecurityEventWebhookStateEnabled
 	go func() {
 		s.outUpdatesChan <- webhook
