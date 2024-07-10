@@ -17,10 +17,11 @@ import (
 )
 
 type QueryServerConfig struct {
-	QueryServerTunnelURL string
-	QueryServerURL       string
-	QueryServerCA        string
-	QueryServerToken     string
+	QueryServerTunnelURL    string
+	QueryServerURL          string
+	QueryServerCA           string
+	QueryServerToken        string
+	AddImpersonationHeaders bool
 }
 
 var errInvalidToken = errors.New("queryServer Token is not valid")
@@ -31,7 +32,8 @@ type QueryServerClient interface {
 }
 
 type queryServerClient struct {
-	client *http.Client
+	client                  *http.Client
+	addImpersonationHeaders bool
 }
 
 type QueryServerResults struct {
@@ -63,7 +65,8 @@ func NewQueryServerClient(cfg *QueryServerConfig) (*queryServerClient, error) {
 	}
 
 	return &queryServerClient{
-		client: client,
+		client:                  client,
+		addImpersonationHeaders: cfg.AddImpersonationHeaders,
 	}, nil
 }
 
@@ -102,6 +105,17 @@ func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *que
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("x-cluster-id", clusterId)
 
+	if q.addImpersonationHeaders {
+		// This is a multi-tenant management cluster. In this setup, in order to fetch information
+		// from the managed cluster, we must impersonate the canonical service account
+		// The Bearer token stores a service account created with a tenant namespace, but we need
+		// to use the canonical service account tigera-manager from tigera-manager namespace
+		req.Header.Add("Impersonate-User", "system:serviceaccount:tigera-manager:tigera-manager")
+		req.Header.Add("Impersonate-Group", "system:authenticated")
+		req.Header.Add("Impersonate-Group", "system:serviceaccounts")
+		req.Header.Add("Impersonate-Group", "system:serviceaccounts:tigera-manager")
+	}
+
 	resp, err := q.client.Do(req)
 	if err != nil {
 		log.WithError(err).Info("failed to execute queryserver request: ", err)
@@ -118,6 +132,7 @@ func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *que
 	qsResp := querycacheclient.QueryEndpointsResp{}
 	err = json.Unmarshal(respBytes, &qsResp)
 	if err != nil {
+		log.Errorf("Response: %s", string(respBytes))
 		log.WithError(err).Error("unmarshaling endpointsRespBody failed.")
 		return nil, err
 	}
