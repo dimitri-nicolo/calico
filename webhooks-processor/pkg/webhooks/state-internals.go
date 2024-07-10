@@ -43,8 +43,7 @@ var (
 			MitreTactic:  "Initial Access",
 			Mitigations: &[]string{
 				"This Web Application Firewall event is generated for the purpose of webhook testing, no action is required",
-				"Payload of this event is consistent with actuall expected payload when a similar event happens in your cluster",
-				"Review the source of this event - an attacker could be inside your cluster attempting to exploit your web application. Calico network policy can be used to block the connection if the activity is not expected",
+				"Payload of this event is consistent with actual expected payload when a similar event happens in your cluster",
 			},
 			Record: map[string]any{
 				"@timestamp": "2024-01-01T12:00:00.000000000Z",
@@ -272,14 +271,10 @@ func (s *ControllerState) testFire(ctx context.Context, webhook *api.SecurityEve
 	logEntry(webhook).Info("Test fire in progress...")
 	testEvent := s.selectTestEvent(webhook)
 	testEvent.Time = lsApi.NewEventDate(time.Now())
-	if err := provider.Process(ctx, config, s.extractLabels(*webhook), testEvent); err != nil {
-		s.updateWebhookHealth(webhook, "TestFireProcedure", time.Now(), err)
-	}
 	webhook.Spec.State = api.SecurityEventWebhookStateEnabled
-	go func() {
-		s.outUpdatesChan <- webhook
-		logEntry(webhook).Info("Webhook has been re-enabled")
-	}()
+	err := provider.Process(ctx, config, s.extractLabels(*webhook), testEvent)
+	s.updateWebhookHealth(webhook, "TestFireProcedure", time.Now(), err)
+	logEntry(webhook).Info("Webhook has been re-enabled")
 }
 
 func (s *ControllerState) selectTestEvent(webhook *api.SecurityEventWebhook) *lsApi.Event {
