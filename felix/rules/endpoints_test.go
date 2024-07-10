@@ -694,7 +694,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-sm-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							{
 								Match:  Match(),
 								Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00},
@@ -807,7 +807,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-fw-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							// conntrack rules.
 							{
 								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -887,7 +887,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-sm-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
 						},
 					},
@@ -911,7 +911,7 @@ var _ = Describe("Endpoints", func() {
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
 					{
 						Name: "cali-tw-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							// conntrack rules.
 							{
 								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -968,7 +968,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-fw-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							// conntrack rules.
 							{
 								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -1027,7 +1027,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-sm-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
 						},
 					},
@@ -1063,7 +1063,7 @@ var _ = Describe("Endpoints", func() {
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
 					{
 						Name: "cali-tw-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							// conntrack rules.
 							{
 								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -1116,7 +1116,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-fw-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							// conntrack rules.
 							{
 								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -1674,7 +1674,7 @@ var _ = Describe("Endpoints", func() {
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
 					{
 						Name: "cali-tw-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							// conntrack rules.
 							{
 								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -1721,7 +1721,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-fw-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							// conntrack rules.
 							{
 								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -1805,7 +1805,7 @@ var _ = Describe("Endpoints", func() {
 					},
 					{
 						Name: "cali-sm-cali1234",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
 						},
 					},
@@ -2282,7 +2282,7 @@ var _ = Describe("Endpoints", func() {
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
 						{
 							Name: "cali-tw-cali1234",
-							Rules: generictables.Rule{
+							Rules: []generictables.Rule{
 								// conntrack rules.
 								{
 									Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -2292,11 +2292,13 @@ var _ = Describe("Endpoints", func() {
 									Match:  Match().ConntrackState("INVALID"),
 									Action: denyAction,
 								},
-
-								{Action: ClearMarkAction{Mark: 0x98}},
-
+								{
+									Match:  Match(),
+									Action: ClearMarkAction{Mark: 0x98},
+								},
 								{
 									Comment: []string{"Start of tier default"},
+									Match:   Match(),
 									Action:  ClearMarkAction{Mark: 0x10},
 								},
 								{
@@ -2321,22 +2323,31 @@ var _ = Describe("Endpoints", func() {
 									Action:  denyAction,
 									Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
 								},
-
-								{Action: JumpAction{Target: "cali-pri-prof1"}},
+								{
+									Match:  Match(),
+									Action: JumpAction{Target: "cali-pri-prof1"},
+								},
 								{
 									Match:   Match().MarkSingleBitSet(0x8),
 									Action:  ReturnAction{},
 									Comment: []string{"Return if profile accepted"},
 								},
-								{Action: JumpAction{Target: "cali-pri-prof2"}},
+								{
+									Match:  Match(),
+									Action: JumpAction{Target: "cali-pri-prof2"},
+								},
 								{
 									Match:   Match().MarkSingleBitSet(0x8),
 									Action:  ReturnAction{},
 									Comment: []string{"Return if profile accepted"},
 								},
 
-								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 								{
+									Match:  Match(),
+									Action: NflogAction{Group: 1, Prefix: "DRI"},
+								},
+								{
+									Match:   Match(),
 									Action:  denyAction,
 									Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
 								},
@@ -2344,7 +2355,7 @@ var _ = Describe("Endpoints", func() {
 						},
 						{
 							Name: "cali-fw-cali1234",
-							Rules: generictables.Rule{
+							Rules: []generictables.Rule{
 								// conntrack rules.
 								{
 									Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
@@ -2355,11 +2366,15 @@ var _ = Describe("Endpoints", func() {
 									Action: denyAction,
 								},
 
-								{Action: ClearMarkAction{Mark: 0x98}},
+								{
+									Match:  Match(),
+									Action: ClearMarkAction{Mark: 0x98},
+								},
 								dropVXLANRule,
 								dropIPIPRule,
 
 								{
+									Match:   Match(),
 									Comment: []string{"Start of tier default"},
 									Action:  ClearMarkAction{Mark: 0x10},
 								},
@@ -2386,21 +2401,31 @@ var _ = Describe("Endpoints", func() {
 									Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
 								},
 
-								{Action: JumpAction{Target: "cali-pro-prof1"}},
+								{
+									Match:  Match(),
+									Action: JumpAction{Target: "cali-pro-prof1"},
+								},
 								{
 									Match:   Match().MarkSingleBitSet(0x8),
 									Action:  ReturnAction{},
 									Comment: []string{"Return if profile accepted"},
 								},
-								{Action: JumpAction{Target: "cali-pro-prof2"}},
+								{
+									Match:  Match(),
+									Action: JumpAction{Target: "cali-pro-prof2"},
+								},
 								{
 									Match:   Match().MarkSingleBitSet(0x8),
 									Action:  ReturnAction{},
 									Comment: []string{"Return if profile accepted"},
 								},
 
-								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 								{
+									Match:  Match(),
+									Action: NflogAction{Group: 2, Prefix: "DRE"},
+								},
+								{
+									Match:   Match(),
 									Action:  denyAction,
 									Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
 								},
@@ -2408,8 +2433,11 @@ var _ = Describe("Endpoints", func() {
 						},
 						{
 							Name: "cali-sm-cali1234",
-							Rules: generictables.Rule{
-								{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
+							Rules: []generictables.Rule{
+								{
+									Match:  Match(),
+									Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00},
+								},
 							},
 						},
 					})))
@@ -2770,7 +2798,7 @@ var _ = table.DescribeTable("PolicyGroup chains",
 			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "e", "f", "g"},
 			Selector:    "all()",
 		},
-		generictables.Rule{
+		[]generictables.Rule{
 			// Match criteria and return rules get skipped until we hit the
 			// first non-staged policy.
 			{
@@ -2810,7 +2838,7 @@ var _ = table.DescribeTable("PolicyGroup chains",
 			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "d", "staged:e", "f", "g"},
 			Selector:    "all()",
 		},
-		generictables.Rule{
+		[]generictables.Rule{
 			// Match criteria and return rules get skipped until we hit the
 			// first non-staged policy.
 			{
@@ -2850,7 +2878,7 @@ var _ = table.DescribeTable("PolicyGroup chains",
 			PolicyNames: []string{"staged:a", "staged:b", "staged:c", "staged:d", "staged:e", "f", "g"},
 			Selector:    "all()",
 		},
-		generictables.Rule{
+		[]generictables.Rule{
 			// Match criteria and return rules get skipped until we hit the
 			// first non-staged policy.
 			{

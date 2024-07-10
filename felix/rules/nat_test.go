@@ -31,6 +31,11 @@ import (
 	. "github.com/projectcalico/calico/felix/iptables"
 )
 
+type (
+	Rule  = generictables.Rule
+	Chain = generictables.Chain
+)
+
 var _ = Describe("NAT", func() {
 	var rrConfigNormal Config
 	BeforeEach(func() {

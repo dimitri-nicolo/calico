@@ -707,7 +707,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	}
 
 	for _, rule := range rules {
-		rule.Match = iptables.Combine(rule.Match, match) // CASEY: TODO iptables.Combine?
+		rule.Match = r.CombineMatches(rule.Match, match)
 		finalRules = append(finalRules, rule)
 	}
 

@@ -15,6 +15,7 @@
 package rules_test
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/generictables"
 	. "github.com/projectcalico/calico/felix/rules"
@@ -908,6 +909,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(rules[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -1898,7 +1900,7 @@ var _ = Describe("DNS policy rules", func() {
 				})
 			}
 
-			Expect(iptableRules).Should(Equal(expected))
+			Expect(iptableRules).Should(Equal(expected), cmp.Diff(iptableRules, expected))
 		},
 		Entry(apiv3.DNSPolicyModeDelayDeniedPacket, apiv3.DNSPolicyModeDelayDeniedPacket, true),
 		Entry(apiv3.DNSPolicyModeNoDelay, apiv3.DNSPolicyModeNoDelay, false),

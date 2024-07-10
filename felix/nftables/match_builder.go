@@ -196,6 +196,11 @@ func (m nftMatch) NotOutInterface(ifaceMatch string) generictables.MatchCriteria
 	return m
 }
 
+func (m nftMatch) NotInInterface(ifaceMatch string) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("iifname != %s", ifaceMatch))
+	return m
+}
+
 func (m nftMatch) RPFCheckFailed() generictables.MatchCriteria {
 	m.clauses = append(m.clauses, "fib saddr . mark . iif oif 0")
 	return m

@@ -95,9 +95,9 @@ var _ = Describe("Dispatch chains", func() {
 				"cali12345",
 				"cali6789a",
 				"calibcdef",
-			})).To(Equal([]*iptables.Chain{{
+			})).To(Equal([]*generictables.Chain{{
 				Name: "cali-from-wl-dispatch",
-				Rules: []iptables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Match:  iptables.Match().InInterface("cali12345"),
 						Action: iptables.ReturnAction{},
@@ -116,7 +116,7 @@ var _ = Describe("Dispatch chains", func() {
 						},
 					},
 					{
-						Match:  iptables.Match().RPFCheckFailed(false),
+						Match:  iptables.Match().RPFCheckFailed(),
 						Action: iptables.DropAction{},
 					},
 				},

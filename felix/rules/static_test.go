@@ -71,7 +71,7 @@ var _ = Describe("Static", func() {
 					Comment: []string{"Host endpoint policy accepted packet."},
 				},
 			}...)
-			Expect(rr.StaticManglePostroutingChain(ipVersion)).To(Equal(&generictables.generictables.Chain{
+			Expect(rr.StaticManglePostroutingChain(ipVersion)).To(Equal(&generictables.Chain{
 				Name:  "cali-POSTROUTING",
 				Rules: expRules,
 			}))
@@ -131,9 +131,9 @@ var _ = Describe("Static", func() {
 				})
 
 				It("IPv4: Should return expected raw PREROUTING chain", func() {
-					Expect(findChain(rr.StaticRawTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.generictables.Chain{
+					Expect(findChain(rr.StaticRawTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 						Name: "cali-PREROUTING",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							{Action: ClearMarkAction{Mark: 0xf1}},
 							{
 								Match:  Match().InInterface("cali+"),
@@ -156,9 +156,9 @@ var _ = Describe("Static", func() {
 				})
 
 				It("IPv6: Should return expected raw PREROUTING chain", func() {
-					Expect(findChain(rr.StaticRawTableChains(6), "cali-PREROUTING")).To(Equal(&generictables.generictables.Chain{
+					Expect(findChain(rr.StaticRawTableChains(6), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 						Name: "cali-PREROUTING",
-						Rules: generictables.Rule{
+						Rules: []generictables.Rule{
 							{Action: ClearMarkAction{Mark: 0xf1}},
 							{
 								Match:  Match().InInterface("cali+"),
@@ -169,7 +169,7 @@ var _ = Describe("Static", func() {
 								Action: JumpAction{Target: ChainRpfSkip},
 							},
 							{
-								Match:  Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
+								Match:  Match().MarkSingleBitSet(0x40).RPFCheckFailed(),
 								Action: denyAction,
 							},
 							{
@@ -205,34 +205,34 @@ var _ = Describe("Static", func() {
 					}
 					portRanges = append(portRanges, portRange)
 
-					expRawFailsafeIn := &generictables.generictables.Chain{
+					expRawFailsafeIn := &generictables.Chain{
 						Name: "cali-failsafe-in",
 						Rules: []generictables.Rule{
 							{Match: Match().Protocol("tcp").DestPorts(1022).SourceNet("::/0"), Action: AcceptAction{}},
 						},
 					}
 
-					expRawFailsafeOut := &generictables.generictables.Chain{
+					expRawFailsafeOut := &generictables.Chain{
 						Name: "cali-failsafe-out",
 						Rules: []generictables.Rule{
 							{Match: Match().Protocol("tcp").SourcePorts(1022).DestNet("::/0"), Action: AcceptAction{}},
 						},
 					}
 
-					expFailsafeIn := &generictables.generictables.Chain{
+					expFailsafeIn := &generictables.Chain{
 						Name: "cali-failsafe-in",
 						Rules: []generictables.Rule{
 							{Match: Match().Protocol("tcp").DestPorts(1022).SourceNet("::/0"), Action: AcceptAction{}},
 						},
 					}
 
-					expFailsafeOut := &generictables.generictables.Chain{
+					expFailsafeOut := &generictables.Chain{
 						Name:  "cali-failsafe-out",
 						Rules: []generictables.Rule{},
 					}
 
 					if ipVersion == 4 {
-						expRawFailsafeIn = &generictables.generictables.Chain{
+						expRawFailsafeIn = &generictables.Chain{
 							Name: "cali-failsafe-in",
 							Rules: []generictables.Rule{
 								{Match: Match().Protocol("tcp").DestPorts(22).SourceNet("0.0.0.0/0"), Action: AcceptAction{}},
@@ -242,7 +242,7 @@ var _ = Describe("Static", func() {
 							},
 						}
 
-						expRawFailsafeOut = &generictables.generictables.Chain{
+						expRawFailsafeOut = &generictables.Chain{
 							Name: "cali-failsafe-out",
 							Rules: []generictables.Rule{
 								{Match: Match().Protocol("tcp").DestPorts(23).DestNet("0.0.0.0/0"), Action: AcceptAction{}},
@@ -252,7 +252,7 @@ var _ = Describe("Static", func() {
 							},
 						}
 
-						expFailsafeIn = &generictables.generictables.Chain{
+						expFailsafeIn = &generictables.Chain{
 							Name: "cali-failsafe-in",
 							Rules: []generictables.Rule{
 								{Match: Match().Protocol("tcp").DestPorts(22).SourceNet("0.0.0.0/0"), Action: AcceptAction{}},
@@ -260,7 +260,7 @@ var _ = Describe("Static", func() {
 							},
 						}
 
-						expFailsafeOut = &generictables.generictables.Chain{
+						expFailsafeOut = &generictables.Chain{
 							Name: "cali-failsafe-out",
 							Rules: []generictables.Rule{
 								{Match: Match().Protocol("tcp").DestPorts(23).DestNet("0.0.0.0/0"), Action: AcceptAction{}},
@@ -269,7 +269,7 @@ var _ = Describe("Static", func() {
 						}
 					}
 
-					expForwardCheck := &generictables.generictables.Chain{
+					expForwardCheck := &generictables.Chain{
 						Name: "cali-forward-check",
 						Rules: []generictables.Rule{
 							{
@@ -298,7 +298,7 @@ var _ = Describe("Static", func() {
 						},
 					}
 
-					expForwardEndpointMark := &generictables.generictables.Chain{
+					expForwardEndpointMark := &generictables.Chain{
 						Name: "cali-forward-endpoint-mark",
 						Rules: []generictables.Rule{
 							{
@@ -326,9 +326,9 @@ var _ = Describe("Static", func() {
 					checkManglePostrouting(ipVersion, kubeIPVSEnabled)
 
 					It("should include the expected forward chain in the filter chains", func() {
-						Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&generictables.generictables.Chain{
+						Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&generictables.Chain{
 							Name: "cali-FORWARD",
-							Rules: generictables.Rule{
+							Rules: []generictables.Rule{
 								// DNS response capture.
 								{
 									Match:  Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
@@ -362,9 +362,9 @@ var _ = Describe("Static", func() {
 					})
 					It("should include the expected input chain in the filter chains", func() {
 						if kubeIPVSEnabled {
-							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.generictables.Chain{
+							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.Chain{
 								Name: "cali-INPUT",
-								Rules: generictables.Rule{
+								Rules: []generictables.Rule{
 									// DNS response capture.
 									{
 										Match:  Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
@@ -408,9 +408,9 @@ var _ = Describe("Static", func() {
 								},
 							}))
 						} else {
-							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.generictables.Chain{
+							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.Chain{
 								Name: "cali-INPUT",
-								Rules: generictables.Rule{
+								Rules: []generictables.Rule{
 									// DNS response capture.
 									{
 										Match:  Match().Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
@@ -449,7 +449,7 @@ var _ = Describe("Static", func() {
 					})
 					It("should include the expected output chain in the filter chains", func() {
 						if kubeIPVSEnabled {
-							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.generictables.Chain{
+							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.Chain{
 								Name: "cali-OUTPUT",
 								Rules: []generictables.Rule{
 									// Untracked packets already matched in raw table.
@@ -493,7 +493,7 @@ var _ = Describe("Static", func() {
 								},
 							}))
 						} else {
-							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.generictables.Chain{
+							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.Chain{
 								Name: "cali-OUTPUT",
 								Rules: []generictables.Rule{
 									// Untracked packets already matched in raw table.
@@ -561,7 +561,7 @@ var _ = Describe("Static", func() {
 					})
 
 					It("Should return expected raw OUTPUT chain", func() {
-						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.generictables.Chain{
+						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.Chain{
 							Name: "cali-OUTPUT",
 							Rules: []generictables.Rule{
 								// For safety, clear all our mark bits before we start.  (We could be in
@@ -594,7 +594,7 @@ var _ = Describe("Static", func() {
 							// is common to the INPUT, OUTPUT and FORWARD chains.
 							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&generictables.Chain{
 								Name: "cali-FORWARD",
-								Rules: generictables.Rule{
+								Rules: []generictables.Rule{
 									// DNS response capture and queue.
 									{
 										Match:  Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
@@ -631,10 +631,13 @@ var _ = Describe("Static", func() {
 			}
 
 			It("IPv4: Should return expected raw PREROUTING chain", func() {
-				Expect(findChain(rr.StaticRawTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticRawTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 					Name: "cali-PREROUTING",
-					Rules: generictables.Rule{
-						{Action: ClearMarkAction{Mark: 0xf1}},
+					Rules: []generictables.Rule{
+						{
+							Match:  Match(),
+							Action: ClearMarkAction{Mark: 0xf1},
+						},
 						{
 							Match:  Match().InInterface("cali+"),
 							Action: SetMarkAction{Mark: 0x40},
@@ -655,10 +658,13 @@ var _ = Describe("Static", func() {
 				}))
 			})
 			It("IPv6: Should return expected raw PREROUTING chain", func() {
-				Expect(findChain(rr.StaticRawTableChains(6), "cali-PREROUTING")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticRawTableChains(6), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 					Name: "cali-PREROUTING",
-					Rules: generictables.Rule{
-						{Action: ClearMarkAction{Mark: 0xf1}},
+					Rules: []generictables.Rule{
+						{
+							Match:  Match(),
+							Action: ClearMarkAction{Mark: 0xf1},
+						},
 						{
 							Match:  Match().InInterface("cali+"),
 							Action: SetMarkAction{Mark: 0x40},
@@ -668,7 +674,7 @@ var _ = Describe("Static", func() {
 							Action: JumpAction{Target: ChainRpfSkip},
 						},
 						{
-							Match:  Match().MarkSingleBitSet(0x40).RPFCheckFailed(false),
+							Match:  Match().MarkSingleBitSet(0x40).RPFCheckFailed(),
 							Action: denyAction,
 						},
 						{
@@ -684,7 +690,7 @@ var _ = Describe("Static", func() {
 			})
 
 			It("IPv4: Should return expected mangle PREROUTING chain", func() {
-				Expect(findChain(rr.StaticMangleTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticMangleTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 					Name: "cali-PREROUTING",
 					Rules: []generictables.Rule{
 						{
@@ -705,7 +711,7 @@ var _ = Describe("Static", func() {
 				}))
 			})
 			It("IPv6: Should return expected mangle PREROUTING chain", func() {
-				Expect(findChain(rr.StaticMangleTableChains(6), "cali-PREROUTING")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticMangleTableChains(6), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 					Name: "cali-PREROUTING",
 					Rules: []generictables.Rule{
 						{
@@ -727,7 +733,7 @@ var _ = Describe("Static", func() {
 			})
 
 			It("IPv4: should include the expected workload-to-host chain in the filter chains", func() {
-				Expect(findChain(rr.StaticFilterTableChains(4), "cali-wl-to-host")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticFilterTableChains(4), "cali-wl-to-host")).To(Equal(&generictables.Chain{
 					Name: "cali-wl-to-host",
 					Rules: []generictables.Rule{
 						{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
@@ -739,7 +745,7 @@ var _ = Describe("Static", func() {
 				}))
 			})
 			It("IPv6: should include the expected workload-to-host chain in the filter chains", func() {
-				Expect(findChain(rr.StaticFilterTableChains(6), "cali-wl-to-host")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticFilterTableChains(6), "cali-wl-to-host")).To(Equal(&generictables.Chain{
 					Name: "cali-wl-to-host",
 					Rules: []generictables.Rule{
 						{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(130), Action: AcceptAction{}},
@@ -758,7 +764,7 @@ var _ = Describe("Static", func() {
 			})
 
 			It("IPv4: Should return expected NAT prerouting chain", func() {
-				Expect(findChain(rr.StaticNATTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticNATTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 					Name: "cali-PREROUTING",
 					Rules: []generictables.Rule{
 						{Action: JumpAction{Target: "cali-fip-dnat"}},
@@ -766,7 +772,7 @@ var _ = Describe("Static", func() {
 				}))
 			})
 			It("IPv4: Should return expected NAT postrouting chain", func() {
-				Expect(findChain(rr.StaticNATTableChains(4), "cali-POSTROUTING")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticNATTableChains(4), "cali-POSTROUTING")).To(Equal(&generictables.Chain{
 					Name: "cali-POSTROUTING",
 					Rules: []generictables.Rule{
 						{Action: JumpAction{Target: "cali-fip-snat"}},
@@ -775,10 +781,13 @@ var _ = Describe("Static", func() {
 				}))
 			})
 			It("IPv4: Should return expected NAT output chain", func() {
-				Expect(findChain(rr.StaticNATTableChains(4), "cali-OUTPUT")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticNATTableChains(4), "cali-OUTPUT")).To(Equal(&generictables.Chain{
 					Name: "cali-OUTPUT",
 					Rules: []generictables.Rule{
-						{Action: JumpAction{Target: "cali-fip-dnat"}},
+						{
+							Match:  Match(),
+							Action: JumpAction{Target: "cali-fip-dnat"},
+						},
 					},
 				}))
 			})
@@ -819,7 +828,7 @@ var _ = Describe("Static", func() {
 
 			checkManglePostrouting(4, kubeIPVSEnabled)
 
-			expInputChainIPIPV4IPVS := &generictables.generictables.Chain{
+			expInputChainIPIPV4IPVS := &generictables.Chain{
 				Name: "cali-INPUT",
 				Rules: []generictables.Rule{
 					// IPIP rules
@@ -870,7 +879,7 @@ var _ = Describe("Static", func() {
 				},
 			}
 
-			expInputChainIPIPV4NoIPVS := &generictables.generictables.Chain{
+			expInputChainIPIPV4NoIPVS := &generictables.Chain{
 				Name: "cali-INPUT",
 				Rules: []generictables.Rule{
 					// IPIP rules
@@ -914,7 +923,7 @@ var _ = Describe("Static", func() {
 			}
 
 			// V6 should be unaffected.
-			expInputChainIPIPV6IPVS := &generictables.generictables.Chain{
+			expInputChainIPIPV6IPVS := &generictables.Chain{
 				Name: "cali-INPUT",
 				Rules: []generictables.Rule{
 					// Forward check chain.
@@ -948,7 +957,7 @@ var _ = Describe("Static", func() {
 					},
 				},
 			}
-			expInputChainIPIPV6NoIPVS := &generictables.generictables.Chain{
+			expInputChainIPIPV6NoIPVS := &generictables.Chain{
 				Name: "cali-INPUT",
 				Rules: []generictables.Rule{
 					// Per-prefix workload jump rules.  Note use of goto so that we
@@ -975,7 +984,7 @@ var _ = Describe("Static", func() {
 				},
 			}
 
-			expOutputChainIPIPV4IPVS := &generictables.generictables.Chain{
+			expOutputChainIPIPV4IPVS := &generictables.Chain{
 				Name: "cali-OUTPUT",
 				Rules: []generictables.Rule{
 					// Untracked packets already matched in raw table.
@@ -1016,7 +1025,7 @@ var _ = Describe("Static", func() {
 				},
 			}
 
-			expOutputChainIPIPV4NoIPVS := &generictables.generictables.Chain{
+			expOutputChainIPIPV4NoIPVS := &generictables.Chain{
 				Name: "cali-OUTPUT",
 				Rules: []generictables.Rule{
 					// Untracked packets already matched in raw table.
@@ -1052,7 +1061,7 @@ var _ = Describe("Static", func() {
 			}
 
 			// V6 should be unaffected.
-			expOutputChainIPIPV6IPVS := &generictables.generictables.Chain{
+			expOutputChainIPIPV6IPVS := &generictables.Chain{
 				Name: "cali-OUTPUT",
 				Rules: []generictables.Rule{
 					// Untracked packets already matched in raw table.
@@ -1084,7 +1093,7 @@ var _ = Describe("Static", func() {
 				},
 			}
 
-			expOutputChainIPIPV6NoIPVS := &generictables.generictables.Chain{
+			expOutputChainIPIPV6NoIPVS := &generictables.Chain{
 				Name: "cali-OUTPUT",
 				Rules: []generictables.Rule{
 					// Untracked packets already matched in raw table.
@@ -1139,7 +1148,7 @@ var _ = Describe("Static", func() {
 				}
 			})
 			It("IPv4: Should return expected NAT postrouting chain", func() {
-				Expect(rr.StaticNATPostroutingChains(4)).To(Equal([]*generictables.generictables.Chain{
+				Expect(rr.StaticNATPostroutingChains(4)).To(Equal([]*generictables.Chain{
 					{
 						Name: "cali-POSTROUTING",
 						Rules: []generictables.Rule{
@@ -1165,7 +1174,7 @@ var _ = Describe("Static", func() {
 				checkManglePostrouting(4, kubeIPVSEnabled)
 
 				It("IPv4: Should return expected NAT postrouting chain", func() {
-					Expect(rr.StaticNATPostroutingChains(4)).To(Equal([]*generictables.generictables.Chain{
+					Expect(rr.StaticNATPostroutingChains(4)).To(Equal([]*generictables.Chain{
 						{
 							Name: "cali-POSTROUTING",
 							Rules: []generictables.Rule{
@@ -1189,7 +1198,7 @@ var _ = Describe("Static", func() {
 					})
 
 					It("IPv4: Should return expected NAT postrouting chain", func() {
-						Expect(rr.StaticNATPostroutingChains(4)).To(Equal([]*generictables.generictables.Chain{
+						Expect(rr.StaticNATPostroutingChains(4)).To(Equal([]*generictables.Chain{
 							{
 								Name: "cali-POSTROUTING",
 								Rules: []generictables.Rule{
@@ -1224,7 +1233,7 @@ var _ = Describe("Static", func() {
 				checkManglePostrouting(6, kubeIPVSEnabled)
 
 				It("IPv6: Should return expected NAT postrouting chain", func() {
-					Expect(rr.StaticNATPostroutingChains(6)).To(Equal([]*generictables.generictables.Chain{
+					Expect(rr.StaticNATPostroutingChains(6)).To(Equal([]*generictables.Chain{
 						{
 							Name: "cali-POSTROUTING",
 							Rules: []generictables.Rule{
@@ -1241,7 +1250,7 @@ var _ = Describe("Static", func() {
 					})
 
 					It("IPv6: Should return expected NAT postrouting chain", func() {
-						Expect(rr.StaticNATPostroutingChains(6)).To(Equal([]*generictables.generictables.Chain{
+						Expect(rr.StaticNATPostroutingChains(6)).To(Equal([]*generictables.Chain{
 							{
 								Name: "cali-POSTROUTING",
 								Rules: []generictables.Rule{
@@ -1262,7 +1271,7 @@ var _ = Describe("Static", func() {
 			})
 
 			It("IPv6: Should return expected NAT postrouting chain", func() {
-				Expect(rr.StaticNATPostroutingChains(6)).To(Equal([]*generictables.generictables.Chain{
+				Expect(rr.StaticNATPostroutingChains(6)).To(Equal([]*generictables.Chain{
 					{
 						Name: "cali-POSTROUTING",
 						Rules: []generictables.Rule{
@@ -1328,7 +1337,7 @@ var _ = Describe("Static", func() {
 				{First: 30830, Last: 30840},
 			}
 
-			expForwardCheck := &generictables.generictables.Chain{
+			expForwardCheck := &generictables.Chain{
 				Name: "cali-forward-check",
 				Rules: []generictables.Rule{
 					{
@@ -1402,7 +1411,7 @@ var _ = Describe("Static", func() {
 			}
 		})
 
-		expWlToHostV4 := &generictables.generictables.Chain{
+		expWlToHostV4 := &generictables.Chain{
 			Name: "cali-wl-to-host",
 			Rules: []generictables.Rule{
 				// OpenStack special cases.
@@ -1430,7 +1439,7 @@ var _ = Describe("Static", func() {
 			},
 		}
 
-		expWlToHostV6 := &generictables.generictables.Chain{
+		expWlToHostV6 := &generictables.Chain{
 			Name: "cali-wl-to-host",
 			Rules: []generictables.Rule{
 				{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(130), Action: AcceptAction{}},
@@ -1466,7 +1475,7 @@ var _ = Describe("Static", func() {
 		})
 
 		It("IPv4: Should return expected NAT prerouting chain", func() {
-			Expect(rr.StaticNATPreroutingChains(4)).To(Equal([]*generictables.generictables.Chain{
+			Expect(rr.StaticNATPreroutingChains(4)).To(Equal([]*generictables.Chain{
 				{
 					Name: "cali-PREROUTING",
 					Rules: []generictables.Rule{
@@ -1488,7 +1497,7 @@ var _ = Describe("Static", func() {
 			}))
 		})
 		It("IPv6: Should return expected NAT prerouting chain", func() {
-			Expect(rr.StaticNATPreroutingChains(6)).To(Equal([]*generictables.generictables.Chain{
+			Expect(rr.StaticNATPreroutingChains(6)).To(Equal([]*generictables.Chain{
 				{
 					Name: "cali-PREROUTING",
 					Rules: []generictables.Rule{
@@ -1525,7 +1534,7 @@ var _ = Describe("Static", func() {
 			}
 		})
 
-		expWlToHostV4 := &generictables.generictables.Chain{
+		expWlToHostV4 := &generictables.Chain{
 			Name: "cali-wl-to-host",
 			Rules: []generictables.Rule{
 				// OpenStack special cases.
@@ -1553,7 +1562,7 @@ var _ = Describe("Static", func() {
 			},
 		}
 
-		expWlToHostV6 := &generictables.generictables.Chain{
+		expWlToHostV6 := &generictables.Chain{
 			Name: "cali-wl-to-host",
 			Rules: []generictables.Rule{
 				{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(130), Action: ReturnAction{}},
@@ -1616,13 +1625,13 @@ var _ = Describe("Static", func() {
 			Expect(rr.StaticNATPreroutingChains(4)).To(Equal([]*generictables.Chain{
 				{
 					Name: "cali-PREROUTING",
-					Rules: generictables.Rule{
+					Rules: []generictables.Rule{
 						{Action: JumpAction{Target: "cali-fip-dnat"}},
 					},
 				},
 				{
 					Name: "cali-egress",
-					Rules: generictables.Rule{
+					Rules: []generictables.Rule{
 						{
 							Action: SetMaskedMarkAction{Mark: 0x400, Mask: 0x400},
 							Match: Match().
@@ -1645,7 +1654,7 @@ var _ = Describe("Static", func() {
 			Expect(rr.StaticNATPreroutingChains(6)).To(Equal([]*generictables.Chain{
 				{
 					Name: "cali-PREROUTING",
-					Rules: generictables.Rule{
+					Rules: []generictables.Rule{
 						{Action: JumpAction{Target: "cali-fip-dnat"}},
 					},
 				},
@@ -1655,7 +1664,7 @@ var _ = Describe("Static", func() {
 		It("IPv4: Should return expected mangle PREROUTING chain", func() {
 			Expect(findChain(rr.StaticMangleTableChains(4), "cali-pre-egress")).To(Equal(&generictables.Chain{
 				Name: "cali-pre-egress",
-				Rules: generictables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Match: Match().SourceIPSet("cali40all-ipam-pools"),
 						Action: RestoreConnMarkAction{
@@ -1667,7 +1676,7 @@ var _ = Describe("Static", func() {
 			}))
 			Expect(findChain(rr.StaticMangleTableChains(4), "cali-pre-egress-in")).To(Equal(&generictables.Chain{
 				Name: "cali-pre-egress-in",
-				Rules: generictables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Match: Match().
 							InInterface("egress.calico"),
@@ -1688,7 +1697,7 @@ var _ = Describe("Static", func() {
 			rr.IPIPEnabled = true
 			Expect(findChain(rr.StaticMangleTableChains(4), "cali-post-egress")).To(Equal(&generictables.Chain{
 				Name: "cali-post-egress",
-				Rules: generictables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Match:  Match().MarkSingleBitSet(rr.IptablesMarkEgress).OutInterface("tunl0"),
 						Action: ChecksumAction{},
@@ -1700,7 +1709,7 @@ var _ = Describe("Static", func() {
 			rr.VXLANEnabled = true
 			Expect(findChain(rr.StaticMangleTableChains(4), "cali-post-egress")).To(Equal(&generictables.Chain{
 				Name: "cali-post-egress",
-				Rules: generictables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Match:  Match().MarkSingleBitSet(rr.IptablesMarkEgress).OutInterface("vxlan.calico"),
 						Action: ChecksumAction{},
@@ -1744,7 +1753,7 @@ var _ = Describe("Static", func() {
 		for _, ipVersion := range []uint8{4, 6} {
 
 			It("should include the expected forward chain in the filter chains", func() {
-				Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&generictables.Chain{
 					Name: "cali-FORWARD",
 					Rules: []generictables.Rule{
 						// Incoming host endpoint chains.
@@ -1769,7 +1778,7 @@ var _ = Describe("Static", func() {
 				}))
 			})
 			It("should include the expected input chain in the filter chains", func() {
-				Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.Chain{
 					Name: "cali-INPUT",
 					Rules: []generictables.Rule{
 						// Per-prefix workload jump rules.  Note use of goto so that we
@@ -1797,7 +1806,7 @@ var _ = Describe("Static", func() {
 				}))
 			})
 			It("should include the expected output chain in the filter chains", func() {
-				Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.generictables.Chain{
+				Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-OUTPUT")).To(Equal(&generictables.Chain{
 					Name: "cali-OUTPUT",
 					Rules: []generictables.Rule{
 						// Untracked packets already matched in raw table.
@@ -1927,7 +1936,7 @@ var _ = Describe("Static", func() {
 						},
 					)
 
-					Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.generictables.Chain{
+					Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-INPUT")).To(Equal(&generictables.Chain{
 						Name:  "cali-INPUT",
 						Rules: rules,
 					}))
@@ -1938,13 +1947,13 @@ var _ = Describe("Static", func() {
 					if ipVersion == 4 {
 						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 							Name: "cali-PREROUTING",
-							Rules: generictables.Rule{
+							Rules: []generictables.Rule{
 								{
-									Match:  nil,
+									Match:  Match(),
 									Action: ClearMarkAction{Mark: 0xf1},
 								},
 								{
-									Match:  nil,
+									Match:  Match(),
 									Action: JumpAction{Target: "cali-wireguard-incoming-mark"},
 								},
 								{
@@ -1968,13 +1977,13 @@ var _ = Describe("Static", func() {
 					} else {
 						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 							Name: "cali-PREROUTING",
-							Rules: generictables.Rule{
+							Rules: []generictables.Rule{
 								{
-									Match:  nil,
+									Match:  Match(),
 									Action: ClearMarkAction{Mark: 0xf1},
 								},
 								{
-									Match:  nil,
+									Match:  Match(),
 									Action: JumpAction{Target: "cali-wireguard-incoming-mark"},
 								},
 								{
@@ -1986,7 +1995,7 @@ var _ = Describe("Static", func() {
 									Action: JumpAction{Target: ChainRpfSkip},
 								},
 								{
-									Match:  Match().MarkMatchesWithMask(0x40, 0x40).RPFCheckFailed(false),
+									Match:  Match().MarkMatchesWithMask(0x40, 0x40).RPFCheckFailed(),
 									Action: DropAction{},
 								},
 								{
@@ -2072,14 +2081,14 @@ var _ = Describe("Static", func() {
 			It("should return no BPF untracked rules when bypassHostConntrack is false", func() {
 				outputBPFModeRawChains := rr.StaticBPFModeRawChains(4, false, false)
 				actualBPFModeRawChains := findChain(outputBPFModeRawChains, "cali-untracked-flows")
-				expectBPFModeRawChains := &generictables.generictables.Chain{Name: "cali-untracked-flows", Rules: nil}
+				expectBPFModeRawChains := &generictables.Chain{Name: "cali-untracked-flows", Rules: nil}
 				Expect(actualBPFModeRawChains).To(Equal(expectBPFModeRawChains))
 			})
 
 			It("should return default static BPF untracked rules when bypassHostConntrack is true", func() {
 				outputBPFModeRawChains := rr.StaticBPFModeRawChains(4, false, true)
 				actualBPFModeRawChains := findChain(outputBPFModeRawChains, "cali-untracked-flows")
-				expectBPFModeRawChains := &generictables.generictables.Chain{Name: "cali-untracked-flows", Rules: staticBPFModeRawRules}
+				expectBPFModeRawChains := &generictables.Chain{Name: "cali-untracked-flows", Rules: staticBPFModeRawRules}
 				Expect(actualBPFModeRawChains).To(Equal(expectBPFModeRawChains))
 			})
 		})
@@ -2101,7 +2110,7 @@ var _ = Describe("Static", func() {
 
 				outputBPFModeRawChains := rr.StaticBPFModeRawChains(4, false, true)
 				actualBPFModeRawChains := findChain(outputBPFModeRawChains, "cali-untracked-flows")
-				expectBPFModeRawChains := &generictables.generictables.Chain{Name: "cali-untracked-flows", Rules: expectBPFModeRawRules}
+				expectBPFModeRawChains := &generictables.Chain{Name: "cali-untracked-flows", Rules: expectBPFModeRawRules}
 				Expect(actualBPFModeRawChains).To(Equal(expectBPFModeRawChains))
 			})
 		})
@@ -2128,7 +2137,7 @@ var _ = Describe("Static", func() {
 
 				outputBPFModeRawChains := rr.StaticBPFModeRawChains(4, false, true)
 				actualBPFModeRawChains := findChain(outputBPFModeRawChains, "cali-untracked-flows")
-				expectBPFModeRawChains := &generictables.generictables.Chain{Name: "cali-untracked-flows", Rules: expectBPFModeRawRules}
+				expectBPFModeRawChains := &generictables.Chain{Name: "cali-untracked-flows", Rules: expectBPFModeRawRules}
 				Expect(actualBPFModeRawChains).To(Equal(expectBPFModeRawChains))
 			})
 		})
@@ -2246,7 +2255,7 @@ var _ = Describe("Static", func() {
 
 		expForwardChain := &generictables.Chain{
 			Name: "cali-FORWARD",
-			Rules: generictables.Rule{
+			Rules: []generictables.Rule{
 				{Action: ClearMarkAction{Mark: 0xe1}},
 				// Incoming host endpoint chains.
 				{
@@ -2278,7 +2287,7 @@ var _ = Describe("Static", func() {
 
 		expInputChainIPIP := &generictables.Chain{
 			Name: "cali-INPUT",
-			Rules: generictables.Rule{
+			Rules: []generictables.Rule{
 				// Per-prefix workload jump rules.  Note use of goto so that we
 				// don't return here.
 				{
@@ -2308,7 +2317,7 @@ var _ = Describe("Static", func() {
 
 		expOutputChain := &generictables.Chain{
 			Name: "cali-OUTPUT",
-			Rules: generictables.Rule{
+			Rules: []generictables.Rule{
 				// Untracked packets already matched in raw table.
 				{
 					Match:  Match().MarkSingleBitSet(0x10),
@@ -2335,7 +2344,7 @@ var _ = Describe("Static", func() {
 
 		expWlToHostV4 := &generictables.Chain{
 			Name: "cali-wl-to-host",
-			Rules: generictables.Rule{
+			Rules: []generictables.Rule{
 				{Action: JumpAction{Target: "cali-from-wl-dispatch"}},
 				{
 					Action:  ReturnAction{},
@@ -2346,7 +2355,7 @@ var _ = Describe("Static", func() {
 
 		expWlToHostV6 := &generictables.Chain{
 			Name: "cali-wl-to-host",
-			Rules: generictables.Rule{
+			Rules: []generictables.Rule{
 				{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(130), Action: AcceptAction{}},
 				{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(131), Action: AcceptAction{}},
 				{Match: Match().ProtocolNum(ProtoICMPv6).ICMPV6Type(132), Action: AcceptAction{}},
@@ -2398,7 +2407,7 @@ var _ = Describe("DropRules", func() {
 	})
 
 	for _, trueOrFalse := range []bool{true, false} {
-		var denyAction Action
+		var denyAction generictables.Action
 		denyAction = DropAction{}
 		denyActionCommand := "DROP"
 		if trueOrFalse {
@@ -2429,7 +2438,7 @@ var _ = Describe("DropRules", func() {
 			})
 
 			It("should render a log and a drop", func() {
-				Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal(generictables.Rule{
+				Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]generictables.Rule{
 					{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "calico-drop"}},
 					{Match: Match().Protocol("tcp"), Action: denyAction},
 				}))
@@ -2441,7 +2450,7 @@ var _ = Describe("DropRules", func() {
 				})
 
 				It("should render a log and a drop with calico-drop as prefix", func() {
-					Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal(generictables.Rule{
+					Expect(rr.DropRules(Match().Protocol("tcp"))).To(Equal([]generictables.Rule{
 						{Match: Match().Protocol("tcp"), Action: LogAction{Prefix: "calico-drop"}},
 						{Match: Match().Protocol("tcp"), Action: denyAction},
 					}))

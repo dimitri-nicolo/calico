@@ -590,8 +590,9 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			// Clear the "pass" mark.  If a policy sets that mark, we'll skip the rest of the policies and
 			// continue processing the profiles, if there are any.
 			rules = append(rules, generictables.Rule{
-				Comment: []string{"Start of tier " + tier.Name},
+				Match:   r.NewMatch(),
 				Action:  r.ClearMark(r.IptablesMarkPass),
+				Comment: []string{"Start of tier " + tier.Name},
 			})
 
 			// Track if any of the policies are not staged. If all of the policies in a tier are staged

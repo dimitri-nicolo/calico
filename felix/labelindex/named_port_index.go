@@ -722,11 +722,11 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 // removals for previously sent members that are now masked.
 // For example, we don't need to send updates for both 10.0.0.0/24 and 10.0.0.1/32.
 func (idx *SelectorAndNamedPortIndex) onMemberAdded(ipSetID string, member IPSetMember) {
-	if member.Protocol == ProtocolNone && member.PortNumber == 0 {
-		// We only deduplicate for IP set members that are CIDRs. Named port members are always unique.
+	if member.Protocol == ProtocolNone && member.PortNumber == 0 && member.Domain == "" {
+		// We only deduplicate for IP set members that are CIDRs. Named port members and domains are always unique.
 		add, removes := idx.suppressor.Add(ipSetID, member.CIDR)
 		if add != nil {
-			idx.OnMemberAdded(ipSetID, IPSetMember{CIDR: add})
+			idx.OnMemberAdded(ipSetID, member)
 		}
 		for _, r := range removes {
 			log.WithField("ipSetID", ipSetID).
