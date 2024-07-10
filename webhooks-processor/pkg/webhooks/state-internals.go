@@ -272,7 +272,9 @@ func (s *ControllerState) testFire(ctx context.Context, webhook *api.SecurityEve
 	logEntry(webhook).Info("Test fire in progress...")
 	testEvent := s.selectTestEvent(webhook)
 	testEvent.Time = lsApi.NewEventDate(time.Now())
-	provider.Process(ctx, config, s.extractLabels(*webhook), testEvent)
+	if err := provider.Process(ctx, config, s.extractLabels(*webhook), testEvent); err != nil {
+		s.updateWebhookHealth(webhook, "TestFireProcedure", time.Now(), err)
+	}
 	webhook.Spec.State = api.SecurityEventWebhookStateEnabled
 	go func() {
 		s.outUpdatesChan <- webhook
