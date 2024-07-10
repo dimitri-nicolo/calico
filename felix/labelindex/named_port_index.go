@@ -914,7 +914,6 @@ func (idx *SelectorAndNamedPortIndex) DeleteParentLabels(parentID string) {
 // If the IP set represents a named port then the returned members will have a named port component.
 // Returns nil if the endpoint doesn't contribute to the IP set.
 func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(id interface{}, d *endpointData, ipSetData *ipSetData) (contrib []IPSetMember) {
-
 	if ipSetData.namedPortProtocol != ProtocolNone {
 		// This IP set represents a named port match, calculate the cross product of
 		// matching named ports by IP address or domain.

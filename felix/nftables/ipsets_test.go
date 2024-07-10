@@ -35,6 +35,6 @@ var _ = Describe("IPSets with empty data plane", func() {
 	})
 
 	It("should Apply() on an empty state)", func() {
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 	})
 })
