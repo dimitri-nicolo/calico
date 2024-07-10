@@ -22,7 +22,7 @@ const (
 
 type nodeLocalDNSManager struct {
 	ruleRenderer rules.RuleRenderer
-	rawTables    IptablesTable
+	rawTables    Table
 	ipVersion    uint8
 
 	nodeLocalDNSCachePresent bool
@@ -33,7 +33,7 @@ type nodeLocalDNSManager struct {
 func newNodeLocalDNSManager(
 	ruleRenderer rules.RuleRenderer,
 	ipVersion uint8,
-	rawTables IptablesTable,
+	rawTables Table,
 ) *nodeLocalDNSManager {
 	return &nodeLocalDNSManager{
 		ruleRenderer: ruleRenderer,

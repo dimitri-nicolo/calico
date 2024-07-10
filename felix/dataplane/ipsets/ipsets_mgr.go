@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package ipsets
 
 import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -62,13 +63,9 @@ type IPSetsManager struct {
 	ignoredSetIds set.Set[string]
 }
 
-type DomainInfoChangeHandler interface {
-	OnDomainChange(name string) (dataplaneSyncNeeded bool)
-}
-
 type store interface {
 	// Register this IPSets manager as a user of the DomainInfoStore.
-	RegisterHandler(DomainInfoChangeHandler)
+	RegisterHandler(common.DomainInfoChangeHandler)
 	// Get the IPs for a given domain name.
 	GetDomainIPs(domain string) []string
 }
@@ -288,7 +285,6 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemo
 }
 
 func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domainsRemoved []string, domainsAdded []string) {
-
 	// Get the current programming for this domain set.
 	ipToDomains := m.domainSetProgramming[ipSetId]
 	if ipToDomains == nil {

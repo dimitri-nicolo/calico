@@ -63,6 +63,8 @@ import (
 	"github.com/projectcalico/calico/felix/config"
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/dns"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/linux/debugconsole"
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/generictables"
@@ -387,7 +389,7 @@ type InternalDataplane struct {
 	natTables    []generictables.Table
 	rawTables    []generictables.Table
 	filterTables []generictables.Table
-	ipSets       []common.IPSetsDataplane
+	ipSets       []dpsets.IPSetsDataplane
 
 	ipipManager          *ipipManager
 	allHostsIpsetManager *allHostsIpsetManager
@@ -409,7 +411,7 @@ type InternalDataplane struct {
 
 	endpointStatusCombiner *endpointStatusCombiner
 
-	domainInfoStore *common.DomainInfoStore
+	domainInfoStore *dns.DomainInfoStore
 
 	allManagers             []Manager
 	managersWithRouteTables []ManagerWithRouteTables
@@ -554,11 +556,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.WithError(err).Error("Failed to write MTU file, pod MTU may not be properly set")
 	}
 
-	featureDetector := environment.NewFeatureDetector(
-		config.FeatureDetectOverrides,
-		environment.WithFeatureGates(config.FeatureGates),
-	)
-
 	// Determine the action set and new match function based on the underlying generictables implementation.
 	actionSet := iptables.Actions()
 	newMatchFn := iptables.Match
@@ -658,7 +655,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	var nftablesV4RootTable generictables.Table
 	var mangleTableV4, natTableV4, rawTableV4, filterTableV4 generictables.Table
-	var ipSetsV4 common.IPSetsDataplane
+	var ipSetsV4 dpsets.IPSetsDataplane
 
 	if config.RulesConfig.NFTables {
 		// Create the underlying table.
@@ -677,7 +674,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		filterTableV4 = nftables.NewTableLayer("filter", nftablesV4RootTable)
 
 		// We use the root table for IP sets as well.
-		ipSetsV4 = nftablesV4RootTable.(common.IPSetsDataplane)
+		ipSetsV4 = nftablesV4RootTable.(dpsets.IPSetsDataplane)
 	} else {
 		// iptables mode
 		mangleTableV4 = iptables.NewTable(
@@ -787,7 +784,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = common.NewDomainInfoStore(&common.DnsConfig{
+	dp.domainInfoStore = dns.NewDomainInfoStore(&dns.DnsConfig{
 		Collector:                 config.Collector,
 		DNSCacheEpoch:             config.DNSCacheEpoch,
 		DNSCacheFile:              config.DNSCacheFile,
@@ -895,8 +892,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// bpffs so there's nothing to clean up
 	}
 
-	ipsetsManager := common.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
-	ipsetsManagerV6 := common.NewIPSetsManager("ipv6", nil, config.MaxIPSetSize, dp.domainInfoStore)
+	ipsetsManager := dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
+	ipsetsManagerV6 := dpsets.NewIPSetsManager("ipv6", nil, config.MaxIPSetSize, dp.domainInfoStore)
 	var mangleTableV6, natTableV6, rawTableV6, filterTableV6 generictables.Table
 	var nftablesV6RootTable generictables.Table
 
@@ -910,7 +907,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		)
 		filterTableV6 = nftables.NewTableLayer("filter", nftablesV6RootTable)
 	} else {
-		filterTableV6 := iptables.NewTable(
+		filterTableV6 = iptables.NewTable(
 			"filter",
 			6,
 			rules.RuleHashPrefix,
@@ -1007,7 +1004,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 					// packet data begins after that.
 					timestampNS := binary.LittleEndian.Uint64(e.Data())
 					consumed := 8
-					dp.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
+					dp.domainInfoStore.MsgChannel() <- dns.DataWithTimestamp{
 						// When we capture DNS packets on Ethernet interfaces - i.e. those that are not
 						// "L3 devices" - the packet data begins with an Ethernet header that we don't
 						// want.  (Note, Ethernet interfaces can be either workload or host interfaces.)
@@ -1026,7 +1023,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 					// packet data begins after that.
 					timestampNS := binary.LittleEndian.Uint64(e.Data())
 					consumed := 8
-					dp.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
+					dp.domainInfoStore.MsgChannel() <- dns.DataWithTimestamp{
 						// On L3 devices the packet data begins with the IP
 						// header, and we don't need to strip anything off.
 						Data:      e.Data()[consumed:],
@@ -1431,16 +1428,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.IPv6Enabled {
 		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-		var ipSetsV6 common.IPSetsDataplane
+		var ipSetsV6 dpsets.IPSetsDataplane
 
 		if config.RulesConfig.NFTables {
 			mangleTableV6 = nftables.NewTableLayer("mangle", nftablesV6RootTable)
 			natTableV6 = nftables.NewTableLayer("nat", nftablesV6RootTable)
 			rawTableV6 = nftables.NewTableLayer("raw", nftablesV6RootTable)
 
-			ipSetsV6 = nftablesV6RootTable.(common.IPSetsDataplane)
+			ipSetsV6 = nftablesV6RootTable.(dpsets.IPSetsDataplane)
 		} else {
-			mangleTableV6 := iptables.NewTable(
+			mangleTableV6 = iptables.NewTable(
 				"mangle",
 				6,
 				rules.RuleHashPrefix,
@@ -1448,7 +1445,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				featureDetector,
 				iptablesOptions,
 			)
-			natTableV6 := iptables.NewTable(
+			natTableV6 = iptables.NewTable(
 				"nat",
 				6,
 				rules.RuleHashPrefix,
@@ -1456,7 +1453,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				featureDetector,
 				iptablesNATOptions,
 			)
-			rawTableV6 := iptables.NewTable(
+			rawTableV6 = iptables.NewTable(
 				"raw",
 				6,
 				rules.RuleHashPrefix,
@@ -2048,7 +2045,7 @@ func (d *InternalDataplane) Start() {
 		int(rules.NFLOGDomainGroup),
 		65535,
 		func(data []byte, timestamp uint64) {
-			d.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
+			d.domainInfoStore.MsgChannel() <- dns.DataWithTimestamp{
 				Data:      data,
 				Timestamp: timestamp,
 			}
@@ -2460,7 +2457,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			Match:  d.newMatch(),
 			Action: d.actions.Jump(rules.ChainNATPrerouting),
 		}})
-		if t.IPVersion == 4 && d.config.EgressIPEnabled {
+		if t.IPVersion() == 4 && d.config.EgressIPEnabled {
 			t.AppendRules("PREROUTING", []generictables.Rule{{
 				Action: d.actions.Jump(rules.ChainNATPreroutingEgress),
 			}})
@@ -2478,7 +2475,7 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 		chains := d.ruleRenderer.StaticMangleTableChains(t.IPVersion())
 		t.UpdateChains(chains)
 		rs := []generictables.Rule{}
-		if t.IPVersion == 4 && d.config.EgressIPEnabled {
+		if t.IPVersion() == 4 && d.config.EgressIPEnabled {
 			// Make sure egress rule at top.
 			rs = append(rs, generictables.Rule{
 				Action: d.actions.Jump(rules.ChainManglePreroutingEgress),
@@ -3078,7 +3075,7 @@ func (d *InternalDataplane) apply() {
 	var ipSetsNeedsReschedule atomic.Bool
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
-		go func(s common.IPSetsDataplane) {
+		go func(s dpsets.IPSetsDataplane) {
 			defer ipSetsWG.Done()
 			reschedule := s.ApplyDeletions()
 			if reschedule {
@@ -3150,7 +3147,7 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 	var ipSetsWG sync.WaitGroup
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
-		go func(ipSets common.IPSetsDataplane) {
+		go func(ipSets dpsets.IPSetsDataplane) {
 			defer ipSetsWG.Done()
 
 			// Apply the IPSet updates.  The filter is requesting that ApplyUpdates only returns the updates IP sets
@@ -3241,7 +3238,7 @@ func startBPFDataplaneComponents(ipFamily proto.IPVersion,
 	bpfmaps *bpfmap.IPMaps,
 	ipSetIDAllocator *idalloc.IDAllocator,
 	config Config,
-	ipSetsMgr *common.IPSetsManager,
+	ipSetsMgr *dpsets.IPSetsManager,
 	dp *InternalDataplane,
 ) (*bpfconntrack.Scanner, egressIPSets) {
 	ipSetConfig := config.RulesConfig.IPSetConfigV4

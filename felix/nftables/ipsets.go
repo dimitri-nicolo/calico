@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/deltatracker"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/knftables"
 )
 
-var _ common.IPSetsDataplane = &IPSets{}
+var _ dpsets.IPSetsDataplane = &IPSets{}
 
 // IPSets manages a whole "plane" of IP sets, i.e. all the IPv4 sets, or all the IPv6 IP sets.
 type IPSets struct {

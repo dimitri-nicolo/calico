@@ -191,6 +191,11 @@ func (m nftMatch) OutInterface(ifaceMatch string) generictables.MatchCriteria {
 	return m
 }
 
+func (m nftMatch) NotOutInterface(ifaceMatch string) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("oifname != %s", ifaceMatch))
+	return m
+}
+
 func (m nftMatch) RPFCheckFailed() generictables.MatchCriteria {
 	m.clauses = append(m.clauses, "fib saddr . mark . iif oif 0")
 	return m
@@ -229,6 +234,11 @@ func (m nftMatch) DestAddrType(addrType generictables.AddrType) generictables.Ma
 
 func (m nftMatch) NotDestAddrType(addrType generictables.AddrType) generictables.MatchCriteria {
 	m.clauses = append(m.clauses, fmt.Sprintf("fib daddr type != %s", strings.ToLower(string(addrType))))
+	return m
+}
+
+func (m nftMatch) DestAddrTypeLimitIfaceIn(addrType generictables.AddrType) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("fib daddr . iif type %s", strings.ToLower(string(addrType))))
 	return m
 }
 
@@ -371,6 +381,11 @@ func (m nftMatch) NotDestIPPortSet(name string) generictables.MatchCriteria {
 	// Note that "th dport" is only compatible with protocols that have their destination port in
 	// the same location within the header, i.e., TCP, UDP, and SCTP.
 	m.clauses = append(m.clauses, fmt.Sprintf("<IPV> daddr . meta l4proto . th dport != @%s", LegalizeSetName(name)))
+	return m
+}
+
+func (m nftMatch) SourceDestSet(name string) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("<IPV> saddr . daddr @%s", LegalizeSetName(name)))
 	return m
 }
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package ipsets
 
 import (
 	"strings"
@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
@@ -48,10 +49,10 @@ var ipsetsMgrTestCases = []IPSetsMgrTestCase{
 		ipsetType:    proto.IPSetUpdate_DOMAIN,
 		ipsetMembers: [numMembers]string{"abc.com", "DEF.com", "gHi.CoM", "jkl.com"},
 		dnsRecs: map[string][]string{
-			"abc.com": []string{"10.0.0.10"},
-			"def.com": []string{"10.0.0.20"},
-			"ghi.com": []string{"10.0.0.30"},
-			"jkl.com": []string{"10.0.0.40"},
+			"abc.com": {"10.0.0.10"},
+			"def.com": {"10.0.0.20"},
+			"ghi.com": {"10.0.0.30"},
+			"jkl.com": {"10.0.0.40"},
 		},
 	},
 }
@@ -60,7 +61,7 @@ type mockDomainStore struct {
 	mappings map[string][]string
 }
 
-func (s *mockDomainStore) RegisterHandler(_ DomainInfoChangeHandler) {}
+func (s *mockDomainStore) RegisterHandler(_ common.DomainInfoChangeHandler) {}
 
 func (s *mockDomainStore) GetDomainIPs(domain string) []string {
 	// The domainStore is case insensitive.

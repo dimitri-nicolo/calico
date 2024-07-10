@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	fc "github.com/projectcalico/calico/felix/config"
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/dns"
 
 	"github.com/projectcalico/calico/felix/dataplane/windows/etw"
 )
@@ -23,7 +23,7 @@ type domainInfoReader struct {
 	msgChannel chan *etw.PktEvent
 
 	// Channel on which domainInfoStore receives captured DNS responses (beginning with the IP header).
-	storeMsgChannel chan<- common.DataWithTimestamp
+	storeMsgChannel chan<- dns.DataWithTimestamp
 
 	// Trusted Servers for DNS packet.
 	trustedServers []etw.ServerPort
@@ -71,7 +71,7 @@ func NewDomainInfoReader(trustedServers []fc.ServerPort, pktMonStartArgs string)
 }
 
 // Start function starts the reader and connects it with domainInfoStore.
-func (r *domainInfoReader) Start(msgChan chan<- common.DataWithTimestamp) {
+func (r *domainInfoReader) Start(msgChan chan<- dns.DataWithTimestamp) {
 	log.Info("Starting Windows domain info reader")
 
 	r.storeMsgChannel = msgChan
@@ -97,7 +97,7 @@ func (r *domainInfoReader) loop() {
 func (r *domainInfoReader) loopIteration() {
 	pktEvent := <-r.msgChannel
 	// Forward to domainInfoStore.
-	r.storeMsgChannel <- common.DataWithTimestamp{
+	r.storeMsgChannel <- dns.DataWithTimestamp{
 		Timestamp: pktEvent.NanoSeconds(),
 		Data:      pktEvent.Payload(),
 	}

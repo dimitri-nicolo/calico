@@ -21,6 +21,9 @@ import (
 type EnterpriseMatchCriteria interface {
 	ConntrackOrigDstPort(port uint16) MatchCriteria
 	ConntrackOrigDst(ip string) MatchCriteria
+	NotOutInterface(ifaceMatch string) MatchCriteria
+	DestAddrTypeLimitIfaceIn(addrType AddrType) MatchCriteria
+	SourceDestSet(name string) MatchCriteria
 }
 
 type MatchCriteria interface {
