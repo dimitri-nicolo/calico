@@ -134,10 +134,11 @@ func Start(cfg *Config) error {
 
 	// Create queryserver Config.
 	qsConfig := &queryserverclient.QueryServerConfig{
-		QueryServerTunnelURL: fmt.Sprintf("%s%s", cfg.VoltronURL, cfg.QueryServerURL),
-		QueryServerURL:       cfg.QueryServerEndpoint,
-		QueryServerCA:        cfg.QueryServerCA,
-		QueryServerToken:     cfg.QueryServerToken,
+		QueryServerTunnelURL:    fmt.Sprintf("%s%s", cfg.VoltronURL, cfg.QueryServerURL),
+		QueryServerURL:          cfg.QueryServerEndpoint,
+		QueryServerCA:           cfg.QueryServerCA,
+		QueryServerToken:        cfg.QueryServerToken,
+		AddImpersonationHeaders: cfg.TenantNamespace != "",
 	}
 
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, cfg.VoltronURL)
