@@ -116,7 +116,7 @@ func rawDispatchEmptyNormal(ipVersion uint8) []*generictables.Chain {
 						Action: iptables.JumpAction{Target: rules.ChainRpfSkip},
 					},
 					{
-						Match:  iptables.Match().RPFCheckFailed(false),
+						Match:  iptables.Match().RPFCheckFailed(),
 						Action: iptables.DropAction{},
 					},
 				},
@@ -784,7 +784,7 @@ func chainsForIfaces(ipVersion uint8,
 						Action: iptables.JumpAction{Target: rules.ChainRpfSkip},
 					},
 					{
-						Match:  iptables.Match().RPFCheckFailed(false),
+						Match:  iptables.Match().RPFCheckFailed(),
 						Action: iptables.DropAction{},
 					},
 				},

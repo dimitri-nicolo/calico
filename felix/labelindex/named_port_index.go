@@ -745,11 +745,11 @@ func (idx *SelectorAndNamedPortIndex) onMemberAdded(ipSetID string, member IPSet
 // deduplicate any members that are masked by another member of the set, sending any necessary IPSet member
 // IPSet member adds for members that were previously masked by the removed member.
 func (idx *SelectorAndNamedPortIndex) onMemberRemoved(ipSetID string, member IPSetMember) {
-	if member.Protocol == ProtocolNone && member.PortNumber == 0 {
+	if member.Protocol == ProtocolNone && member.PortNumber == 0 && member.Domain == "" {
 		// We only deduplicate for IP set members that are CIDRs. Named port members are always unique.
 		rem, adds := idx.suppressor.Remove(ipSetID, member.CIDR)
 		if rem != nil {
-			idx.OnMemberRemoved(ipSetID, IPSetMember{CIDR: rem})
+			idx.OnMemberRemoved(ipSetID, member)
 		}
 		for _, a := range adds {
 			log.WithField("ipSetID", ipSetID).

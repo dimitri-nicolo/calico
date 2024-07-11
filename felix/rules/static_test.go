@@ -134,7 +134,10 @@ var _ = Describe("Static", func() {
 					Expect(findChain(rr.StaticRawTableChains(4), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 						Name: "cali-PREROUTING",
 						Rules: []generictables.Rule{
-							{Action: ClearMarkAction{Mark: 0xf1}},
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: 0xf1},
+							},
 							{
 								Match:  Match().InInterface("cali+"),
 								Action: SetMarkAction{Mark: 0x40},
@@ -159,7 +162,10 @@ var _ = Describe("Static", func() {
 					Expect(findChain(rr.StaticRawTableChains(6), "cali-PREROUTING")).To(Equal(&generictables.Chain{
 						Name: "cali-PREROUTING",
 						Rules: []generictables.Rule{
-							{Action: ClearMarkAction{Mark: 0xf1}},
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: 0xf1},
+							},
 							{
 								Match:  Match().InInterface("cali+"),
 								Action: SetMarkAction{Mark: 0x40},

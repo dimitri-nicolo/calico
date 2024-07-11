@@ -237,6 +237,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(rules[3]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -309,6 +310,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 				if len(in.DstDomainIpSetIds) > 0 {
 					Expect(rules[3]).To(Equal(generictables.Rule{
+						Match:  iptables.Match(),
 						Action: iptables.SetMarkAction{Mark: 0x00001},
 					}))
 				}
@@ -424,6 +426,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(rules[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -506,6 +509,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(inbound[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -568,6 +572,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(outbound[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -728,6 +733,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(rules[5]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -800,6 +806,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(rules[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -865,6 +872,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 
 			if len(in.DstDomainIpSetIds) > 0 {
 				Expect(rules[3]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -1896,6 +1904,7 @@ var _ = Describe("DNS policy rules", func() {
 
 			if expectDNSMark {
 				expected = append(expected, generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				})
 			}

@@ -22,7 +22,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/generictables"
-	"github.com/projectcalico/calico/felix/iptables"
 )
 
 type mockTable struct {
@@ -88,14 +87,14 @@ func (t *mockTable) checkChainsSameAsBefore(optionalOffset ...int) {
 		log.WithField("chain", *chain).Debug("")
 	}
 
-	var currentChains []iptables.Chain
+	var currentChains []generictables.Chain
 	for _, c := range t.currentChains {
 		currentChains = append(currentChains, *c)
 	}
 	sort.Slice(currentChains, func(i, j int) bool {
 		return currentChains[i].Name < currentChains[j].Name
 	})
-	var expectedChains []iptables.Chain
+	var expectedChains []generictables.Chain
 	for _, c := range t.expectedChains {
 		expectedChains = append(expectedChains, *c)
 	}
@@ -109,6 +108,6 @@ func (t *mockTable) checkChainsSameAsBefore(optionalOffset ...int) {
 	ExpectWithOffset(offset, currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
 }
 
-func (t *mockTable) getCurrentChainByName(name string) *iptables.Chain {
+func (t *mockTable) getCurrentChainByName(name string) *generictables.Chain {
 	return t.currentChains[name]
 }

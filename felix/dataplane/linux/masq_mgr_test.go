@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
@@ -33,12 +33,12 @@ var _ = Describe("Masquerade manager", func() {
 	var (
 		masqMgr      *masqManager
 		natTable     *mockTable
-		ipSets       *common.MockIPSets
+		ipSets       *dpsets.MockIPSets
 		ruleRenderer rules.RuleRenderer
 	)
 
 	BeforeEach(func() {
-		ipSets = common.NewMockIPSets()
+		ipSets = dpsets.NewMockIPSets()
 		natTable = newMockTable("nat")
 		ruleRenderer = rules.NewRenderer(rules.Config{
 			IPSetConfigV4: ipsets.NewIPVersionConfig(
@@ -258,7 +258,7 @@ var _ = Describe("Masquerade manager", func() {
 			It("should only add the pool to the all IP set", func() {
 				Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 				Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From("10.0.0.0/16")))
-				natTable.checkChains([][]*iptables.Chain{{{
+				natTable.checkChains([][]*generictables.Chain{{{
 					Name:  "cali-nat-outgoing",
 					Rules: nil,
 				}}})
@@ -277,7 +277,7 @@ var _ = Describe("Masquerade manager", func() {
 				It("should have no IP set entries", func() {
 					Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 					Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.New[string]()))
-					natTable.checkChains([][]*iptables.Chain{{{
+					natTable.checkChains([][]*generictables.Chain{{{
 						Name:  "cali-nat-outgoing",
 						Rules: nil,
 					}}})
@@ -321,9 +321,9 @@ var _ = Describe("Masquerade manager", func() {
 				It("should be programmed for the local masq pool", func() {
 					Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.From("10.0.0.0/16")))
 					Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From("10.0.0.0/16")))
-					natTable.checkChains([][]*iptables.Chain{{{
+					natTable.checkChains([][]*generictables.Chain{{{
 						Name: "cali-nat-outgoing",
-						Rules: []iptables.Rule{
+						Rules: []generictables.Rule{
 							{
 								Action: iptables.MasqAction{},
 								Match: iptables.Match().
@@ -347,9 +347,9 @@ var _ = Describe("Masquerade manager", func() {
 					It("should still be programmed for the local masq pool", func() {
 						Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.From("10.0.0.0/16")))
 						Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From("10.0.0.0/16")))
-						natTable.checkChains([][]*iptables.Chain{{{
+						natTable.checkChains([][]*generictables.Chain{{{
 							Name: "cali-nat-outgoing",
-							Rules: []iptables.Rule{
+							Rules: []generictables.Rule{
 								{
 									Action: iptables.MasqAction{},
 									Match: iptables.Match().
@@ -399,7 +399,7 @@ var _ = Describe("Masquerade manager", func() {
 				It("should be programmed for the local non-masq pool", func() {
 					Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 					Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From("10.0.0.0/16")))
-					natTable.checkChains([][]*iptables.Chain{{{
+					natTable.checkChains([][]*generictables.Chain{{{
 						Name:  "cali-nat-outgoing",
 						Rules: nil,
 					}}})
@@ -418,7 +418,7 @@ var _ = Describe("Masquerade manager", func() {
 					It("should still be programmed for the local masq pool", func() {
 						Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 						Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From("10.0.0.0/16")))
-						natTable.checkChains([][]*iptables.Chain{{{
+						natTable.checkChains([][]*generictables.Chain{{{
 							Name:  "cali-nat-outgoing",
 							Rules: nil,
 						}}})
@@ -468,7 +468,7 @@ var _ = Describe("Masquerade manager", func() {
 			It("should have no masq IPs programmed and have all IPs updated for all pools", func() {
 				Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 				Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From[string]("10.0.0.0/16", "10.0.0.0/12", "10.0.0.0/8")))
-				natTable.checkChains([][]*iptables.Chain{{{
+				natTable.checkChains([][]*generictables.Chain{{{
 					Name:  "cali-nat-outgoing",
 					Rules: nil,
 				}}})
@@ -491,7 +491,7 @@ var _ = Describe("Masquerade manager", func() {
 				It("should be programmed for the local non-masq pool", func() {
 					Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 					Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From[string]("10.0.0.0/16")))
-					natTable.checkChains([][]*iptables.Chain{{{
+					natTable.checkChains([][]*generictables.Chain{{{
 						Name:  "cali-nat-outgoing",
 						Rules: nil,
 					}}})
@@ -526,7 +526,7 @@ var _ = Describe("Masquerade manager", func() {
 		It("should only be programmed to the all IP set", func() {
 			Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 			Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From[string]("10.0.0.0/16")))
-			natTable.checkChains([][]*iptables.Chain{{{
+			natTable.checkChains([][]*generictables.Chain{{{
 				Name:  "cali-nat-outgoing",
 				Rules: nil,
 			}}})
@@ -545,7 +545,7 @@ var _ = Describe("Masquerade manager", func() {
 			It("should still be programmed to the all IP set", func() {
 				Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 				Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From[string]("10.0.0.0/16")))
-				natTable.checkChains([][]*iptables.Chain{{{
+				natTable.checkChains([][]*generictables.Chain{{{
 					Name:  "cali-nat-outgoing",
 					Rules: nil,
 				}}})
@@ -569,7 +569,7 @@ var _ = Describe("Masquerade manager", func() {
 			It("should have no programming", func() {
 				Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 				Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.New[string]()))
-				natTable.checkChains([][]*iptables.Chain{{{
+				natTable.checkChains([][]*generictables.Chain{{{
 					Name:  "cali-nat-outgoing",
 					Rules: nil,
 				}}})
@@ -595,7 +595,7 @@ var _ = Describe("Masquerade manager", func() {
 		It("should be programmed only for the all IP set", func() {
 			Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.New[string]()))
 			Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From[string]("10.0.0.0/16")))
-			natTable.checkChains([][]*iptables.Chain{{{
+			natTable.checkChains([][]*generictables.Chain{{{
 				Name:  "cali-nat-outgoing",
 				Rules: nil,
 			}}})
@@ -618,9 +618,9 @@ var _ = Describe("Masquerade manager", func() {
 				Expect(ipSets.Members["masq-ipam-pools"]).To(Equal(set.From[string]("10.0.0.0/16")))
 				Expect(ipSets.Members["all-ipam-pools"]).To(Equal(set.From[string]("10.0.0.0/16")))
 				Expect(natTable.UpdateCalled).To(BeTrue())
-				natTable.checkChains([][]*iptables.Chain{{{
+				natTable.checkChains([][]*generictables.Chain{{{
 					Name: "cali-nat-outgoing",
-					Rules: []iptables.Rule{
+					Rules: []generictables.Rule{
 						{
 							Action: iptables.MasqAction{},
 							Match: iptables.Match().
