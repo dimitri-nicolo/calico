@@ -17,6 +17,7 @@ import (
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/client"
 
@@ -108,27 +109,27 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 
 		It("return denied endpoints", func() {
 			By("preparing the server")
-			serverResponse := middleware.EndpointsAggregationResponse{
+			deniedEndPointsResponse := querycacheclient.QueryEndpointsResp{
 				Count: 2,
-				Item: []middleware.AggregatedEndpoint{
+				Items: []querycacheclient.Endpoint{
 					{
-						Endpoint: querycacheclient.Endpoint{
-							Namespace: "ns-src",
-							Pod:       "ep-src-1234",
-						},
-						HasDeniedTraffic: true,
+						Namespace: "ns-src",
+						Pod:       "ep-src-1234",
 					},
 					{
-						Endpoint: querycacheclient.Endpoint{
-							Namespace: "ns-dst",
-							Pod:       "ep-dst-1234",
-						},
-						HasDeniedTraffic: true,
+						Namespace: "ns-dst",
+						Pod:       "ep-dst-1234",
 					},
 				},
 			}
-
-			server = createServer(&serverResponse)
+			server = createFakeQueryServer(&deniedEndPointsResponse, func(requestBody *querycacheclient.QueryEndpointsReqBody) {
+				// If showDeniedEndpointsOnly is true, the endpoints aggregation handler will generate
+				// an endpoint list based on the result of the linseedResults.
+				Expect(requestBody.EndpointsList).Should(ConsistOf([]string{
+					".*ns-src/.*-ep--src--*",
+					".*ns-dst/.*-ep--dst--*",
+				}))
+			})
 			defer server.Close()
 
 			// update queryserver url
@@ -167,34 +168,28 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 
 		It("return all endpoints", func() {
 			By("preparing the server")
-			serverResponse := middleware.EndpointsAggregationResponse{
+			allEndPointsResponse := querycacheclient.QueryEndpointsResp{
 				Count: 3,
-				Item: []middleware.AggregatedEndpoint{
+				Items: []querycacheclient.Endpoint{
 					{
-						Endpoint: querycacheclient.Endpoint{
-							Namespace: "ns-src",
-							Pod:       "ep-src-1234",
-						},
-						HasDeniedTraffic: true,
+						Namespace: "ns-src",
+						Pod:       "ep-src-1234",
 					},
 					{
-						Endpoint: querycacheclient.Endpoint{
-							Namespace: "ns-dst",
-							Pod:       "ep-dst-1234",
-						},
-						HasDeniedTraffic: true,
+						Namespace: "ns-dst",
+						Pod:       "ep-dst-1234",
 					},
 					{
-						Endpoint: querycacheclient.Endpoint{
-							Namespace: "ns-allow",
-							Pod:       "ep-allow-1234",
-						},
-						HasDeniedTraffic: false,
+						Namespace: "ns-allow",
+						Pod:       "ep-allow-1234",
 					},
 				},
 			}
-
-			server = createServer(&serverResponse)
+			server = createFakeQueryServer(&allEndPointsResponse, func(requestBody *querycacheclient.QueryEndpointsReqBody) {
+				// If showDeniedEndpointsOnly is false, the endpoints aggregation handler will NOT generate
+				// an endpoint list and will return all endpoints as a result.
+				Expect(requestBody.EndpointsList).Should(ConsistOf([]string{}))
+			})
 			defer server.Close()
 
 			// update queryserver url
@@ -202,7 +197,7 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 
 			// prepare request
 			endpointReq := &middleware.EndpointsAggregationRequest{
-				ShowDeniedEndpoints: true,
+				ShowDeniedEndpoints: false,
 			}
 
 			reqBodyBytes, err := json.Marshal(endpointReq)
@@ -226,6 +221,7 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(response.Count).To(Equal(3))
+			Expect(response.Item).To(HaveLen(3))
 			for _, item := range response.Item {
 				if item.Namespace == "ns-allow" {
 					Expect(item.HasDeniedTraffic).To(BeFalse())
@@ -237,7 +233,9 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 	})
 })
 
-func createServer(response *middleware.EndpointsAggregationResponse) *httptest.Server {
+// createFakeQueryServer sets up a fake Query Server instance for tests.
+func createFakeQueryServer(response *querycacheclient.QueryEndpointsResp, test func(requestBody *querycacheclient.QueryEndpointsReqBody)) *httptest.Server {
+
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "" {
 			w.WriteHeader(http.StatusForbidden)
@@ -250,10 +248,21 @@ func createServer(response *middleware.EndpointsAggregationResponse) *httptest.S
 		}
 		w.WriteHeader(http.StatusOK)
 
+		// Make sure we get a valid request
+		var requestBody querycacheclient.QueryEndpointsReqBody
+		err := httputils.Decode(w, r, &requestBody)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		// Run any extra test supplied as a parameter
+		if test != nil {
+			test(&requestBody)
+		}
+
 		bytes, err := json.Marshal(response)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		_, err = w.Write(bytes)
 		Expect(err).ShouldNot(HaveOccurred())
 	}))
+
 }
