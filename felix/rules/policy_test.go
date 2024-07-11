@@ -16,6 +16,7 @@ package rules_test
 
 import (
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/generictables"
 	. "github.com/projectcalico/calico/felix/rules"
