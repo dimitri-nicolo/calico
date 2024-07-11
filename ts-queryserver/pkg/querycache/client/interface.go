@@ -6,6 +6,7 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -89,10 +90,11 @@ type QueryPoliciesReq struct {
 	NetworkSet model.Key
 
 	// Filters
-	Unmatched bool
-	Tier      []string
-	Page      *Page
-	Sort      *Sort
+	Unmatched     bool
+	Tier          []string
+	Page          *Page
+	Sort          *Sort
+	FieldSelector map[string]bool
 }
 
 type QueryPoliciesResp struct {
@@ -100,19 +102,21 @@ type QueryPoliciesResp struct {
 	Items []Policy `json:"items"`
 }
 
+// The names of the members in the Policy struct should match their corresponding json name for field selection feature to work for the /policies API.
 type Policy struct {
-	Index                int               `json:"index"`
-	Kind                 string            `json:"kind"`
-	Name                 string            `json:"name"`
+	UID                  types.UID         `json:"uid,omitempty"`
+	Index                int               `json:"index,omitempty"`
+	Kind                 string            `json:"kind,omitempty"`
+	Name                 string            `json:"name,omitempty"`
 	Namespace            string            `json:"namespace,omitempty"`
-	Tier                 string            `json:"tier"`
-	Annotations          map[string]string `json:"annotations"`
-	NumHostEndpoints     int               `json:"numHostEndpoints"`
-	NumWorkloadEndpoints int               `json:"numWorkloadEndpoints"`
-	Ingress              []RuleDirection   `json:"ingressRules"`
-	Egress               []RuleDirection   `json:"egressRules"`
-	Order                *float64          `json:"order"`
-	CreationTime         *v1.Time          `json:"creation-time"`
+	Tier                 string            `json:"tier,omitempty"`
+	Annotations          map[string]string `json:"annotations,omitempty"`
+	NumHostEndpoints     int               `json:"numHostEndpoints,omitempty"`
+	NumWorkloadEndpoints int               `json:"numWorkloadEndpoints,omitempty"`
+	IngressRules         []RuleDirection   `json:"ingressRules,omitempty"`
+	EgressRules          []RuleDirection   `json:"egressRules,omitempty"`
+	Order                *float64          `json:"order,omitempty"`
+	CreationTime         *v1.Time          `json:"creationTime,omitempty"`
 }
 
 type RuleDirection struct {

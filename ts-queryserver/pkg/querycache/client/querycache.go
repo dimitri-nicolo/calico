@@ -4,6 +4,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -398,7 +399,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		return &QueryPoliciesResp{
 			Count: 1,
 			Items: []Policy{
-				*c.apiPolicyToQueryPolicy(p, 0),
+				*c.apiPolicyToQueryPolicy(p, 0, req.FieldSelector),
 			},
 		}, nil
 	}
@@ -476,7 +477,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				log.Info("Filter out matched policy")
 				continue
 			}
-			items = append(items, *c.apiPolicyToQueryPolicy(p, len(items)))
+			items = append(items, *c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector))
 		}
 	}
 
@@ -501,12 +502,13 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}, nil
 }
 
-func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
+func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelector map[string]bool) *Policy {
 	ep := p.GetEndpointCounts()
 	res := p.GetResource()
 
 	creationTime := res.GetObjectMeta().GetCreationTimestamp()
-	return &Policy{
+	policy := Policy{
+		UID:                  res.GetObjectMeta().GetUID(),
 		Index:                idx,
 		Name:                 res.GetObjectMeta().GetName(),
 		Namespace:            res.GetObjectMeta().GetNamespace(),
@@ -515,11 +517,43 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 		Annotations:          p.GetAnnotations(),
 		NumHostEndpoints:     ep.NumHostEndpoints,
 		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
-		Ingress:              c.convertRules(p.GetRuleEndpointCounts().Ingress),
-		Egress:               c.convertRules(p.GetRuleEndpointCounts().Egress),
+		IngressRules:         c.convertRules(p.GetRuleEndpointCounts().Ingress),
+		EgressRules:          c.convertRules(p.GetRuleEndpointCounts().Egress),
 		Order:                p.GetOrder(),
 		CreationTime:         &creationTime,
 	}
+
+	if fieldSelector != nil {
+		updatedPolicy := new(Policy)
+		policyFields := reflect.TypeOf(policy)
+		policyValues := reflect.ValueOf(policy)
+
+		updatedPolicyFields := reflect.ValueOf(updatedPolicy).Elem()
+
+		for i := 0; i < policyFields.NumField(); i++ {
+			policyFieldName := policyFields.Field(i).Name
+			fieldValue := policyValues.Field(i)
+
+			if fieldSelector[strings.ToLower(policyFieldName)] {
+				updatePolicyField := updatedPolicyFields.FieldByName(policyFields.Field(i).Name)
+				switch reflect.TypeOf(fieldValue) {
+				case reflect.TypeOf(reflect.Int):
+					updatePolicyField.SetInt(fieldValue.Int())
+				case reflect.TypeOf(reflect.String):
+					updatePolicyField.Set(fieldValue)
+				case reflect.TypeOf(reflect.Slice):
+					updatePolicyField.SetBytes(fieldValue.Bytes())
+				default:
+					updatePolicyField.Set(fieldValue)
+				}
+
+			}
+		}
+
+		policy = *updatedPolicy
+	}
+
+	return &policy
 }
 
 func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection {

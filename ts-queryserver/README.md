@@ -88,3 +88,12 @@ curl https://localhost:8080/policies?host=yes -k
 # And for NPs, include the namespace label.
 curl "https://localhost:8080/policies?panda=verysad&projectcalico.org/namespace=namespace1" -k
 ```
+
+### locally running and debugging queryserver
+1. set KUBECONFIG=<path to your kubeconfig file> in your rub/debug configuration
+2. navigate to ts-queryserver/queryserver/queryserver.go
+   2.1. overwrite serverCfg.TLSKey and serverCfg.TLSCert to a local path for tls key and certificate file.
+   2.2. overwrite restCfg.Host with the kubernetes host address from the kubeconfig file
+   2.3. overwrite restCfg.BearerToken with the networkadmin (i.e. jane) token created from the terminal (kubectl create token jane --duration=24h)
+3. now you can run/debug queryserver locally.
+4. you can access queryserver at localhost:8080

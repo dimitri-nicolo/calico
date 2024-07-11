@@ -49,6 +49,7 @@ const (
 	QueryUnprotected         = "unprotected"
 	QueryUnlabelled          = "unlabelled"
 	QueryTier                = "tier"
+	QueryFieldSelector       = "fields"
 
 	AllResults     = "all"
 	resultsPerPage = 100
@@ -248,15 +249,17 @@ func (q *query) Endpoint(w http.ResponseWriter, r *http.Request) {
 // Policies handles GET requets to /policies api
 //
 // list of parameters that can be passed in the url:
-// - endpoint (endpoints:<endpoint name>)
-// - labels (list of labels staritng with labels_ ex. labels_a)
-// - networkset (networkset:<ns name>)
-// - unmatched (unmatched:<true/false>)
-// - items in a page (maxItems:10)
-// - page number (page:0)
-// - list of tiers (tier=t1,t2,t3)
-// - sorting attribute (sortBy=<index/kind/name/namespace/tier/numHostEndpoints/numWorkloadEndpoints/numEndpoints>)
-// - sort ascending or descending (reverseSort=<true/false>)
+//   - endpoint (endpoints:<endpoint name>)
+//   - labels (list of labels staritng with labels_ ex. labels_a)
+//   - networkset (networkset:<ns name>)
+//   - unmatched (unmatched:<true/false>)
+//   - items in a page (maxItems:10)
+//   - page number (page:0)
+//   - list of tiers (tier=t1,t2,t3)
+//   - sorting attribute (sortBy=<index/kind/name/namespace/tier/numHostEndpoints/numWorkloadEndpoints/numEndpoints>)
+//   - sort ascending or descending (reverseSort=<true/false>)
+//   - fields: list of fields to be returned in the resultset (if not passed all fields will be returned).
+//     exmaple: fields=id,name,namespace (this will only return id, name, and namespace for each policy in the resultset)
 func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 	endpoints, err := getEndpoints(r)
 	if err != nil {
@@ -275,6 +278,14 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	page, err := q.getPage(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	fieldSelector := getPolicyFieldSelector(r)
+
 	var endpoint model.Key
 	if len(endpoints) > 0 {
 		endpoint = endpoints[0]
@@ -284,12 +295,6 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		networkset = networksets[0]
 	}
 
-	page, err := q.getPage(r)
-	if err != nil {
-		q.writeError(w, err, http.StatusBadRequest)
-		return
-	}
-
 	var tiers []string
 	tiersString := r.URL.Query().Get(QueryTier)
 	if tiersString != "" {
@@ -297,13 +302,14 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q.runQuery(w, r, client.QueryPoliciesReq{
-		Tier:       tiers,
-		Labels:     getLabels(r),
-		Endpoint:   endpoint,
-		NetworkSet: networkset,
-		Unmatched:  unmatched,
-		Page:       page,
-		Sort:       q.getSort(r),
+		Tier:          tiers,
+		Labels:        getLabels(r),
+		Endpoint:      endpoint,
+		NetworkSet:    networkset,
+		Unmatched:     unmatched,
+		Page:          page,
+		Sort:          q.getSort(r),
+		FieldSelector: fieldSelector,
 	}, false)
 }
 
@@ -510,6 +516,27 @@ func getNetworkSetKeyFromCombinedName(combined string) (model.Key, bool) {
 
 	log.WithField("name", combined).Info("Extracting policy key from combined name failed with unknown name format")
 	return nil, false
+}
+
+// getPolicyFieldSelector parses the query params of pattern fields=f1,f2,f3,... and return the values in a map.
+// if fields is not set in the query params, all fields will be returned in the result set and if field= (field is set to empty list)
+// none of the fields will be returned in the result set.
+//
+// returns a map[string]bool including the requested fields.
+func getPolicyFieldSelector(r *http.Request) map[string]bool {
+	if r.URL.Query().Has(QueryFieldSelector) {
+		fieldSelector := r.URL.Query().Get(QueryFieldSelector)
+		fields := strings.Split(fieldSelector, ",")
+		fieldMap := make(map[string]bool)
+		for _, f := range fields {
+			if len(strings.TrimSpace(f)) > 0 {
+				fieldMap[strings.ToLower(f)] = true
+			}
+		}
+
+		return fieldMap
+	}
+	return nil
 }
 
 func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}, exact bool) {

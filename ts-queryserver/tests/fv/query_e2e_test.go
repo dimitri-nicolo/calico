@@ -78,7 +78,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 
 				By(fmt.Sprintf("Running query for test: %s", tqd.description))
 
-				// remove CreationTime and Order from QueryPoliciesResp as the tests are not build to
+				// remove CreationTime, Order, and UID from QueryPoliciesResp as the tests are not build to
 				// verify these values.
 				switch tqd.response.(type) {
 				case *client.QueryPoliciesResp:
@@ -86,6 +86,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 						for i := range tqd.response.(*client.QueryPoliciesResp).Items {
 							tqd.response.(*client.QueryPoliciesResp).Items[i].CreationTime = nil
 							tqd.response.(*client.QueryPoliciesResp).Items[i].Order = nil
+							tqd.response.(*client.QueryPoliciesResp).Items[i].UID = ""
 						}
 					}
 				}
@@ -156,11 +157,12 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 			return fmt.Errorf("unmarshal error: %v: %v: %v", reflect.TypeOf(ro), err, bodyString)
 		}
 
-		// remove CreationTime and Order from QueryPoliciesResp as the tests are not build to
+		// remove CreationTime, Order, and UID from QueryPoliciesResp as the tests are not build to
 		// verify these values.
 		switch ro := ro.(type) {
 		case *client.QueryPoliciesResp:
 			for i := range ro.Items {
+				ro.Items[i].UID = ""
 				ro.Items[i].CreationTime = nil
 				ro.Items[i].Order = nil
 			}
