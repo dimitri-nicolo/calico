@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 package labels_test
 
 import (
@@ -10,6 +10,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/labels"
 )
 
+var shortNetworksetName = "my-netset"
+var longNetworksetName = "my-very-long-networkset-name-for-testing-shortening-very-long-networkset-names"
+var hashedLongNetworksetName = "my-very-long-networkset-name-for-testing-shortening-ver-9dc9e83"
+
 var _ = Describe("lib/labels tests", func() {
 	DescribeTable("AddKindandNameLabels",
 		func(name string, inputLabels, expectedLabels map[string]string) {
@@ -17,19 +21,24 @@ var _ = Describe("lib/labels tests", func() {
 		},
 
 		Entry("Nil labels",
-			"my-netset",
+			shortNetworksetName,
 			nil,
-			map[string]string{apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: "my-netset"},
+			map[string]string{apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: shortNetworksetName},
 		),
 		Entry("Empty labels",
-			"my-netset",
+			shortNetworksetName,
 			map[string]string{},
-			map[string]string{apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: "my-netset"},
+			map[string]string{apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: shortNetworksetName},
 		),
 		Entry("Filled labels",
-			"my-netset",
+			shortNetworksetName,
 			map[string]string{"a": "b", "projectcalico.org/namespace": "my-namespace"},
-			map[string]string{"a": "b", apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: "my-netset", "projectcalico.org/namespace": "my-namespace"},
+			map[string]string{"a": "b", apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: shortNetworksetName, "projectcalico.org/namespace": "my-namespace"},
+		),
+		Entry("Empty labels with long name",
+			longNetworksetName,
+			map[string]string{},
+			map[string]string{apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: hashedLongNetworksetName},
 		),
 	)
 
@@ -39,18 +48,23 @@ var _ = Describe("lib/labels tests", func() {
 		},
 
 		Entry("Nil labels",
-			"my-netset",
+			shortNetworksetName,
 			nil,
 			false,
 		),
 		Entry("Empty labels",
-			"my-netset",
+			shortNetworksetName,
 			map[string]string{},
 			false,
 		),
 		Entry("Filled labels",
-			"my-netset",
-			map[string]string{"a": "b", apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: "my-netset", "projectcalico.org/namespace": "my-namespace"},
+			shortNetworksetName,
+			map[string]string{"a": "b", apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: shortNetworksetName, "projectcalico.org/namespace": "my-namespace"},
+			true,
+		),
+		Entry("Filled labels with long name",
+			longNetworksetName,
+			map[string]string{"a": "b", apiv3.LabelKind: apiv3.KindNetworkSet, apiv3.LabelName: hashedLongNetworksetName, "projectcalico.org/namespace": "my-namespace"},
 			true,
 		),
 	)
