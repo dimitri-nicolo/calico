@@ -104,17 +104,16 @@ ENV LINSEED_KEY_PATH=/etc/flu/key.pem
 ENV LINSEED_FLUSH_INTERVAL=5s
 ENV LINSEED_TOKEN="${ROOT_DIR}/var/run/secrets/kubernetes.io/serviceaccount/token"
 
-
-COPY readiness.sh /bin/
-COPY liveness.sh /bin/
-COPY syslog-environment.sh /bin/
-COPY syslog-config.sh /bin/
-COPY splunk-environment.sh /bin/
-COPY splunk-config.sh /bin/
-COPY sumo-environment.sh /bin/
-COPY sumo-config.sh /bin/
-COPY ee_entrypoint.sh /bin/
-COPY eks/bin/eks-log-forwarder-startup.exe /bin/
+COPY readiness.sh /bin/readiness.sh
+COPY liveness.sh /bin/liveness.sh
+COPY syslog-environment.sh /bin/syslog-environment.sh
+COPY syslog-config.sh /bin/syslog-config.sh
+COPY splunk-environment.sh /bin/splunk-environment.sh
+COPY splunk-config.sh /bin/splunk-config.sh
+COPY sumo-environment.sh /bin/sumo-environment.sh
+COPY sumo-config.sh /bin/sumo-config.sh
+COPY ee_entrypoint.sh /bin/ee_entrypoint.sh
+COPY eks/bin/eks-log-forwarder-startup.exe /bin/eks-log-forwarder-startup.exe
 
 EXPOSE 24284
 
