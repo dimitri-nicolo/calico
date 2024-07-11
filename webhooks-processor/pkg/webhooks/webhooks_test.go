@@ -277,6 +277,43 @@ func TestWebhookSent(t *testing.T) {
 	)
 }
 
+func TestWebhookTestEventSent(t *testing.T) {
+	testState := Setup(t, func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return []lsApi.Event{}, nil
+	})
+
+	wh := testutils.NewTestWebhook("test-wh")
+	wh.Spec.State = api.SecurityEventWebhookStateTest
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
+
+	// Make sure the webhook eventually hits the test provider
+	require.Eventually(t, hasOneRequest(testState.TestSlackProvider()), time.Second, 100*time.Millisecond)
+	require.Equal(t, wh.Spec.Config[0].Name, "url")
+	require.Equal(t, wh.Spec.Config[0].Value, testState.TestSlackProvider().Requests[0].Config["url"])
+
+	// Make sure labels annotation is correctly processed
+	require.Eventually(t,
+		func() bool {
+			return assert.Equal(t,
+				map[string]string{
+					"hips dont lie": "true",
+					"anything":      "goes",
+					"also-this":     "",
+				},
+				testState.TestSlackProvider().Requests[0].Labels,
+			)
+		}, time.Second, 100*time.Millisecond,
+	)
+
+	// Make sure the webhook's state has been changed to 'Enabled'
+	require.Eventually(t,
+		func() bool {
+			return wh.Spec.State == api.SecurityEventWebhookStateEnabled
+		}, time.Second, 100*time.Millisecond,
+	)
+}
+
 func TestSendsOneWebhookPerEvent(t *testing.T) {
 	// Making sure that if we test multiple events at once
 	// we still get the expected number of webhooks triggered.
