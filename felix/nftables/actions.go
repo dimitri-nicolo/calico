@@ -111,15 +111,19 @@ func (s *actionSet) SetConnmark(mark, mask uint32) generictables.Action {
 }
 
 func (a *actionSet) Nflog(group uint16, prefix string, size int) generictables.Action {
-	panic("not implemented") // CASEY TODO: Implement
+	return NflogAction{
+		Group:  group,
+		Prefix: prefix,
+		Size:   size,
+	}
 }
 
 func (s *actionSet) Nfqueue(queue int64) generictables.Action {
-	panic("not implemented") // CASEY TODO: Implement
+	return NfqueueAction{QueueNum: queue}
 }
 
 func (s *actionSet) NfqueueWithBypass(queue int64) generictables.Action {
-	panic("not implemented") // CASEY TODO: Implement
+	return NfqueueWithBypassAction{QueueNum: queue}
 }
 
 func (s *actionSet) SaveConnMark(saveMask uint32) generictables.Action {
@@ -131,11 +135,15 @@ func (s *actionSet) RestoreConnMark(restoreMask uint32) generictables.Action {
 }
 
 func (s *actionSet) Checksum() generictables.Action {
-	panic("not implemented") // CASEY TODO: Implement
+	return ChecksumAction{}
 }
 
 func (s *actionSet) TProxy(mark, mask uint32, port uint16) generictables.Action {
-	panic("not implemented") // CASEY TODO: Implement
+	return TProxyAction{
+		Mark: mark,
+		Mask: mask,
+		Port: port,
+	}
 }
 
 type Referrer interface {
