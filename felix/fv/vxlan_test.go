@@ -231,19 +231,15 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				for _, c := range cs.GetActiveClusters() {
 					for _, felix := range c.felixes {
 						if NFTMode() {
-							for _, felix := range felixes {
-								Eventually(func() string {
-									out, _ := felix.ExecOutput("nft", "list", "table", "calico")
-									return out
-								}, "10s", "100ms").Should(ContainSubstring("fully-random"))
-							}
+							Eventually(func() string {
+								out, _ := felix.ExecOutput("nft", "list", "table", "calico")
+								return out
+							}, "10s", "100ms").Should(ContainSubstring("fully-random"))
 						} else {
-							for _, felix := range felixes {
-								Eventually(func() string {
-									out, _ := felix.ExecOutput("iptables-save", "-c")
-									return out
-								}, "10s", "100ms").Should(ContainSubstring("--random-fully"))
-							}
+							Eventually(func() string {
+								out, _ := felix.ExecOutput("iptables-save", "-c")
+								return out
+							}, "10s", "100ms").Should(ContainSubstring("--random-fully"))
 						}
 					}
 				}
@@ -851,7 +847,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 								Eventually(f.BPFNumRemoteHostRoutes, waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount),
 									fmt.Sprintf("Expected felix %s to have %d host routes, got: %s", f.IP, baseIPSetMemberCount, f.BPFRoutes()))
 							} else if NFTMode() {
-								Eventually(f.NFTSetSizeFn("cali40all-vxlan-net"), "10s", "200ms").Should(Equal(len(felixes) - 1))
+								Eventually(f.NFTSetSizeFn("cali40all-vxlan-net"), "10s", "200ms").Should(Equal(baseIPSetMemberCount))
 							} else {
 								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
 							}
@@ -883,7 +879,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						Eventually(cs.local.felixes[0].BPFNumRemoteHostRoutes, "10s", "200ms").Should(Equal(adjustedIPSetMemberCount),
 							fmt.Sprintf("Expected %d host routes, got:\n%s", adjustedIPSetMemberCount, cs.local.felixes[0].BPFRoutes()))
 					} else if NFTMode() {
-						Eventually(felixes[0].NFTSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(Equal(len(felixes) - 2))
+						Eventually(cs.local.felixes[0].NFTSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(Equal(adjustedIPSetMemberCount))
 					} else {
 						Eventually(cs.local.felixes[0].IPSetSizeFn("cali40all-vxlan-net"), "5s", "200ms").Should(
 							Equal(adjustedIPSetMemberCount))
@@ -948,9 +944,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						for _, f := range c.felixes {
 							// Wait for Felix to set up the allow list.
 							if NFTMode() {
-								Eventually(f.NFTSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(baseIPSetMemberCount)
+								Eventually(f.NFTSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
 							} else {
-								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(baseIPSetMemberCount)
+								Eventually(f.IPSetSizeFn("cali40all-vxlan-net"), waitPeriod, "200ms").Should(Equal(baseIPSetMemberCount))
 							}
 						}
 						// Wait until dataplane has settled.
@@ -974,9 +970,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 				if vxlanMode == api.VXLANModeAlways && !BPFMode() {
 					It("after manually removing third node from allow list should have expected connectivity", func() {
 						if NFTMode() {
-							cs.local.felixes[0].Exec("nft", "delete", "element", "ip", "calico", "cali40all-vxlan-net", fmt.Sprintf("{ %s }", felixes[2].IP))
+							cs.local.felixes[0].Exec("nft", "delete", "element", "ip", "calico", "cali40all-vxlan-net", fmt.Sprintf("{ %s }", cs.local.felixes[2].IP))
 							if enableIPv6 {
-								cs.local.felixes[0].Exec("nft", "delete", "element", "ip6", "calico", "cali60all-vxlan-net", fmt.Sprintf("{ %s }", felixes[2].IPv6))
+								cs.local.felixes[0].Exec("nft", "delete", "element", "ip6", "calico", "cali60all-vxlan-net", fmt.Sprintf("{ %s }", cs.local.felixes[2].IPv6))
 							}
 						} else {
 							cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.local.felixes[2].IP)
