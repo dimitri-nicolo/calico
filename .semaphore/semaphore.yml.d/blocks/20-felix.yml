@@ -54,7 +54,7 @@
         - cd felix
         - cache restore go-pkg-cache
         - cache restore go-mod-cache
-        # We don't have an ARM64 protoc image, but we also know that the 
+        # We don't have an ARM64 protoc image, but we also know that the
         # file is fresh because the pre-flight check verifies that.
         - touch proto/felixbackend.pb.go
     jobs:
@@ -170,15 +170,16 @@
           - make check-wireguard
           - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
         parallelism: 3
-      - name: nftables FV Test matrix
-        execution_time_limit:
-          minutes: 120
-        env_vars:
-        - name: FELIX_FV_NFTABLES
-          value: "Enabled"
-        commands:
-          - make check-wireguard
-          - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
+      # TODO: Re-enable once nftables supports enterprise features.
+      # - name: nftables FV Test matrix
+      #   execution_time_limit:
+      #     minutes: 120
+      #   env_vars:
+      #   - name: FELIX_FV_NFTABLES
+      #     value: "Enabled"
+      #   commands:
+      #     - make check-wireguard
+      #     - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
         parallelism: 3
     epilogue:
       always:
