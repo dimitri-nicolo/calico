@@ -219,6 +219,15 @@ func Start(cfg *Config) error {
 						qsConfig,
 						linseed,
 					)))))
+	sm.Handle("/endpoints/names",
+		middleware.ClusterRequestToResource(flowLogsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					middleware.EndpointsNamesHandler(
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						qsConfig,
+						linseed,
+					)))))
 	sm.Handle("/dnsLogs/aggregation",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,

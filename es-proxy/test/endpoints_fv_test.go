@@ -161,6 +161,7 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(response.Count).To(Equal(2))
+			Expect(response.Item).To(HaveLen(2))
 			for _, item := range response.Item {
 				Expect(item.HasDeniedTraffic).To(BeTrue())
 			}
@@ -229,6 +230,128 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 					Expect(item.HasDeniedTraffic).To(BeTrue())
 				}
 			}
+		})
+
+		It("return all endpoints names", func() {
+			By("preparing the server")
+			serverResponseJson := `{
+				"count": 3,
+				"items": [{
+					"kind": "WorkloadEndpoint",
+					"name": "colmkenefick--bz--eghn--kadm--infra--0-k8s-compliance--benchmarker--t8nbs-eth0",
+					"namespace": "tigera-compliance",
+					"node": "colmkenefick-bz-eghn-kadm-infra-0",
+					"workload": "",
+					"orchestrator": "k8s",
+					"pod": "compliance-benchmarker-t8nbs",
+					"interfaceName": "cali57001ef7b96",
+					"ipNetworks": [
+						"192.168.170.201/32"
+					],
+					"labels": {
+						"app.kubernetes.io/name": "compliance-benchmarker",
+						"controller-revision-hash": "f84cb4cf6",
+						"k8s-app": "compliance-benchmarker",
+						"pod-template-generation": "1",
+						"projectcalico.org/namespace": "tigera-compliance",
+						"projectcalico.org/orchestrator": "k8s",
+						"projectcalico.org/serviceaccount": "tigera-compliance-benchmarker"
+					},
+					"numGlobalNetworkPolicies": 0,
+					"numNetworkPolicies": 2
+					},
+					{
+					"kind": "WorkloadEndpoint",
+					"name": "colmkenefick--bz--eghn--kadm--infra--0-k8s-csi--node--driver--r8vvn-eth0",
+					"namespace": "calico-system",
+					"node": "colmkenefick-bz-eghn-kadm-infra-0",
+					"workload": "",
+					"orchestrator": "k8s",
+					"pod": "csi-node-driver-r8vvn",
+					"interfaceName": "cali948dd367640",
+					"ipNetworks": [
+						"192.168.170.194/32"
+					],
+					"labels": {
+						"app.kubernetes.io/name": "csi-node-driver",
+						"controller-revision-hash": "788499ff8d",
+						"k8s-app": "csi-node-driver",
+						"name": "csi-node-driver",
+						"pod-template-generation": "1",
+						"projectcalico.org/namespace": "calico-system",
+						"projectcalico.org/orchestrator": "k8s",
+						"projectcalico.org/serviceaccount": "csi-node-driver"
+					},
+					"numGlobalNetworkPolicies": 0,
+					"numNetworkPolicies": 1
+					},
+					{
+					"kind": "WorkloadEndpoint",
+					"name": "colmkenefick--bz--eghn--kadm--infra--0-k8s-fluentd--node--2nb55-eth0",
+					"namespace": "tigera-fluentd",
+					"node": "colmkenefick-bz-eghn-kadm-infra-0",
+					"workload": "",
+					"orchestrator": "k8s",
+					"pod": "fluentd-node-2nb55",
+					"interfaceName": "cali392a095478c",
+					"ipNetworks": [
+						"192.168.170.197/32"
+					],
+					"labels": {
+						"app.kubernetes.io/name": "fluentd-node",
+						"controller-revision-hash": "ffb846565",
+						"k8s-app": "fluentd-node",
+						"pod-template-generation": "1",
+						"projectcalico.org/namespace": "tigera-fluentd",
+						"projectcalico.org/orchestrator": "k8s",
+						"projectcalico.org/serviceaccount": "fluentd-node"
+					},
+					"numGlobalNetworkPolicies": 0,
+					"numNetworkPolicies": 1
+				}]
+			}`
+			var serverResponse querycacheclient.QueryEndpointsResp
+			err := json.Unmarshal([]byte(serverResponseJson), &serverResponse)
+			Expect(err).NotTo(HaveOccurred())
+
+			server = createFakeQueryServer(&serverResponse, nil)
+			defer server.Close()
+
+			// update queryserver url
+			qsconfig.QueryServerURL = server.URL
+
+			// prepare request
+			req, err = http.NewRequest("POST", server.URL, bytes.NewBufferString("{}"))
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// prepare response recorder
+			rr := httptest.NewRecorder()
+
+			By("calling EndpointsNamesHandler")
+			handler := middleware.EndpointsNamesHandler(authReview, qsconfig, mocklsclient)
+			handler.ServeHTTP(rr, req)
+
+			By("validating server response")
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			var response []middleware.EndPointName
+			err = json.Unmarshal(rr.Body.Bytes(), &response)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(response).To(Equal([]middleware.EndPointName{
+				{
+					Pod:       "compliance-benchmarker-t8nbs",
+					Namespace: "tigera-compliance",
+				},
+				{
+					Pod:       "csi-node-driver-r8vvn",
+					Namespace: "calico-system",
+				},
+				{
+					Pod:       "fluentd-node-2nb55",
+					Namespace: "tigera-fluentd",
+				},
+			}))
 		})
 	})
 })
