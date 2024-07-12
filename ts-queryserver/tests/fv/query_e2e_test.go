@@ -238,6 +238,8 @@ func calculateQueryBody(query interface{}) io.Reader {
 			Unprotected:         qt.Unprotected,
 			EndpointsList:       qt.EndpointsList,
 			Node:                qt.Node,
+			Namespace:           qt.Namespace,
+			PodNamePrefix:       qt.PodNamePrefix,
 			Unlabelled:          qt.Unlabelled,
 			Page:                qt.Page,
 			Sort:                qt.Sort,

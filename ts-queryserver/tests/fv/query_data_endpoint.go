@@ -1380,5 +1380,127 @@ func endpointTestQueryData() []testQueryData {
 				Items: []client.Endpoint{},
 			},
 		},
+		{
+			description: "multiple weps, no policy - query by namespace",
+			resources: []resourcemgr.ResourceObject{
+				wep1_n1_ns1, wep3_n1_ns2, wep5_n3_ns2_unlabelled,
+			},
+			query: client.QueryEndpointsReq{
+				Namespace: getStringPointer("namespace-2"),
+				Sort: &client.Sort{
+					SortBy: []string{"name"},
+				},
+			},
+			response: &client.QueryEndpointsResp{
+				Count: 2,
+				Items: []client.Endpoint{
+					qcEndpoint(wep3_n1_ns2, 0, 0),
+					qcEndpoint(wep5_n3_ns2_unlabelled, 0, 0),
+				},
+			},
+		},
+		{
+			description: "multiple heps, weps, no policy - query by namespace, return heps only if namespace is set to empty string",
+			resources: []resourcemgr.ResourceObject{
+				wep1_n1_ns1, wep3_n1_ns2, wep5_n3_ns2_unlabelled, hep1_n2,
+			},
+			query: client.QueryEndpointsReq{
+				Namespace: getStringPointer(""),
+				Sort: &client.Sort{
+					SortBy: []string{"name"},
+				},
+			},
+			response: &client.QueryEndpointsResp{
+				Count: 1,
+				Items: []client.Endpoint{
+					qcEndpoint(hep1_n2, 0, 0),
+				},
+			},
+		},
+		{
+			description: "multiple heps, weps, no policy - query by namespace, return all if namespace is not set or nil",
+			resources: []resourcemgr.ResourceObject{
+				wep1_n1_ns1, wep3_n1_ns2, wep5_n3_ns2_unlabelled, hep1_n2,
+			},
+			query: client.QueryEndpointsReq{
+				Namespace: nil,
+				Sort: &client.Sort{
+					SortBy: []string{"name"},
+				},
+			},
+			response: &client.QueryEndpointsResp{
+				Count: 4,
+				Items: []client.Endpoint{
+					qcEndpoint(wep1_n1_ns1, 0, 0),
+					qcEndpoint(wep3_n1_ns2, 0, 0),
+					qcEndpoint(hep1_n2, 0, 0),
+					qcEndpoint(wep5_n3_ns2_unlabelled, 0, 0),
+				},
+			},
+		},
+		{
+			description: "multiple heps, weps, no policy - query by pod name prefix, return all endpoints starting with podNamePrefix",
+			resources: []resourcemgr.ResourceObject{
+				wep1_n1_ns1, wep3_n1_ns2, wep2_n1_ns1_filtered_in, hep1_n2,
+			},
+			query: client.QueryEndpointsReq{
+				PodNamePrefix: getStringPointer("pod1"),
+				Sort: &client.Sort{
+					SortBy: []string{"name"},
+				},
+			},
+			response: &client.QueryEndpointsResp{
+				Count: 2,
+				Items: []client.Endpoint{
+					qcEndpoint(wep1_n1_ns1, 0, 0),
+					qcEndpoint(wep2_n1_ns1_filtered_in, 0, 0),
+				},
+			},
+		},
+		{
+
+			description: "multiple heps, weps, no policy - query by pod name prefix, return all if podPrefix is empty",
+			resources: []resourcemgr.ResourceObject{
+				wep1_n1_ns1, wep3_n1_ns2, hep1_n2,
+			},
+			query: client.QueryEndpointsReq{
+				PodNamePrefix: getStringPointer(""),
+				Sort: &client.Sort{
+					SortBy: []string{"name"},
+				},
+			},
+			response: &client.QueryEndpointsResp{
+				Count: 3,
+				Items: []client.Endpoint{
+					qcEndpoint(wep1_n1_ns1, 0, 0),
+					qcEndpoint(wep3_n1_ns2, 0, 0),
+					qcEndpoint(hep1_n2, 0, 0),
+				},
+			},
+		},
+		{
+
+			description: "multiple heps, weps, no policy - query by pod name prefix, return all if podPrefix is nil",
+			resources: []resourcemgr.ResourceObject{
+				wep1_n1_ns1, wep3_n1_ns2, hep1_n2,
+			},
+			query: client.QueryEndpointsReq{
+				PodNamePrefix: nil,
+				Sort: &client.Sort{
+					SortBy: []string{"name"},
+				},
+			},
+			response: &client.QueryEndpointsResp{
+				Count: 3,
+				Items: []client.Endpoint{
+					qcEndpoint(wep1_n1_ns1, 0, 0),
+					qcEndpoint(wep3_n1_ns2, 0, 0),
+					qcEndpoint(hep1_n2, 0, 0),
+				},
+			},
+		},
 	}
+}
+func getStringPointer(s string) *string {
+	return &s
 }

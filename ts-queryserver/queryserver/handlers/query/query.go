@@ -221,6 +221,7 @@ func parseEndpointsBody(bodyBytes []byte) (*client.QueryEndpointsReq, error) {
 		EndpointsList:       body.EndpointsList,
 		Node:                body.Node,
 		Namespace:           body.Namespace,
+		PodNamePrefix:       body.PodNamePrefix,
 		Unlabelled:          body.Unlabelled,
 		Page:                body.Page,
 		Sort:                body.Sort,

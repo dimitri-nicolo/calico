@@ -387,6 +387,7 @@ func getQueryServerRequestParams(params *EndpointsAggregationRequest, deniedEndp
 		Unprotected:         params.Unprotected,
 		Node:                params.Node,
 		Namespace:           params.Namespace,
+		PodNamePrefix:       params.PodNamePrefix,
 		Unlabelled:          params.Unlabelled,
 		Page:                params.Page,
 		Sort:                params.Sort,

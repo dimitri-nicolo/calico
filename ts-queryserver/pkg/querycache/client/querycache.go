@@ -312,7 +312,7 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 	items := make([]Endpoint, 0, len(epkeys))
 	for _, result := range epkeys {
 
-		if req.Namespace != "" && !strings.EqualFold(result.(model.ResourceKey).Namespace, req.Namespace) {
+		if req.Namespace != nil && !strings.EqualFold(result.(model.ResourceKey).Namespace, *req.Namespace) {
 			skippedNamespaces = append(skippedNamespaces, result.(model.ResourceKey).Namespace)
 			continue
 		}
@@ -333,13 +333,22 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		if req.Unlabelled && ep.IsLabelled() {
 			continue
 		}
-		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
+
+		// compare pod name if podNamePrefix is provided in the param set
+		queryEP := *c.apiEndpointToQueryEndpoint(ep)
+		if req.PodNamePrefix != nil {
+			if !strings.HasPrefix(queryEP.Pod, *req.PodNamePrefix) {
+				continue
+			}
+		}
+		items = append(items, queryEP)
+
 	}
 
 	// log list of skipped ns if any for debugging purposes
 	if log.IsLevelEnabled(log.DebugLevel) && len(skippedNamespaces) > 0 {
 		log.Debugf("some endpoints are skipped due to namespace mismatch. requested:%s vs. actual:%v",
-			req.Namespace,
+			*req.Namespace,
 			strings.Join(skippedNamespaces, ","))
 	}
 	sortEndpoints(items, req.Sort)
