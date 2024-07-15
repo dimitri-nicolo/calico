@@ -703,7 +703,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 			Match:  match,
 			Action: r.SetMark(mark),
 		})
-		match = iptables.Match().MarkSingleBitSet(mark)
+		match = r.NewMatch().MarkSingleBitSet(mark)
 	}
 
 	for _, rule := range rules {

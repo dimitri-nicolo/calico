@@ -586,6 +586,9 @@ func NewRenderer(config Config) RuleRenderer {
 		return iptables.Match()
 	}
 	combineMatches := iptables.Combine
+	if config.NFTables {
+		combineMatches = nftables.Combine
+	}
 
 	// First, what should we do when packets are not accepted.
 	var iptablesFilterDenyAction generictables.Action
