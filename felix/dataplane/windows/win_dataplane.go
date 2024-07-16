@@ -26,7 +26,8 @@ import (
 	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/config"
 	felixconfig "github.com/projectcalico/calico/felix/config"
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/dns"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/windows/hcn"
 	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
@@ -49,9 +50,7 @@ const (
 	reschedDelay = time.Duration(5) * time.Second
 )
 
-var (
-	processStartTime time.Time
-)
+var processStartTime time.Time
 
 func init() {
 	processStartTime = time.Now()
@@ -154,7 +153,7 @@ type WindowsDataplane struct {
 
 	// DNS policy components
 	domainInfoReader *domainInfoReader
-	domainInfoStore  *common.DomainInfoStore
+	domainInfoStore  *dns.DomainInfoStore
 }
 
 const (
@@ -225,8 +224,8 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 	}
 
 	dp.domainInfoReader = NewDomainInfoReader(config.DNSTrustedServers, config.PktMonStartArgs)
-	dp.domainInfoStore = common.NewDomainInfoStore(
-		&common.DnsConfig{
+	dp.domainInfoStore = dns.NewDomainInfoStore(
+		&dns.DnsConfig{
 			Collector:                 config.Collector,
 			DNSCacheFile:              config.DNSCacheFile,
 			DNSCacheSaveInterval:      config.DNSCacheSaveInterval,
@@ -236,7 +235,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 		})
 	dp.RegisterManager(dp.domainInfoStore)
 
-	dp.RegisterManager(common.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
+	dp.RegisterManager(dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
 	dp.RegisterManager(newPolicyManager(dp.policySets))
 	dp.endpointMgr = newEndpointManager(hns, dp.policySets, epEventListeners)
 	dp.RegisterManager(dp.endpointMgr)

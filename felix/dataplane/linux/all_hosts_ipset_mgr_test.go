@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
@@ -14,7 +14,7 @@ import (
 var _ = Describe("allHostsIpsetManager IP set updates", func() {
 	var (
 		allHostsMgr *allHostsIpsetManager
-		ipSets      *common.MockIPSets
+		ipSets      *ipsets.MockIPSets
 	)
 
 	const (
@@ -22,7 +22,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 	)
 
 	BeforeEach(func() {
-		ipSets = common.NewMockIPSets()
+		ipSets = ipsets.NewMockIPSets()
 		allHostsMgr = newAllHostsIpsetManager(ipSets, 1024, []string{externalCIDR})
 	})
 

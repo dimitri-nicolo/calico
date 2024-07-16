@@ -4,7 +4,7 @@ package intdataplane
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
@@ -14,7 +14,7 @@ import (
 // when IPIP or IPSec are enabled.  It doesn't actually program the rules, because they are part of the
 // top-level static chains.
 type allHostsIpsetManager struct {
-	ipsetsDataplane common.IPSetsDataplane
+	ipsetsDataplane dpsets.IPSetsDataplane
 
 	// activeHostnameToIP maps hostname to string IP address.  We don't bother to parse into
 	// net.IPs because we're going to pass them directly to the IPSet API.
@@ -28,7 +28,7 @@ type allHostsIpsetManager struct {
 	ipSetMetadata ipsets.IPSetMetadata
 }
 
-func newAllHostsIpsetManager(ipsetsDataplane common.IPSetsDataplane, maxIPSetSize int, externalNodeCIDRs []string) *allHostsIpsetManager {
+func newAllHostsIpsetManager(ipsetsDataplane dpsets.IPSetsDataplane, maxIPSetSize int, externalNodeCIDRs []string) *allHostsIpsetManager {
 	return &allHostsIpsetManager{
 		ipsetsDataplane:    ipsetsDataplane,
 		activeHostnameToIP: map[string]string{},

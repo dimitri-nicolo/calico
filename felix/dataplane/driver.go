@@ -65,8 +65,8 @@ func StartDataplaneDriver(configParams *config.Config,
 	childExitedRestartCallback func(),
 	ipamClient ipam.Interface,
 	k8sClientSet *kubernetes.Clientset,
-	lc *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
-
+	lc *calc.LookupsCache,
+) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	if !configParams.IsLeader() {
 		// Return an inactive dataplane, since we're not the leader.
 		log.Info("Not the leader, using an inactive dataplane")
@@ -275,6 +275,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				NetlinkTimeout:    configParams.NetlinkTimeoutSecs,
 			},
 			RulesConfig: rules.Config{
+				NFTables:              configParams.NFTablesMode == "Enabled",
 				WorkloadIfacePrefixes: configParams.InterfacePrefixes(),
 
 				IPSetConfigV4: ipsets.NewIPVersionConfig(

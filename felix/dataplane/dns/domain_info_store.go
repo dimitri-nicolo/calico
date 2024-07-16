@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package dns
 
 // Component interactions with the DomainInfoStore.
 //
@@ -88,6 +88,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/collector"
 	fc "github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -218,7 +219,7 @@ type DomainInfoStore struct {
 	dnsLookup map[string]*dnsLookupInfoByClient
 
 	// Handlers that we need update.
-	handlers []DomainInfoChangeHandler
+	handlers []common.DomainInfoChangeHandler
 
 	// Channel on which we receive captured DNS responses (beginning with the IP header).
 	msgChannel chan DataWithTimestamp
@@ -412,7 +413,7 @@ func (s *DomainInfoStore) Start() {
 	}
 
 	// Ensure that the directory for the persistent file exists.
-	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {
+	if err := os.MkdirAll(path.Dir(s.saveFile), 0o755); err != nil {
 		log.WithError(err).Fatal("Failed to create persistent file dir")
 	}
 
@@ -526,7 +527,7 @@ func (s *DomainInfoStore) UpdatesApplied() {
 	}
 }
 
-func (s *DomainInfoStore) RegisterHandler(handler DomainInfoChangeHandler) {
+func (s *DomainInfoStore) RegisterHandler(handler common.DomainInfoChangeHandler) {
 	s.handlers = append(s.handlers, handler)
 }
 

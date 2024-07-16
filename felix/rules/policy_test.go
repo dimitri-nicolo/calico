@@ -15,7 +15,10 @@
 package rules_test
 
 import (
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/projectcalico/calico/felix/environment"
+	"github.com/projectcalico/calico/felix/generictables"
 	. "github.com/projectcalico/calico/felix/rules"
 
 	. "github.com/onsi/ginkgo"
@@ -186,7 +189,7 @@ var ruleTestData = []TableEntry{
 }
 
 var _ = Describe("Protobuf rule to iptables rule conversion", func() {
-	var rrConfigNormal = Config{
+	rrConfigNormal := Config{
 		IPIPEnabled:                      true,
 		IPIPTunnelAddress:                nil,
 		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
@@ -221,20 +224,21 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x80}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
+			Expect(rules[1]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x80),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "API0|default.foo",
 				},
 			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
+			Expect(rules[2]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x80),
 				Action: iptables.ReturnAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(rules[3]).To(Equal(iptables.Rule{
+				Expect(rules[3]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -293,20 +297,21 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Expect(len(rules)).To(Equal(numRules))
 				Expect(rules[0].Match.Render()).To(Equal(expMatch))
 				Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x100}))
-				Expect(rules[1]).To(Equal(iptables.Rule{
+				Expect(rules[1]).To(Equal(generictables.Rule{
 					Match: iptables.Match().MarkSingleBitSet(0x100),
 					Action: iptables.NflogAction{
 						Group:  1,
 						Prefix: "PPI0|default.foo",
 					},
 				}))
-				Expect(rules[2]).To(Equal(iptables.Rule{
+				Expect(rules[2]).To(Equal(generictables.Rule{
 					Match:  iptables.Match().MarkSingleBitSet(0x100),
 					Action: iptables.ReturnAction{},
 				}))
 
 				if len(in.DstDomainIpSetIds) > 0 {
-					Expect(rules[3]).To(Equal(iptables.Rule{
+					Expect(rules[3]).To(Equal(generictables.Rule{
+						Match:  iptables.Match(),
 						Action: iptables.SetMarkAction{Mark: 0x00001},
 					}))
 				}
@@ -404,24 +409,25 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(len(rules)).To(Equal(expectedLen))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
+			Expect(rules[1]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
 				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
+			Expect(rules[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
 			}))
-			Expect(rules[3]).To(Equal(iptables.Rule{
+			Expect(rules[3]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(rules[4]).To(Equal(iptables.Rule{
+				Expect(rules[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -481,29 +487,30 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			outbound := chains[1].Rules
 			Expect(inbound).To(HaveLen(numInboundRules))
 			Expect(outbound).To(ConsistOf(
-				iptables.Rule{
+				generictables.Rule{
 					Comment: []string{"Policy default.foo egress"},
 				}))
 			Expect(inbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(inbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
-			Expect(inbound[1]).To(Equal(iptables.Rule{
+			Expect(inbound[1]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
 				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
-			Expect(inbound[2]).To(Equal(iptables.Rule{
+			Expect(inbound[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
 			}))
-			Expect(inbound[3]).To(Equal(iptables.Rule{
+			Expect(inbound[3]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(inbound[4]).To(Equal(iptables.Rule{
+				Expect(inbound[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -542,30 +549,31 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}
 
 			Expect(inbound).To(ConsistOf(
-				iptables.Rule{
+				generictables.Rule{
 					Comment: []string{"Policy default.foo ingress"},
 				}))
 			Expect(outbound).To(HaveLen(numOutboundRules))
 			Expect(outbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(outbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
-			Expect(outbound[1]).To(Equal(iptables.Rule{
+			Expect(outbound[1]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
 				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
-			Expect(outbound[2]).To(Equal(iptables.Rule{
+			Expect(outbound[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  2,
 					Prefix: "DPE0|default.foo",
 				},
 			}))
-			Expect(outbound[3]).To(Equal(iptables.Rule{
+			Expect(outbound[3]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(outbound[4]).To(Equal(iptables.Rule{
+				Expect(outbound[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -606,14 +614,14 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}))
 			Expect(inbound[1].Match.Render()).To(Equal(expMatch))
 			Expect(inbound[1].Action).To(Equal(iptables.ReturnAction{}))
-			Expect(inbound[2]).To(Equal(iptables.Rule{
+			Expect(inbound[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI|staged:default.foo",
 				},
 			}))
-			Expect(outbound[0]).To(Equal(iptables.Rule{
+			Expect(outbound[0]).To(Equal(generictables.Rule{
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  2,
@@ -660,14 +668,14 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}))
 			Expect(outbound[1].Match.Render()).To(Equal(expMatch))
 			Expect(outbound[1].Action).To(Equal(iptables.ReturnAction{}))
-			Expect(outbound[2]).To(Equal(iptables.Rule{
+			Expect(outbound[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  2,
 					Prefix: "DPE|staged:default.foo",
 				},
 			}))
-			Expect(inbound[0]).To(Equal(iptables.Rule{
+			Expect(inbound[0]).To(Equal(generictables.Rule{
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  1,
@@ -702,31 +710,33 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
+			Expect(rules[1]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
 				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
+			Expect(rules[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
 			}))
-			Expect(rules[3]).To(Equal(iptables.Rule{
+			Expect(rules[3]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.LogAction{
 					Prefix: "calico-drop",
 				},
 			}))
-			Expect(rules[4]).To(Equal(iptables.Rule{
+			Expect(rules[4]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.DropAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(rules[5]).To(Equal(iptables.Rule{
-					Action: iptables.SetMarkAction{Mark: 0x00001}}))
+				Expect(rules[5]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				}))
 			}
 		},
 		ruleTestData...,
@@ -777,26 +787,27 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
+			Expect(rules[1]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
 			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
+			Expect(rules[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.LogAction{
 					Prefix: "calico-drop",
 				},
 			}))
-			Expect(rules[3]).To(Equal(iptables.Rule{
+			Expect(rules[3]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.AcceptAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(rules[4]).To(Equal(iptables.Rule{
+				Expect(rules[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -848,20 +859,21 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(len(rules)).To(Equal(numRules))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
+			Expect(rules[1]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
 			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
+			Expect(rules[2]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.AcceptAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(rules[3]).To(Equal(iptables.Rule{
+				Expect(rules[3]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -888,24 +900,25 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(len(rules)).To(Equal(expectedLen))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
+			Expect(rules[1]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkSingleBitSet(0x800),
 				Action: iptables.NfqueueAction{QueueNum: 100},
 			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
+			Expect(rules[2]).To(Equal(generictables.Rule{
 				Match: iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI0|default.foo",
 				},
 			}))
-			Expect(rules[3]).To(Equal(iptables.Rule{
+			Expect(rules[3]).To(Equal(generictables.Rule{
 				Match:  iptables.Match().MarkSingleBitSet(0x800),
 				Action: iptables.RejectAction{},
 			}))
 
 			if len(in.DstDomainIpSetIds) > 0 {
-				Expect(rules[4]).To(Equal(iptables.Rule{
+				Expect(rules[4]).To(Equal(generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				}))
 			}
@@ -942,7 +955,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			rendered := []string{}
 			for _, ir := range iptRules {
-				s := ir.RenderAppend("test", "", &environment.Features{})
+				s := iptables.NewIptablesRenderer("").RenderAppend(&ir, "test", "", &environment.Features{})
 				rendered = append(rendered, s)
 			}
 			Expect(rendered).To(Equal(expected))
@@ -1069,7 +1082,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			rendered := []string{}
 			for _, ir := range iptRules {
-				s := ir.RenderAppend("test", "", &environment.Features{})
+				s := iptables.NewIptablesRenderer("").RenderAppend(&ir, "test", "", &environment.Features{})
 				rendered = append(rendered, s)
 			}
 			Expect(rendered).To(Equal(expected))
@@ -1697,7 +1710,7 @@ var _ = Describe("rule metadata tests", func() {
 		}},
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
 	}
-	var rrConfigNormal = Config{
+	rrConfigNormal := Config{
 		IPIPEnabled:                      true,
 		IPIPTunnelAddress:                nil,
 		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
@@ -1749,11 +1762,11 @@ var _ = Describe("rule metadata tests", func() {
 			4,
 		)
 		Expect(chains).To(ConsistOf(
-			&iptables.Chain{
+			&generictables.Chain{
 				Name: "cali-pi-_FJ9yUkNpzshVDh2n7mg",
-				Rules: []iptables.Rule{
+				Rules: []generictables.Rule{
 					{
-						Match:  nil,
+						Match:  iptables.Match(),
 						Action: iptables.SetMarkAction{Mark: 0x80},
 						Comment: []string{
 							"Policy long-policy-name-that-gets-hashed ingress",
@@ -1769,9 +1782,9 @@ var _ = Describe("rule metadata tests", func() {
 					},
 				},
 			},
-			&iptables.Chain{
+			&generictables.Chain{
 				Name: "cali-po-_FJ9yUkNpzshVDh2n7mg",
-				Rules: []iptables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Comment: []string{
 							"Policy long-policy-name-that-gets-hashed egress",
@@ -1792,12 +1805,12 @@ var _ = Describe("rule metadata tests", func() {
 			},
 			4,
 		)
-		Expect([]*iptables.Chain{inbound, outbound}).To(ConsistOf(
-			&iptables.Chain{
+		Expect([]*generictables.Chain{inbound, outbound}).To(ConsistOf(
+			&generictables.Chain{
 				Name: "cali-pri-_ffOMcf6pikpiZ6hgKc",
-				Rules: []iptables.Rule{
+				Rules: []generictables.Rule{
 					{
-						Match:  nil,
+						Match:  iptables.Match(),
 						Action: iptables.SetMarkAction{Mark: 0x80},
 						Comment: []string{
 							"Profile long-policy-name-that-gets-hashed ingress",
@@ -1813,9 +1826,9 @@ var _ = Describe("rule metadata tests", func() {
 					},
 				},
 			},
-			&iptables.Chain{
+			&generictables.Chain{
 				Name: "cali-pro-_ffOMcf6pikpiZ6hgKc",
-				Rules: []iptables.Rule{
+				Rules: []generictables.Rule{
 					{
 						Comment: []string{
 							"Profile long-policy-name-that-gets-hashed egress",
@@ -1828,7 +1841,7 @@ var _ = Describe("rule metadata tests", func() {
 })
 
 var _ = Describe("DNS policy rules", func() {
-	var rrConfigNormal = Config{
+	rrConfigNormal := Config{
 		IPIPEnabled:                      true,
 		IPIPTunnelAddress:                nil,
 		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
@@ -1860,7 +1873,7 @@ var _ = Describe("DNS policy rules", func() {
 			iptableRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 
-			expected := []iptables.Rule{
+			expected := []generictables.Rule{
 				{
 					Action: iptables.SetMaskedMarkAction{Mask: 1536},
 				},
@@ -1891,12 +1904,13 @@ var _ = Describe("DNS policy rules", func() {
 			}
 
 			if expectDNSMark {
-				expected = append(expected, iptables.Rule{
+				expected = append(expected, generictables.Rule{
+					Match:  iptables.Match(),
 					Action: iptables.SetMarkAction{Mark: 0x00001},
 				})
 			}
 
-			Expect(iptableRules).Should(Equal(expected))
+			Expect(iptableRules).Should(Equal(expected), cmp.Diff(iptableRules, expected))
 		},
 		Entry(apiv3.DNSPolicyModeDelayDeniedPacket, apiv3.DNSPolicyModeDelayDeniedPacket, true),
 		Entry(apiv3.DNSPolicyModeNoDelay, apiv3.DNSPolicyModeNoDelay, false),

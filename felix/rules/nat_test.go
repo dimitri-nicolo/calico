@@ -21,6 +21,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/felix/generictables"
 	. "github.com/projectcalico/calico/felix/rules"
 
 	. "github.com/onsi/ginkgo"
@@ -28,6 +29,11 @@ import (
 
 	"github.com/projectcalico/calico/felix/ipsets"
 	. "github.com/projectcalico/calico/felix/iptables"
+)
+
+type (
+	Rule  = generictables.Rule
+	Chain = generictables.Chain
 )
 
 var _ = Describe("NAT", func() {
@@ -61,9 +67,9 @@ var _ = Describe("NAT", func() {
 	})
 
 	It("should render rules when active", func() {
-		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
+		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
-			Rules: []Rule{
+			Rules: []generictables.Rule{
 				{
 					Action: MasqAction{},
 					Match: Match().
@@ -79,9 +85,9 @@ var _ = Describe("NAT", func() {
 		localConfig.NATOutgoingAddress = net.ParseIP(snatAddress)
 		renderer = NewRenderer(localConfig)
 
-		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
+		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
-			Rules: []Rule{
+			Rules: []generictables.Rule{
 				{
 					Action: SNATAction{ToAddr: snatAddress},
 					Match: Match().
@@ -92,15 +98,14 @@ var _ = Describe("NAT", func() {
 		}))
 	})
 	It("should render rules when active with explicit port range", func() {
-
-		//copy struct
+		// copy struct
 		localConfig := rrConfigNormal
 		localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
 		renderer = NewRenderer(localConfig)
 
-		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
+		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
-			Rules: []Rule{
+			Rules: []generictables.Rule{
 				{
 					Action: MasqAction{ToPorts: "99-100"},
 					Match: Match().
@@ -135,16 +140,15 @@ var _ = Describe("NAT", func() {
 		}))
 	})
 	It("should render rules when active with explicit port range", func() {
-
-		//copy struct
+		// copy struct
 		localConfig := rrConfigNormal
 		localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
 		localConfig.IptablesNATOutgoingInterfaceFilter = "cali-123"
 		renderer = NewRenderer(localConfig)
 
-		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
+		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
-			Rules: []Rule{
+			Rules: []generictables.Rule{
 				{
 					Action: MasqAction{ToPorts: "99-100"},
 					Match: Match().
@@ -184,9 +188,8 @@ var _ = Describe("NAT", func() {
 		}))
 	})
 	It("should render rules when active with explicit port range and an explicit SNAT address", func() {
-
 		snatAddress := "192.168.0.1"
-		//copy struct
+		// copy struct
 		localConfig := rrConfigNormal
 		localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
 		localConfig.NATOutgoingAddress = net.ParseIP(snatAddress)
@@ -194,9 +197,9 @@ var _ = Describe("NAT", func() {
 
 		expectedAddress := fmt.Sprintf("%s:%s", snatAddress, "99-100")
 
-		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
+		Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&generictables.Chain{
 			Name: "cali-nat-outgoing",
-			Rules: []Rule{
+			Rules: []generictables.Rule{
 				{
 					Action: SNATAction{ToAddr: expectedAddress},
 					Match: Match().
@@ -231,7 +234,7 @@ var _ = Describe("NAT", func() {
 		}))
 	})
 	It("should render nothing when inactive", func() {
-		Expect(renderer.NATOutgoingChain(false, 4)).To(Equal(&Chain{
+		Expect(renderer.NATOutgoingChain(false, 4)).To(Equal(&generictables.Chain{
 			Name:  "cali-nat-outgoing",
 			Rules: nil,
 		}))
@@ -274,8 +277,7 @@ var _ = Describe("NAT", func() {
 			}))
 		})
 		It("should render rules when active with explicit port range", func() {
-
-			//copy struct
+			// copy struct
 			localConfig := rrConfigNormal
 			localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
 			renderer = NewRenderer(localConfig)
