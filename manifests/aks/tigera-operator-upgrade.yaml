@@ -21238,9 +21238,10 @@ spec:
                                     name:
                                       description: |-
                                         Name is an enum which identifies the calico-kube-controllers Deployment container by name.
-                                        Supported values are: calico-kube-controllers
+                                        Supported values are: calico-kube-controllers, es-calico-kube-controllers
                                       enum:
                                       - calico-kube-controllers
+                                      - es-calico-kube-controllers
                                       type: string
                                     resources:
                                       description: |-
@@ -28614,9 +28615,10 @@ spec:
                                         name:
                                           description: |-
                                             Name is an enum which identifies the calico-kube-controllers Deployment container by name.
-                                            Supported values are: calico-kube-controllers
+                                            Supported values are: calico-kube-controllers, es-calico-kube-controllers
                                           enum:
                                           - calico-kube-controllers
+                                          - es-calico-kube-controllers
                                           type: string
                                         resources:
                                           description: |-
