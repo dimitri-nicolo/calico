@@ -1740,6 +1740,11 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 		if !m.isDataIface(iface) && !m.isL3Iface(iface) {
 			log.WithField("iface", iface).Debug(
 				"Ignoring interface that doesn't match the host data/l3 interface regex")
+			if !m.isWorkloadIface(iface) {
+				log.WithField("iface", iface).Debug(
+					"Removing interface that doesn't match the host data/l3 interface and is not workload interface")
+				return set.RemoveItem
+			}
 			return nil
 		}
 
