@@ -20,7 +20,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
@@ -35,7 +35,7 @@ type hostIPManager struct {
 	routesByDest     set.Set[ip.CIDR]
 
 	hostIPSetID     string
-	ipsetsDataplane common.IPSetsDataplane
+	ipsetsDataplane dpsets.IPSetsDataplane
 	maxSize         int
 	tunIPSetID      string
 	routesDirty     bool
@@ -43,9 +43,9 @@ type hostIPManager struct {
 
 func newHostIPManager(wlIfacesPrefixes []string,
 	ipSetID string,
-	ipsets common.IPSetsDataplane,
-	maxIPSetSize int, tunIpSetID string) *hostIPManager {
-
+	ipsets dpsets.IPSetsDataplane,
+	maxIPSetSize int, tunIpSetID string,
+) *hostIPManager {
 	return newHostIPManagerWithShims(
 		wlIfacesPrefixes,
 		ipSetID,
@@ -57,9 +57,9 @@ func newHostIPManager(wlIfacesPrefixes []string,
 
 func newHostIPManagerWithShims(wlIfacesPrefixes []string,
 	ipSetID string,
-	ipsets common.IPSetsDataplane,
-	maxIPSetSize int, tunIpSetID string) *hostIPManager {
-
+	ipsets dpsets.IPSetsDataplane,
+	maxIPSetSize int, tunIpSetID string,
+) *hostIPManager {
 	wlIfacesPattern := "^(" + strings.Join(wlIfacesPrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
 

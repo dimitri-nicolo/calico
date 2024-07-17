@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/SermoDigital/jose/jws"
+	log "github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -27,6 +26,7 @@ import (
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 )
 
@@ -49,6 +49,7 @@ const (
 	QueryUnprotected         = "unprotected"
 	QueryUnlabelled          = "unlabelled"
 	QueryTier                = "tier"
+	QueryFieldSelector       = "fields"
 
 	AllResults     = "all"
 	resultsPerPage = 100
@@ -86,13 +87,14 @@ type Query interface {
 	Metrics(w http.ResponseWriter, r *http.Request)
 }
 
-func NewQuery(qi client.QueryInterface, cfg *config.Config) Query {
-	return &query{cfg: cfg, qi: qi}
+func NewQuery(qi client.QueryInterface, cfg *config.Config, authz authhandler.Authorizer) Query {
+	return &query{cfg: cfg, qi: qi, authorizer: authz}
 }
 
 type query struct {
-	cfg *config.Config
-	qi  client.QueryInterface
+	cfg        *config.Config
+	qi         client.QueryInterface
+	authorizer authhandler.Authorizer
 }
 
 func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +222,7 @@ func parseEndpointsBody(bodyBytes []byte) (*client.QueryEndpointsReq, error) {
 		EndpointsList:       body.EndpointsList,
 		Node:                body.Node,
 		Namespace:           body.Namespace,
+		PodNamePrefix:       body.PodNamePrefix,
 		Unlabelled:          body.Unlabelled,
 		Page:                body.Page,
 		Sort:                body.Sort,
@@ -248,16 +251,24 @@ func (q *query) Endpoint(w http.ResponseWriter, r *http.Request) {
 // Policies handles GET requets to /policies api
 //
 // list of parameters that can be passed in the url:
-// - endpoint (endpoints:<endpoint name>)
-// - labels (list of labels staritng with labels_ ex. labels_a)
-// - networkset (networkset:<ns name>)
-// - unmatched (unmatched:<true/false>)
-// - items in a page (maxItems:10)
-// - page number (page:0)
-// - list of tiers (tier=t1,t2,t3)
-// - sorting attribute (sortBy=<index/kind/name/namespace/tier/numHostEndpoints/numWorkloadEndpoints/numEndpoints>)
-// - sort ascending or descending (reverseSort=<true/false>)
+//   - endpoint (endpoints:<endpoint name>)
+//   - labels (list of labels staritng with labels_ ex. labels_a)
+//   - networkset (networkset:<ns name>)
+//   - unmatched (unmatched:<true/false>)
+//   - items in a page (maxItems:10)
+//   - page number (page:0)
+//   - list of tiers (tier=t1,t2,t3)
+//   - sorting attribute (sortBy=<index/kind/name/namespace/tier/numHostEndpoints/numWorkloadEndpoints/numEndpoints>)
+//   - sort ascending or descending (reverseSort=<true/false>)
+//   - fields: list of fields to be returned in the resultset (if not passed all fields will be returned).
+//     exmaple: fields=id,name,namespace (this will only return id, name, and namespace for each policy in the resultset)
 func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
+	permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), authhandler.PolicyAuthReviewAttrList)
+	if err != nil {
+		q.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
 	endpoints, err := getEndpoints(r)
 	if err != nil {
 		q.writeError(w, err, http.StatusBadRequest)
@@ -275,6 +286,14 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	page, err := q.getPage(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	fieldSelector := getPolicyFieldSelector(r)
+
 	var endpoint model.Key
 	if len(endpoints) > 0 {
 		endpoint = endpoints[0]
@@ -284,12 +303,6 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		networkset = networksets[0]
 	}
 
-	page, err := q.getPage(r)
-	if err != nil {
-		q.writeError(w, err, http.StatusBadRequest)
-		return
-	}
-
 	var tiers []string
 	tiersString := r.URL.Query().Get(QueryTier)
 	if tiersString != "" {
@@ -297,17 +310,25 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q.runQuery(w, r, client.QueryPoliciesReq{
-		Tier:       tiers,
-		Labels:     getLabels(r),
-		Endpoint:   endpoint,
-		NetworkSet: networkset,
-		Unmatched:  unmatched,
-		Page:       page,
-		Sort:       q.getSort(r),
+		Tier:          tiers,
+		Labels:        getLabels(r),
+		Endpoint:      endpoint,
+		NetworkSet:    networkset,
+		Unmatched:     unmatched,
+		Page:          page,
+		Sort:          q.getSort(r),
+		FieldSelector: fieldSelector,
+		Permissions:   permissions,
 	}, false)
 }
 
 func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
+	permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), authhandler.PolicyAuthReviewAttrList)
+	if err != nil {
+		q.writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
 	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
 	if len(urlParts) != numURLSegmentsWithName {
 		q.writeError(w, ErrorInvalidPolicyURL, http.StatusBadRequest)
@@ -319,7 +340,8 @@ func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q.runQuery(w, r, client.QueryPoliciesReq{
-		Policy: policy,
+		Policy:      policy,
+		Permissions: permissions,
 	}, true)
 }
 
@@ -510,6 +532,27 @@ func getNetworkSetKeyFromCombinedName(combined string) (model.Key, bool) {
 
 	log.WithField("name", combined).Info("Extracting policy key from combined name failed with unknown name format")
 	return nil, false
+}
+
+// getPolicyFieldSelector parses the query params of pattern fields=f1,f2,f3,... and return the values in a map.
+// if fields is not set in the query params, all fields will be returned in the result set and if field= (field is set to empty list)
+// none of the fields will be returned in the result set.
+//
+// returns a map[string]bool including the requested fields.
+func getPolicyFieldSelector(r *http.Request) map[string]bool {
+	if r.URL.Query().Has(QueryFieldSelector) {
+		fieldSelector := r.URL.Query().Get(QueryFieldSelector)
+		fields := strings.Split(fieldSelector, ",")
+		fieldMap := make(map[string]bool)
+		for _, f := range fields {
+			if len(strings.TrimSpace(f)) > 0 {
+				fieldMap[strings.ToLower(f)] = true
+			}
+		}
+
+		return fieldMap
+	}
+	return nil
 }
 
 func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}, exact bool) {

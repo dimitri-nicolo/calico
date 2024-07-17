@@ -22,7 +22,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/calico/felix/dataplane/common"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/ethtool"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
@@ -35,7 +35,7 @@ import (
 //
 // ipipManager also takes care of the configuration of the IPIP tunnel device.
 type ipipManager struct {
-	ipsetsDataplane common.IPSetsDataplane
+	ipsetsDataplane dpsets.IPSetsDataplane
 
 	// activeHostnameToIP maps hostname to string IP address.  We don't bother to parse into
 	// net.IPs because we're going to pass them directly to the IPSet API.
@@ -57,7 +57,7 @@ type ipipManager struct {
 }
 
 func newIPIPManager(
-	ipsetsDataplane common.IPSetsDataplane,
+	ipsetsDataplane dpsets.IPSetsDataplane,
 	maxIPSetSize int,
 	externalNodeCidrs []string,
 	dpConfig Config,
@@ -66,7 +66,7 @@ func newIPIPManager(
 }
 
 func newIPIPManagerWithShim(
-	ipsetsDataplane common.IPSetsDataplane,
+	ipsetsDataplane dpsets.IPSetsDataplane,
 	maxIPSetSize int,
 	procSysWriter procSysWriter,
 	dataplane ipipDataplane,

@@ -15,6 +15,7 @@
 package iptables_test
 
 import (
+	"github.com/projectcalico/calico/felix/generictables"
 	. "github.com/projectcalico/calico/felix/iptables"
 
 	. "github.com/onsi/ginkgo"
@@ -48,7 +49,7 @@ var _ = Describe("MatchBuilder failure cases", func() {
 })
 
 var _ = DescribeTable("MatchBuilder",
-	func(match MatchCriteria, expRendering string) {
+	func(match generictables.MatchCriteria, expRendering string) {
 		Expect(match.Render()).To(Equal(expRendering))
 	},
 	// Marks.
@@ -67,11 +68,11 @@ var _ = DescribeTable("MatchBuilder",
 	Entry("OutInterface", Match().OutInterface("tap1234abcd"), "--out-interface tap1234abcd"),
 	Entry("NotOutInterface", Match().NotOutInterface("tap1234abcd"), "! --out-interface tap1234abcd"),
 	// Address types.
-	Entry("SrcAddrType limit iface", Match().SrcAddrType(AddrTypeLocal, true), "-m addrtype --src-type LOCAL --limit-iface-out"),
-	Entry("SrcAddrType no limit iface", Match().SrcAddrType(AddrTypeLocal, false), "-m addrtype --src-type LOCAL"),
-	Entry("NotSrcAddrType limit iface", Match().NotSrcAddrType(AddrTypeLocal, true), "-m addrtype ! --src-type LOCAL --limit-iface-out"),
-	Entry("NotSrcAddrType no limit iface", Match().NotSrcAddrType(AddrTypeLocal, false), "-m addrtype ! --src-type LOCAL"),
-	Entry("DestAddrType no limit iface", Match().DestAddrType(AddrTypeLocal), "-m addrtype --dst-type LOCAL"),
+	Entry("SrcAddrType limit iface", Match().SrcAddrType(generictables.AddrTypeLocal, true), "-m addrtype --src-type LOCAL --limit-iface-out"),
+	Entry("SrcAddrType no limit iface", Match().SrcAddrType(generictables.AddrTypeLocal, false), "-m addrtype --src-type LOCAL"),
+	Entry("NotSrcAddrType limit iface", Match().NotSrcAddrType(generictables.AddrTypeLocal, true), "-m addrtype ! --src-type LOCAL --limit-iface-out"),
+	Entry("NotSrcAddrType no limit iface", Match().NotSrcAddrType(generictables.AddrTypeLocal, false), "-m addrtype ! --src-type LOCAL"),
+	Entry("DestAddrType no limit iface", Match().DestAddrType(generictables.AddrTypeLocal), "-m addrtype --dst-type LOCAL"),
 	// Protocol.
 	Entry("Protocol", Match().Protocol("tcp"), "-p tcp"),
 	Entry("NotProtocol", Match().NotProtocol("tcp"), "! -p tcp"),

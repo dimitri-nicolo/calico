@@ -4,8 +4,11 @@ package client
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -20,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/cache"
@@ -311,7 +315,7 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 	items := make([]Endpoint, 0, len(epkeys))
 	for _, result := range epkeys {
 
-		if req.Namespace != "" && !strings.EqualFold(result.(model.ResourceKey).Namespace, req.Namespace) {
+		if req.Namespace != nil && !strings.EqualFold(result.(model.ResourceKey).Namespace, *req.Namespace) {
 			skippedNamespaces = append(skippedNamespaces, result.(model.ResourceKey).Namespace)
 			continue
 		}
@@ -332,13 +336,22 @@ func (c *cachedQuery) runQueryEndpoints(req QueryEndpointsReq) (*QueryEndpointsR
 		if req.Unlabelled && ep.IsLabelled() {
 			continue
 		}
-		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
+
+		// compare pod name if podNamePrefix is provided in the param set
+		queryEP := *c.apiEndpointToQueryEndpoint(ep)
+		if req.PodNamePrefix != nil {
+			if !strings.HasPrefix(queryEP.Pod, *req.PodNamePrefix) {
+				continue
+			}
+		}
+		items = append(items, queryEP)
+
 	}
 
 	// log list of skipped ns if any for debugging purposes
 	if log.IsLevelEnabled(log.DebugLevel) && len(skippedNamespaces) > 0 {
 		log.Debugf("some endpoints are skipped due to namespace mismatch. requested:%s vs. actual:%v",
-			req.Namespace,
+			*req.Namespace,
 			strings.Join(skippedNamespaces, ","))
 	}
 	sortEndpoints(items, req.Sort)
@@ -395,10 +408,19 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				Identifier: req.Policy,
 			}
 		}
+
+		if !req.Permissions.IsAuthorized(p.GetResource(), []string{"get", "list"}) {
+			return nil, errors.ErrorOperationNotSupported{
+				Operation:  "Get",
+				Identifier: req.Policy,
+				Reason:     "User does not have required permissions to access this resource.",
+			}
+		}
+
 		return &QueryPoliciesResp{
 			Count: 1,
 			Items: []Policy{
-				*c.apiPolicyToQueryPolicy(p, 0),
+				*c.apiPolicyToQueryPolicy(p, 0, req.FieldSelector),
 			},
 		}, nil
 	}
@@ -476,7 +498,27 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				log.Info("Filter out matched policy")
 				continue
 			}
-			items = append(items, *c.apiPolicyToQueryPolicy(p, len(items)))
+			// if policy is not of type native kubernetes and tier is not default, check authorization to tier resource.
+			if p.GetResource().GetObjectKind().GroupVersionKind().Group == "networking.k8s.io" && p.GetTier() != names.DefaultTierName {
+				tierResource := apiv3.Tier{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Tier",
+						APIVersion: "projectcalico.org",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: p.GetTier(),
+					},
+				}
+
+				if !req.Permissions.IsAuthorized(interface{}(tierResource).(api.Resource), []string{"get", "list"}) {
+					continue
+				}
+			}
+
+			// check authorization to the policy resource.
+			if req.Permissions.IsAuthorized(p.GetResource(), []string{"get", "list"}) {
+				items = append(items, *c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector))
+			}
 		}
 	}
 
@@ -501,12 +543,13 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}, nil
 }
 
-func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
+func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelector map[string]bool) *Policy {
 	ep := p.GetEndpointCounts()
 	res := p.GetResource()
 
 	creationTime := res.GetObjectMeta().GetCreationTimestamp()
-	return &Policy{
+	policy := Policy{
+		UID:                  res.GetObjectMeta().GetUID(),
 		Index:                idx,
 		Name:                 res.GetObjectMeta().GetName(),
 		Namespace:            res.GetObjectMeta().GetNamespace(),
@@ -515,11 +558,43 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 		Annotations:          p.GetAnnotations(),
 		NumHostEndpoints:     ep.NumHostEndpoints,
 		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
-		Ingress:              c.convertRules(p.GetRuleEndpointCounts().Ingress),
-		Egress:               c.convertRules(p.GetRuleEndpointCounts().Egress),
+		IngressRules:         c.convertRules(p.GetRuleEndpointCounts().Ingress),
+		EgressRules:          c.convertRules(p.GetRuleEndpointCounts().Egress),
 		Order:                p.GetOrder(),
 		CreationTime:         &creationTime,
 	}
+
+	if fieldSelector != nil {
+		updatedPolicy := new(Policy)
+		policyFields := reflect.TypeOf(policy)
+		policyValues := reflect.ValueOf(policy)
+
+		updatedPolicyFields := reflect.ValueOf(updatedPolicy).Elem()
+
+		for i := 0; i < policyFields.NumField(); i++ {
+			policyFieldName := policyFields.Field(i).Name
+			fieldValue := policyValues.Field(i)
+
+			if fieldSelector[strings.ToLower(policyFieldName)] {
+				updatePolicyField := updatedPolicyFields.FieldByName(policyFields.Field(i).Name)
+				switch reflect.TypeOf(fieldValue) {
+				case reflect.TypeOf(reflect.Int):
+					updatePolicyField.SetInt(fieldValue.Int())
+				case reflect.TypeOf(reflect.String):
+					updatePolicyField.Set(fieldValue)
+				case reflect.TypeOf(reflect.Slice):
+					updatePolicyField.SetBytes(fieldValue.Bytes())
+				default:
+					updatePolicyField.Set(fieldValue)
+				}
+
+			}
+		}
+
+		policy = *updatedPolicy
+	}
+
+	return &policy
 }
 
 func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection {

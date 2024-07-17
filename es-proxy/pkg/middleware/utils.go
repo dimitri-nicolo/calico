@@ -64,7 +64,7 @@ func MaybeParseClusterNameFromRequest(r *http.Request) string {
 }
 
 type RequestType interface {
-	v1.CommonSearchRequest | v1.FlowLogSearchRequest | EndpointsAggregationRequest
+	v1.CommonSearchRequest | v1.FlowLogSearchRequest | EndpointsAggregationRequest | EndpointsNamesRequest
 }
 
 // ParseBody extracts query parameters from the request body (JSON.blob) into RequestType.

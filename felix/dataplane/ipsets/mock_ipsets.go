@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package ipsets
 
 import (
 	"net"
@@ -48,6 +48,7 @@ func (s *MockIPSets) AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, newMemb
 	s.Members[setMetadata.SetID] = members
 	s.AddOrReplaceCalled = true
 }
+
 func (s *MockIPSets) AddMembers(setID string, newMembers []string) {
 	members := s.Members[setID]
 	for _, member := range newMembers {

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+//go:build fvtests
+
+package fv_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"os"
 
-	"testing"
-
-	"github.com/onsi/ginkgo/reporters"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
+	"github.com/projectcalico/calico/felix/fv/infrastructure"
 )
 
-func init() {
-	testutils.HookLogrusForGinkgo()
+func NFTMode() bool {
+	return os.Getenv("FELIX_FV_NFTABLES") == "Enabled"
 }
 
-func TestDNS(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/dns_ut_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "DNS Suite", []Reporter{junitReporter})
+func logNFTDiags(f *infrastructure.Felix) {
+	f.Exec("nft", "list", "ruleset")
 }

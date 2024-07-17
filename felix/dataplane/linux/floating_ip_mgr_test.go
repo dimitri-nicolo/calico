@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
@@ -34,29 +35,29 @@ type snat struct {
 	extIP string
 }
 
-func expectedDNATChain(dnats ...dnat) *iptables.Chain {
-	rules := []iptables.Rule{}
+func expectedDNATChain(dnats ...dnat) *generictables.Chain {
+	rules := []generictables.Rule{}
 	for _, dnat := range dnats {
-		rules = append(rules, iptables.Rule{
+		rules = append(rules, generictables.Rule{
 			Match:  iptables.Match().DestNet(dnat.extIP),
 			Action: iptables.DNATAction{DestAddr: dnat.intIP},
 		})
 	}
-	return &iptables.Chain{
+	return &generictables.Chain{
 		Name:  "cali-fip-dnat",
 		Rules: rules,
 	}
 }
 
-func expectedSNATChain(snats ...snat) *iptables.Chain {
-	rules := []iptables.Rule{}
+func expectedSNATChain(snats ...snat) *generictables.Chain {
+	rules := []generictables.Rule{}
 	for _, snat := range snats {
-		rules = append(rules, iptables.Rule{
+		rules = append(rules, generictables.Rule{
 			Match:  iptables.Match().DestNet(snat.intIP).SourceNet(snat.intIP),
 			Action: iptables.SNATAction{ToAddr: snat.extIP},
 		})
 	}
-	return &iptables.Chain{
+	return &generictables.Chain{
 		Name:  "cali-fip-snat",
 		Rules: rules,
 	}
@@ -123,7 +124,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 			})
 
 			It("should have empty NAT chains", func() {
-				natTable.checkChains([][]*iptables.Chain{{
+				natTable.checkChains([][]*generictables.Chain{{
 					expectedDNATChain(),
 					expectedSNATChain(),
 				}})
@@ -161,7 +162,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 
 				It("should have expected NAT chains", func() {
 					if ipVersion == 4 {
-						natTable.checkChains([][]*iptables.Chain{{
+						natTable.checkChains([][]*generictables.Chain{{
 							expectedDNATChain([]dnat{
 								{extIP: "172.16.1.3", intIP: "10.0.240.2"},
 								{extIP: "172.18.1.4", intIP: "10.0.240.2"},
@@ -171,7 +172,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 							}...),
 						}})
 					} else {
-						natTable.checkChains([][]*iptables.Chain{{
+						natTable.checkChains([][]*generictables.Chain{{
 							expectedDNATChain([]dnat{
 								{extIP: "2001:db8:3::2", intIP: "2001:db8:2::2"},
 								{extIP: "2001:db8:4::2", intIP: "2001:db8:2::2"},
@@ -197,7 +198,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 					})
 
 					It("should have empty NAT chains", func() {
-						natTable.checkChains([][]*iptables.Chain{{
+						natTable.checkChains([][]*generictables.Chain{{
 							expectedDNATChain(),
 							expectedSNATChain(),
 						}})
@@ -229,7 +230,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 			})
 
 			It("should have empty NAT chains", func() {
-				natTable.checkChains([][]*iptables.Chain{{
+				natTable.checkChains([][]*generictables.Chain{{
 					expectedDNATChain(),
 					expectedSNATChain(),
 				}})
@@ -267,7 +268,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 				})
 
 				It("should have empty NAT chains", func() {
-					natTable.checkChains([][]*iptables.Chain{{
+					natTable.checkChains([][]*generictables.Chain{{
 						expectedDNATChain(),
 						expectedSNATChain(),
 					}})
@@ -287,7 +288,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 					})
 
 					It("should have empty NAT chains", func() {
-						natTable.checkChains([][]*iptables.Chain{{
+						natTable.checkChains([][]*generictables.Chain{{
 							expectedDNATChain(),
 							expectedSNATChain(),
 						}})
@@ -328,7 +329,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 
 				It("should have expected NAT chains", func() {
 					if ipVersion == 4 {
-						natTable.checkChains([][]*iptables.Chain{{
+						natTable.checkChains([][]*generictables.Chain{{
 							expectedDNATChain([]dnat{
 								{extIP: "172.16.1.3", intIP: "10.0.240.2"},
 								{extIP: "172.18.1.4", intIP: "10.0.240.2"},
@@ -338,7 +339,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 							}...),
 						}})
 					} else {
-						natTable.checkChains([][]*iptables.Chain{{
+						natTable.checkChains([][]*generictables.Chain{{
 							expectedDNATChain([]dnat{
 								{extIP: "2001:db8:3::2", intIP: "2001:db8:2::2"},
 								{extIP: "2001:db8:4::2", intIP: "2001:db8:2::2"},
@@ -364,7 +365,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 					})
 
 					It("should have empty NAT chains", func() {
-						natTable.checkChains([][]*iptables.Chain{{
+						natTable.checkChains([][]*generictables.Chain{{
 							expectedDNATChain(),
 							expectedSNATChain(),
 						}})

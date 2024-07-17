@@ -1,5 +1,5 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
-package jwtauth
+package auth
 
 import (
 	log "github.com/sirupsen/logrus"

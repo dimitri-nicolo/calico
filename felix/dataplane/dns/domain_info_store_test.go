@@ -1,6 +1,6 @@
 // Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
 
-package common
+package dns
 
 import (
 	"crypto/rand"
@@ -667,7 +667,6 @@ var _ = Describe("Domain Info Store", func() {
 					dns:     dnsLayerResponse1,
 					latency: nil,
 				}))
-
 			})
 
 			It("handles no timestamp on response", func() {
@@ -1252,9 +1251,7 @@ var _ = Describe("Domain Info Store", func() {
 `
 		)
 
-		var (
-			tempDir string
-		)
+		var tempDir string
 
 		BeforeEach(func() {
 			var err error

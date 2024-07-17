@@ -12,6 +12,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/clientmgr"
 	authjwt "github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
@@ -90,10 +91,14 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create authenticator")
 	}
-	handler := handler.NewAuthHandler(authJWT)
+	authnHandler := handler.NewAuthHandler(authJWT)
+
+	// Define a new authorization handler
+	k8sClientSet := k8s.NewClientSetFactory("", "")
+	authzHandler := authjwt.NewAuthorizer(k8sClientSet)
 
 	// Start the server.
-	srv := server.NewServer(k8sClient, cfg, serverCfg, handler)
+	srv := server.NewServer(k8sClient, cfg, serverCfg, authnHandler, authzHandler)
 	if err := srv.Start(); err != nil {
 		log.WithError(err).Fatal("Error starting queryserver")
 	}

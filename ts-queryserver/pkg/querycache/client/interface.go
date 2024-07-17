@@ -6,8 +6,10 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 )
 
 // TODO (rlb):  These data types are basically focussed on the requirements of the web server
@@ -89,10 +91,14 @@ type QueryPoliciesReq struct {
 	NetworkSet model.Key
 
 	// Filters
-	Unmatched bool
-	Tier      []string
-	Page      *Page
-	Sort      *Sort
+	Unmatched     bool
+	Tier          []string
+	Page          *Page
+	Sort          *Sort
+	FieldSelector map[string]bool
+
+	// Authorization
+	Permissions auth.Permission
 }
 
 type QueryPoliciesResp struct {
@@ -100,19 +106,21 @@ type QueryPoliciesResp struct {
 	Items []Policy `json:"items"`
 }
 
+// The names of the members in the Policy struct should match their corresponding json name for field selection feature to work for the /policies API.
 type Policy struct {
-	Index                int               `json:"index"`
-	Kind                 string            `json:"kind"`
-	Name                 string            `json:"name"`
+	UID                  types.UID         `json:"uid,omitempty"`
+	Index                int               `json:"index,omitempty"`
+	Kind                 string            `json:"kind,omitempty"`
+	Name                 string            `json:"name,omitempty"`
 	Namespace            string            `json:"namespace,omitempty"`
-	Tier                 string            `json:"tier"`
-	Annotations          map[string]string `json:"annotations"`
-	NumHostEndpoints     int               `json:"numHostEndpoints"`
-	NumWorkloadEndpoints int               `json:"numWorkloadEndpoints"`
-	Ingress              []RuleDirection   `json:"ingressRules"`
-	Egress               []RuleDirection   `json:"egressRules"`
-	Order                *float64          `json:"order"`
-	CreationTime         *v1.Time          `json:"creation-time"`
+	Tier                 string            `json:"tier,omitempty"`
+	Annotations          map[string]string `json:"annotations,omitempty"`
+	NumHostEndpoints     int               `json:"numHostEndpoints,omitempty"`
+	NumWorkloadEndpoints int               `json:"numWorkloadEndpoints,omitempty"`
+	IngressRules         []RuleDirection   `json:"ingressRules,omitempty"`
+	EgressRules          []RuleDirection   `json:"egressRules,omitempty"`
+	Order                *float64          `json:"order,omitempty"`
+	CreationTime         *v1.Time          `json:"creationTime,omitempty"`
 }
 
 type RuleDirection struct {
@@ -126,6 +134,10 @@ type RuleEntity struct {
 }
 
 // QueryEndpointsReqBody is used to UnMarshal endpoints request body.
+// if any member is added / removed / changed in this struct, also update:
+// 1. QueryEndpointsReq struct defined below
+// 2. getQueryServerRequestParams in es-proxy/pkg/middleware/endpoints_aggregation.go as needed.
+// 3. update tests and test function calculateQueryBody in ts-queryserver/tests/fv/query_e2e_test.go
 type QueryEndpointsReqBody struct {
 	// Queries
 	Policy              []string `json:"policy,omitempty" validate:"omitempty"`
@@ -140,7 +152,8 @@ type QueryEndpointsReqBody struct {
 	// Filters
 	EndpointsList []string `json:"endpointsList"` // we need to identify when this field is passed as empty list or is not passed
 	Node          string   `json:"node,omitempty" validate:"omitempty"`
-	Namespace     string   `json:"namespace,omitempty" validate:"omitempty"`
+	Namespace     *string  `json:"namespace,omitempty" validate:"omitempty"`
+	PodNamePrefix *string  `json:"podNamePrefix,omitempty" validate:"omitempty"`
 	Unlabelled    bool     `json:"unlabelled,omitempty"  validate:"omitempty"`
 	Page          *Page    `json:"page,omitempty" validate:"omitempty"`
 	Sort          *Sort    `json:"sort,omitempty" validate:"omitempty"`
@@ -150,6 +163,7 @@ type QueryEndpointsReqBody struct {
 // if any member is added / removed / changed in this struct, also update:
 // 1. QueryEndpointsRequestBody struct defined above
 // 2. getQueryServerRequestParams in es-proxy/pkg/middleware/endpoints_aggregation.go as needed.
+// 3. update tests and test function calculateQueryBody in ts-queryserver/tests/fv/query_e2e_test.go
 type QueryEndpointsReq struct {
 	// Queries
 	Policy              model.Key
@@ -164,7 +178,8 @@ type QueryEndpointsReq struct {
 	// Filters
 	EndpointsList []string
 	Node          string
-	Namespace     string
+	Namespace     *string
+	PodNamePrefix *string
 	Unlabelled    bool
 	Page          *Page
 	Sort          *Sort

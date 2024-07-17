@@ -3,6 +3,7 @@ package fv
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,7 +31,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
 	queryhdr "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
@@ -64,8 +67,10 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 			fakeK8sClient := fake.NewSimpleClientset()
 			mh := &mockHandler{}
 
+			authz := &mockAuthorizer{}
+
 			By("Starting the queryserver")
-			srv := server.NewServer(fakeK8sClient, &config, servercfg, mh)
+			srv := server.NewServer(fakeK8sClient, &config, servercfg, mh, authz)
 			err = srv.Start()
 			Expect(err).NotTo(HaveOccurred())
 			defer srv.Stop()
@@ -78,7 +83,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 
 				By(fmt.Sprintf("Running query for test: %s", tqd.description))
 
-				// remove CreationTime and Order from QueryPoliciesResp as the tests are not build to
+				// remove CreationTime, Order, and UID from QueryPoliciesResp as the tests are not build to
 				// verify these values.
 				switch tqd.response.(type) {
 				case *client.QueryPoliciesResp:
@@ -86,6 +91,7 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 						for i := range tqd.response.(*client.QueryPoliciesResp).Items {
 							tqd.response.(*client.QueryPoliciesResp).Items[i].CreationTime = nil
 							tqd.response.(*client.QueryPoliciesResp).Items[i].Order = nil
+							tqd.response.(*client.QueryPoliciesResp).Items[i].UID = ""
 						}
 					}
 				}
@@ -156,11 +162,12 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 			return fmt.Errorf("unmarshal error: %v: %v: %v", reflect.TypeOf(ro), err, bodyString)
 		}
 
-		// remove CreationTime and Order from QueryPoliciesResp as the tests are not build to
+		// remove CreationTime, Order, and UID from QueryPoliciesResp as the tests are not build to
 		// verify these values.
 		switch ro := ro.(type) {
 		case *client.QueryPoliciesResp:
 			for i := range ro.Items {
+				ro.Items[i].UID = ""
 				ro.Items[i].CreationTime = nil
 				ro.Items[i].Order = nil
 			}
@@ -236,6 +243,8 @@ func calculateQueryBody(query interface{}) io.Reader {
 			Unprotected:         qt.Unprotected,
 			EndpointsList:       qt.EndpointsList,
 			Node:                qt.Node,
+			Namespace:           qt.Namespace,
+			PodNamePrefix:       qt.PodNamePrefix,
 			Unlabelled:          qt.Unlabelled,
 			Page:                qt.Page,
 			Sort:                qt.Sort,
@@ -400,6 +409,22 @@ func (mh *mockHandler) AuthenticationHandler(handlerFunc http.HandlerFunc, httpM
 
 		handlerFunc.ServeHTTP(w, req)
 	}
+}
+
+type mockAuthorizer struct {
+}
+
+type mockPermissions struct {
+}
+
+func (p *mockPermissions) IsAuthorized(res api.Resource, verbs []string) bool {
+	return true
+}
+
+func (authz *mockAuthorizer) PerformUserAuthorizationReview(ctx context.Context,
+	authReviewattributes []apiv3.AuthorizationReviewResourceAttributes) (auth.Permission, error) {
+
+	return &mockPermissions{}, nil
 }
 
 // TODO(rlb):

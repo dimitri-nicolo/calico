@@ -1756,6 +1756,9 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 	qcStagedAdjustment(&p)
 
 	createRulesFn := func(num int) []client.RuleDirection {
+		if num == 0 {
+			return nil
+		}
 		rules := make([]client.RuleDirection, num)
 		for i := 0; i < num; i++ {
 			rules[i] = client.RuleDirection{
@@ -1775,23 +1778,23 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 	switch er := r.(type) {
 	case *apiv3.NetworkPolicy:
 		p.Tier = er.Spec.Tier
-		p.Ingress = createRulesFn(len(er.Spec.Ingress))
-		p.Egress = createRulesFn(len(er.Spec.Egress))
+		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
+		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 	case *apiv3.GlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
-		p.Ingress = createRulesFn(len(er.Spec.Ingress))
-		p.Egress = createRulesFn(len(er.Spec.Egress))
+		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
+		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 	case *apiv3.StagedNetworkPolicy:
 		p.Tier = er.Spec.Tier
-		p.Ingress = createRulesFn(len(er.Spec.Ingress))
-		p.Egress = createRulesFn(len(er.Spec.Egress))
+		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
+		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 	case *apiv3.StagedKubernetesNetworkPolicy:
-		p.Ingress = createRulesFn(len(er.Spec.Ingress))
-		p.Egress = createRulesFn(len(er.Spec.Egress))
+		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
+		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 	case *apiv3.StagedGlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
-		p.Ingress = createRulesFn(len(er.Spec.Ingress))
-		p.Egress = createRulesFn(len(er.Spec.Egress))
+		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
+		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 	}
 
 	return p

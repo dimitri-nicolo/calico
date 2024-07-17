@@ -67,7 +67,7 @@ var _ = Describe("Queryserver query tests", func() {
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 			w := httptest.NewRecorder()
 
-			q := NewQuery(&qi, nil)
+			q := NewQuery(&qi, nil, nil)
 			q.Metrics(w, r)
 
 			resp := w.Result()
@@ -85,7 +85,7 @@ var _ = Describe("Queryserver query tests", func() {
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 			w := httptest.NewRecorder()
 
-			q := NewQuery(&qi, nil)
+			q := NewQuery(&qi, nil, nil)
 			q.Metrics(w, r)
 
 			resp := w.Result()
@@ -103,7 +103,7 @@ var _ = Describe("Queryserver query tests", func() {
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 			w := httptest.NewRecorder()
 
-			q := NewQuery(&qi, nil)
+			q := NewQuery(&qi, nil, nil)
 			q.Metrics(w, r)
 
 			resp := w.Result()
@@ -228,4 +228,35 @@ var _ = Describe("Queryserver query tests", func() {
 			Expect(req.EndpointsList).To(BeNil())
 		})
 	})
+
+	Context("Test getPolicyFieldSelector for field selection", func() {
+
+		It("should return the policy field selector with uid and name selected", func() {
+			req := httptest.NewRequest("GET", "http://locahost:8080/policies?fields=UID,NAME", nil)
+
+			pfs := getPolicyFieldSelector(req)
+			Expect(pfs["uid"]).To(BeTrue())
+			Expect(pfs["name"]).To(BeTrue())
+			Expect(pfs["namespace"]).To(BeFalse())
+
+		})
+
+		It("should return the nil as policy field selector when \"fields\" is not passed in the url", func() {
+			req := httptest.NewRequest("GET", "http://locahost:8080/policies", nil)
+
+			pfs := getPolicyFieldSelector(req)
+
+			Expect(pfs).To(BeNil())
+		})
+
+		It("should return the policy field selector with nothing selected if \"fields\" is passed but not set", func() {
+			req := httptest.NewRequest("GET", "http://locahost:8080/policies?fields", nil)
+
+			pfs := getPolicyFieldSelector(req)
+
+			Expect(len(pfs)).To(Equal(0))
+		})
+
+	})
+
 })
