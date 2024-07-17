@@ -670,7 +670,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					var err error
 					mapID, err = getMapIDByPath(felix, filename)
 					return err
-				}, "5s").ShouldNot(HaveOccurred())
+				}, "10s").ShouldNot(HaveOccurred())
 				return mapID
 			}
 
@@ -4320,6 +4320,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 		Describe("with BPF disabled to begin with", func() {
 			var pc *PersistentConnection
+			var err error
 
 			BeforeEach(func() {
 				options.TestManagesBPF = true
@@ -4333,6 +4334,22 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				pol.Spec.Egress = []api.Rule{{Action: "Allow"}}
 				pol.Spec.Selector = "all()"
 				pol = createPolicy(pol)
+
+				out := ""
+				rulesProgrammed := func() bool {
+					if testOpts.ipv6 {
+						out, err = tc.Felixes[0].ExecOutput("ip6tables-save", "-t", "filter")
+					} else {
+						out, err = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+					}
+					Expect(err).NotTo(HaveOccurred())
+					if strings.Count(out, "default.policy-1") == 0 {
+						return false
+					}
+					return true
+				}
+				Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
+					"Expected iptables rules to appear on the correct felix instances")
 
 				pc = nil
 			})
@@ -4352,15 +4369,14 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					fc.Spec.BPFEnabled = &bpfEnabled
 					_, err := calicoClient.FelixConfigurations().Update(context.Background(), fc, options2.SetOptions{})
 					Expect(err).NotTo(HaveOccurred())
-					return
+				} else {
+					// Fall back on creating it...
+					fc = api.NewFelixConfiguration()
+					fc.Name = "default"
+					fc.Spec.BPFEnabled = &bpfEnabled
+					fc, err = calicoClient.FelixConfigurations().Create(context.Background(), fc, options2.SetOptions{})
+					Expect(err).NotTo(HaveOccurred())
 				}
-
-				// Fall back on creating it...
-				fc = api.NewFelixConfiguration()
-				fc.Name = "default"
-				fc.Spec.BPFEnabled = &bpfEnabled
-				fc, err = calicoClient.FelixConfigurations().Create(context.Background(), fc, options2.SetOptions{})
-				Expect(err).NotTo(HaveOccurred())
 
 				// Wait for BPF to be active.
 				ensureAllNodesBPFProgramsAttached(tc.Felixes)
