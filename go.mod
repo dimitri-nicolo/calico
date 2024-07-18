@@ -6,7 +6,7 @@ require (
 	github.com/AppsFlyer/go-sundheit v0.5.0
 	github.com/BurntSushi/toml v1.4.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/Microsoft/hcsshim v0.11.5
+	github.com/Microsoft/hcsshim v0.11.6
 	github.com/PaloAltoNetworks/pango v0.10.2
 	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 	github.com/alecthomas/participle v0.7.1
