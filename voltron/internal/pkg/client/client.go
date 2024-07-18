@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -47,6 +48,9 @@ type Client struct {
 
 	connRetryAttempts int
 	connRetryInterval time.Duration
+
+	// If set, the default tunnel dialer will issue an HTTP CONNECT to this URL to establish a TCP passthrough connection to Voltron.
+	httpProxyURL *url.URL
 }
 
 // New returns a new Client
@@ -105,6 +109,7 @@ func New(addr string, serverName string, opts ...Option) (*Client, error) {
 					tunnelAddress,
 					tlsConfig,
 					client.tunnelDialTimeout,
+					client.httpProxyURL,
 					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
 				)
 			}

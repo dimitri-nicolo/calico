@@ -505,7 +505,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 						Certificates: []tls.Certificate{clusterATLSCert},
 						RootCAs:      voltronTunnelCAs,
-					}, 5*time.Second)
+					}, 5*time.Second, nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					WaitForClusterToConnect(fakeClient, clusterA, clusterNS)
@@ -602,7 +602,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 						tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 							Certificates: []tls.Certificate{clusterBTLSCert},
 							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second)
+						}, 5*time.Second, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						WaitForClusterToConnect(fakeClient, clusterB, clusterNS)
@@ -664,13 +664,13 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 						_, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 							Certificates: []tls.Certificate{clusterBTLSCert},
 							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second)
+						}, 5*time.Second, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						tunB2, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 							Certificates: []tls.Certificate{clusterBTLSCert},
 							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second)
+						}, 5*time.Second, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = tunB2.Accept()
@@ -706,7 +706,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 						tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 							Certificates: []tls.Certificate{clusterCTLSCert},
 							RootCAs:      voltronTunnelCAs,
-						}, 5*time.Second)
+						}, 5*time.Second, nil)
 						Expect(err).NotTo(HaveOccurred())
 
 						WaitForClusterToConnect(fakeClient, clusterC, clusterNS)
@@ -1216,7 +1216,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					Certificates: []tls.Certificate{tlsCert},
 					RootCAs:      voltronTunnelCAs,
 					ServerName:   "voltron",
-				}, 5*time.Second)
+				}, 5*time.Second, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(func() string {
@@ -1256,7 +1256,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					Certificates: []tls.Certificate{tlsCert},
 					RootCAs:      voltronTunnelCAs,
 					ServerName:   "voltron",
-				}, 5*time.Second)
+				}, 5*time.Second, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				// wait for one cycle of clusters.watchK8sFrom() to complete
@@ -1367,8 +1367,8 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				Certificates: []tls.Certificate{tlsCert},
 				RootCAs:      voltronTunnelCAs,
 				ServerName:   "voltron",
-			}, 5*time.Second)
-			Expect(err).Should(MatchError("tcp.tls.Dial failed: tls: failed to verify certificate: x509: certificate specifies an incompatible key usage"))
+			}, 5*time.Second, nil)
+			Expect(err).Should(MatchError("TLS dial failed: tls: failed to verify certificate: x509: certificate specifies an incompatible key usage"))
 		})
 	})
 })
@@ -1495,7 +1495,7 @@ func createAndStartManagedCluster(
 	tun, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
 		RootCAs:      tunnelCA,
-	}, 5*time.Second)
+	}, 5*time.Second, nil)
 	Expect(err).NotTo(HaveOccurred())
 
 	WaitForClusterToConnect(fakeClient, clusterName, clusterNS)

@@ -5,15 +5,23 @@
 package tunnel
 
 import (
+	"bufio"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/projectcalico/calico/lma/pkg/logutils"
+
+	"golang.org/x/net/http/httpproxy"
+
+	calicoTLS "github.com/projectcalico/calico/crypto/pkg/tls"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 
@@ -100,9 +108,9 @@ func (d *dialer) Dial() (*Tunnel, error) {
 		if err != nil {
 			var xerr x509.UnknownAuthorityError
 			if errors.As(err, &xerr) {
-				logrus.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
+				logrus.WithError(err).Infof("TLS dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
 			} else {
-				logrus.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
+				logrus.WithError(err).Infof("TLS dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
 			}
 			time.Sleep(d.retryInterval)
 			continue
@@ -358,26 +366,117 @@ func Dial(target string, opts ...Option) (*Tunnel, error) {
 }
 
 // DialTLS creates a TLS connection based on the config, must not be nil.
-func DialTLS(target string, config *tls.Config, timeout time.Duration, opts ...Option) (*Tunnel, error) {
-	if config == nil {
+func DialTLS(target string, tunnelTLSConfig *tls.Config, timeout time.Duration, httpProxyURL *url.URL, opts ...Option) (*Tunnel, error) {
+	if tunnelTLSConfig == nil {
 		return nil, errors.Errorf("nil config")
 	}
+	logrus.Infof("Starting TLS dial to %s with a timeout of %v", target, timeout)
 
-	logrus.Debugf("Starting TLS dial to %s with a timeout of %v", target, timeout)
+	// First, establish the mTLS connection that serves as the basis of the tunnel.
+	var c net.Conn
+	var err error
+	dialer := newDialer(timeout)
+	if httpProxyURL != nil {
+		// mTLS will be negotiated over a TCP connection to the proxy, which performs TCP passthrough to the target.
+		logrus.Infof("Dialing to %s via HTTP proxy at %s", target, httpProxyURL)
+		c, err = tlsDialViaHTTPProxy(dialer, target, httpProxyURL, tunnelTLSConfig, calicoTLS.NewTLSConfig())
+		if err != nil {
+			return nil, fmt.Errorf("TLS dial via HTTP proxy failed: %w", err)
+		}
+	} else {
+		// mTLS will be negotiated over a TCP connection directly to the target.
+		logrus.Infof("Dialing directly to %s", target)
+		c, err = tls.DialWithDialer(dialer, "tcp", target, tunnelTLSConfig)
+		if err != nil {
+			return nil, fmt.Errorf("TLS dial failed: %w", err)
+		}
+	}
+	logrus.Infof("TLS dial to %s succeeded: basis connection for the tunnel has been established", target)
 
-	// We need to explicitly set the timeout as it seems it's possible for this to hang indefinitely if we
-	// don't.
-	dialer := &net.Dialer{
+	// Then, create the tunnel on top of the mTLS connection.
+	return NewClientTunnel(c, append(opts, WithDialTimeout(timeout))...)
+}
+
+// GetHTTPProxyURL resolves the proxy URL that should be used for the tunnel target. It respects HTTPS_PROXY and NO_PROXY
+// environment variables (case-insensitive).
+func GetHTTPProxyURL(target string) *url.URL {
+	targetURL := &url.URL{
+		// The scheme should be HTTPS, as we are establishing an mTLS session with the target.
+		Scheme: "https",
+
+		// We expect `target` to be of the form host:port.
+		Host: target,
+	}
+
+	proxyURL, err := httpproxy.FromEnvironment().ProxyFunc()(targetURL)
+	if err != nil {
+		logrus.Warnf("Failed to resolve proxy URL (%v): %v", proxyURL, err)
+		return nil
+	}
+	return proxyURL
+}
+
+func newDialer(timeout time.Duration) *net.Dialer {
+	// We need to explicitly set the timeout as it seems it's possible for this to hang indefinitely if we don't.
+	return &net.Dialer{
 		Timeout: timeout,
 	}
+}
 
-	c, err := tls.DialWithDialer(dialer, "tcp", target, config)
-	logrus.Debugf("Finished TLS dial to %s", target)
-	if err != nil {
-		return nil, fmt.Errorf("tcp.tls.Dial failed: %w", err)
+func tlsDialViaHTTPProxy(d *net.Dialer, destination string, proxyTargetURL *url.URL, tunnelTLS *tls.Config, proxyTLS *tls.Config) (net.Conn, error) {
+	if proxyTargetURL.Scheme != "http" && proxyTargetURL.Scheme != "https" {
+		return nil, fmt.Errorf("unknown proxy scheme: %s", proxyTargetURL.Scheme)
 	}
 
-	return NewClientTunnel(c, append(opts, WithDialTimeout(timeout))...)
+	// Resolve the proxy address.
+	proxyAddress := proxyTargetURL.Host
+	if proxyTargetURL.Port() == "" && proxyTargetURL.Scheme == "http" {
+		proxyAddress = net.JoinHostPort(proxyAddress, "80")
+	} else if proxyTargetURL.Port() == "" && proxyTargetURL.Scheme == "https" {
+		proxyAddress = net.JoinHostPort(proxyAddress, "443")
+	}
+
+	// Establish the TCP connection to the proxy.
+	var c net.Conn
+	var err error
+	if proxyTargetURL.Scheme == "https" {
+		c, err = tls.DialWithDialer(d, "tcp", proxyAddress, proxyTLS)
+	} else {
+		c, err = d.DialContext(context.Background(), "tcp", proxyAddress)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("dialing proxy %q failed: %v", proxyAddress, err)
+	}
+
+	// Send an HTTP CONNECT to the proxy.
+	_, err = fmt.Fprintf(c, "CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", destination, destination)
+	if err != nil {
+		return nil, fmt.Errorf("writing HTTP CONNECT to proxy %s failed: %v", proxyAddress, err)
+	}
+	br := bufio.NewReader(c)
+	res, err := http.ReadResponse(br, nil)
+	if err != nil {
+		return nil, fmt.Errorf("reading HTTP response from CONNECT to %s via proxy %s failed: %v", destination, proxyAddress, err)
+	}
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("proxy error from %s while dialing %s: %v", proxyAddress, destination, res.Status)
+	}
+	if br.Buffered() > 0 {
+		// After the CONNECT was handled by the server, the client should be the first to talk to initiate the TLS handshake.
+		// If we reach this point, the server spoke before the client, so something went wrong.
+		return nil, fmt.Errorf("unexpected %d bytes of buffered data from CONNECT proxy %q", br.Buffered(), proxyAddress)
+	}
+
+	// When we've reached this point, the proxy should now passthrough any TCP segments written to our connection to the destination.
+	// Any TCP segments sent by the destination should also be readable on our connection.
+
+	// Negotiate mTLS on top of our passthrough connection.
+	mtlsC := tls.Client(c, tunnelTLS)
+	if err := mtlsC.HandshakeContext(context.Background()); err != nil {
+		mtlsC.Close()
+		return nil, err
+	}
+	return mtlsC, nil
 }
 
 // We don't want to / need to expose that we're using the yamux library
