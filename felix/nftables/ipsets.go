@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/prometheus/client_golang/prometheus"
 
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/deltatracker"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/ipsets"
