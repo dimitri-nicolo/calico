@@ -49,7 +49,7 @@ func (h *dikastesHarness) Start(ctx context.Context) error {
 	go h.policySync.Serve(ctx)
 	go h.dikastes.Serve(ctx)
 	<-h.dikastes.Ready
-	cc, err := grpc.DialContext(ctx, h.dikastes.Addr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cc, err := grpc.NewClient(h.dikastes.Addr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}

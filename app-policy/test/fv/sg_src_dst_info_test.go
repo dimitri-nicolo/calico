@@ -80,7 +80,7 @@ func (s *dikastesSrcDstInfoTestSuite) setupPolicySyncAndDikastes(policySyncName,
 }
 
 func (s *dikastesSrcDstInfoTestSuite) createExtAuthzClientFromDikastes(d *server.Dikastes) (authzv3.AuthorizationClient, error) {
-	cc, err := grpc.DialContext(context.Background(), d.Addr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cc, err := grpc.NewClient(d.Addr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}

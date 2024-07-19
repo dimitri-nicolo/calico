@@ -6,7 +6,9 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/resolver"
 
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
@@ -27,6 +29,10 @@ type felixClient struct {
 	dialOpts []grpc.DialOption
 }
 
+func init() {
+	resolver.SetDefaultScheme("passthrough")
+}
+
 func NewFelixClient(target string, opts []grpc.DialOption) FelixClient {
 	return &felixClient{
 		target:   target,
@@ -37,7 +43,7 @@ func NewFelixClient(target string, opts []grpc.DialOption) FelixClient {
 // SendStats listens for data from the collector and sends it.
 func (fc *felixClient) SendStats(ctx context.Context, collector collector.EnvoyCollector) {
 	log.Info("Starting sending L7 Stats to Policy Sync server")
-	conn, err := grpc.Dial(fc.target, fc.dialOpts...)
+	conn, err := grpc.NewClient(fc.target, fc.dialOpts...)
 	if err != nil {
 		log.Warnf("fail to dial Policy Sync server: %v", err)
 		return

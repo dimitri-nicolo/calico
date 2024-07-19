@@ -239,10 +239,7 @@ func TestRunServeNoPolicySync(t *testing.T) {
 func NewExtAuthzClient(ctx context.Context, addr string) (authzv3.AuthorizationClient, error) {
 	dialOpts := uds.GetDialOptionsWithNetwork("unix")
 	dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	cc, err := grpc.DialContext(
-		ctx, addr,
-		dialOpts...,
-	)
+	cc, err := grpc.NewClient(addr, dialOpts...)
 	if err != nil {
 		return nil, err
 	}
