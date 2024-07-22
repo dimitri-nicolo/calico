@@ -308,6 +308,30 @@ DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 
 DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
 
+# Host native build images
+HOST_NATIVE_BUILD_IMAGE ?= calico/host-native-build
+
+HOST_NATIVE_BUILD_IMAGE_RHEL8_CREATED=.host-native-build.rhel8.created
+host-native-build.rhel8: $(HOST_NATIVE_BUILD_IMAGE_RHEL8_CREATED)
+$(HOST_NATIVE_BUILD_IMAGE_RHEL8_CREATED): $(REPO_DIR)/third_party/host-native/Dockerfile.rhel8
+	$(DOCKER_BUILD) -t $(HOST_NATIVE_BUILD_IMAGE):rhel8 -f $(REPO_DIR)/third_party/host-native/Dockerfile.rhel8 $(REPO_DIR)/third_party/host-native
+	touch $@
+
+HOST_NATIVE_BUILD_IMAGE_RHEL9_CREATED=.host-native-build.rhel9.created
+host-native-build.rhel9: $(HOST_NATIVE_BUILD_IMAGE_RHEL9_CREATED)
+$(HOST_NATIVE_BUILD_IMAGE_RHEL9_CREATED): $(REPO_DIR)/third_party/host-native/Dockerfile.rhel9
+	$(DOCKER_BUILD) -t $(HOST_NATIVE_BUILD_IMAGE):rhel9 -f $(REPO_DIR)/third_party/host-native/Dockerfile.rhel9 $(REPO_DIR)/third_party/host-native
+	touch $@
+
+DOCKER_HOST_NATIVE_RUN := mkdir -p build && \
+	docker run --rm \
+		--net=host \
+		--init \
+		--user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
+		$(EXTRA_DOCKER_ARGS) \
+		-v $(REPO_ROOT):/go/src/github.com/projectcalico/calico:rw \
+		-w /go/src/$(PACKAGE_NAME)
+
 # A target that does nothing but it always stale, used to force a rebuild on certain targets based on some non-file criteria.
 .PHONY: force-rebuild
 force-rebuild:
