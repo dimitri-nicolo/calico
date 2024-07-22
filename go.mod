@@ -15,7 +15,7 @@ require (
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/aws/aws-sdk-go v1.53.13
-	github.com/aws/aws-sdk-go-v2 v1.27.1
+	github.com/aws/aws-sdk-go-v2 v1.27.2
 	github.com/aws/aws-sdk-go-v2/config v1.27.16
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.162.0
@@ -149,18 +149,18 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
 	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
-	k8s.io/api v0.28.11
-	k8s.io/apiextensions-apiserver v0.28.11
-	k8s.io/apimachinery v0.28.11
-	k8s.io/apiserver v0.28.11
-	k8s.io/client-go v0.28.11
-	k8s.io/code-generator v0.28.11
-	k8s.io/component-base v0.28.11
+	k8s.io/api v0.28.12
+	k8s.io/apiextensions-apiserver v0.28.12
+	k8s.io/apimachinery v0.28.12
+	k8s.io/apiserver v0.28.12
+	k8s.io/client-go v0.28.12
+	k8s.io/code-generator v0.28.12
+	k8s.io/component-base v0.28.12
 	k8s.io/klog/v2 v2.120.1
-	k8s.io/kube-aggregator v0.28.11
+	k8s.io/kube-aggregator v0.28.12
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9
-	k8s.io/kubectl v0.28.11
-	k8s.io/kubernetes v1.28.11
+	k8s.io/kubectl v0.28.12
+	k8s.io/kubernetes v1.28.12
 	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
 	modernc.org/memory v1.8.0
 	sigs.k8s.io/controller-runtime v0.15.3
@@ -201,15 +201,15 @@ require (
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.16 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.8 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.8 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.9 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/securityhub v1.29.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.20.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.24.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.28.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.28.12 // indirect
 	github.com/beevik/etree v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
@@ -404,18 +404,18 @@ require (
 	gorm.io/driver/postgres v1.4.6 // indirect
 	gorm.io/gorm v1.25.1 // indirect
 	howett.net/plist v1.0.0 // indirect
-	k8s.io/cloud-provider v0.28.11 // indirect
-	k8s.io/component-helpers v0.28.11 // indirect
-	k8s.io/controller-manager v0.28.11 // indirect
-	k8s.io/cri-api v0.28.11 // indirect
-	k8s.io/csi-translation-lib v0.28.11 // indirect
-	k8s.io/dynamic-resource-allocation v0.28.11 // indirect
+	k8s.io/cloud-provider v0.28.12 // indirect
+	k8s.io/component-helpers v0.28.12 // indirect
+	k8s.io/controller-manager v0.28.12 // indirect
+	k8s.io/cri-api v0.28.12 // indirect
+	k8s.io/csi-translation-lib v0.28.12 // indirect
+	k8s.io/dynamic-resource-allocation v0.28.12 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
-	k8s.io/kms v0.28.11 // indirect
+	k8s.io/kms v0.28.12 // indirect
 	k8s.io/kube-scheduler v0.0.0 // indirect
-	k8s.io/kubelet v0.28.11 // indirect
+	k8s.io/kubelet v0.28.12 // indirect
 	k8s.io/legacy-cloud-providers v0.0.0 // indirect
-	k8s.io/mount-utils v0.28.11 // indirect
+	k8s.io/mount-utils v0.28.12 // indirect
 	k8s.io/pod-security-admission v0.0.0 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.1.2 // indirect
@@ -437,31 +437,31 @@ replace (
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for
 	// transient imports.
-	k8s.io/api => k8s.io/api v0.28.11
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.28.11
-	k8s.io/apimachinery => k8s.io/apimachinery v0.28.11
-	k8s.io/apiserver => k8s.io/apiserver v0.28.11
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.28.11
-	k8s.io/client-go => k8s.io/client-go v0.28.11
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.28.11
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.28.11
-	k8s.io/code-generator => k8s.io/code-generator v0.28.11
-	k8s.io/component-base => k8s.io/component-base v0.28.11
-	k8s.io/component-helpers => k8s.io/component-helpers v0.28.11
-	k8s.io/controller-manager => k8s.io/controller-manager v0.28.11
-	k8s.io/cri-api => k8s.io/cri-api v0.28.11
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.28.11
-	k8s.io/endpointslice => k8s.io/endpointslice v0.28.11
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.28.11
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.28.11
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.28.11
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.28.11
-	k8s.io/kubectl => k8s.io/kubectl v0.28.11
-	k8s.io/kubelet => k8s.io/kubelet v0.28.11
-	k8s.io/kubernetes => k8s.io/kubernetes v1.28.11
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.28.11
-	k8s.io/metrics => k8s.io/metrics v0.28.11
-	k8s.io/mount-utils => k8s.io/mount-utils v0.28.11
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.28.11
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.28.11
+	k8s.io/api => k8s.io/api v0.28.12
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.28.12
+	k8s.io/apimachinery => k8s.io/apimachinery v0.28.12
+	k8s.io/apiserver => k8s.io/apiserver v0.28.12
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.28.12
+	k8s.io/client-go => k8s.io/client-go v0.28.12
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.28.12
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.28.12
+	k8s.io/code-generator => k8s.io/code-generator v0.28.12
+	k8s.io/component-base => k8s.io/component-base v0.28.12
+	k8s.io/component-helpers => k8s.io/component-helpers v0.28.12
+	k8s.io/controller-manager => k8s.io/controller-manager v0.28.12
+	k8s.io/cri-api => k8s.io/cri-api v0.28.12
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.28.12
+	k8s.io/endpointslice => k8s.io/endpointslice v0.28.12
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.28.12
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.28.12
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.28.12
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.28.12
+	k8s.io/kubectl => k8s.io/kubectl v0.28.12
+	k8s.io/kubelet => k8s.io/kubelet v0.28.12
+	k8s.io/kubernetes => k8s.io/kubernetes v1.28.12
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.28.12
+	k8s.io/metrics => k8s.io/metrics v0.28.12
+	k8s.io/mount-utils => k8s.io/mount-utils v0.28.12
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.28.12
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.28.12
 )
