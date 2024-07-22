@@ -37,6 +37,8 @@ import (
 	"github.com/dexidp/dex/api/v2"
 	"github.com/dexidp/dex/server"
 	"github.com/dexidp/dex/storage"
+
+	tls2 "github.com/projectcalico/calico/crypto/pkg/tls"
 )
 
 type serveOptions struct {
@@ -135,37 +137,8 @@ func runServe(options serveOptions) error {
 
 	var grpcOptions []grpc.ServerOption
 
-	allowedTLSCiphers := []uint16{
-		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-		tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-	}
-
-	allowedTLSVersions := map[string]int{
-		"1.2": tls.VersionTLS12,
-		"1.3": tls.VersionTLS13,
-	}
-
 	if c.GRPC.TLSCert != "" {
-		tlsMinVersion := tls.VersionTLS12
-		if c.GRPC.TLSMinVersion != "" {
-			tlsMinVersion = allowedTLSVersions[c.GRPC.TLSMinVersion]
-		}
-		tlsMaxVersion := 0 // default for max is whatever Go defaults to
-		if c.GRPC.TLSMaxVersion != "" {
-			tlsMaxVersion = allowedTLSVersions[c.GRPC.TLSMaxVersion]
-		}
-		baseTLSConfig := &tls.Config{
-			MinVersion:               uint16(tlsMinVersion),
-			MaxVersion:               uint16(tlsMaxVersion),
-			CipherSuites:             allowedTLSCiphers,
-			PreferServerCipherSuites: true,
-		}
+		baseTLSConfig := tls2.NewTLSConfig()
 
 		tlsConfig, err := newTLSReloader(logger, c.GRPC.TLSCert, c.GRPC.TLSKey, c.GRPC.TLSClientCA, baseTLSConfig)
 		if err != nil {
@@ -437,23 +410,7 @@ func runServe(options serveOptions) error {
 		if err != nil {
 			return fmt.Errorf("listening (%s) on %s: %v", name, c.Web.HTTPS, err)
 		}
-
-		tlsMinVersion := tls.VersionTLS12
-		if c.Web.TLSMinVersion != "" {
-			tlsMinVersion = allowedTLSVersions[c.Web.TLSMinVersion]
-		}
-		tlsMaxVersion := 0 // default for max is whatever Go defaults to
-		if c.Web.TLSMaxVersion != "" {
-			tlsMaxVersion = allowedTLSVersions[c.Web.TLSMaxVersion]
-		}
-
-		baseTLSConfig := &tls.Config{
-			MinVersion:               uint16(tlsMinVersion),
-			MaxVersion:               uint16(tlsMaxVersion),
-			CipherSuites:             allowedTLSCiphers,
-			PreferServerCipherSuites: true,
-		}
-
+		baseTLSConfig := tls2.NewTLSConfig()
 		tlsConfig, err := newTLSReloader(logger, c.Web.TLSCert, c.Web.TLSKey, "", baseTLSConfig)
 		if err != nil {
 			return fmt.Errorf("invalid config: get HTTP TLS: %v", err)
@@ -649,16 +606,17 @@ func newTLSReloader(logger *slog.Logger, certFile, keyFile, caFile string, baseC
 		}
 	}()
 
+	conf := tls2.NewTLSConfig()
 	// https://pkg.go.dev/crypto/tls#baseConfig
 	// Server configurations must set one of Certificates, GetCertificate or GetConfigForClient.
 	if caFile != "" {
 		// grpc will use this via tls.Server for mTLS
-		initialConfig.GetConfigForClient = func(chi *tls.ClientHelloInfo) (*tls.Config, error) { return ptr.Load(), nil }
+		conf.GetConfigForClient = func(chi *tls.ClientHelloInfo) (*tls.Config, error) { return ptr.Load(), nil }
 	} else {
 		// net/http only uses Certificates or GetCertificate
-		initialConfig.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) { return &ptr.Load().Certificates[0], nil }
+		conf.GetCertificate = func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) { return &ptr.Load().Certificates[0], nil }
 	}
-	return initialConfig, nil
+	return conf, nil
 }
 
 // loadTLSConfig loads the given file paths into a [tls.Config]
