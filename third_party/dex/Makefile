@@ -9,7 +9,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/dex
 DEX_IMAGE    ?= dex
 BUILD_IMAGES ?= $(DEX_IMAGE)
 
-UPSTREAM_DEX_VERSION = v2.39.0
+UPSTREAM_DEX_VERSION = v2.40.0
 
 ###############################################################################
 # Include lib.Makefile

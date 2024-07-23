@@ -11,11 +11,12 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/resolver"
 
 	"github.com/projectcalico/calico/felix/proto"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const reconnectSleepTime = 3 * time.Second
@@ -35,11 +36,15 @@ type connection struct {
 	grpcTarget string
 }
 
+func init() {
+	resolver.SetDefaultScheme("passthrough")
+}
+
 // Dial establishes a new client connection and returns its address. Closes the connection if an
 // error occurs during the dial process. Logs the connection's address.
 func (c *connection) Dial() error {
 	var err error
-	c.conn, err = grpc.Dial(c.grpcTarget, c.dialOpts...)
+	c.conn, err = grpc.NewClient(c.grpcTarget, c.dialOpts...)
 	if err != nil {
 		return err
 	}

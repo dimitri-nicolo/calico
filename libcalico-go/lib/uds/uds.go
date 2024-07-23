@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 package uds
 
@@ -7,7 +7,13 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/resolver"
 )
+
+func init() {
+	resolver.SetDefaultScheme("passthrough")
+}
 
 func getDialer(proto string) func(context.Context, string) (net.Conn, error) {
 	d := &net.Dialer{}
@@ -22,6 +28,6 @@ func GetDialOptions() []grpc.DialOption {
 
 func GetDialOptionsWithNetwork(network string) []grpc.DialOption {
 	return []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(getDialer(network))}
 }

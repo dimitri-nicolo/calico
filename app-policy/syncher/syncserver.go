@@ -118,7 +118,7 @@ func (s *SyncClient) connectAndSync(ptx context.Context, cb ...statscache.StatsC
 		return fmt.Errorf("connection to PolicySync stopped: %w", err)
 	}
 
-	cc, err := grpc.Dial(s.target, s.dialOpts...)
+	cc, err := grpc.NewClient(s.target, s.dialOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to connect to PolicySync server %s. %w", s.target, err)
 	}

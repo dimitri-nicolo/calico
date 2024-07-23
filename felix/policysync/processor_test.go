@@ -28,9 +28,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/resolver"
 
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/policysync"
@@ -42,6 +44,10 @@ const IPSetName = "testset"
 const ProfileName = "testpro"
 const TierName = "testtier"
 const PolicyName = "testpolicy"
+
+func init() {
+	resolver.SetDefaultScheme("passthrough")
+}
 
 var _ = Describe("Processor", func() {
 	var configParams *config.Config
@@ -845,7 +851,7 @@ var _ = Describe("Processor", func() {
 
 						opts := getDialOptions()
 						var err error
-						clientConn, err = grpc.Dial(path.Join(socketDir, ListenerSocket), opts...)
+						clientConn, err = grpc.NewClient(path.Join(socketDir, ListenerSocket), opts...)
 						Expect(err).ToNot(HaveOccurred())
 
 						syncClient = proto.NewPolicySyncClient(clientConn)
