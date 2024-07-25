@@ -59,7 +59,7 @@ make build
 ### Push the SELinux RPM packages
 
 ```bash
-aws --profile helm s3 cp selinux/build/dist/noarch/calico-selinux-x.y-z.el8.noarch.rpm s3://tigera-public/ee/archives/ --acl public-read
-aws --profile helm s3 cp selinux/build/dist/noarch/calico-selinux-x.y-z.el9.noarch.rpm s3://tigera-public/ee/archives/ --acl public-read
+aws --profile helm s3 cp selinux/build/rhel8/dist/noarch/calico-selinux-x.y-z.el8.noarch.rpm s3://tigera-public/ee/archives/ --acl public-read
+aws --profile helm s3 cp selinux/build/rhel9/dist/noarch/calico-selinux-x.y-z.el9.noarch.rpm s3://tigera-public/ee/archives/ --acl public-read
 # any other RPM packages for newer RHEL releases
 ```

@@ -47,6 +47,3 @@ charts/tigera-operator/charts
 crypto/tmp
 
 metadata.yaml
-
-# host-native files
-.host-native-build.*.created

@@ -22,27 +22,31 @@ SRC_FILES = calico-selinux.spec \
 .PHONY: build
 build: calico-selinux.rhel8 calico-selinux.rhel9
 
+calico.pp: $(SRC_FILES) host-native-build
+	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel8 \
+		sh -c 'make -f /usr/share/selinux/devel/Makefile calico.pp'
+
 .PHONY: calico-selinux.rhel8
-calico-selinux.rhel8: $(SRC_FILES) host-native-build.rhel8 clean
+calico-selinux.rhel8: calico.pp
 	$(info *** Building SELinux RPM for RHEL 8)
-	@mkdir -p build
-	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel8 ./build.sh
+	@mkdir -p build/rhel8
+	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel8 ./build.sh rhel8
 
 .PHONY: calico-selinux.rhel9
-calico-selinux.rhel9: $(SRC_FILES) host-native-build.rhel9 clean
+calico-selinux.rhel9: calico.pp
 	$(info *** Building SELinux RPM for RHEL 9)
-	@mkdir -p build
-	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel9 ./build.sh
+	@mkdir -p build/rhel9
+	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel9 ./build.sh rhel9
 
 publish: publish-rhel8 publish-rhel9
 
-publish-rhel8: calico-selinux.rhel8 | calico-selinux.rhel9
+publish-rhel8: calico-selinux.rhel8
 	$(info *** Publishing SELinux RPM for RHEL 8)
-	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard build/dist/noarch/calico-selinux-*.el8.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
+	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard build/rhel8/dist/noarch/calico-selinux-*.el8.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
 
-publish-rhel9: calico-selinux.rhel9 | calico-selinux.rhel8
+publish-rhel9: calico-selinux.rhel9
 	$(info *** Publishing SELinux RPM for RHEL 9)
-	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard build/dist/noarch/calico-selinux-*.el9.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
+	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard build/rhel9/dist/noarch/calico-selinux-*.el9.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
 
 ###############################################################################
 # Clean
