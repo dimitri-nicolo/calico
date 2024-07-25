@@ -1,4 +1,4 @@
-FROM rockylinux:8
+FROM almalinux:8
 
 RUN dnf upgrade -y && dnf install -y \
 	container-selinux \

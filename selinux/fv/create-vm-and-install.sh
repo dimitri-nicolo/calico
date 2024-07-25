@@ -41,7 +41,7 @@ delete_vm() {
 copy_and_install() {
     local package=calico-selinux-1.0-1.el8.noarch.rpm
     echo "scp $package to $vm_name ..."
-    if gcloud --quiet compute scp --zone="$zone" "build/dist/noarch/$package" "user@$vm_name:/tmp/$package"; then
+    if gcloud --quiet compute scp --zone="$zone" "build/rhel8/dist/noarch/$package" "user@$vm_name:/tmp/$package"; then
         echo "install $package to $vm_name ..."
         if gcloud --quiet compute ssh --zone="$zone" "user@$vm_name" -- sudo dnf install -y /tmp/$package; then
             echo "$package is installed on $vm_name successfully."

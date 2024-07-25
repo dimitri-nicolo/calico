@@ -1,6 +1,6 @@
 # Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-FROM rockylinux:8 AS snort
+FROM almalinux:8 AS snort
 
 ARG DAQ_VERSION=3.0.14
 ARG SNORT3_VERSION
