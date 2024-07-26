@@ -3,9 +3,9 @@
 package file
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path"
 
@@ -15,7 +15,6 @@ import (
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
-	"github.com/projectcalico/calico/felix/collector/types"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -25,21 +24,21 @@ const (
 	L7LogFilename   = "l7.log"
 )
 
-// fileReporter is a Reporter that writes logs to a local,
+// FileReporter is a Reporter that writes logs to a local,
 // auto-rotated log file. We write one JSON-encoded log per line.
-type fileReporter struct {
+type FileReporter struct {
 	directory string
 	fileName  string
 	maxMB     int
 	numFiles  int
-	logger    io.WriteCloser
+	logger    *bufio.Writer
 }
 
-func NewReporter(directory, fileName string, maxMB, numFiles int) types.Reporter {
-	return &fileReporter{directory: directory, fileName: fileName, maxMB: maxMB, numFiles: numFiles}
+func NewReporter(directory, fileName string, maxMB, numFiles int) *FileReporter {
+	return &FileReporter{directory: directory, fileName: fileName, maxMB: maxMB, numFiles: numFiles}
 }
 
-func (f *fileReporter) Start() error {
+func (f *FileReporter) Start() error {
 	if f.logger != nil {
 		// Already initialized; no-op
 		return nil
@@ -51,47 +50,66 @@ func (f *fileReporter) Start() error {
 	if err != nil {
 		return fmt.Errorf("can't make directories for new logfile: %s", err)
 	}
-	f.logger = &lumberjack.Logger{
+	logger := &lumberjack.Logger{
 		Filename:   path.Join(f.directory, f.fileName),
 		MaxSize:    f.maxMB,
 		MaxBackups: f.numFiles,
 	}
+	f.logger = bufio.NewWriterSize(logger, 1<<16)
 	return nil
 }
 
-func (f *fileReporter) Report(logSlice interface{}) error {
+func (f *FileReporter) Report(logSlice interface{}) (err error) {
 	enc := json.NewEncoder(f.logger)
 
-	switch fl := logSlice.(type) {
+	defer func() {
+		flushErr := f.logger.Flush()
+		if flushErr != nil {
+			log.WithError(flushErr).Error("Failed to flush log file.")
+			if err == nil {
+				err = flushErr
+			}
+		}
+	}()
+
+	switch logs := logSlice.(type) {
 	case []*flowlog.FlowLog:
 		if log.IsLevelEnabled(log.DebugLevel) {
-			log.WithField("num", len(fl)).Debug("Dispatching flow logs to file")
+			log.WithField("num", len(logs)).Debug("Dispatching flow logs to file")
 		}
-		for _, l := range fl {
-			o := flowlog.ToOutput(l)
-			err := enc.Encode(o)
+		// Optimisation: we re-use the same output object for each log to avoid
+		// a (large) allocation per log.
+		var output flowlog.JSONOutput
+		for _, l := range logs {
+			output.FillFrom(l)
+			err := enc.Encode(&output)
 			if err != nil {
 				log.WithError(err).
-					WithField("flowLog", o).
+					WithField("flowLog", output).
 					Error("Unable to serialize flow log to file.")
 				return err
 			}
 		}
 	case []*v1.DNSLog:
 		if log.IsLevelEnabled(log.DebugLevel) {
-			log.WithField("num", len(fl)).Debug("Dispatching DNS logs to file")
+			log.WithField("num", len(logs)).Debug("Dispatching DNS logs to file")
 		}
-		for _, l := range fl {
-			var objToLog any = l
+		// Optimisation: put this outside the loop to avoid an allocation per
+		// excess log.
+		var excessLog dnslog.DNSExcessLog
+		for _, l := range logs {
+			var err error
 			if l.Type == v1.DNSLogTypeUnlogged {
-				objToLog = &dnslog.DNSExcessLog{
+				excessLog = dnslog.DNSExcessLog{
 					StartTime: l.StartTime,
 					EndTime:   l.EndTime,
 					Type:      l.Type,
 					Count:     l.Count,
 				}
+				err = enc.Encode(&excessLog)
+			} else {
+				err = enc.Encode(l)
 			}
-			err := enc.Encode(objToLog)
 			if err != nil {
 				log.WithError(err).
 					WithField("dnsLog", l).
@@ -101,9 +119,9 @@ func (f *fileReporter) Report(logSlice interface{}) error {
 		}
 	case []*l7log.L7Log:
 		if log.IsLevelEnabled(log.DebugLevel) {
-			log.WithField("num", len(fl)).Debug("Dispatching L7 logs to file")
+			log.WithField("num", len(logs)).Debug("Dispatching L7 logs to file")
 		}
-		for _, l := range fl {
+		for _, l := range logs {
 			err := enc.Encode(l)
 			if err != nil {
 				log.WithError(err).

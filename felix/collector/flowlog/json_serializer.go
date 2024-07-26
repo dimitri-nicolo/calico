@@ -108,6 +108,11 @@ type policiesJSONOutput struct {
 
 func ToOutput(l *FlowLog) JSONOutput {
 	var out JSONOutput
+	out.FillFrom(l)
+	return out
+}
+
+func (out *JSONOutput) FillFrom(l *FlowLog) {
 	out.StartTime = l.StartTime.Unix()
 	out.EndTime = l.EndTime.Unix()
 
@@ -115,6 +120,8 @@ func ToOutput(l *FlowLog) JSONOutput {
 	if !ip.IsUnspecified() {
 		s := ip.String()
 		out.SourceIP = &s
+	} else {
+		out.SourceIP = nil
 	}
 	if l.Tuple.Proto == 1 || l.Tuple.L4Src == unsetIntField {
 		out.SourcePortNum = nil
@@ -135,15 +142,18 @@ func ToOutput(l *FlowLog) JSONOutput {
 		}
 	}
 
+	out.NatOutgoingPorts = out.NatOutgoingPorts[:0]
 	if len(l.FlowProcessReportedStats.NatOutgoingPorts) > 0 {
-		sort.Ints(l.FlowProcessReportedStats.NatOutgoingPorts)
-		out.NatOutgoingPorts = l.FlowProcessReportedStats.NatOutgoingPorts
+		out.NatOutgoingPorts = append(out.NatOutgoingPorts, l.FlowProcessReportedStats.NatOutgoingPorts...)
+		sort.Ints(out.NatOutgoingPorts)
 	}
 
 	ip = net.IP(l.Tuple.Dst[:16])
 	if !ip.IsUnspecified() {
 		s := ip.String()
 		out.DestIP = &s
+	} else {
+		out.DestIP = nil
 	}
 	if l.Tuple.Proto == 1 || l.Tuple.L4Dst == unsetIntField {
 		out.DestPortNum = nil
@@ -191,18 +201,18 @@ func ToOutput(l *FlowLog) JSONOutput {
 	if l.FlowPolicySet == nil {
 		out.Policies = nil
 	} else {
-		all_p := make([]string, 0, len(l.FlowPolicySet))
-		for pol := range l.FlowPolicySet {
-			all_p = append(all_p, pol)
+		if out.Policies == nil {
+			out.Policies = &policiesJSONOutput{}
 		}
-		out.Policies = &policiesJSONOutput{
-			AllPolicies: all_p,
+		out.Policies.AllPolicies = out.Policies.AllPolicies[:0]
+		for pol := range l.FlowPolicySet {
+			out.Policies.AllPolicies = append(out.Policies.AllPolicies, pol)
 		}
 	}
 
 	if l.FlowExtras.OriginalSourceIPs == nil {
 		out.OrigSourceIPs = nil
-		out.NumOrigSourceIPs = int64(0)
+		out.NumOrigSourceIPs = 0
 	} else {
 		out.NumOrigSourceIPs = int64(l.FlowExtras.NumOriginalSourceIPs)
 		if len(l.FlowExtras.OriginalSourceIPs) == 0 {
@@ -240,7 +250,6 @@ func ToOutput(l *FlowLog) JSONOutput {
 	out.TotalRetrans = int64(l.TotalRetrans)
 	out.LostOut = int64(l.LostOut)
 	out.UnrecoveredRTO = int64(l.UnrecoveredRTO)
-	return out
 }
 
 func protoToString(p int) string {
@@ -261,7 +270,7 @@ func stringToProto(s string) int {
 	return p
 }
 
-func (o JSONOutput) ToFlowLog() (FlowLog, error) {
+func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 	fl := FlowLog{}
 	fl.StartTime = time.Unix(o.StartTime, 0)
 	fl.EndTime = time.Unix(o.EndTime, 0)
