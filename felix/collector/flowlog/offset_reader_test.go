@@ -5,8 +5,6 @@ package flowlog
 import (
 	"os"
 
-	log "github.com/sirupsen/logrus"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -17,18 +15,17 @@ var _ = Describe("LogOffsetReader", func() {
 	DescribeTable("Reads Offsets from",
 		func(positions string, expected Offsets) {
 			var positionFile, err = os.CreateTemp("", "pos")
+			defer func() {
+				err := os.Remove(positionFile.Name())
+				Expect(err).NotTo(HaveOccurred(), "Failed to delete temp file")
+			}()
 			Expect(err).NotTo(HaveOccurred())
 			_, err = positionFile.WriteString(positions)
 			Expect(err).NotTo(HaveOccurred())
+			err = positionFile.Close()
+			Expect(err).NotTo(HaveOccurred())
 
-			defer func() {
-				err := os.Remove(positionFile.Name())
-				if err != nil {
-					log.Fatal(err)
-				}
-			}()
 			var fluentDLogOffsetReader = NewFluentDLogOffsetReader(positionFile.Name())
-
 			var offsets = fluentDLogOffsetReader.Read()
 			Expect(offsets).Should(Equal(expected))
 		},

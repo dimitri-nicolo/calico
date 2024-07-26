@@ -534,19 +534,27 @@ func (m *logOffsetMock) GetIncreaseFactor(offsets Offsets) int {
 	return v
 }
 
-type dispatcherMock struct {
+type mockDispatcher struct {
 	mock.Mock
 	iteration    int
 	maxIteration int
 	collector    chan []*FlowLog
+	started      atomic.Bool
 }
 
-func (m *dispatcherMock) Start() error {
-	m.collector = make(chan []*FlowLog)
+func newMockDispatcher(maxIterations int) *mockDispatcher {
+	return &mockDispatcher{
+		collector:    make(chan []*FlowLog),
+		maxIteration: maxIterations,
+	}
+}
+
+func (m *mockDispatcher) Start() error {
+	m.started.Store(true)
 	return nil
 }
 
-func (m *dispatcherMock) Report(logSlice interface{}) error {
+func (m *mockDispatcher) Report(logSlice interface{}) error {
 	m.iteration++
 	log.Infof("Mocked dispatcher was called %d times ", m.iteration)
 	logs := logSlice.([]*FlowLog)
@@ -557,7 +565,11 @@ func (m *dispatcherMock) Report(logSlice interface{}) error {
 	return nil
 }
 
-func (m *dispatcherMock) Close() {
+func (m *mockDispatcher) Started() bool {
+	return m.started.Load()
+}
+
+func (m *mockDispatcher) Close() {
 	close(m.collector)
 }
 
@@ -565,6 +577,13 @@ type mockTicker struct {
 	mock.Mock
 	tick chan time.Time
 	stop chan bool
+}
+
+func newMockTicker() *mockTicker {
+	return &mockTicker{
+		tick: make(chan time.Time),
+		stop: make(chan bool),
+	}
 }
 
 func (m *mockTicker) invokeTick(x time.Time) {
@@ -577,7 +596,6 @@ func (m *mockTicker) Channel() <-chan time.Time {
 
 func (m *mockTicker) Stop() {
 	close(m.tick)
-	m.stop <- true
 	close(m.stop)
 }
 
@@ -596,46 +614,50 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			mockLogOffset.On("GetIncreaseFactor").Return(1)
 
 			// mock ticker
-			ticker := &mockTicker{}
-			ticker.tick = make(chan time.Time)
-			ticker.stop = make(chan bool)
+			ticker := newMockTicker()
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			cd := &dispatcherMock{}
-			cd.maxIteration = 4
-			defer cd.Close()
-			ds := map[string]types.Reporter{"mock": cd}
+			dispatcher := newMockDispatcher(4)
+			defer dispatcher.Close()
+			dispatchers := map[string]types.Reporter{"mock": dispatcher}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
-			cr := newReporterTest(ds, nil, false, ticker, mockLogOffset)
-			ca := NewAggregator()
-			cr.AddAggregator(ca, []string{"mock"})
+			reporter := newReporterTest(dispatchers, nil, false, ticker, mockLogOffset)
+			agg := NewAggregator()
+			reporter.AddAggregator(agg, []string{"mock"})
 
 			By("Starting the log reporter")
-			Expect(cr.Start()).NotTo(HaveOccurred())
+			Expect(reporter.Start()).NotTo(HaveOccurred())
+			Eventually(dispatcher.Started).Should(BeTrue(), "dispatcher should have been started")
 
 			expectedLevel := 0
 			// Feed reporter with log with two iterations
-			i := 0
-			for ; i < 2; i++ {
+			for i := 0; i < 2; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+				err := reporter.Report(muNoConn1Rule1AllowUpdate)
+				Expect(err).NotTo(HaveOccurred())
+				By("Sending a tick...")
 				ticker.invokeTick(time.Now())
-				logs := <-cd.collector
+				By("Waiting for the collector...")
+				var logs []*FlowLog
+				Eventually(dispatcher.collector).Should(Receive(&logs))
 				Expect(len(logs)).To(Equal(1))
-				Expect(int(ca.CurrentAggregationLevel())).To(Equal(expectedLevel + 1))
+				Expect(int(agg.CurrentAggregationLevel())).To(Equal(expectedLevel + 1))
 				expectedLevel++
 			}
 
 			// Feed reporter with another log with two iterations
-			for ; i < 4; i++ {
+			for i := 2; i < 4; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+				Expect(reporter.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+				By("Sending a tick...")
 				ticker.invokeTick(time.Now())
-				logs := <-cd.collector
+				By("Waiting for the collector...")
+				var logs []*FlowLog
+				Eventually(dispatcher.collector).Should(Receive(&logs))
 				Expect(len(logs)).To(Equal(1))
-				Expect(ca.CurrentAggregationLevel()).To(Equal(FlowDefault))
+				Expect(agg.CurrentAggregationLevel()).To(Equal(FlowDefault))
 			}
 		})
 
@@ -646,36 +668,35 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			mockLogOffset.On("GetIncreaseFactor").Return(1)
 
 			// mock ticker
-			ticker := &mockTicker{}
-			ticker.tick = make(chan time.Time)
-			ticker.stop = make(chan bool)
+			ticker := newMockTicker()
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			cd := &dispatcherMock{}
-			cd.maxIteration = 4
-			defer cd.Close()
-			ds := map[string]types.Reporter{"mock": cd}
+			dispatcher := newMockDispatcher(4)
+			defer dispatcher.Close()
+			dispatchers := map[string]types.Reporter{"mock": dispatcher}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
-			cr := newReporterTest(ds, nil, false, ticker, mockLogOffset)
-			ca := NewAggregator()
-			ca.AggregateOver(FlowPrefixName)
-			cr.AddAggregator(ca, []string{"mock"})
+			reporter := newReporterTest(dispatchers, nil, false, ticker, mockLogOffset)
+			agg := NewAggregator()
+			agg.AggregateOver(FlowPrefixName)
+			reporter.AddAggregator(agg, []string{"mock"})
 
 			By("Starting the log reporter")
-			Expect(cr.Start()).NotTo(HaveOccurred())
+			Expect(reporter.Start()).NotTo(HaveOccurred())
+			Eventually(dispatcher.Started).Should(BeTrue(), "dispatcher should have been started")
 
 			expectedLevel := 0
 			// Feed reporter with log with four iterations
 
 			for i := 0; i < 4; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+				Expect(reporter.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())
-				logs := <-cd.collector
+				var logs []*FlowLog
+				Eventually(dispatcher.collector).Should(Receive(&logs))
 				Expect(len(logs)).To(Equal(1))
-				Expect(ca.CurrentAggregationLevel()).To(Equal(FlowPrefixName))
+				Expect(agg.CurrentAggregationLevel()).To(Equal(FlowPrefixName))
 				expectedLevel++
 			}
 		})
@@ -696,7 +717,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			var cd = &dispatcherMock{}
+			var cd = &mockDispatcher{}
 			cd.maxIteration = 1
 			defer cd.Close()
 			var ds = map[string]LogReporter{"mock": cd}
@@ -737,37 +758,36 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			mockLogOffset.On("GetIncreaseFactor").Return(1)
 
 			// mock ticker
-			ticker := &mockTicker{}
-			ticker.tick = make(chan time.Time)
-			ticker.stop = make(chan bool)
+			ticker := newMockTicker()
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			cd := &dispatcherMock{}
-			cd.maxIteration = 5
-			defer cd.Close()
-			ds := map[string]types.Reporter{"mock": cd}
+			dispatcher := newMockDispatcher(5)
+			defer dispatcher.Close()
+			dispatchers := map[string]types.Reporter{"mock": dispatcher}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
-			cr := newReporterTest(ds, nil, false, ticker, mockLogOffset)
-			ca := NewAggregator()
-			ca.AggregateOver(FlowPrefixName)
-			cr.AddAggregator(ca, []string{"mock"})
+			reporter := newReporterTest(dispatchers, nil, false, ticker, mockLogOffset)
+			agg := NewAggregator()
+			agg.AggregateOver(FlowPrefixName)
+			reporter.AddAggregator(agg, []string{"mock"})
 
 			By("Starting the log reporter")
-			Expect(cr.Start()).NotTo(HaveOccurred())
+			Expect(reporter.Start()).NotTo(HaveOccurred())
+			Eventually(dispatcher.Started).Should(BeTrue(), "dispatcher should have been started")
 
 			// Feed reporter with log with five iterations
 
 			for i := 0; i < 5; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
-				Expect(cr.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
+				Expect(reporter.Report(muNoConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
 				ticker.invokeTick(time.Now())
-				logs := <-cd.collector
+				var logs []*FlowLog
+				Eventually(dispatcher.collector).Should(Receive(&logs))
 				Expect(len(logs)).To(Equal(1))
 			}
 
-			Expect(ca.CurrentAggregationLevel()).To(Equal(MaxAggregationLevel))
+			Expect(agg.CurrentAggregationLevel()).To(Equal(MaxAggregationLevel))
 		})
 	})
 })
