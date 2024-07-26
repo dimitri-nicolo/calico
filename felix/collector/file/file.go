@@ -60,76 +60,55 @@ func (f *fileReporter) Start() error {
 }
 
 func (f *fileReporter) Report(logSlice interface{}) error {
-	writeLog := func(b []byte) error {
-		b = append(b, '\n')
-		// It is an error to call Dispatch before Initialize, so it's safe to
-		// assume d.logger is non-nil.
-		_, err := f.logger.Write(b)
-		if err != nil {
-			// NOTE: the FlowLogsReporter ignores errors returned by Dispatch,
-			// so log the error here.  We don't want to do anything more drastic
-			// like retrying because we don't know if the error is even
-			// recoverable.
-			log.WithError(err).Error("unable to write flow log to file")
-			return err
-		}
-		return nil
-	}
+	enc := json.NewEncoder(f.logger)
+
 	switch fl := logSlice.(type) {
 	case []*flowlog.FlowLog:
-		log.Debug("Dispatching flow logs to file")
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithField("num", len(fl)).Debug("Dispatching flow logs to file")
+		}
 		for _, l := range fl {
 			o := flowlog.ToOutput(l)
-			b, err := json.Marshal(o)
+			err := enc.Encode(o)
 			if err != nil {
-				// This indicates a bug, not a runtime error since we should always
-				// be able to serialize.
 				log.WithError(err).
-					WithField("FlowLog", o).
-					Panic("unable to serialize flow log to JSON")
-			}
-			if err = writeLog(b); err != nil {
+					WithField("flowLog", o).
+					Error("Unable to serialize flow log to file.")
 				return err
 			}
 		}
 	case []*v1.DNSLog:
-		log.Debug("Dispatching DNS logs to file")
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithField("num", len(fl)).Debug("Dispatching DNS logs to file")
+		}
 		for _, l := range fl {
-			var b []byte
-			var err error
+			var objToLog any = l
 			if l.Type == v1.DNSLogTypeUnlogged {
-				b, err = json.Marshal(&dnslog.DNSExcessLog{
+				objToLog = &dnslog.DNSExcessLog{
 					StartTime: l.StartTime,
 					EndTime:   l.EndTime,
 					Type:      l.Type,
 					Count:     l.Count,
-				})
-			} else {
-				b, err = json.Marshal(l)
+				}
 			}
+			err := enc.Encode(objToLog)
 			if err != nil {
-				// This indicates a bug, not a runtime error since we should always
-				// be able to serialize.
 				log.WithError(err).
-					WithField("DNSLog", l).
-					Panic("unable to serialize DNS log to JSON")
-			}
-			if err = writeLog(b); err != nil {
+					WithField("dnsLog", l).
+					Error("Unable to serialize DNS log to JSON")
 				return err
 			}
 		}
 	case []*l7log.L7Log:
-		log.Debug("Dispatching L7 logs to file")
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithField("num", len(fl)).Debug("Dispatching L7 logs to file")
+		}
 		for _, l := range fl {
-			b, err := json.Marshal(l)
+			err := enc.Encode(l)
 			if err != nil {
-				// This indicates a bug, not a runtime error since we should always
-				// be able to serialize.
 				log.WithError(err).
-					WithField("L7Log", l).
-					Panic("unable to serialize L7 log to JSON")
-			}
-			if err = writeLog(b); err != nil {
+					WithField("l7Log", l).
+					Error("Unable to serialize L7 log to JSON")
 				return err
 			}
 		}
