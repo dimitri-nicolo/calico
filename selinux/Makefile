@@ -10,7 +10,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/selinux
 include ../lib.Makefile
 
 ###############################################################################
-# Build RPM
+# Package
 ###############################################################################
 AWS_PROFILE ?= helm
 
@@ -19,8 +19,8 @@ SRC_FILES = calico-selinux.spec \
 	calico.if \
 	calico.te
 
-.PHONY: build
-build: calico-selinux.rhel8 calico-selinux.rhel9
+.PHONY: package
+package: calico-selinux.rhel8 calico-selinux.rhel9
 
 calico.pp: $(SRC_FILES) host-native-build
 	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel8 \
@@ -29,24 +29,22 @@ calico.pp: $(SRC_FILES) host-native-build
 .PHONY: calico-selinux.rhel8
 calico-selinux.rhel8: calico.pp
 	$(info *** Building SELinux RPM for RHEL 8)
-	@mkdir -p build/rhel8
-	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel8 ./build.sh rhel8
+	$(call host_native_rpm_build,rhel8,calico-selinux)
 
 .PHONY: calico-selinux.rhel9
 calico-selinux.rhel9: calico.pp
 	$(info *** Building SELinux RPM for RHEL 9)
-	@mkdir -p build/rhel9
-	$(DOCKER_HOST_NATIVE_RUN) $(HOST_NATIVE_BUILD_IMAGE):rhel9 ./build.sh rhel9
+	$(call host_native_rpm_build,rhel9,calico-selinux)
 
 publish: publish-rhel8 publish-rhel9
 
 publish-rhel8: calico-selinux.rhel8
 	$(info *** Publishing SELinux RPM for RHEL 8)
-	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard build/rhel8/dist/noarch/calico-selinux-*.el8.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
+	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard package/rhel8/RPMS/noarch/calico-selinux-*.el8.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
 
 publish-rhel9: calico-selinux.rhel9
 	$(info *** Publishing SELinux RPM for RHEL 9)
-	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard build/rhel9/dist/noarch/calico-selinux-*.el9.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
+	@aws --profile $(AWS_PROFILE) s3 cp $(wildcard package/rhel9/RPMS/noarch/calico-selinux-*.el9.*.rpm) s3://tigera-public/ee/archives/ --acl public-read
 
 ###############################################################################
 # Clean
@@ -54,7 +52,7 @@ publish-rhel9: calico-selinux.rhel9
 .PHONY: clean
 clean:
 	rm -f *.pp
-	rm -fr build/
+	rm -fr package/
 	rm -fr tmp/
 
 ###############################################################################
@@ -64,7 +62,7 @@ ZONE ?= us-central1-a
 VM_PREFIX ?= $(USER)-selinux
 
 .PHONY: fv
-fv: build
+fv: package
 	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX)
 	fv/run-tests.sh $(ZONE) $(VM_PREFIX)
 
