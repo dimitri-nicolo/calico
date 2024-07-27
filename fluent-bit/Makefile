@@ -12,15 +12,6 @@ FLUENT_BIT_VERSION = 3.1.4
 include ../lib.Makefile
 
 ###############################################################################
-# Build
-###############################################################################
-
-clean:
-	rm -f ${FLUENT_BIT_DOWNLOADED}
-	rm -f *.tar.gz
-	rm -fr package
-
-###############################################################################
 # Package
 ###############################################################################
 FLUENT_BIT_DOWNLOADED=.fluent-bit.downloaded
@@ -48,7 +39,26 @@ calico-fluent-bit.rhel9: ${FLUENT_BIT_DOWNLOADED} host-native-build rhel/calico-
 	$(call host_native_rpm_build,rhel9,calico-fluent-bit)
 
 ###############################################################################
+# Clean
+###############################################################################
+clean:
+	rm -f ${FLUENT_BIT_DOWNLOADED}
+	rm -f *.tar.gz
+	rm -fr package
+
+###############################################################################
+# Tests
+###############################################################################
+ZONE ?= us-central1-a
+VM_PREFIX ?= $(USER)-fluent-bit
+
+.PHONY: fv
+fv: package
+	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX)
+	fv/run-tests.sh $(ZONE) $(VM_PREFIX)
+
+###############################################################################
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean package
+ci: clean fv
