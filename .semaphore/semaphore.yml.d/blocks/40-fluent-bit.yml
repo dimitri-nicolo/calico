@@ -1,0 +1,13 @@
+- name: fluent-bit
+  run:
+    when: "${FORCE_RUN} or change_in(['/fluent-bit/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd fluent-bit
+    jobs:
+      - name: fluent-bit tests
+        commands:
+          - make ci

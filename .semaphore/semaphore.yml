@@ -1735,6 +1735,19 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+- name: fluent-bit
+  run:
+    when: "false or change_in(['/fluent-bit/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd fluent-bit
+    jobs:
+      - name: fluent-bit tests
+        commands:
+          - make ci
 - name: selinux
   run:
     when: "false or change_in(['/selinux/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
