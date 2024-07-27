@@ -1,0 +1,3 @@
+*.tar.gz
+.fluent-bit.downloaded
+package/

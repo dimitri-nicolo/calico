@@ -14,7 +14,7 @@ include ../lib.Makefile
 ###############################################################################
 AWS_PROFILE ?= helm
 
-SRC_FILES = calico-selinux.spec \
+SRC_FILES = rhel/calico-selinux.spec \
 	calico.fc \
 	calico.if \
 	calico.te

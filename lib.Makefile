@@ -331,7 +331,7 @@ define host_native_rpm_build
 			sh -c 'rpmbuild \
 				--define "_topdir $$PWD/package/$(1)" \
 				--define "_sourcedir $$PWD" \
-				-ba $(2).spec'
+				-ba rhel/$(2).spec'
 endef
 
 # A target that does nothing but it always stale, used to force a rebuild on certain targets based on some non-file criteria.
