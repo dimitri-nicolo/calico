@@ -19,7 +19,7 @@ create_vm() {
         --image=rocky-linux-8-optimized-gcp-v20230411 \
         --image-project=rocky-linux-cloud \
         --boot-disk-size=20GB \
-        --boot-disk-type=pd-standard; then
+        --boot-disk-type=pd-balanced; then
         for ssh_try in $(seq 1 20); do
             echo "trying to ssh in: attempt $ssh_try ..."
             if gcloud --quiet compute ssh --zone="$zone" "user@$vm_name" -- cat /etc/os-release; then
