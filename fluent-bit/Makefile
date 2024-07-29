@@ -31,18 +31,18 @@ $(FLUENT_BIT_DOWNLOADED):
 package: calico-fluent-bit.rhel8 calico-fluent-bit.rhel9
 
 .PHONY: calico-fluent-bit.rhel8
-calico-fluent-bit.rhel8: ${FLUENT_BIT_DOWNLOADED} host-native-build rhel/calico-fluent-bit.spec
+calico-fluent-bit.rhel8: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec
 	$(call host_native_rpm_build,rhel8,calico-fluent-bit)
 
 .PHONY: calico-fluent-bit.rhel9
-calico-fluent-bit.rhel9: ${FLUENT_BIT_DOWNLOADED} host-native-build rhel/calico-fluent-bit.spec
+calico-fluent-bit.rhel9: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec
 	$(call host_native_rpm_build,rhel9,calico-fluent-bit)
 
 ###############################################################################
 # Clean
 ###############################################################################
 clean:
-	rm -f ${FLUENT_BIT_DOWNLOADED}
+	rm -f $(FLUENT_BIT_DOWNLOADED)
 	rm -f *.tar.gz
 	rm -fr package
 
