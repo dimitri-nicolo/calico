@@ -1,10 +1,11 @@
 #!/bin/bash
 # Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-set -ex
+set -eu
 
 zone=$1
 vm_name=$2-rocky8
+version=$3
 project=${GCP_PROJECT:-unique-caldron-775}
 gcp_secret_key=${GCP_SECRET_KEY:-$HOME/secrets/secret.google-service-account-key.json}
 
@@ -39,7 +40,7 @@ delete_vm() {
 }
 
 copy_and_install() {
-    local package=calico-selinux-1.0-1.el8.noarch.rpm
+    local package=calico-selinux-$version-1.el8.noarch.rpm
     echo "scp $package to $vm_name ..."
     if gcloud --quiet compute scp --zone="$zone" "package/rhel8/RPMS/noarch/$package" "user@$vm_name:/tmp/$package"; then
         echo "install $package to $vm_name ..."

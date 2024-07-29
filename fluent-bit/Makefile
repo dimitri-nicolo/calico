@@ -31,11 +31,13 @@ $(FLUENT_BIT_DOWNLOADED):
 package: calico-fluent-bit.rhel8 calico-fluent-bit.rhel9
 
 .PHONY: calico-fluent-bit.rhel8
-calico-fluent-bit.rhel8: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec
+calico-fluent-bit.rhel8: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in
+	sed 's/@FLUENT_BIT_VERSION@/$(FLUENT_BIT_VERSION)/g' rhel/calico-fluent-bit.spec.in > rhel/calico-fluent-bit.spec
 	$(call host_native_rpm_build,rhel8,calico-fluent-bit)
 
 .PHONY: calico-fluent-bit.rhel9
-calico-fluent-bit.rhel9: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec
+calico-fluent-bit.rhel9: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in
+	sed 's/@FLUENT_BIT_VERSION@/$(FLUENT_BIT_VERSION)/g' rhel/calico-fluent-bit.spec.in > rhel/calico-fluent-bit.spec
 	$(call host_native_rpm_build,rhel9,calico-fluent-bit)
 
 ###############################################################################
@@ -44,6 +46,7 @@ calico-fluent-bit.rhel9: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-
 clean:
 	rm -f $(FLUENT_BIT_DOWNLOADED)
 	rm -f *.tar.gz
+	rm -f rhel/calico-fluent-bit.spec
 	rm -fr package
 
 ###############################################################################
@@ -54,7 +57,7 @@ VM_PREFIX ?= $(USER)-fluent-bit
 
 .PHONY: fv
 fv: package
-	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX)
+	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX) $(FLUENT_BIT_VERSION)
 	fv/run-tests.sh $(ZONE) $(VM_PREFIX)
 
 ###############################################################################

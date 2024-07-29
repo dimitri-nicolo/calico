@@ -1,3 +1,4 @@
 *.tar.gz
 .fluent-bit.downloaded
 package/
+rhel/calico-fluent-bit.spec

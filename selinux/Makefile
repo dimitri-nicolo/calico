@@ -2,6 +2,8 @@ include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/selinux
 
+CALICO_SELINUX_VERSION = 1.0
+
 ##############################################################################
 # Download and include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -14,7 +16,7 @@ include ../lib.Makefile
 ###############################################################################
 AWS_PROFILE ?= helm
 
-SRC_FILES = rhel/calico-selinux.spec \
+SRC_FILES = rhel/calico-selinux.spec.in \
 	calico.fc \
 	calico.if \
 	calico.te
@@ -29,11 +31,13 @@ calico.pp: $(SRC_FILES) host-native-build
 .PHONY: calico-selinux.rhel8
 calico-selinux.rhel8: calico.pp
 	$(info *** Building SELinux RPM for RHEL 8)
+	sed 's/@CALICO_SELINUX_VERSION@/$(CALICO_SELINUX_VERSION)/g' rhel/calico-selinux.spec.in > rhel/calico-selinux.spec
 	$(call host_native_rpm_build,rhel8,calico-selinux)
 
 .PHONY: calico-selinux.rhel9
 calico-selinux.rhel9: calico.pp
 	$(info *** Building SELinux RPM for RHEL 9)
+	sed 's/@CALICO_SELINUX_VERSION@/$(CALICO_SELINUX_VERSION)/g' rhel/calico-selinux.spec.in > rhel/calico-selinux.spec
 	$(call host_native_rpm_build,rhel9,calico-selinux)
 
 publish: publish-rhel8 publish-rhel9
@@ -52,6 +56,7 @@ publish-rhel9: calico-selinux.rhel9
 .PHONY: clean
 clean:
 	rm -f *.pp
+	rm -f rhel/calico-selinux.spec
 	rm -fr package/
 	rm -fr tmp/
 
@@ -63,7 +68,7 @@ VM_PREFIX ?= $(USER)-selinux
 
 .PHONY: fv
 fv: package
-	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX)
+	fv/create-vm-and-install.sh $(ZONE) $(VM_PREFIX) $(CALICO_SELINUX_VERSION)
 	fv/run-tests.sh $(ZONE) $(VM_PREFIX)
 
 ###############################################################################
