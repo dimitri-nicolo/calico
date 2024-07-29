@@ -94,6 +94,8 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 	case "Error":
 		log.SetLevel(log.ErrorLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
