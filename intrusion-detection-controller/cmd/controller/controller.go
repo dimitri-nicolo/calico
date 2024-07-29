@@ -85,6 +85,17 @@ func main() {
 		return
 	}
 
+	switch logLevel := os.Getenv("LOG_LEVEL"); logLevel {
+	case "Debug":
+		log.SetLevel(log.DebugLevel)
+	case "Warn":
+		log.SetLevel(log.WarnLevel)
+	case "Info", "":
+		log.SetLevel(log.InfoLevel)
+	case "Error":
+		log.SetLevel(log.ErrorLevel)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
