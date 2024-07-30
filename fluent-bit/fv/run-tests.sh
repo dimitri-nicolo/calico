@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 set -ex
 
@@ -27,8 +27,11 @@ assert_folder_exists /etc/calico/calico-fluent-bit
 
 # check files
 assert_file_exists /etc/calico/calico-fluent-bit/calico-fluent-bit.conf
+assert_file_exists /etc/calico/calico-fluent-bit/calico-fluent-bit.env
+assert_file_exists /etc/calico/calico-fluent-bit/out_linseed.so
 assert_file_exists /etc/calico/calico-fluent-bit/parsers.conf
 assert_file_exists /etc/calico/calico-fluent-bit/plugins.conf
+assert_file_exists /etc/calico/calico-fluent-bit/record_transformer.lua
 assert_file_exists /usr/bin/calico-fluent-bit
 assert_file_exists /usr/lib/systemd/system/calico-fluent-bit.service
 
