@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
 
 %define calico_relabel_files() \
 mkdir -p /var/lib/calico; \
@@ -17,7 +17,7 @@ restorecon -FR /mnt/tigera
 %define container_policy_epoch 2
 
 Name:       calico-selinux
-Version:    1.0
+Version:    @CALICO_SELINUX_VERSION@
 Release:    1%{?dist}
 Summary:    SELinux policy module for Calico
 

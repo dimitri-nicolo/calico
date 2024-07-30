@@ -1,3 +1,4 @@
 *.pp
-build/
+package/
+rhel/calico-selinux.spec
 tmp/

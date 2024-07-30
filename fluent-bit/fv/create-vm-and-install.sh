@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 set -eu
 
@@ -40,9 +40,9 @@ delete_vm() {
 }
 
 copy_and_install() {
-    local package=calico-selinux-$version-1.el8.noarch.rpm
+    local package=calico-fluent-bit-$version-1.el8.x86_64.rpm
     echo "scp $package to $vm_name ..."
-    if gcloud --quiet compute scp --zone="$zone" "package/rhel8/RPMS/noarch/$package" "user@$vm_name:/tmp/$package"; then
+    if gcloud --quiet compute scp --zone="$zone" "package/rhel8/RPMS/x86_64/$package" "user@$vm_name:/tmp/$package"; then
         echo "install $package to $vm_name ..."
         if gcloud --quiet compute ssh --zone="$zone" "user@$vm_name" -- sudo dnf install -y /tmp/$package; then
             echo "$package is installed on $vm_name successfully."
@@ -57,11 +57,11 @@ for attempt in $(seq 1 3); do
     echo "creating $vm_name, attempt $attempt ..."
     if create_vm; then
         if copy_and_install; then
-            echo "calico selinux package is installed successfully."
+            echo "calico fluent-bit package is installed successfully."
             exit 0
         fi
 
-        echo "failed to copy and install calico selinux package."
+        echo "failed to copy and install calico fluent-bit package."
     else
         echo "failed to create or ssh into $vm_name."
     fi
