@@ -717,8 +717,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			var cd = &mockDispatcher{}
-			cd.maxIteration = 1
+			var cd = newMockDispatcher(1)
 			defer cd.Close()
 			var ds = map[string]LogReporter{"mock": cd}
 

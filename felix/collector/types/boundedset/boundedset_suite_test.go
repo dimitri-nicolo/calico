@@ -21,7 +21,7 @@ func init() {
 	logrus.SetFormatter(&logutils.Formatter{})
 }
 
-func TestIPSets(t *testing.T) {
+func TestBoundedSet(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../../report/boundedset_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Bounded Set Suite", []Reporter{junitReporter})

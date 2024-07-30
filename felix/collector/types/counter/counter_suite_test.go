@@ -21,7 +21,7 @@ func init() {
 	logrus.SetFormatter(&logutils.Formatter{})
 }
 
-func TestIPSets(t *testing.T) {
+func TestCounter(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("../../../report/counter_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Counter Suite", []Reporter{junitReporter})
