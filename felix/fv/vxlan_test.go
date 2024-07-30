@@ -971,8 +971,14 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					It("after manually removing third node from allow list should have expected connectivity", func() {
 						if NFTMode() {
 							cs.local.felixes[0].Exec("nft", "delete", "element", "ip", "calico", "cali40all-vxlan-net", fmt.Sprintf("{ %s }", cs.local.felixes[2].IP))
+							if cs.ExpectRemoteConnectivity() {
+								cs.local.felixes[0].Exec("nft", "delete", "element", "ip", "calico", "cali40all-vxlan-net", fmt.Sprintf("{ %s }", cs.remote.felixes[2].IP))
+							}
 							if enableIPv6 {
 								cs.local.felixes[0].Exec("nft", "delete", "element", "ip6", "calico", "cali60all-vxlan-net", fmt.Sprintf("{ %s }", cs.local.felixes[2].IPv6))
+								if cs.ExpectRemoteConnectivity() {
+									cs.local.felixes[0].Exec("nft", "delete", "element", "ip6", "calico", "cali60all-vxlan-net", fmt.Sprintf("{ %s }", cs.remote.felixes[2].IPv6))
+								}
 							}
 						} else {
 							cs.local.felixes[0].Exec("ipset", "del", "cali40all-vxlan-net", cs.local.felixes[2].IP)

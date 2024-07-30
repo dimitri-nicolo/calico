@@ -257,6 +257,11 @@ func (m matchCriteria) NotDestIPSet(name string) generictables.MatchCriteria {
 	return append(m, fmt.Sprintf("-m set ! --match-set %s dst", name))
 }
 
+func (m matchCriteria) DestPortSet(name string) generictables.MatchCriteria {
+	// The dest port set is identical to an IP port set syntax-wise.
+	return m.DestIPPortSet(name)
+}
+
 func (m matchCriteria) DestIPPortSet(name string) generictables.MatchCriteria {
 	return append(m, fmt.Sprintf("-m set --match-set %s dst,dst", name))
 }

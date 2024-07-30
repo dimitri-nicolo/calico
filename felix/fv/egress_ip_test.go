@@ -97,7 +97,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	}
 
 	rulesProgrammed := func(felix *infrastructure.Felix, polNames []string) bool {
-		out, err := felix.ExecOutput("iptables-save", "-t", "filter")
+		out, err := getRuleset(felix)
 		if err != nil {
 			return false
 		}
@@ -183,18 +183,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			}, "5s", "200ms").Should(BeTrue())
 		} else {
 			hostEndpointProgrammed := func() bool {
-				out, err := felix.ExecOutput("iptables-save", "-t", "filter")
+				out, err := getRuleset(felix)
 				Expect(err).NotTo(HaveOccurred())
 				return (strings.Count(out, "cali-thfw-eth0") > 0)
 			}
 			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
-				"Expected HostEndpoint iptables rules to appear")
+				"Expected HostEndpoint rules to appear")
 			polNames := []string{"default.allow-all", "default.deny-egw", "default.deny-egw-health"}
 			Eventually(func() bool {
 				return rulesProgrammed(felix, polNames)
-			}, "10s", "1s").Should(BeTrue(), "Expected iptables rules to appear on the felix instances")
+			}, "10s", "1s").Should(BeTrue(), "Expected rules to appear on the felix instances")
 		}
-
 	}
 
 	makeClient := func(felix *infrastructure.Felix, wIP, wName string) *workload.Workload {
@@ -376,7 +375,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		})
 
 		Context("with external server", func() {
-
 			var (
 				extHost     *containers.Container
 				extWorkload *workload.Workload
@@ -426,7 +424,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 						description += " (" + proto + ")"
 
 						Context("egress selector "+description, func() {
-
 							var egwClient, gw *workload.Workload
 
 							BeforeEach(func() {
@@ -443,7 +440,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									if BPFMode() {
 										return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
 									}
-									out, err := felix.ExecOutput("iptables-save", "-t", "filter")
+									out, err := getRuleset(felix)
 									Expect(err).NotTo(HaveOccurred())
 									return (strings.Contains(out, "default.egw-deny-ingress"))
 								}
@@ -469,7 +466,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								}
 								createEgwIngPol(gw)
 								Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
-									"Expected iptables rules to appear on the correct felix instances")
+									"Expected rules to appear on the correct felix instances")
 								extWorkload.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 							})
 
@@ -489,7 +486,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		})
 
 		Context("with 3 external servers", func() {
-
 			var (
 				extHosts     []*containers.Container
 				extWorkloads []*workload.Workload
@@ -500,7 +496,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			)
 
 			JustBeforeEach(func() {
-
 				for i := 0; i < 4; i++ {
 					extHost := infrastructure.RunExtClient("external-server")
 					extWorkload := &workload.Workload{
@@ -709,7 +704,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 						description += " (" + proto + ")"
 
 						Context("egress gateway policy "+description, func() {
-
 							var egwClient *workload.Workload
 							var gws []*workload.Workload
 							var gw *workload.Workload
@@ -728,7 +722,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									if BPFMode() {
 										return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
 									}
-									out, err := felix.ExecOutput("iptables-save", "-t", "filter")
+									out, err := getRuleset(felix)
 									Expect(err).NotTo(HaveOccurred())
 									return (strings.Contains(out, "default.egw-deny-ingress"))
 								}
@@ -760,7 +754,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								}
 								createEgwIngPol(gw)
 								Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
-									"Expected iptables rules to appear on the correct felix instances")
+									"Expected rules to appear on the correct felix instances")
 								for i := 0; i < 4; i++ {
 									for j := 0; j < 2; j++ {
 										gwRoute := fmt.Sprintf("10.10.1%v.1/32", j)
@@ -795,7 +789,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							It("should reuse existing route rule and table", func() {
-
 								triggerStartup := tc.Felixes[0].RestartWithDelayedStartup()
 
 								// Add route rule and table for client, to check if egress ip manager picks table 220 for this client
@@ -826,8 +819,16 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								egwClient = makeClientWithEGWPolicy(tc.Felixes[0], "10.65.0.2", "client", "egw-policy1")
 								defer egwClient.Stop()
 
+								// Confirm the route rules we added are present.
+								Eventually(getIPRules, "10s", "1s").Should(HaveLen(3))
+
 								triggerStartup()
 
+								// Expect the extra rules and tables to be cleaned up before attempting the connectivity check to
+								// mitigate race conditions.
+								Eventually(getIPRules, "20s", "1s").Should(HaveLen(1))
+
+								// Expect correct connectivity.
 								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
 								cc.ExpectSNAT(egwClient, gws[0].IP, extWorkloads[1], 4321)
 								cc.ExpectSNAT(egwClient, gws[1].IP, extWorkloads[2], 4321)
@@ -1103,6 +1104,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -1121,3 +1123,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		infra.Stop()
 	})
 })
+
+func getRuleset(felix *infrastructure.Felix) (string, error) {
+	if NFTMode() {
+		return felix.ExecOutput("nft", "list", "ruleset")
+	}
+	return felix.ExecOutput("iptables-save", "-t", "filter")
+}

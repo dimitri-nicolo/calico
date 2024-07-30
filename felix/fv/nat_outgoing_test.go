@@ -157,26 +157,43 @@ var _ = infrastructure.DatastoreDescribeWithRemote("NATOutgoing remote cluster r
 	})
 
 	It("should have expected all pools ipset", func() {
-		listingAllIPAMPoolsIPSet := func() string {
-			output, _ := tc[0].Felixes[0].ExecOutput("ipset", "-L", "cali40all-ipam-pools")
-			return output
-		}
+		if NFTMode() {
+			listingAllIPAMPoolsIPSet := func() string {
+				output, _ := tc[0].Felixes[0].ExecOutput("nft", "list", "set", "ip", "calico", "cali40all-ipam-pools")
+				return output
+			}
+			Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
+			Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[1].Spec.CIDR))
+		} else {
+			listingAllIPAMPoolsIPSet := func() string {
+				output, _ := tc[0].Felixes[0].ExecOutput("ipset", "-L", "cali40all-ipam-pools")
+				return output
+			}
 
-		// The remote pool should be included in the all pools ipset, as traffic to it should not be masqueraded.
-		Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring("Number of entries: 2"))
-		Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
-		Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[1].Spec.CIDR))
+			// The remote pool should be included in the all pools ipset, as traffic to it should not be masqueraded.
+			Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring("Number of entries: 2"))
+			Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
+			Eventually(listingAllIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[1].Spec.CIDR))
+		}
 	})
 
 	It("should have expected masq pools ipset", func() {
-		listingMasqIPAMPoolsIPSet := func() string {
-			output, _ := tc[0].Felixes[0].ExecOutput("ipset", "-L", "cali40masq-ipam-pools")
-			return output
-		}
+		if NFTMode() {
+			listingMasqIPAMPoolsIPSet := func() string {
+				output, _ := tc[0].Felixes[0].ExecOutput("nft", "list", "set", "ip", "calico", "cali40masq-ipam-pools")
+				return output
+			}
+			Eventually(listingMasqIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
+		} else {
+			listingMasqIPAMPoolsIPSet := func() string {
+				output, _ := tc[0].Felixes[0].ExecOutput("ipset", "-L", "cali40masq-ipam-pools")
+				return output
+			}
 
-		// The remote pool should not be programmed as a masq pool for the local cluster.
-		Eventually(listingMasqIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring("Number of entries: 1"))
-		Eventually(listingMasqIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
+			// The remote pool should not be programmed as a masq pool for the local cluster.
+			Eventually(listingMasqIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring("Number of entries: 1"))
+			Eventually(listingMasqIPAMPoolsIPSet, 5*time.Second, 100*time.Millisecond).Should(ContainSubstring(natPool[0].Spec.CIDR))
+		}
 	})
 
 	AfterEach(func() {

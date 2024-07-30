@@ -206,6 +206,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
+			logNFTDiags(tc.Felixes[0])
 			tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump", "--debug")
 			tc.Felixes[0].Exec("ipset", "list")
 			tc.Felixes[0].Exec("iptables-save", "-c")
@@ -443,44 +444,68 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					dnsMode = string(localMode)
 				})
 
-				// Helper used to check iptables contains the correct entries based on DNSPolicyMode and eBPF.
+				// Helper used to check table contains the correct entries based on DNSPolicyMode and eBPF.
 				checkIPTablesFunc := func(nfq100, nfq101 bool) func() error {
 					return func() error {
-						iptablesSaveOutput, err := tc.Felixes[0].ExecCombinedOutput("iptables-save", "-c")
-						if err != nil {
-							return err
-						}
-
 						var foundReq, foundResp, found100, found101 bool
-						for _, line := range strings.Split(iptablesSaveOutput, "\n") {
-							if strings.Contains(line, "--nflog-group 3") {
-								if strings.Contains(line, "NEW") {
-									foundReq = true
+
+						var out string
+						var err error
+						if NFTMode() {
+							out, err = tc.Felixes[0].ExecCombinedOutput("nft", "list", "ruleset")
+							if err != nil {
+								return err
+							}
+							for _, line := range strings.Split(out, "\n") {
+								if strings.Contains(line, "group 3") {
+									if strings.Contains(line, "new") {
+										foundReq = true
+									}
+									if strings.Contains(line, "established") {
+										foundResp = true
+									}
+								} else if strings.Contains(line, "queue to 100") {
+									found100 = true
+								} else if strings.Contains(line, "queue flags bypass to 101") && strings.Contains(line, "established") {
+									found101 = true
 								}
-								if strings.Contains(line, "ESTABLISHED") {
-									foundResp = true
+							}
+						} else {
+							out, err = tc.Felixes[0].ExecCombinedOutput("iptables-save", "-c")
+							if err != nil {
+								return err
+							}
+
+							for _, line := range strings.Split(out, "\n") {
+								if strings.Contains(line, "--nflog-group 3") {
+									if strings.Contains(line, "NEW") {
+										foundReq = true
+									}
+									if strings.Contains(line, "ESTABLISHED") {
+										foundResp = true
+									}
+								} else if strings.Contains(line, "--queue-num 100") {
+									found100 = true
+								} else if strings.Contains(line, "--queue-num 101") && strings.Contains(line, "ESTABLISHED") {
+									found101 = true
 								}
-							} else if strings.Contains(line, "--queue-num 100") {
-								found100 = true
-							} else if strings.Contains(line, "--queue-num 101") && strings.Contains(line, "ESTABLISHED") {
-								found101 = true
 							}
 						}
 
 						if !foundReq {
-							return fmt.Errorf("iptables does not contain the NFLOG DNS request snooping rule\n%s", iptablesSaveOutput)
+							return fmt.Errorf("table does not contain the NFLOG DNS request snooping rule\n%s", out)
 						}
 						if !nfq101 && !foundResp {
-							return fmt.Errorf("iptables does not contain the NFLOG DNS response snooping rule\n%s", iptablesSaveOutput)
+							return fmt.Errorf("table does not contain the NFLOG DNS response snooping rule\n%s", out)
 						}
 						if nfq100 && !found100 {
-							return fmt.Errorf("iptables does not contain the NFQUEUE id 100 rule\n%s", iptablesSaveOutput)
+							return fmt.Errorf("table does not contain the NFQUEUE id 100 rule\n%s", out)
 						}
 						if nfq101 && !found101 {
-							return fmt.Errorf("iptables does not contain the NFQUEUE id 101 rule\n%s", iptablesSaveOutput)
+							return fmt.Errorf("table does not contain the NFQUEUE id 101 rule\n%s", out)
 						}
 						if found100 && found101 {
-							return fmt.Errorf("iptables contains NFQUEUE id 100 and 101 rules\n%s", iptablesSaveOutput)
+							return fmt.Errorf("table contains NFQUEUE id 100 and 101 rules\n%s", out)
 						}
 
 						return nil
@@ -852,6 +877,10 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		policy          *api.NetworkPolicy
 		policyChainName string
 		cc              *connectivity.Checker
+
+		queueDropMatch       string
+		dnsPolicyAllowMatch1 string
+		dnsPolicyAllowMatch2 string
 	)
 
 	const (
@@ -950,11 +979,22 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		// Ensure that Felix is connected to nfqueue
 		_, err = tc.Felixes[0].ExecCombinedOutput("cat", "/proc/net/netfilter/nfnetlink_queue")
 		Expect(err).ShouldNot(HaveOccurred())
+
+		// Define rule matches used in the test.
+		queueDropMatch = "Drop if no policies passed packet[^\n]*NFQUEUE.*"
+		dnsPolicyAllowMatch1 = "rule-name=allow-bazbiff[^\n]*cali40d"
+		dnsPolicyAllowMatch2 = "rule-name=allow-foobar[^\n]*cali40d"
+		if NFTMode() {
+			queueDropMatch = "queue to 100 comment .*Drop if no policies passed packet"
+			dnsPolicyAllowMatch1 = "cali40d-8FX6lj5QBNTr5qeMZJwks6E.*rule-name=allow-bazbiff"
+			dnsPolicyAllowMatch2 = "cali40d-c19ArGfvjwU6D6ljIxk2xsA.*rule-name=allow-foobar"
+		}
 	})
 
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
+			logNFTDiags(tc.Felixes[0])
 			tc.Felixes[0].Exec("calico-bpf", "ipsets", "dump")
 			tc.Felixes[0].Exec("ipset", "list")
 			tc.Felixes[0].Exec("iptables-save", "-c")
@@ -979,18 +1019,17 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 	When("when the dns response isn't programmed before the packet reaches the dns policy rule", func() {
 		It("nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
-			waitForIptablesChain(tc.Felixes[0], policyChainName)
+			waitForChain(tc.Felixes[0], policyChainName)
 
 			output, err := checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
 			Expect(err).ShouldNot(HaveOccurred(), output)
 
 			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 			// being accepted.
-			nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
-				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
+			nfqueuedPacketsCount := getPacketCount(tc.Felixes[0], fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), queueDropMatch)
 			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
+			dnsPolicyRulePacketsAllowed := getPacketCount(tc.Felixes[0], policyChainName, dnsPolicyAllowMatch2)
 			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 
 			cc.ExpectNone(workload1, workload3)
@@ -999,18 +1038,17 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 		// Shared code for checking DNS policy interaction with IPVS/iptables NAT.
 		checkDNSPolicyDNATInteraction := func() {
-			waitForIptablesChain(tc.Felixes[0], policyChainName)
+			waitForChain(tc.Felixes[0], policyChainName)
 
 			_, err := checkSingleShotDNSConnectivity(workload1, "bazbiff.com", dnsserver.IP)
 			Expect(err).Should(HaveOccurred(), "Unexpectedly had connectivity via DNS entry that maps to service IP")
 
 			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 			// being dropped.
-			nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
-				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
+			nfqueuedPacketsCount := getPacketCount(tc.Felixes[0], fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), queueDropMatch)
 			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-bazbiff[^\n]*cali40d")
+			dnsPolicyRulePacketsAllowed := getPacketCount(tc.Felixes[0], policyChainName, dnsPolicyAllowMatch1)
 			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(0))
 
 			// Now, to rule out a bug in our IPVS set-up, add the backing pod
@@ -1032,11 +1070,19 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 			// Wait for the new rule to show up so we know we're testing the
 			// right thing.
 			Eventually(func() string {
-				out, err := tc.Felixes[0].ExecOutput("iptables-save", "-c")
-				if err != nil {
-					return fmt.Sprintf("Error running iptables-save: %v", err)
+				if NFTMode() {
+					out, err := tc.Felixes[0].ExecOutput("nft", "list", "table", "ip", "calico")
+					if err != nil {
+						return fmt.Sprintf("Error running iptables-save: %v", err)
+					}
+					return out
+				} else {
+					out, err := tc.Felixes[0].ExecOutput("iptables-save", "-c")
+					if err != nil {
+						return fmt.Sprintf("Error running iptables-save: %v", err)
+					}
+					return out
 				}
-				return out
 			}).Should(ContainSubstring("allow-wl2"))
 
 			// Now, the packet should get through, but it should hit the
@@ -1060,6 +1106,9 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 			// its mark bits.
 
 			BeforeEach(func() {
+				if NFTMode() {
+					Skip("IPVS not supported in NFT mode")
+				}
 				tc.Felixes[0].Exec("ip", "link", "add", "dev", kubeIPVSInterface, "type", "dummy")
 				tc.Felixes[0].Exec("ip", "link", "set", kubeIPVSInterface, "up")
 				tc.Felixes[0].Exec("ip", "addr", "add", "dev", kubeIPVSInterface, serviceIP)
@@ -1074,31 +1123,37 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		if !BPFMode() {
 			Describe("with an iptables NAT IP service behind DNS", func() {
 				BeforeEach(func() {
-					tc.Felixes[0].Exec("iptables", "-t", "nat", "-A", "PREROUTING", "-d", serviceIP, "-j", "DNAT", "--to-destination", workload2IP)
+					if NFTMode() {
+						tc.Felixes[0].Exec("nft", "add", "table", "ip", "services")
+						tc.Felixes[0].Exec("nft", "add", "chain", "ip", "services", "PREROUTING", "{ type nat hook prerouting priority -100; }")
+						tc.Felixes[0].Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "ip daddr", serviceIP, "dnat", "to", workload2IP)
+					} else {
+						tc.Felixes[0].Exec("iptables", "-t", "nat", "-A", "PREROUTING", "-d", serviceIP, "-j", "DNAT", "--to-destination", workload2IP)
+					}
 				})
 				It("the packet should not match DNS policy (due to the DNAT)", checkDNSPolicyDNATInteraction)
 			})
 		}
 
 		It("nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
-			waitForIptablesChain(tc.Felixes[0], policyChainName)
+			waitForChain(tc.Felixes[0], policyChainName)
 
 			output, err := checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
 			Expect(err).ShouldNot(HaveOccurred(), output)
 
 			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 			// being accepted.
-			nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
-				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
+			nfqueuedPacketsCount := getPacketCount(tc.Felixes[0],
+				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), queueDropMatch)
 			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
+			dnsPolicyRulePacketsAllowed := getPacketCount(tc.Felixes[0], policyChainName, dnsPolicyAllowMatch2)
 			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 		})
 
 		When("the connection to nfqueue is terminated", func() {
 			It("restarts the connection and nf repeats the packet and the packet is eventually accepted by the dns policy rule", func() {
-				waitForIptablesChain(tc.Felixes[0], policyChainName)
+				waitForChain(tc.Felixes[0], policyChainName)
 
 				output, err := tc.Felixes[0].RunDebugConsoleCommand("close-nfqueue-conn")
 				Expect(err).ShouldNot(HaveOccurred(), output)
@@ -1111,21 +1166,34 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 				// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 				// being accepted.
-				nfqueuedPacketsCount := getIptablesSavePacketCount(tc.Felixes[0],
-					fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
+				nfqueuedPacketsCount := getPacketCount(tc.Felixes[0],
+					fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), queueDropMatch)
 				Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-				dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(tc.Felixes[0], policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
+				dnsPolicyRulePacketsAllowed := getPacketCount(tc.Felixes[0], policyChainName, dnsPolicyAllowMatch2)
 				Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 			})
 		})
 	})
 })
 
-// waitForIptablesChain waits for the chain to be programmed on the felix instance. It eventually times out if it waits
+// waitForChain waits for the chain to be programmed on the felix instance. It eventually times out if it waits
 // too long.
-func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
-	EventuallyWithOffset(1, felix.IPTablesChainsFn("filter"), "10s", "1s").Should(HaveKey(chainName))
+func waitForChain(felix *infrastructure.Felix, chainName string) {
+	if NFTMode() {
+		EventuallyWithOffset(1, func() error {
+			out, err := felix.ExecOutput("nft", "list", "ruleset")
+			if err != nil {
+				return nil
+			}
+			if !strings.Contains(out, fmt.Sprintf("chain filter-%s {", chainName)) {
+				return fmt.Errorf("chain %s not found in nft ruleset:\n%s", chainName, out)
+			}
+			return nil
+		}, "10s", "1s").ShouldNot(HaveOccurred())
+	} else {
+		EventuallyWithOffset(1, felix.IPTablesChainsFn("filter"), "10s", "1s").Should(HaveKey(chainName))
+	}
 }
 
 // checkSingleShotDNSConnectivity sends a single udp request to the domain name from the given workload on port 8055.
@@ -1133,6 +1201,51 @@ func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
 func checkSingleShotDNSConnectivity(w *workload.Workload, domainName, dnsServerIP string) (string, error) {
 	output, err := w.ExecCombinedOutput("test-connection", "-", domainName, "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 	return output, err
+}
+
+// getPacketCount searches for the rule identified by the chain and rule identifier given, and returns the packet
+// count for that rule. If the rule isn't found in the output this function fails the test.
+//
+// The ruleIdentifier is a regex that targets the text in the rule, and varies based on the dataplane mode.
+func getPacketCount(felix *infrastructure.Felix, chainName, ruleIdentifier string) int {
+	if NFTMode() {
+		return getNFTPacketCount(felix, chainName, ruleIdentifier)
+	}
+	return getIptablesSavePacketCount(felix, chainName, ruleIdentifier)
+}
+
+func getNFTPacketCount(felix *infrastructure.Felix, chainName, ruleIdentifier string) int {
+	var count int
+
+	EventuallyWithOffset(2, func() error {
+		out, err := felix.ExecCombinedOutput("nft", "list", "chain", "ip", "calico", fmt.Sprintf("filter-%s", chainName))
+		if err != nil {
+			return err
+		}
+
+		// Find the rule containing the identifier and extract the entire rule text from the chain.
+		ruleFinder := regexp.MustCompile(fmt.Sprintf(`.*(%s).*`, ruleIdentifier))
+		matches := ruleFinder.FindStringSubmatch(out)
+		if len(matches) < 1 {
+			return fmt.Errorf("no rule found for identifier \"%s\" using regex %s", ruleIdentifier, ruleFinder.String())
+		}
+		if len(matches) > 2 {
+			return fmt.Errorf("more than one rule found for identifier \"%s\"", ruleIdentifier)
+		}
+		rule := matches[0]
+
+		// Extract packet count from the rule.
+		packetCountFinder := regexp.MustCompile(`packets\s+(\d+)`)
+		matches = packetCountFinder.FindStringSubmatch(rule)
+		if len(matches) < 1 {
+			return fmt.Errorf("no packets found in rule \"%s\" using %s", rule, packetCountFinder.String())
+		}
+
+		count, err = strconv.Atoi(matches[1])
+		return err
+	}, "10s", "1s").ShouldNot(HaveOccurred())
+
+	return count
 }
 
 // getIptablesSavePacketCount searches the given iptables-save output for the iptables rule identified by the chain and

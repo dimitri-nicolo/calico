@@ -8,6 +8,7 @@ package fv_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/projectcalico/calico/felix/fv/connectivity"
@@ -17,8 +18,6 @@ import (
 
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"os"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -61,7 +60,6 @@ var (
 // These tests include tests of Kubernetes policies as well as other policy types. To ensure we have the correct
 // behavior, run using the Kubernetes infrastructure only.
 var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _BPF-SAFE_", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	const (
 		wepPort = 8055
 		svcPort = 8066
@@ -293,10 +291,19 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests with policy tiers _
 		if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" {
 			// Wait for felix to see and program some expected nflog entries, and for the cluster IP to appear.
 			rulesProgrammed := func() bool {
-				out0, err := tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
-				Expect(err).NotTo(HaveOccurred())
-				out1, err := tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
-				Expect(err).NotTo(HaveOccurred())
+				var out0, out1 string
+				var err error
+				if NFTMode() {
+					out0, err = tc.Felixes[0].ExecOutput("nft", "list", "table", "ip", "calico")
+					Expect(err).NotTo(HaveOccurred())
+					out1, err = tc.Felixes[1].ExecOutput("nft", "list", "table", "ip", "calico")
+					Expect(err).NotTo(HaveOccurred())
+				} else {
+					out0, err = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+					Expect(err).NotTo(HaveOccurred())
+					out1, err = tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
+					Expect(err).NotTo(HaveOccurred())
+				}
 				return strings.Count(out0, "APE0|default.ep1-1-allow-all") > 0 &&
 					strings.Count(out1, "APE0|default.ep1-1-allow-all") == 0 &&
 					strings.Count(out0, "DPI|default/staged:default.np3-4") == 0 &&

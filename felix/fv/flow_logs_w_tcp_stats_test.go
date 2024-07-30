@@ -25,7 +25,6 @@ import (
 )
 
 var _ = infrastructure.DatastoreDescribe("flow log with TCP stats", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra           infrastructure.DatastoreInfra
 		opts            infrastructure.TopologyOptions
@@ -115,6 +114,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with TCP stats", []apiconfig.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")

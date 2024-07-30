@@ -424,6 +424,9 @@ func (s *IPSets) tryResync() error {
 				if len(e.Key) == 3 {
 					// This is a concatination of IP, protocol and port. Format it back into Felix's internal representation.
 					strElems = append(strElems, fmt.Sprintf("%s,%s:%s", e.Key[0], e.Key[1], e.Key[2]))
+				} else if len(e.Key) == 2 {
+					// This is a net,net pair.
+					strElems = append(strElems, fmt.Sprintf("%s,%s", e.Key[0], e.Key[1]))
 				} else {
 					// This is just an IP address / CIDR.
 					strElems = append(strElems, e.Key[0])
@@ -435,9 +438,9 @@ func (s *IPSets) tryResync() error {
 
 	// We expect a response for every set we asked for.
 	responses := make([]setData, len(sets))
-	for range sets {
+	for i := range responses {
 		setData := <-setsChan
-		responses = append(responses, setData)
+		responses[i] = setData
 	}
 
 	for _, setData := range responses {
@@ -453,6 +456,7 @@ func (s *IPSets) tryResync() error {
 		if !ok {
 			// Programmed in the data plane, but not in memory. Skip this one - we'll clean up
 			// state for this below.
+			s.setNameToProgrammedMetadata.Dataplane().Set(setName, ipsets.IPSetMetadata{})
 			continue
 		}
 		elemsSet := s.filterAndCanonicaliseMembers(metadata.Type, strElems)
@@ -528,6 +532,10 @@ func (s *IPSets) NFTablesSet(name string) *knftables.Set {
 		// IP and port sets don't support the interval flag.
 	case ipsets.IPSetTypeHashIP:
 		// IP addr sets don't use the interval flag.
+	case ipsets.IPSetTypeBitmapPort:
+		// Bitmap port sets don't use the interval flag.
+	case ipsets.IPSetTypeHashNetNet:
+		// Net sets don't use the interval flag.
 	case ipsets.IPSetTypeHashNet:
 		// Net sets require the interval flag.
 		flags = append(flags, knftables.IntervalFlag)
@@ -819,6 +827,12 @@ func CanonicaliseMember(t ipsets.IPSetType, member string) ipsets.IPSetMember {
 		// pretty-printing, the hash:net ipset type prints IPs with no "/32" or "/128"
 		// suffix.
 		return ip.MustParseCIDROrIP(member)
+	case ipsets.IPSetTypeHashNetNet:
+		cidrs := strings.Split(member, ",")
+		return netNet{
+			cidr1: ip.MustParseCIDROrIP(cidrs[0]),
+			cidr2: ip.MustParseCIDROrIP(cidrs[1]),
+		}
 	case ipsets.IPSetTypeBitmapPort:
 		// Trim the family if it exists
 		if member[0] == 'v' {
@@ -831,6 +845,23 @@ func CanonicaliseMember(t ipsets.IPSetType, member string) ipsets.IPSetMember {
 	}
 	log.WithField("type", string(t)).Warn("Unknown IPSetType")
 	return nil
+}
+
+type netNet struct {
+	cidr1, cidr2 ip.CIDR
+}
+
+func (nn netNet) String() string {
+	// nftables doesn't support interval types (CIDRs) on concatenation sets, and thus we
+	// can only represent the set as a concatenation of IP addresses. Conveniently, the only
+	// current use of this type is for WorkloadEndpoint IP addresses which are always /32 or /128.
+	if nn.cidr1.Version() == 4 && nn.cidr1.Prefix() != 32 || nn.cidr1.Version() == 6 && nn.cidr1.Prefix() != 128 {
+		log.WithField("cidr", nn.cidr1).Panic("Unexpected CIDR prefix")
+	}
+	if nn.cidr2.Version() == 4 && nn.cidr2.Prefix() != 32 || nn.cidr2.Version() == 6 && nn.cidr2.Prefix() != 128 {
+		log.WithField("cidr", nn.cidr2).Panic("Unexpected CIDR prefix")
+	}
+	return nn.cidr1.Addr().String() + " . " + nn.cidr2.Addr().String()
 }
 
 // v4NFTIPPort is a struct that represents an IPv4 address, protocol and port for IPv4, and implements
@@ -864,8 +895,12 @@ func setType(t ipsets.IPSetType, ipVersion int) string {
 		return fmt.Sprintf("ipv%d_addr", ipVersion)
 	case ipsets.IPSetTypeHashNet:
 		return fmt.Sprintf("ipv%d_addr", ipVersion)
+	case ipsets.IPSetTypeHashNetNet:
+		return fmt.Sprintf("ipv%d_addr . ipv%d_addr", ipVersion, ipVersion)
 	case ipsets.IPSetTypeHashIPPort:
 		return fmt.Sprintf("ipv%d_addr . inet_proto . inet_service", ipVersion)
+	case ipsets.IPSetTypeBitmapPort:
+		return "inet_service"
 	}
 	return string(t)
 }

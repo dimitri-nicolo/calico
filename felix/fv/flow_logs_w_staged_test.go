@@ -71,7 +71,6 @@ var (
 // These tests include tests of Kubernetes policies as well as other policy types. To ensure we have the correct
 // behavior, run using the Kubernetes infrastructure only.
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	const (
 		wepPort = 8055
 		svcPort = 8066
@@ -544,6 +543,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -595,7 +595,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 //
 // Each change to staged policy should result in a change of aggregation level.
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log with staged policy tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	const (
 		wepPort = 8055
 		svcPort = 8066
@@ -1167,6 +1166,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -1195,8 +1195,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 })
 
 func getRuleFunc(felix *infrastructure.Felix, rule string) func() error {
+	cmd := []string{"iptables-save", "-t", "filter"}
+	if NFTMode() {
+		cmd = []string{"nft", "list", "ruleset"}
+	}
 	return func() error {
-		if out, err := felix.ExecOutput("iptables-save", "-t", "filter"); err != nil {
+		if out, err := felix.ExecOutput(cmd...); err != nil {
 			return err
 		} else if strings.Count(out, rule) > 0 {
 			return nil

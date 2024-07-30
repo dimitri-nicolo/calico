@@ -342,7 +342,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 	// host-networked DNS server.
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding DNS request snooping rules")
-		ifaceMatch := prefix + "+"
+		ifaceMatch := prefix + r.wildcard
 		inputRules = append(inputRules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
 	}
 
@@ -793,7 +793,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*gene
 	// we might be too late because of the packet already having been accepted.
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding DNS snooping rules")
-		ifaceMatch := prefix + "+"
+		ifaceMatch := prefix + r.wildcard
 		rules = append(rules, r.dnsResponseSnoopingRules(ifaceMatch, ipVersion)...)
 		rules = append(rules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
 	}
@@ -1469,7 +1469,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 						Protocol("tcp").
 						DestAddrType(generictables.AddrTypeLocal).
 						// We use a single port ipset for both V4 and V6
-						DestIPPortSet(r.IPSetConfigV4.NameForMainIPSet(tproxydefs.NodePortsIPSet)),
+						DestPortSet(r.IPSetConfigV4.NameForMainIPSet(tproxydefs.NodePortsIPSet)),
 					Action: r.Jump(ChainManglePreroutingTProxyNP),
 				},
 			},

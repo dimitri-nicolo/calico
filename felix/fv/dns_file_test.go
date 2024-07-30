@@ -25,7 +25,6 @@ import (
 )
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
-
 	var (
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
@@ -59,7 +58,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	startWithPersistentFileContent := func(fileContent string) {
 		// Populate the DNS info file that Felix will read.
-		err := os.WriteFile(path.Join(dnsDir, "dnsinfo.txt"), []byte(fileContent), 0644)
+		err := os.WriteFile(path.Join(dnsDir, "dnsinfo.txt"), []byte(fileContent), 0o644)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Now start etcd and Felix.
@@ -129,9 +128,17 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			return fmt.Errorf("No IP set with 1000 members (last=%d) in:\n[%v]", numMembers, ipsetsOutput)
 		}
 
-		for name, count := range felix.IPSetSizes() {
-			if strings.HasPrefix(name, "cali40d:") && count == 1000 {
-				return nil
+		if NFTMode() {
+			for _, count := range felix.NFTSetSizes() {
+				if count == 1000 {
+					return nil
+				}
+			}
+		} else {
+			for name, count := range felix.IPSetSizes() {
+				if strings.HasPrefix(name, "cali40d:") && count == 1000 {
+					return nil
+				}
 			}
 		}
 		return errors.New("No IP set with 1000 members")
