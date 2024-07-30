@@ -82,7 +82,13 @@ func NewReporter(dispatchers map[string]types.Reporter, flushInterval time.Durat
 	}
 }
 
-func newReporterTest(dispatchers map[string]types.Reporter, healthAggregator *health.HealthAggregator, hepEnabled bool, flushTicker jitter.JitterTicker, logOffset LogOffset) *FlowLogReporter {
+func newReporterTest(
+	dispatchers map[string]types.Reporter,
+	healthAggregator *health.HealthAggregator,
+	hepEnabled bool,
+	flushTicker jitter.JitterTicker,
+	logOffset LogOffset,
+) *FlowLogReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
@@ -102,67 +108,73 @@ func newReporterTest(dispatchers map[string]types.Reporter, healthAggregator *he
 	}
 }
 
-func (fr *FlowLogReporter) updateFlowLogsAvg(numFlows int) {
-	fr.flowLogAvgMutex.Lock()
-	defer fr.flowLogAvgMutex.Unlock()
-	fr.flowLogAvg.totalFlows += numFlows
+func (r *FlowLogReporter) updateFlowLogsAvg(numFlows int) {
+	r.flowLogAvgMutex.Lock()
+	defer r.flowLogAvgMutex.Unlock()
+	r.flowLogAvg.totalFlows += numFlows
 }
 
-func (fr *FlowLogReporter) GetAndResetFlowLogsAvgPerMinute() (flowsPerMinute float64) {
-	fr.flowLogAvgMutex.Lock()
-	defer fr.flowLogAvgMutex.Unlock()
+func (r *FlowLogReporter) GetAndResetFlowLogsAvgPerMinute() (flowsPerMinute float64) {
+	r.flowLogAvgMutex.Lock()
+	defer r.flowLogAvgMutex.Unlock()
 
-	if fr.flowLogAvg == nil || fr.flowLogAvg.totalFlows == 0 {
+	if r.flowLogAvg == nil || r.flowLogAvg.totalFlows == 0 {
 		return 0
 	}
 
 	currentTime := time.Now()
-	elapsedTime := currentTime.Sub(fr.flowLogAvg.lastReportTime)
+	elapsedTime := currentTime.Sub(r.flowLogAvg.lastReportTime)
 
-	if elapsedTime.Seconds() < fr.flushIntervalDuration {
+	if elapsedTime.Seconds() < r.flushIntervalDuration {
 		return 0
 	}
 
-	flowsPerMinute = float64(fr.flowLogAvg.totalFlows) / elapsedTime.Minutes()
-	fr.resetFlowLogsAvg()
+	flowsPerMinute = float64(r.flowLogAvg.totalFlows) / elapsedTime.Minutes()
+	r.resetFlowLogsAvg()
 	return flowsPerMinute
 }
 
 // resetFlowLogsAvg sets the flowAvg fields in FlowLogsReporter.
 // This method isn't safe to be used concurrently and the caller should acquire the
 // Report.flowLogAvgMutex before calling this method.
-func (fr *FlowLogReporter) resetFlowLogsAvg() {
-	fr.flowLogAvg.totalFlows = 0
-	fr.flowLogAvg.lastReportTime = time.Now()
+func (r *FlowLogReporter) resetFlowLogsAvg() {
+	r.flowLogAvg.totalFlows = 0
+	r.flowLogAvg.lastReportTime = time.Now()
 }
 
-func (c *FlowLogReporter) AddAggregator(agg *Aggregator, dispatchers []string) {
+func (r *FlowLogReporter) AddAggregator(agg *Aggregator, dispatchers []string) {
 	var ref aggregatorRef
 	ref.a = agg
 	for _, d := range dispatchers {
-		dis, ok := c.dispatchers[d]
+		dis, ok := r.dispatchers[d]
 		if !ok {
 			// This is a code error and is unrecoverable.
 			log.Panic(fmt.Sprintf("unknown dispatcher \"%s\"", d))
 		}
 		ref.d = append(ref.d, dis)
 	}
-	c.aggregators = append(c.aggregators, ref)
+	r.aggregators = append(r.aggregators, ref)
 }
 
-func (c *FlowLogReporter) Start() error {
+func (r *FlowLogReporter) Start() error {
 	log.Info("Starting FlowLogReporter")
-	go c.run()
+
+	// Try to start the dispatchers now to give early feedback.  We'll retry
+	// on the health tick on failure.
+	ready := r.maybeStartDispatchers()
+	r.reportHealth(ready)
+
+	go r.run()
 	return nil
 }
 
-func (c *FlowLogReporter) Report(u interface{}) error {
+func (r *FlowLogReporter) Report(u interface{}) error {
 	mu, ok := u.(metric.Update)
 	if !ok {
 		return fmt.Errorf("invalid metric update")
 	}
 	log.Debug("Flow Logs Report got Metric Update")
-	if !c.hepEnabled {
+	if !r.hepEnabled {
 		if mu.SrcEp != nil && mu.SrcEp.IsHostEndpoint() {
 			mu.SrcEp = nil
 		}
@@ -171,7 +183,7 @@ func (c *FlowLogReporter) Report(u interface{}) error {
 		}
 	}
 
-	for _, agg := range c.aggregators {
+	for _, agg := range r.aggregators {
 		if err := agg.a.FeedUpdate(&mu); err != nil {
 			log.WithError(err).Debug("failed to feed metric update")
 		}
@@ -179,40 +191,41 @@ func (c *FlowLogReporter) Report(u interface{}) error {
 	return nil
 }
 
-func (fr *FlowLogReporter) run() {
+func (r *FlowLogReporter) run() {
 	healthTicks := time.NewTicker(healthInterval)
 	defer healthTicks.Stop()
-	fr.reportHealth()
 	for {
 		// TODO(doublek): Stop and flush cases.
 		select {
-		case <-fr.flushTicker.Done():
+		case <-r.flushTicker.Done():
 			log.Debugf("Stopping flush ticker")
 			healthTicks.Stop()
 			return
-		case <-fr.flushTicker.Channel():
+		case <-r.flushTicker.Channel():
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
 			log.Debug("Flow log flush tick")
-			var offsets = fr.logOffset.Read()
-			var isBehind = fr.logOffset.IsBehind(offsets)
-			var factor = fr.logOffset.GetIncreaseFactor(offsets)
+			var offsets = r.logOffset.Read()
+			var isBehind = r.logOffset.IsBehind(offsets)
+			var factor = r.logOffset.GetIncreaseFactor(offsets)
 
-			for _, agg := range fr.aggregators {
+			for _, agg := range r.aggregators {
 				// Evaluate if the external pipeline is stalled
 				// and increase / decrease the aggregation level if needed
-				newLevel := fr.estimateLevel(agg, AggregationKind(factor), isBehind)
+				newLevel := r.estimateLevel(agg, AggregationKind(factor), isBehind)
 
 				// Retrieve values from cache and calibrate the cache to the new aggregation level
 				fl := agg.a.GetAndCalibrate(newLevel)
-				fr.updateFlowLogsAvg(len(fl))
+				r.updateFlowLogsAvg(len(fl))
 				if len(fl) > 0 {
 					// Dispatch logs
 					for _, d := range agg.d {
-						log.WithFields(log.Fields{
-							"size":       len(fl),
-							"dispatcher": d,
-						}).Debug("Dispatching log buffer")
+						if log.IsLevelEnabled(log.DebugLevel) {
+							log.WithFields(log.Fields{
+								"size":       len(fl),
+								"dispatcher": fmt.Sprintf("%T", d),
+							}).Debug("Dispatching log buffer")
+						}
 						if err := d.Report(fl); err != nil {
 							log.WithError(err).Debug("failed to dispatch flow log")
 						}
@@ -221,15 +234,16 @@ func (fr *FlowLogReporter) run() {
 			}
 		case <-healthTicks.C:
 			// Periodically report current health.
-			fr.reportHealth()
+			ready := r.maybeStartDispatchers()
+			r.reportHealth(ready)
 		}
 	}
 }
 
-func (c *FlowLogReporter) estimateLevel(
+func (r *FlowLogReporter) estimateLevel(
 	agg aggregatorRef, factor AggregationKind, isBehind bool,
 ) AggregationKind {
-	logutil.Tracef(c.displayDebugTraceLogs, "Evaluate aggregation level. Logs are marked as behind = %v for level %v",
+	logutil.Tracef(r.displayDebugTraceLogs, "Evaluate aggregation level. Logs are marked as behind = %v for level %v",
 		isBehind, agg.a.CurrentAggregationLevel())
 	var newLevel = agg.a.CurrentAggregationLevel()
 	if isBehind {
@@ -237,21 +251,21 @@ func (c *FlowLogReporter) estimateLevel(
 	} else if agg.a.AggregationLevelChanged() {
 		newLevel = agg.a.DefaultAggregationLevel()
 	}
-	logutil.Tracef(c.displayDebugTraceLogs, "Estimate aggregation level to %d", newLevel)
+	logutil.Tracef(r.displayDebugTraceLogs, "Estimate aggregation level to %d", newLevel)
 	return newLevel
 }
 
-func (c *FlowLogReporter) reportHealth() {
-	if c.healthAggregator != nil {
-		c.healthAggregator.Report(healthName, &health.HealthReport{
+func (r *FlowLogReporter) reportHealth(ready bool) {
+	if r.healthAggregator != nil {
+		r.healthAggregator.Report(healthName, &health.HealthReport{
 			Live:  true,
-			Ready: c.canPublish(),
+			Ready: ready,
 		})
 	}
 }
 
-func (c *FlowLogReporter) canPublish() bool {
-	for name, d := range c.dispatchers {
+func (r *FlowLogReporter) maybeStartDispatchers() bool {
+	for name, d := range r.dispatchers {
 		err := d.Start()
 		if err != nil {
 			log.WithError(err).

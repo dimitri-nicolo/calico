@@ -61,7 +61,7 @@ func NewRangeLogOffset(offsetReader OffsetReader, threshold int64) *rangeLogOffs
 	return &rangeLogOffset{offsetReader, threshold}
 }
 
-type fluentDLogOffsetReader struct {
+type FluentDLogOffsetReader struct {
 	regExp       *regexp.Regexp
 	positionFile string
 }
@@ -74,12 +74,12 @@ const unwatchedPosition = "ffffffffffffffff"
 
 var posFilePattern = regexp.MustCompile(pattern)
 
-// NewFluentDLogOffsetReader creates a new fluentDLogOffsetReader. fluentDLogOffsetReader reads Offsets stored by
+// NewFluentDLogOffsetReader creates a new FluentDLogOffsetReader. FluentDLogOffsetReader reads Offsets stored by
 // FluentD in the position file and compares than with the actual size of the logfile. The position file written by
 // FluentD will have one entry for each of the log files that is reading from. Each line from the position file will
 // have the following format: {file_path}\t{position_in_file_as_hex}\t{inode_of_the_file_as_hex}
-func NewFluentDLogOffsetReader(positionFile string) *fluentDLogOffsetReader {
-	return &fluentDLogOffsetReader{posFilePattern, positionFile}
+func NewFluentDLogOffsetReader(positionFile string) *FluentDLogOffsetReader {
+	return &FluentDLogOffsetReader{posFilePattern, positionFile}
 }
 
 func (fluentD *rangeLogOffset) Read() Offsets {
@@ -116,7 +116,7 @@ func (fluentD *rangeLogOffset) GetIncreaseFactor(offsets Offsets) int {
 	return maxFactor
 }
 
-func (fluentD *fluentDLogOffsetReader) Read() Offsets {
+func (fluentD *FluentDLogOffsetReader) Read() Offsets {
 	var offsets = Offsets{}
 	log.Debugf("Reading last position from %s", fluentD.positionFile)
 	fi, err := os.Open(fluentD.positionFile)
@@ -166,7 +166,7 @@ func offset(hexOffset string, filePath string) (int64, bool) {
 	}
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		log.Warnf("Could not stat find file %s due to %s", filePath, err)
+		log.Warnf("Could not stat file %s due to %s", filePath, err)
 		return 0, false
 	}
 	currentSize = fi.Size()
