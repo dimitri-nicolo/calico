@@ -21,6 +21,8 @@ var (
 	rawLog string
 	//go:embed testdata/waf_log_2.json
 	rawLog2 string
+	//go:embed testdata/waf_log_2.json
+	duplicateLog string
 )
 
 type MockClient struct {
@@ -56,7 +58,7 @@ func (f *MockWaf) List(ctx context.Context, params v1.Params) (*v1.List[v1.WAFLo
 	var wafLog v1.WAFLog
 	logs := []v1.WAFLog{}
 
-	rawLogs := []string{rawLog, rawLog2}
+	rawLogs := []string{rawLog, rawLog2, duplicateLog}
 	for _, rl := range rawLogs {
 		err := json.Unmarshal([]byte(rl), &wafLog)
 		if err != nil {
