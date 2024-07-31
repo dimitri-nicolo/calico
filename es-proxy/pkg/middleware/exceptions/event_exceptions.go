@@ -272,7 +272,7 @@ func getAlertException(eventException *v1.EventException) (*v3.AlertException, e
 		return nil, err
 	}
 	if eventException.UseNameAggr && !strings.ContainsAny(eventException.Pod, "*") {
-		return nil, errors.New("pod must contain a '*' when use_name_aggr is true")
+		return nil, fmt.Errorf("pod field '%v' must contain a '*' when use_name_aggr is true", eventException.Pod)
 	}
 	name := fmt.Sprintf("security-event-exception-%x", checksum.New(s))
 	description := fmt.Sprintf("%s%s", descriptionPrefix, eventException.Description)
