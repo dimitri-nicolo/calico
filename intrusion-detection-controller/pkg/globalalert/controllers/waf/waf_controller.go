@@ -176,11 +176,14 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 	// query was successful, update last query time
 	c.refreshLastQueryTime()
+	batchCache := make(map[cacheKey]bool)
 
 	wafEvents := []v1.Event{}
 	for _, wafLog := range logs.Items {
-		if !c.logsCache.Contains(&wafLog) {
+		wafkey := logKey(&wafLog)
+		if !c.logsCache.Contains(&wafLog) && !batchCache[wafkey] {
 			// generate the new alerts/events from the waflogs
+			batchCache[wafkey] = true
 			wafEvents = append(wafEvents, NewWafEvent(wafLog))
 		}
 	}
