@@ -10,6 +10,12 @@ spec:
           image: docker.io/library/node-windows:latest
           imagePullPolicy: IfNotPresent
           name: felix
+          volumeMounts:
+            # Mount c:/TigeraCalico from the host so that testing can have
+            # access to flow logs and DNS cache that Felix writes
+            - mountPath: /TigeraCalico
+              name: c-tigera-calico
+              readOnly: false
         - args:
             - $env:CONTAINER_SANDBOX_MOUNT_POINT/CalicoWindows/node-service.ps1
           env:
@@ -25,7 +31,7 @@ spec:
           imagePullPolicy: IfNotPresent
           name: uninstall-calico
         - command:
-          - $env:CONTAINER_SANDBOX_MOUNT_POINT/opt/cni/bin/install.exe
+            - $env:CONTAINER_SANDBOX_MOUNT_POINT/opt/cni/bin/install.exe
           env:
             - name: CNI_BIN_DIR
               value: /host/opt/cni/bin
@@ -41,3 +47,7 @@ spec:
           image: docker.io/library/cni-windows:latest
           imagePullPolicy: IfNotPresent
           name: install-cni
+      volumes:
+        - name: c-tigera-calico
+          hostPath:
+            path: /TigeraCalico
