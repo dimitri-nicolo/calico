@@ -37,7 +37,7 @@ var (
 )
 
 func secretAccessDenied(name string) error {
-	return fmt.Errorf("access denied: %s", name)
+	return fmt.Errorf("[Global Threat Feeds] access denied: %s", name)
 }
 
 type RestrictedSecretsClient struct {

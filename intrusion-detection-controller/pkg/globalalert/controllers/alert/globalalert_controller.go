@@ -73,7 +73,7 @@ func NewGlobalAlertController(calicoClientSet calicoclient.Interface, linseedCli
 func (c *globalAlertController) Run(parentCtx context.Context) {
 	var ctx context.Context
 	ctx, c.cancel = context.WithCancel(parentCtx)
-	log.Infof("Starting alert controller for cluster %s", c.clusterName)
+	log.Infof("[Global Alert] Starting alert controller for cluster %s", c.clusterName)
 	go c.worker.Run(ctx.Done())
 }
 

@@ -66,7 +66,7 @@ func (p dnSetHandler) updateDataStore(ctx context.Context, name string, snapshot
 
 func (d dnSetHandler) handleSnapshot(ctx context.Context, snapshot interface{}, feedCacher cacher.GlobalThreatFeedCacher, f SyncFailFunction) {
 	if d.gnsEnabled {
-		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
+		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("[Global Threat Feeds] sync not supported for domain name set"))
 	} else {
 		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 	}
@@ -74,7 +74,7 @@ func (d dnSetHandler) handleSnapshot(ctx context.Context, snapshot interface{}, 
 
 func (d dnSetHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
 	if d.gnsEnabled {
-		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("sync not supported for domain name set"))
+		utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, errors.New("[Global Threat Feeds] sync not supported for domain name set"))
 	} else {
 		utils.ClearErrorFromFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed)
 	}

@@ -62,7 +62,7 @@ func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) storag
 				logContext.WithError(err).WithFields(log.Fields{
 					"entry_num": n,
 					"entry":     entry,
-				}).Warn("could not parse IP network")
+				}).Warn("[Global Threat Feeds] could not parse IP network")
 			})
 			return nil
 		} else {
@@ -75,7 +75,7 @@ func parseIP(entry string, logContext *log.Entry, n int, once *sync.Once) storag
 				log.WithFields(log.Fields{
 					"entry_num": n,
 					"entry":     entry,
-				}).Warn("could not parse IP address")
+				}).Warn("[Global Threat Feeds] could not parse IP address")
 			})
 			return nil
 		} else {
@@ -105,10 +105,10 @@ func (h ipSetHandler) get(ctx context.Context) (interface{}, error) {
 
 func (h ipSetHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
 	if h.gnsEnabled {
-		log.WithField("feed", h.name).Info("synchronizing GlobalNetworkSet from cached feed contents")
+		log.WithField("feed", h.name).Infof("[Global Threat Feeds] synchronizing GlobalNetworkSet from cached feed %v contents", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 		ipSet, err := h.get(ctx)
 		if err != nil {
-			log.WithError(err).WithField("feed", h.name).Error("failed to load cached feed contents")
+			log.WithError(err).WithField("feed", h.name).Errorf("[Global Threat Feeds] failed to load cached feed %v contents", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, err)
 		} else {
 			g := h.makeGNS(ipSet)
