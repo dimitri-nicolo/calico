@@ -3714,6 +3714,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				route := routes[0]
 				Expect(route).Should(Equal(netlink.Route{
 					LinkIndex: link.Attrs().Index,
+					Dst:       netlinkDefaultCIDR(),
 					Table:     2,
 					Type:      route.Type,
 					Protocol:  route.Protocol,

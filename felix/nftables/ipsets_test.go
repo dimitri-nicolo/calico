@@ -49,7 +49,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 		s.AddOrReplaceIPSet(m1, []string{"10.0.0.1"})
 		s.AddOrReplaceIPSet(m2, []string{"10.0.0.2"})
 		s.AddOrReplaceIPSet(m3, []string{"10.0.0.3"})
-		s.ApplyUpdates()
+		s.ApplyUpdates(nil)
 
 		// Modifiy each set out-of-band.
 		tx := f.NewTransaction()
@@ -73,7 +73,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 		// Trigger a resync, which should fix the out-of-band modifications.
 		f.Reset()
 		s.QueueResync()
-		s.ApplyUpdates()
+		s.ApplyUpdates(nil)
 
 		// Expect all errors to have been executed.
 		Expect(f.ListElementsErrors).To(HaveLen(0))
