@@ -465,7 +465,7 @@ func (c *Container) DockerInspect(format string) string {
 		c.Name,
 	)
 	outputBytes, err := inspectCmd.CombinedOutput()
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Failed to run %q", inspectCmd))
 	return string(outputBytes)
 }
 
@@ -605,7 +605,7 @@ func (c *Container) WaitUntilRunning() {
 
 		cmd := utils.Command("docker", "ps")
 		out, err := cmd.CombinedOutput()
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "Failed to run 'docker ps'")
 		if strings.Contains(string(out), c.Name) {
 			break
 		}
@@ -622,7 +622,7 @@ func (c *Container) Stopped() bool {
 func (c *Container) ListedInDockerPS() bool {
 	cmd := utils.Command("docker", "ps")
 	out, err := cmd.CombinedOutput()
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), "Failed to run 'docker ps'")
 	return strings.Contains(string(out), c.Name)
 }
 
@@ -676,7 +676,7 @@ func (c *Container) ExecOutput(args ...string) (string, error) {
 	cmd := utils.Command("docker", arg...)
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to make a pipe for stderr %q: %w", cmd, err)
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -685,9 +685,10 @@ func (c *Container) ExecOutput(args ...string) (string, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		if out == nil {
-			return "", err
+			return "", fmt.Errorf("command failed with no output %q: %w", cmd, err)
 		}
-		return string(out), err
+		outStr := string(out)
+		return outStr, fmt.Errorf("command failed %q: %w output=%q", cmd, err, outStr)
 	}
 	return string(out), nil
 }
@@ -705,9 +706,10 @@ func (c *Container) ExecCombinedOutput(args ...string) (string, error) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if out == nil {
-			return "", err
+			return "", fmt.Errorf("command failed with no output %q: %w", cmd, err)
 		}
-		return string(out), err
+		outStr := string(out)
+		return outStr, fmt.Errorf("command failed %q: %w output=%q", cmd, err, outStr)
 	}
 	return string(out), nil
 }
