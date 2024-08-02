@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/felix/aws"
+	"github.com/projectcalico/calico/felix/dataplane/linux/dataplanedefs"
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
@@ -725,7 +726,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		var routeTableVXLAN routetable.RouteTableInterface
 		if !config.RouteSyncDisabled {
 			log.Debug("RouteSyncDisabled is false.")
-			routeTableVXLAN = routetable.New([]string{"^" + VXLANIfaceNameV4 + "$"}, 4, config.NetlinkTimeout,
+			routeTableVXLAN = routetable.New([]string{"^" + dataplanedefs.VXLANIfaceNameV4 + "$"}, 4, config.NetlinkTimeout,
 				config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_MAIN,
 				dp.loopSummarizer, featureDetector, routetable.WithLivenessCB(dp.reportHealth))
 		} else {
@@ -733,14 +734,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			routeTableVXLAN = &routetable.DummyTable{}
 		}
 
-		vxlanFDB := vxlanfdb.New(netlink.FAMILY_V4, VXLANIfaceNameV4, featureDetector, config.NetlinkTimeout)
+		vxlanFDB := vxlanfdb.New(netlink.FAMILY_V4, dataplanedefs.VXLANIfaceNameV4, featureDetector, config.NetlinkTimeout)
 		dp.vxlanFDBs = append(dp.vxlanFDBs, vxlanFDB)
 
 		dp.vxlanManager = newVXLANManager(
 			ipSetsV4,
 			routeTableVXLAN,
 			vxlanFDB,
-			VXLANIfaceNameV4,
+			dataplanedefs.VXLANIfaceNameV4,
 			config,
 			dp.loopSummarizer,
 			4,
@@ -751,7 +752,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(dp.vxlanManager)
 	} else {
 		// Start a cleanup goroutine not to block felix if it needs to retry
-		go cleanUpVXLANDevice(VXLANIfaceNameV4)
+		go cleanUpVXLANDevice(dataplanedefs.VXLANIfaceNameV4)
 	}
 
 	// Allocate the tproxy route table indices before Egress grabs them all.
@@ -1475,7 +1476,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			var routeTableVXLANV6 routetable.RouteTableInterface
 			if !config.RouteSyncDisabled {
 				log.Debug("RouteSyncDisabled is false.")
-				routeTableVXLANV6 = routetable.New([]string{"^" + VXLANIfaceNameV6 + "$"}, 6, config.NetlinkTimeout,
+				routeTableVXLANV6 = routetable.New([]string{"^" + dataplanedefs.VXLANIfaceNameV6 + "$"}, 6, config.NetlinkTimeout,
 					config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, true, unix.RT_TABLE_MAIN,
 					dp.loopSummarizer, featureDetector, routetable.WithLivenessCB(dp.reportHealth))
 			} else {
@@ -1483,14 +1484,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				routeTableVXLANV6 = &routetable.DummyTable{}
 			}
 
-			vxlanFDBV6 := vxlanfdb.New(netlink.FAMILY_V6, VXLANIfaceNameV6, featureDetector, config.NetlinkTimeout)
+			vxlanFDBV6 := vxlanfdb.New(netlink.FAMILY_V6, dataplanedefs.VXLANIfaceNameV6, featureDetector, config.NetlinkTimeout)
 			dp.vxlanFDBs = append(dp.vxlanFDBs, vxlanFDBV6)
 
 			dp.vxlanManagerV6 = newVXLANManager(
 				ipSetsV6,
 				routeTableVXLANV6,
 				vxlanFDBV6,
-				VXLANIfaceNameV6,
+				dataplanedefs.VXLANIfaceNameV6,
 				config,
 				dp.loopSummarizer,
 				6,
@@ -1501,7 +1502,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.RegisterManager(dp.vxlanManagerV6)
 		} else {
 			// Start a cleanup goroutine not to block felix if it needs to retry
-			go cleanUpVXLANDevice(VXLANIfaceNameV6)
+			go cleanUpVXLANDevice(dataplanedefs.VXLANIfaceNameV6)
 		}
 
 		var routeTableV6 routetable.RouteTableInterface
@@ -2332,9 +2333,9 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 			}
 			fwdRules = append(fwdRules,
 				generictables.Rule{
-					Match:   d.newMatch().InInterface(bpfOutDev),
+					Match:   d.newMatch().InInterface(dataplanedefs.BPFOutDev),
 					Action:  d.actions.Allow(),
-					Comment: []string{"From ", bpfOutDev, " device, mark verified, accept."},
+					Comment: []string{"From ", dataplanedefs.BPFOutDev, " device, mark verified, accept."},
 				},
 			)
 		}
