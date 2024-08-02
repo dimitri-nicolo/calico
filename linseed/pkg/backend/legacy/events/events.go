@@ -315,10 +315,11 @@ func (b *eventsBackend) getEventIndexValues(ctx context.Context, i api.ClusterIn
 	}
 
 	q := b.queryHelper.BaseQuery(i)
-	q = q.Should(elastic.NewIdsQuery().Ids(ids...))
+	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
 
 	// Build the query.
 	idsQuery := b.client.Search().
+		Index(b.index.Index(i)).
 		Query(q)
 
 	indexValues := make(map[string]string)

@@ -30,14 +30,13 @@ import (
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var _ = describeALPTest(false)
-var _ = describeALPTest(true)
+var (
+	_ = describeALPTest(false)
+	_ = describeALPTest(true)
+)
 
 func describeALPTest(ipip bool) bool {
-	var (
-		TPROXYApplicationLayerPolicyIPSet = fmt.Sprintf("cali40%s",
-			tproxydefs.ApplicationLayerPolicyIPSet)
-	)
+	TPROXYApplicationLayerPolicyIPSet := fmt.Sprintf("cali40%s", tproxydefs.ApplicationLayerPolicyIPSet)
 
 	tunnel := "none"
 	if ipip {
@@ -47,7 +46,6 @@ func describeALPTest(ipip bool) bool {
 	return infrastructure.DatastoreDescribe("ALP tests tunnel="+tunnel,
 		[]apiconfig.DatastoreType{apiconfig.Kubernetes},
 		func(getInfra infrastructure.InfraFactory) {
-
 			// if numNodes <= 1 no IPPool is created
 			const numNodes = 2
 			const clusterIP = "10.101.0.10"
@@ -81,8 +79,8 @@ func describeALPTest(ipip bool) bool {
 				ip string,
 				felix *infrastructure.Felix,
 				exists bool,
-				canErr bool) {
-
+				canErr bool,
+			) {
 				Eventually(func() bool {
 					out, err := felix.ExecOutput("ipset", "list", ipSetID)
 					log.Infof("felix ipset list output %s", out)
@@ -244,8 +242,14 @@ func describeALPTest(ipip bool) bool {
 				// content of the maps.
 				Eventually(func() bool {
 					for _, felix := range tc.Felixes {
-						if _, err := felix.ExecOutput("ipset", "list", TPROXYApplicationLayerPolicyIPSet); err != nil {
-							return false
+						if NFTMode() {
+							if _, err := felix.ExecOutput("nft", "list", "set", "ip", "calico", TPROXYApplicationLayerPolicyIPSet); err != nil {
+								return false
+							}
+						} else {
+							if _, err := felix.ExecOutput("ipset", "list", TPROXYApplicationLayerPolicyIPSet); err != nil {
+								return false
+							}
 						}
 					}
 					return true
@@ -282,6 +286,5 @@ func describeALPTest(ipip bool) bool {
 					assertIPInIPSetErr(TPROXYApplicationLayerPolicyIPSet, w[1][0].IP, tc.Felixes[1], false, true)
 				})
 			})
-
 		})
 }

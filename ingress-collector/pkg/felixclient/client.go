@@ -7,11 +7,17 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/resolver"
 
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/ingress-collector/pkg/collector"
 )
+
+func init() {
+	resolver.SetDefaultScheme("passthrough")
+}
 
 type FelixClient interface {
 	SendStats(context.Context, collector.IngressCollector)
@@ -34,7 +40,7 @@ func NewFelixClient(target string, opts []grpc.DialOption) FelixClient {
 // SendStats listens for data from the collector and sends it.
 func (fc *felixClient) SendStats(ctx context.Context, collector collector.IngressCollector) {
 	log.Info("Starting sending DataplaneStats to Policy Sync server")
-	conn, err := grpc.Dial(fc.target, fc.dialOpts...)
+	conn, err := grpc.NewClient(fc.target, fc.dialOpts...)
 	if err != nil {
 		log.Warnf("fail to dial Policy Sync server: %v", err)
 		return

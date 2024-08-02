@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
@@ -134,7 +136,6 @@ func main() {
 	}
 
 	health, err := client.NewHealth()
-
 	if err != nil {
 		log.Fatalf("Failed to create health server: %s", err)
 	}
@@ -194,6 +195,7 @@ func main() {
 		client.WithTunnelDialTimeout(cfg.TunnelDialTimeout),
 		client.WithConnectionRetryAttempts(cfg.ConnectionRetryAttempts),
 		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
+		client.WithHTTPProxyURL(tunnel.GetHTTPProxyURL(cfg.VoltronURL)),
 	)
 
 	if err != nil {
@@ -201,7 +203,7 @@ func main() {
 	}
 
 	go func() {
-		// Health checks start meaning everything before has worked.
+		// Health checks start, meaning everything before has worked.
 		if err = health.ListenAndServeHTTP(); err != nil {
 			log.Fatalf("Health exited with error: %s", err)
 		}

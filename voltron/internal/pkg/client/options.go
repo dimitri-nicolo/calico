@@ -5,6 +5,7 @@ package client
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"net/url"
 	"time"
 
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
@@ -115,6 +116,14 @@ func WithConnectionRetryInterval(connRetryInterval time.Duration) Option {
 func WithTunnelDialTimeout(tunnelDialTimeout time.Duration) Option {
 	return func(c *Client) error {
 		c.tunnelDialTimeout = tunnelDialTimeout
+		return nil
+	}
+}
+
+// WithHTTPProxyURL sets the URL that will be dialed via HTTP CONNECT to set up a TCP passthrough connection to Voltron.
+func WithHTTPProxyURL(httpProxyURL *url.URL) Option {
+	return func(c *Client) error {
+		c.httpProxyURL = httpProxyURL
 		return nil
 	}
 }

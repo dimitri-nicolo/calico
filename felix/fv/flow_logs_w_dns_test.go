@@ -53,7 +53,6 @@ import (
 // based policy and reverse DNS lookup.
 // TODO(rlb): add in BPF checks when DNS policy is fully fixed for BPF.
 var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra           infrastructure.DatastoreInfra
 		opts            infrastructure.TopologyOptions
@@ -146,7 +145,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		_, err = client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Allow traffic to networksets in staged policy
+		// Allow traffic to both networksets in staged policy
 		udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 		sgnp := api.NewStagedGlobalNetworkPolicy()
 		sgnp.Name = "tier1.ep1-1-allow-netset1-netset2"
@@ -178,7 +177,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		_, err = client.StagedGlobalNetworkPolicies().Create(utils.Ctx, sgnp, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Allow traffic to networkset1.
+		// Allow traffic to networkset2.
 		gnp := api.NewGlobalNetworkPolicy()
 		gnp.Name = "tier2.ep1-1-allow-netset2"
 		gnp.Spec.Order = &float1_0
@@ -367,6 +366,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -408,7 +408,6 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 // The main purpose is to check that destination domains are collected and reported in the flow logs
 // on a per client basis.
 var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra           infrastructure.DatastoreInfra
 		opts            infrastructure.TopologyOptions
@@ -552,6 +551,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")

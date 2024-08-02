@@ -71,9 +71,6 @@
     elastic-tsee-installer:
       image: tigera/intrusion-detection-job-installer
       version: master
-    es-curator:
-      image: tigera/es-curator
-      version: master
     intrusion-detection-controller:
       image: tigera/intrusion-detection-controller
       version: master
@@ -167,6 +164,9 @@
       version: master
     envoy-init:
       image: tigera/envoy-init
+      version: master
+    webhooks-processor:
+      image: tigera/webhooks-processor
       version: master
     # Below components are all maintained by 3rd parties and thus specify a 'registry' to indicate
     # to the docs & manifest tooling not to default to the tigera registry.

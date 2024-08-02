@@ -79,7 +79,7 @@ func (d *dikastesTestCaseStep) runAssertions(s *dikastesTestSuite) {
 	s.policySync.SendUpdates(d.updates...)
 
 	// we create a grpc client from scratch..
-	cc, err := grpc.DialContext(ctx, s.dikastes.Addr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cc, err := grpc.NewClient(s.dikastes.Addr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		s.FailNowf("failed to init grpc client", "dialing to %s errors with %v", s.dikastes.Addr(), err)
 		return

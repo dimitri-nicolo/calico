@@ -64,6 +64,7 @@ type MatchCriteria interface {
 	NotDestIPSet(name string) MatchCriteria
 	DestIPPortSet(name string) MatchCriteria
 	NotDestIPPortSet(name string) MatchCriteria
+	DestPortSet(name string) MatchCriteria
 	IPSetNames() (ipSetNames []string)
 	SourcePorts(ports ...uint16) MatchCriteria
 	NotSourcePorts(ports ...uint16) MatchCriteria

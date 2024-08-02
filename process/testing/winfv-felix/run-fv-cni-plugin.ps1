@@ -34,58 +34,58 @@ Set-Item -Path env:REPORT -Value "C:\\k\\report\\report-l2bridge.xml"
 # Install containerd if not present
 if (!(Test-Path "$Env:ProgramFiles\containerd"))
 {
-  curl.exe -L https://github.com/containerd/containerd/releases/download/v$ContainerdVersion/containerd-$ContainerdVersion-windows-amd64.tar.gz -o c:\containerd-windows-amd64.tar.gz
-  cd c:\
-  tar.exe xvf c:\containerd-windows-amd64.tar.gz | Out-Null
+    curl.exe -L https://github.com/containerd/containerd/releases/download/v$ContainerdVersion/containerd-$ContainerdVersion-windows-amd64.tar.gz -o c:\containerd-windows-amd64.tar.gz
+    cd c:\
+    tar.exe xvf c:\containerd-windows-amd64.tar.gz | Out-Null
 
-  # containerd tarball contains a bin folder containing the exe files.
-  # containerd expects to be in c:\Program Files
-  Copy-Item -Path "c:\bin" -Destination "$Env:ProgramFiles\containerd" -Recurse -Force
-  cd $Env:ProgramFiles\containerd\
+    # containerd tarball contains a bin folder containing the exe files.
+    # containerd expects to be in c:\Program Files
+    Copy-Item -Path "c:\bin" -Destination "$Env:ProgramFiles\containerd" -Recurse -Force
+    cd $Env:ProgramFiles\containerd\
 
-  # Generate and save the config file.
-  .\containerd.exe config default | Out-File config.toml -Encoding ascii
+    # Generate and save the config file.
+    .\containerd.exe config default | Out-File config.toml -Encoding ascii
 
-  # Register but do not start the service.
-  .\containerd.exe --register-service
+    # Register but do not start the service.
+    .\containerd.exe --register-service
 
-  # Exclude containerd from Windows Defender Scans
-  Add-MpPreference -ExclusionProcess "$Env:ProgramFiles\containerd\containerd.exe"
+    # Exclude containerd from Windows Defender Scans
+    Add-MpPreference -ExclusionProcess "$Env:ProgramFiles\containerd\containerd.exe"
 
-  # Go back to script root
-  cd $PSScriptRoot
+    # Go back to script root
+    cd $PSScriptRoot
 }
 
 if ($ContainerRuntime -EQ "containerd")
 {
-  if ((Get-Service | where Name -EQ 'containerd' | where Status -EQ Running) -EQ $null)
-  {
-    Start-Service -Name containerd
-  }
-  if ((Get-Service | where Name -EQ 'docker' | where Status -EQ Running) -NE $null)
-  {
-    Stop-Service -Name docker
-  }
+    if ((Get-Service | where Name -EQ 'containerd' | where Status -EQ Running) -EQ $null)
+    {
+        Start-Service -Name containerd
+    }
+    if ((Get-Service | where Name -EQ 'docker' | where Status -EQ Running) -NE $null)
+    {
+        Stop-Service -Name docker
+    }
 
-  if ( "$OSVersion" -eq "Windows1809container" ) {
-     C:\bin\ctr.exe -n k8s.io images pull mcr.microsoft.com/windows/servercore:1809 | Out-Null
-  } elseif ( "$OSVersion" -eq "Windows1903container" ) {
-     C:\bin\ctr.exe -n k8s.io images pull mcr.microsoft.com/windows/servercore/insider:10.0.18317.1000 | Out-Null
-  }
+    if ( "$OSVersion" -eq "Windows1809container" ) {
+        C:\bin\ctr.exe -n k8s.io images pull mcr.microsoft.com/windows/servercore:1809 | Out-Null
+    } elseif ( "$OSVersion" -eq "Windows1903container" ) {
+        C:\bin\ctr.exe -n k8s.io images pull mcr.microsoft.com/windows/servercore/insider:10.0.18317.1000 | Out-Null
+    }
 }
 else
 {
-  if ( "$OSVersion" -eq "Windows1809container" ) {
-     docker pull mcr.microsoft.com/windows/servercore:1809
-  } elseif ( "$OSVersion" -eq "Windows1903container" ) {
-     docker pull mcr.microsoft.com/windows/servercore/insider:10.0.18317.1000
-  }
+    if ( "$OSVersion" -eq "Windows1809container" ) {
+        docker pull mcr.microsoft.com/windows/servercore:1809
+    } elseif ( "$OSVersion" -eq "Windows1903container" ) {
+        docker pull mcr.microsoft.com/windows/servercore/insider:10.0.18317.1000
+    }
 }
 
 #create external network
 if (!(Test-Path C:\\k\\helper.psm1))
 {
-  Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Microsoft/SDN/master/Kubernetes/windows/helper.psm1 -OutFile C:\\k\\helper.psm1
+    Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/Microsoft/SDN/master/Kubernetes/windows/helper.psm1 -OutFile C:\\k\\helper.psm1
 }
 ipmo C:\\k\\helper.psm1
 DownloadFile -Url "https://raw.githubusercontent.com/Microsoft/SDN/master/Kubernetes/windows/hns.psm1" -Destination C:\\k\\hns.psm1
@@ -102,7 +102,7 @@ mkdir -p C:\\k\\report
 cd C:\\k
 & .\win-fv.exe --ginkgo.focus "l2bridge network" > C:\k\report\fv-test-l2bridge.log 2>&1
 if ( $LastExitCode -ne 0 ){
-  echo $LastExitCode > c:\k\report\error-codes
+    echo $LastExitCode > c:\k\report\error-codes
 }
 
 #Delete l2bridge external network
@@ -115,7 +115,7 @@ Start-Sleep -s 20
 Set-Item -Path env:REPORT -Value "C:\\k\\report\\report-overlay.xml"
 & .\win-fv.exe --ginkgo.focus "overlay network" > C:\k\report\fv-test-overlay.log 2>&1
 if ( $LastExitCode -ne 0 ){
-  echo $LastExitCode >> c:\k\report\error-codes
+    echo $LastExitCode >> c:\k\report\error-codes
 }
 
 cp .\cf-fv-log c:\k\report
@@ -124,5 +124,4 @@ cat C:\\k\\report\\report-l2bridge.xml C:\\k\\report\\report-overlay.xml | sc C:
 echo y | c:\k\pscp.exe -2 -i c:\k\linux-node.ppk c:\k\report\* ubuntu@${LinuxPIP}:/home/ubuntu/report/
 echo done-marker > done-marker
 echo y | c:\k\pscp.exe -2 -i c:\k\linux-node.ppk done-marker ubuntu@${LinuxPIP}:/home/ubuntu/report/done-marker
-
 

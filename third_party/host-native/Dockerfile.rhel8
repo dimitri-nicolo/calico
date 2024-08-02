@@ -1,0 +1,14 @@
+FROM almalinux:8
+
+RUN dnf upgrade -y && dnf --enablerepo=powertools install -y \
+	bison \
+	cmake \
+	container-selinux \
+	flex \
+	gcc-c++ \
+	libyaml-devel \
+	openssl-devel \
+	policycoreutils-devel \
+	rpm-build \
+	selinux-policy-devel \
+	zlib-devel

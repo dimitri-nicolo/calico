@@ -10,11 +10,11 @@ Subject: [PATCH] Remove code from dex that is unused and requires code
  2 files changed, 8 insertions(+), 61 deletions(-)
 
 diff --git a/third_party/dex/cmd/dex/config.go b/third_party/dex/cmd/dex/config.go
-index 33c0db4782..8f74e49f31 100644
+index b6d34f37e2..1cb065dfeb 100644
 --- a/third_party/dex/cmd/dex/config.go
 +++ b/third_party/dex/cmd/dex/config.go
 @@ -14,11 +14,9 @@ import (
- 	"github.com/dexidp/dex/pkg/log"
+ 	"github.com/dexidp/dex/pkg/featureflags"
  	"github.com/dexidp/dex/server"
  	"github.com/dexidp/dex/storage"
 -	"github.com/dexidp/dex/storage/ent"
@@ -49,11 +49,11 @@ index 33c0db4782..8f74e49f31 100644
  
  // UnmarshalJSON allows Storage to implement the unmarshaler interface to
 diff --git a/third_party/dex/cmd/dex/serve.go b/third_party/dex/cmd/dex/serve.go
-index 9461a6220a..fe47721072 100644
+index 456e07f6a9..b67de7ee9f 100644
 --- a/third_party/dex/cmd/dex/serve.go
 +++ b/third_party/dex/cmd/dex/serve.go
-@@ -38,6 +38,8 @@ import (
- 	"github.com/dexidp/dex/pkg/log"
+@@ -37,6 +37,8 @@ import (
+ 	"github.com/dexidp/dex/api/v2"
  	"github.com/dexidp/dex/server"
  	"github.com/dexidp/dex/storage"
 +
@@ -61,7 +61,7 @@ index 9461a6220a..fe47721072 100644
  )
  
  type serveOptions struct {
-@@ -134,37 +136,8 @@ func runServe(options serveOptions) error {
+@@ -135,37 +137,8 @@ func runServe(options serveOptions) error {
  
  	var grpcOptions []grpc.ServerOption
  
@@ -100,7 +100,7 @@ index 9461a6220a..fe47721072 100644
  
  		tlsConfig, err := newTLSReloader(logger, c.GRPC.TLSCert, c.GRPC.TLSKey, c.GRPC.TLSClientCA, baseTLSConfig)
  		if err != nil {
-@@ -436,23 +409,7 @@ func runServe(options serveOptions) error {
+@@ -437,23 +410,7 @@ func runServe(options serveOptions) error {
  		if err != nil {
  			return fmt.Errorf("listening (%s) on %s: %v", name, c.Web.HTTPS, err)
  		}
@@ -125,7 +125,7 @@ index 9461a6220a..fe47721072 100644
  		tlsConfig, err := newTLSReloader(logger, c.Web.TLSCert, c.Web.TLSKey, "", baseTLSConfig)
  		if err != nil {
  			return fmt.Errorf("invalid config: get HTTP TLS: %v", err)
-@@ -672,16 +629,17 @@ func newTLSReloader(logger log.Logger, certFile, keyFile, caFile string, baseCon
+@@ -649,16 +606,17 @@ func newTLSReloader(logger *slog.Logger, certFile, keyFile, caFile string, baseC
  		}
  	}()
  

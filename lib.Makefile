@@ -308,6 +308,32 @@ DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 
 DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
 
+# Host native build images
+HOST_NATIVE_BUILD_IMAGE ?= calico/host-native-build
+
+.PHONY: host-native-build
+host-native-build: $(wildcard $(REPO_DIR)/third_party/host-native/Dockerfile.*)
+	cd $(REPO_DIR)/third_party/host-native && \
+		docker buildx bake --load --pull \
+		-f $(REPO_DIR)/third_party/host-native/host-native-build-bake.hcl
+
+DOCKER_HOST_NATIVE_RUN := docker run --rm \
+	--net=host \
+	--init \
+	--user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
+	$(EXTRA_DOCKER_ARGS) \
+	-v $(REPO_ROOT):/go/src/github.com/projectcalico/calico:rw \
+	-w /go/src/$(PACKAGE_NAME)
+
+define host_native_rpm_build
+	mkdir -p package/$(1) && $(DOCKER_HOST_NATIVE_RUN) \
+		$(HOST_NATIVE_BUILD_IMAGE):$(1) \
+			sh -c 'rpmbuild \
+				--define "_topdir $$PWD/package/$(1)" \
+				--define "_sourcedir $$PWD" \
+				-ba rhel/$(2).spec'
+endef
+
 # A target that does nothing but it always stale, used to force a rebuild on certain targets based on some non-file criteria.
 .PHONY: force-rebuild
 force-rebuild:

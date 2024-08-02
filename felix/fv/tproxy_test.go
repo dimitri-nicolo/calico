@@ -35,9 +35,11 @@ import (
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var _ = describeTProxyTest(false, "Enabled")
-var _ = describeTProxyTest(true, "Enabled")
-var _ = describeTProxyTest(false, "EnabledAllServices")
+var (
+	_ = describeTProxyTest(false, "Enabled")
+	_ = describeTProxyTest(true, "Enabled")
+	_ = describeTProxyTest(false, "EnabledAllServices")
+)
 
 func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 	const (
@@ -59,7 +61,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 	return infrastructure.DatastoreDescribe("tproxy tests tunnel="+tunnel+" TPROXYMode="+TPROXYMode,
 		[]apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 			const numNodes = 2
 			const clusterIP = "10.101.0.10"
 
@@ -98,12 +99,18 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				port string,
 				felixes []*infrastructure.Felix,
 				exists bool,
-				canErr bool) {
-
+				canErr bool,
+			) {
 				results := make(map[*infrastructure.Felix]struct{}, len(felixes))
 				Eventually(func() bool {
 					for _, felix := range felixes {
-						out, err := felix.ExecOutput("ipset", "list", ipSetID)
+						var out string
+						var err error
+						if NFTMode() {
+							out, err = felix.ExecOutput("nft", "list", "set", "ip", "calico", ipSetID)
+						} else {
+							out, err = felix.ExecOutput("ipset", "list", ipSetID)
+						}
 						log.Infof("felix ipset list output %s", out)
 						if canErr && err != nil {
 							continue
@@ -121,7 +128,8 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				ip string,
 				port string,
 				felixes []*infrastructure.Felix,
-				exists bool) {
+				exists bool,
+			) {
 				assertIPPortInIPSetErr(ipSetID, ip, port, tc.Felixes, exists, false)
 			}
 
@@ -129,7 +137,13 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				results := make(map[*infrastructure.Felix]struct{}, len(tc.Felixes))
 				Eventually(func() bool {
 					for _, felix := range tc.Felixes {
-						out, err := felix.ExecOutput("ipset", "list", ipSetID)
+						var out string
+						var err error
+						if NFTMode() {
+							out, err = felix.ExecOutput("nft", "list", "set", "ip", "calico", ipSetID)
+						} else {
+							out, err = felix.ExecOutput("ipset", "list", ipSetID)
+						}
 						log.Infof("felix ipset list output %s", out)
 						Expect(err).NotTo(HaveOccurred())
 						if strings.Contains(out, port) == exists {
@@ -279,8 +293,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				// that we can sync with the content of the maps.
 				Eventually(func() bool {
 					for _, felix := range tc.Felixes {
-						if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-svc-ips"); err != nil {
-							return false
+						if NFTMode() {
+							if _, err := felix.ExecOutput("nft", "list", "set", "ip", "calico", "cali40tproxy-svc-ips"); err != nil {
+								return false
+							}
+						} else {
+							if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-svc-ips"); err != nil {
+								return false
+							}
 						}
 					}
 					return true
@@ -294,6 +314,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 				if CurrentGinkgoTestDescription().Failed {
 					for _, felix := range tc.Felixes {
+						logNFTDiags(felix)
 						felix.Exec("iptables-save", "-c")
 						felix.Exec("ipset", "list", TPROXYServiceIPsIPSetV4)
 						felix.Exec("ipset", "list", TPROXYNodeportsSet)
@@ -320,7 +341,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 			})
 
 			Context("ClusterIP", func() {
-
 				var pod, svc string
 
 				JustBeforeEach(func() {
@@ -328,21 +348,33 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					svc = clusterIP + ":8090"
 
 					for _, f := range tc.Felixes {
-						// Mimic the kube-proxy service iptable clusterIP rule.
-						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-p", "tcp",
-							"-d", clusterIP,
-							"-m", "tcp", "--dport", "8090",
-							"-j", "DNAT", "--to-destination",
-							pod)
-						// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
-						f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
-							"-j", "MASQUERADE", "--random-fully")
+						if NFTMode() {
+							f.Exec("nft", "add", "table", "ip", "services")
+
+							// Mimic the kube-proxy service iptable clusterIP rule.
+							f.Exec("nft", "add", "chain", "ip", "services", "PREROUTING", "{ type nat hook prerouting priority -100; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "ip", "daddr", clusterIP, "tcp", "dport", "8090", "counter", "dnat", "to", pod)
+
+							// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
+							f.Exec("nft", "add", "chain", "ip", "services", "POSTROUTING", "{ type nat hook postrouting priority 100 ; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "POSTROUTING", "mark", "and", "0x4000", "==", "0x4000", "counter", "masquerade", "fully-random")
+						} else {
+							// Mimic the kube-proxy service iptable clusterIP rule.
+							f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-p", "tcp",
+								"-d", clusterIP,
+								"-m", "tcp", "--dport", "8090",
+								"-j", "DNAT", "--to-destination",
+								pod)
+							// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
+							f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
+								"-j", "MASQUERADE", "--random-fully")
+						}
 					}
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
@@ -353,8 +385,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				})
 
 				It("should have connectivity from all workloads via ClusterIP", func() {
-
-					By("asserting that ipaddress, port exists in ipset ")
+					By("asserting that ipaddress, port exists in ipset")
 					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, "8090", tc.Felixes, true)
 
 					cc.Expect(Some, w[0][0], TargetIP(clusterIP), ExpectWithPorts(8090), expectedFelix0IP)
@@ -578,28 +609,37 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 					// Mimic the kube-proxy service iptable nodeport rule.
 					for _, f := range tc.Felixes {
-						f.Exec("iptables", "-t", "nat",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-A", "PREROUTING",
-							"-p", "tcp",
-							"-m", "addrtype", "--dst-type", "LOCAL",
-							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
-							"-j", "MARK", "--set-xmark", "0x4000/0x4000")
-						f.Exec("iptables", "-t", "nat",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-A", "PREROUTING",
-							"-p", "tcp",
-							"-m", "addrtype", "--dst-type", "LOCAL",
-							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
-							"-j", "DNAT", "--to-destination", pod)
-						f.Exec("iptables", "-t", "nat",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-A", "POSTROUTING",
-							"-m", "mark", "--mark", "0x4000/0x4000",
-							"-j", "MASQUERADE")
+						if NFTMode() {
+							f.Exec("nft", "add", "table", "ip", "services")
+							f.Exec("nft", "add", "chain", "ip", "services", "PREROUTING", "{ type nat hook prerouting priority -100; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "fib", "daddr", "type", "local", "tcp", "dport", strconv.Itoa(int(nodeport)), "counter", "meta", "mark", "set", "mark", "or", "0x4000")
+							f.Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "fib", "daddr", "type", "local", "tcp", "dport", strconv.Itoa(int(nodeport)), "counter", "dnat", "to", pod)
+							f.Exec("nft", "add", "chain", "ip", "services", "POSTROUTING", "{ type nat hook postrouting priority 100 ; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "POSTROUTING", "mark", "and", "0x4000", "==", "0x4000", "counter", "masquerade", "fully-random")
+						} else {
+							f.Exec("iptables", "-t", "nat",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-A", "PREROUTING",
+								"-p", "tcp",
+								"-m", "addrtype", "--dst-type", "LOCAL",
+								"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+								"-j", "MARK", "--set-xmark", "0x4000/0x4000")
+							f.Exec("iptables", "-t", "nat",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-A", "PREROUTING",
+								"-p", "tcp",
+								"-m", "addrtype", "--dst-type", "LOCAL",
+								"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+								"-j", "DNAT", "--to-destination", pod)
+							f.Exec("iptables", "-t", "nat",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-A", "POSTROUTING",
+								"-m", "mark", "--mark", "0x4000/0x4000",
+								"-j", "MASQUERADE")
+						}
 					}
 
 					// for this context create service before each test
@@ -612,11 +652,19 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					assertPortInIPSet(TPROXYNodeportsSet, "30333", tc.Felixes, true)
 
 					for _, f := range tc.Felixes {
-						Eventually(func() string {
-							out, err := f.ExecOutput("iptables-save")
-							Expect(err).NotTo(HaveOccurred())
-							return out
-						}, "10s").Should(ContainSubstring("TPROXY"))
+						if NFTMode() {
+							Eventually(func() string {
+								out, err := f.ExecOutput("nft", "list", "ruleset")
+								Expect(err).NotTo(HaveOccurred())
+								return out
+							}, "10s").Should(ContainSubstring("tproxy to"))
+						} else {
+							Eventually(func() string {
+								out, err := f.ExecOutput("iptables-save")
+								Expect(err).NotTo(HaveOccurred())
+								return out
+							}, "10s").Should(ContainSubstring("TPROXY"))
+						}
 					}
 
 					pol := api.NewGlobalNetworkPolicy()
@@ -714,6 +762,11 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 						// Wait for iptables to be fully in sync.
 						Eventually(func() string {
+							if NFTMode() {
+								out, err := tc.Felixes[0].ExecOutput("nft", "list", "ruleset")
+								Expect(err).NotTo(HaveOccurred())
+								return out
+							}
 							out, err := tc.Felixes[0].ExecOutput("iptables-save")
 							Expect(err).NotTo(HaveOccurred())
 							return out
@@ -863,37 +916,47 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					svc = clusterIP + ":8090"
 
 					for _, f := range tc.Felixes {
-						// Mimic the kube-proxy service iptable clusterIP rule.
-						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-p", "tcp",
-							"-d", clusterIP,
-							"-m", "tcp", "--dport", "8090",
-							"-j", "DNAT", "--to-destination",
-							pod)
-						f.Exec("iptables", "-t", "nat",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-A", "PREROUTING",
-							"-p", "tcp",
-							"-m", "addrtype", "--dst-type", "LOCAL",
-							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
-							"-j", "MARK", "--set-xmark", "0x4000/0x4000")
-						f.Exec("iptables", "-t", "nat",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-A", "PREROUTING",
-							"-p", "tcp",
-							"-m", "addrtype", "--dst-type", "LOCAL",
-							"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
-							"-j", "DNAT", "--to-destination", pod)
-						// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
-						f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
-							"-j", "MASQUERADE", "--random-fully")
+						if NFTMode() {
+							f.Exec("nft", "add", "table", "ip", "services")
+							f.Exec("nft", "add", "chain", "ip", "services", "PREROUTING", "{ type nat hook prerouting priority -100; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "ip", "daddr", clusterIP, "tcp", "dport", "8090", "counter", "dnat", "to", pod)
+							f.Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "fib", "daddr", "type", "local", "tcp", "dport", strconv.Itoa(int(nodeport)), "counter", "meta", "mark", "set", "mark", "or", "0x4000")
+							f.Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "fib", "daddr", "type", "local", "tcp", "dport", strconv.Itoa(int(nodeport)), "counter", "dnat", "to", pod)
+							f.Exec("nft", "add", "chain", "ip", "services", "POSTROUTING", "{ type nat hook postrouting priority 100 ; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "POSTROUTING", "mark", "and", "0x4000", "==", "0x4000", "masquerade")
+						} else {
+							// Mimic the kube-proxy service iptable clusterIP rule.
+							f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-p", "tcp",
+								"-d", clusterIP,
+								"-m", "tcp", "--dport", "8090",
+								"-j", "DNAT", "--to-destination",
+								pod)
+							f.Exec("iptables", "-t", "nat",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-A", "PREROUTING",
+								"-p", "tcp",
+								"-m", "addrtype", "--dst-type", "LOCAL",
+								"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+								"-j", "MARK", "--set-xmark", "0x4000/0x4000")
+							f.Exec("iptables", "-t", "nat",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-A", "PREROUTING",
+								"-p", "tcp",
+								"-m", "addrtype", "--dst-type", "LOCAL",
+								"-m", "tcp", "--dport", strconv.Itoa(int(nodeport)),
+								"-j", "DNAT", "--to-destination", pod)
+							// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
+							f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
+								"-j", "MASQUERADE", "--random-fully")
+						}
 					}
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, int32(nodeport), "tcp")
@@ -950,7 +1013,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				servicePort := "8090"
 
 				It("Should propagate annotated service update and deletions to tproxy ip set", func() {
-
 					By("setting up annotated service for the end points ")
 					// create service resource that has annotation at creation
 					v1Svc := k8sService("l7-service", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
@@ -1001,9 +1063,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 					By("asserting that ipaddress, port of service removed from ipset")
 					assertIPPortInIPSet(TPROXYServiceIPsIPSetV4, clusterIP, servicePort, tc.Felixes, false)
-
 				})
-
 			})
 
 			Context("Enabling TPROXY with life connections", func() {
@@ -1017,12 +1077,18 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					// Wait until the ipsets disappear
 					Eventually(func() bool {
 						for _, felix := range tc.Felixes {
-							if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-svc-ips"); err == nil {
-								return false
+							if NFTMode() {
+								if _, err := felix.ExecOutput("nft", "list", "set", "ip", "calico", "cali40tproxy-svc-ips"); err == nil {
+									return false
+								}
+							} else {
+								if _, err := felix.ExecOutput("ipset", "list", "cali40tproxy-svc-ips"); err == nil {
+									return false
+								}
 							}
 						}
 						return true
-					}, "20s", "1s").Should(BeTrue())
+					}, "20s", "1s").Should(BeTrue(), "cali40tproxy-svc-ips ipset still exists")
 				})
 
 				JustBeforeEach(func() {
@@ -1030,21 +1096,29 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					svc = clusterIP + ":8090"
 
 					for _, f := range tc.Felixes {
-						// Mimic the kube-proxy service iptable clusterIP rule.
-						f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-p", "tcp",
-							"-d", clusterIP,
-							"-m", "tcp", "--dport", "8090",
-							"-j", "DNAT", "--to-destination",
-							pod)
-						// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
-						f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
-							"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
-							"-W", "100000", // How often to probe the lock in microsecs.
-							"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
-							"-j", "MASQUERADE", "--random-fully")
+						if NFTMode() {
+							f.Exec("nft", "add", "table", "ip", "services")
+							f.Exec("nft", "add", "chain", "ip", "services", "PREROUTING", "{ type nat hook prerouting priority -100; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "PREROUTING", "ip", "daddr", clusterIP, "tcp", "dport", "8090", "counter", "dnat", "to", pod)
+							f.Exec("nft", "add", "chain", "ip", "services", "POSTROUTING", "{ type nat hook postrouting priority 100 ; }")
+							f.Exec("nft", "add", "rule", "ip", "services", "POSTROUTING", "mark", "and", "0x4000", "==", "0x4000", "masquerade")
+						} else {
+							// Mimic the kube-proxy service iptable clusterIP rule.
+							f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-p", "tcp",
+								"-d", clusterIP,
+								"-m", "tcp", "--dport", "8090",
+								"-j", "DNAT", "--to-destination",
+								pod)
+							// Mimic the kube-proxy MASQ rule based on the kube-proxy bit
+							f.Exec("iptables", "-t", "nat", "-A", "POSTROUTING",
+								"-w", "10", // Retry this for 10 seconds, e.g. if something else is holding the lock
+								"-W", "100000", // How often to probe the lock in microsecs.
+								"-m", "mark", "--mark", "0x4000/0x4000", // 0x4000 is the deault --iptables-masquerade-bit
+								"-j", "MASQUERADE", "--random-fully")
+						}
 					}
 					// for this context create service before each test
 					v1Svc := k8sService("service-with-annotation", clusterIP, w[0][0], 8090, 8055, 0, "tcp")
@@ -1055,7 +1129,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				})
 
 				It("should not break existing connections", func() {
-
 					pc := w[1][0].StartPersistentConnection(
 						clusterIP, 8090, workload.PersistentConnectionOpts{
 							MonitorConnectivity: true,

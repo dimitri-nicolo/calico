@@ -1,10 +1,11 @@
 #!/bin/bash
 # Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-set -ex
+set -eu
 
 zone=$1
 vm_name=$2-rocky8
+version=$3
 project=${GCP_PROJECT:-unique-caldron-775}
 gcp_secret_key=${GCP_SECRET_KEY:-$HOME/secrets/secret.google-service-account-key.json}
 
@@ -18,7 +19,7 @@ create_vm() {
         --image=rocky-linux-8-optimized-gcp-v20230411 \
         --image-project=rocky-linux-cloud \
         --boot-disk-size=20GB \
-        --boot-disk-type=pd-standard; then
+        --boot-disk-type=pd-balanced; then
         for ssh_try in $(seq 1 20); do
             echo "trying to ssh in: attempt $ssh_try ..."
             if gcloud --quiet compute ssh --zone="$zone" "user@$vm_name" -- cat /etc/os-release; then
@@ -39,9 +40,9 @@ delete_vm() {
 }
 
 copy_and_install() {
-    local package=calico-selinux-1.0-1.el8.noarch.rpm
+    local package=calico-selinux-$version-1.el8.noarch.rpm
     echo "scp $package to $vm_name ..."
-    if gcloud --quiet compute scp --zone="$zone" "build/dist/noarch/$package" "user@$vm_name:/tmp/$package"; then
+    if gcloud --quiet compute scp --zone="$zone" "package/rhel8/RPMS/noarch/$package" "user@$vm_name:/tmp/$package"; then
         echo "install $package to $vm_name ..."
         if gcloud --quiet compute ssh --zone="$zone" "user@$vm_name" -- sudo dnf install -y /tmp/$package; then
             echo "$package is installed on $vm_name successfully."

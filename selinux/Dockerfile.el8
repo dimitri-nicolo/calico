@@ -1,7 +1,0 @@
-FROM rockylinux:8
-
-RUN dnf upgrade -y && dnf install -y \
-	container-selinux \
-	policycoreutils-devel \
-	rpm-build \
-	selinux-policy-devel

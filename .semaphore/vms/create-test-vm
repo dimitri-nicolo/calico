@@ -32,7 +32,7 @@ function create-vm() {
            --image=ubuntu-2004-focal-v20240307b \
            --image-project=ubuntu-os-cloud \
            --boot-disk-size=$disk_size \
-           --boot-disk-type=pd-standard && \
+           --boot-disk-type=pd-balanced && \
   ssh_cmd="gcloud --quiet compute ssh --zone=${zone} ubuntu@${vm_name}"
   for ssh_try in $(seq 1 10); do
     echo "Trying to SSH in: $ssh_try"

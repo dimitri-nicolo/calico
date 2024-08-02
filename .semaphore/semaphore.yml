@@ -611,16 +611,15 @@ blocks:
           - make check-wireguard
           - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
         parallelism: 3
-      # TODO: Re-enable once nftables supports enterprise features.
-      # - name: nftables FV Test matrix
-      #   execution_time_limit:
-      #     minutes: 120
-      #   env_vars:
-      #   - name: FELIX_FV_NFTABLES
-      #     value: "Enabled"
-      #   commands:
-      #     - make check-wireguard
-      #     - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
+      - name: nftables FV Test matrix
+        execution_time_limit:
+          minutes: 120
+        env_vars:
+        - name: FELIX_FV_NFTABLES
+          value: "Enabled"
+        commands:
+          - make check-wireguard
+          - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
         parallelism: 3
     epilogue:
       always:
@@ -1735,6 +1734,31 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+- name: fluent-bit
+  run:
+    when: "false or change_in(['/fluent-bit/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    secrets:
+      - name: google-service-account-for-gce
+    prologue:
+      commands:
+        - cd fluent-bit
+        - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+        - export REPO_NAME=$(basename $(pwd))
+        - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+        - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-fluent-bit
+        - export ZONE=us-east4-c
+        - echo VM_PREFIX=${VM_PREFIX}
+    jobs:
+      - name: fluent-bit FV tests
+        commands:
+          - make ci
+    epilogue:
+      always:
+        commands:
+          - ../.semaphore/vms/clean-up-vms ${ZONE} ${VM_PREFIX}
 - name: selinux
   run:
     when: "false or change_in(['/selinux/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

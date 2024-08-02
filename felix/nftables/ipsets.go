@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/deltatracker"
 	"github.com/projectcalico/calico/felix/ip"
@@ -34,6 +36,27 @@ import (
 )
 
 var _ dpsets.IPSetsDataplane = &IPSets{}
+
+var (
+	gaugeVecNumSets = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "felix_nft_sets",
+		Help: "Number of active Calico nftables sets.",
+	}, []string{"ip_version"})
+	countNumSetTransactions = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_nft_set_calls",
+		Help: "Number of nftables set transactions executed.",
+	})
+	countNumSetErrors = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_nft_set_errors",
+		Help: "Number of nftables set transaction failures.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(gaugeVecNumSets)
+	prometheus.MustRegister(countNumSetTransactions)
+	prometheus.MustRegister(countNumSetErrors)
+}
 
 // IPSets manages a whole "plane" of IP sets, i.e. all the IPv4 sets, or all the IPv6 IP sets.
 type IPSets struct {
@@ -63,6 +86,8 @@ type IPSets struct {
 	mainSetNameToMembers   map[string]*deltatracker.SetDeltaTracker[ipsets.IPSetMember]
 	ipSetsWithDirtyMembers set.Set[string]
 
+	gaugeNumSets prometheus.Gauge
+
 	opReporter logutils.OpRecorder
 
 	sleep func(time.Duration)
@@ -89,6 +114,7 @@ func NewIPSets(ipVersionConfig *ipsets.IPVersionConfig, nft knftables.Interface,
 
 // NewIPSetsWithShims is an internal test constructor.
 func NewIPSetsWithShims(ipVersionConfig *ipsets.IPVersionConfig, sleep func(time.Duration), nft knftables.Interface, recorder logutils.OpRecorder) *IPSets {
+	familyStr := string(ipVersionConfig.Family)
 	return &IPSets{
 		IPVersionConfig:      ipVersionConfig,
 		setNameToAllMetadata: map[string]ipsets.IPSetMetadata{},
@@ -107,8 +133,9 @@ func NewIPSetsWithShims(ipVersionConfig *ipsets.IPVersionConfig, sleep func(time
 		logCxt: log.WithFields(log.Fields{
 			"family": ipVersionConfig.Family,
 		}),
-		sleep: sleep,
-		nft:   nft,
+		gaugeNumSets: gaugeVecNumSets.WithLabelValues(familyStr),
+		sleep:        sleep,
+		nft:          nft,
 	}
 }
 
@@ -397,6 +424,9 @@ func (s *IPSets) tryResync() error {
 				if len(e.Key) == 3 {
 					// This is a concatination of IP, protocol and port. Format it back into Felix's internal representation.
 					strElems = append(strElems, fmt.Sprintf("%s,%s:%s", e.Key[0], e.Key[1], e.Key[2]))
+				} else if len(e.Key) == 2 {
+					// This is a net,net pair.
+					strElems = append(strElems, fmt.Sprintf("%s,%s", e.Key[0], e.Key[1]))
 				} else {
 					// This is just an IP address / CIDR.
 					strElems = append(strElems, e.Key[0])
@@ -408,9 +438,9 @@ func (s *IPSets) tryResync() error {
 
 	// We expect a response for every set we asked for.
 	responses := make([]setData, len(sets))
-	for range sets {
+	for i := range responses {
 		setData := <-setsChan
-		responses = append(responses, setData)
+		responses[i] = setData
 	}
 
 	for _, setData := range responses {
@@ -426,6 +456,7 @@ func (s *IPSets) tryResync() error {
 		if !ok {
 			// Programmed in the data plane, but not in memory. Skip this one - we'll clean up
 			// state for this below.
+			s.setNameToProgrammedMetadata.Dataplane().Set(setName, ipsets.IPSetMetadata{})
 			continue
 		}
 		elemsSet := s.filterAndCanonicaliseMembers(metadata.Type, strElems)
@@ -501,6 +532,10 @@ func (s *IPSets) NFTablesSet(name string) *knftables.Set {
 		// IP and port sets don't support the interval flag.
 	case ipsets.IPSetTypeHashIP:
 		// IP addr sets don't use the interval flag.
+	case ipsets.IPSetTypeBitmapPort:
+		// Bitmap port sets don't use the interval flag.
+	case ipsets.IPSetTypeHashNetNet:
+		// Net sets don't use the interval flag.
 	case ipsets.IPSetTypeHashNet:
 		// Net sets require the interval flag.
 		flags = append(flags, knftables.IntervalFlag)
@@ -591,7 +626,7 @@ func (s *IPSets) tryUpdates(ipsetFilter func(ipSetName string) bool, programmedI
 	if tx.NumOperations() > 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
-		if err := s.nft.Run(ctx, tx); err != nil {
+		if err := s.runTransaction(ctx, tx); err != nil {
 			s.logCxt.WithError(err).Errorf("Failed to update IP sets. %s", tx.String())
 			return fmt.Errorf("error updating nftables sets: %s", err)
 		}
@@ -656,7 +691,7 @@ func (s *IPSets) ApplyDeletions() bool {
 		s.logCxt.WithField("numSets", deletedSets.Len()).Info("Deleting IP sets.")
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
-		if err := s.nft.Run(ctx, tx); err != nil {
+		if err := s.runTransaction(ctx, tx); err != nil {
 			s.logCxt.WithError(err).Errorf("Failed to delete IP sets. %s", tx.String())
 			return true
 		}
@@ -673,12 +708,22 @@ func (s *IPSets) ApplyDeletions() bool {
 	// ApplyDeletions() marks the end of the two-phase "apply". Piggyback on that to
 	// update the gauge that records how many IP sets we own.
 	numDeletionsPending := s.setNameToProgrammedMetadata.Dataplane().Len()
+	s.gaugeNumSets.Set(float64(numDeletionsPending))
 	if deletedSets.Len() == 0 {
 		// We had nothing to delete, or we only encountered errors, don't
 		// ask to be rescheduled.
 		return false
 	}
 	return numDeletionsPending > 0 // Reschedule if we have sets left to delete.
+}
+
+func (s *IPSets) runTransaction(ctx context.Context, tx *knftables.Transaction) error {
+	countNumSetTransactions.Inc()
+	err := s.nft.Run(ctx, tx)
+	if err != nil {
+		countNumSetErrors.Inc()
+	}
+	return err
 }
 
 func (s *IPSets) updateDirtiness(name string) {
@@ -782,6 +827,12 @@ func CanonicaliseMember(t ipsets.IPSetType, member string) ipsets.IPSetMember {
 		// pretty-printing, the hash:net ipset type prints IPs with no "/32" or "/128"
 		// suffix.
 		return ip.MustParseCIDROrIP(member)
+	case ipsets.IPSetTypeHashNetNet:
+		cidrs := strings.Split(member, ",")
+		return netNet{
+			cidr1: ip.MustParseCIDROrIP(cidrs[0]),
+			cidr2: ip.MustParseCIDROrIP(cidrs[1]),
+		}
 	case ipsets.IPSetTypeBitmapPort:
 		// Trim the family if it exists
 		if member[0] == 'v' {
@@ -794,6 +845,23 @@ func CanonicaliseMember(t ipsets.IPSetType, member string) ipsets.IPSetMember {
 	}
 	log.WithField("type", string(t)).Warn("Unknown IPSetType")
 	return nil
+}
+
+type netNet struct {
+	cidr1, cidr2 ip.CIDR
+}
+
+func (nn netNet) String() string {
+	// nftables doesn't support interval types (CIDRs) on concatenation sets, and thus we
+	// can only represent the set as a concatenation of IP addresses. Conveniently, the only
+	// current use of this type is for WorkloadEndpoint IP addresses which are always /32 or /128.
+	if nn.cidr1.Version() == 4 && nn.cidr1.Prefix() != 32 || nn.cidr1.Version() == 6 && nn.cidr1.Prefix() != 128 {
+		log.WithField("cidr", nn.cidr1).Panic("Unexpected CIDR prefix")
+	}
+	if nn.cidr2.Version() == 4 && nn.cidr2.Prefix() != 32 || nn.cidr2.Version() == 6 && nn.cidr2.Prefix() != 128 {
+		log.WithField("cidr", nn.cidr2).Panic("Unexpected CIDR prefix")
+	}
+	return nn.cidr1.Addr().String() + " . " + nn.cidr2.Addr().String()
 }
 
 // v4NFTIPPort is a struct that represents an IPv4 address, protocol and port for IPv4, and implements
@@ -827,8 +895,12 @@ func setType(t ipsets.IPSetType, ipVersion int) string {
 		return fmt.Sprintf("ipv%d_addr", ipVersion)
 	case ipsets.IPSetTypeHashNet:
 		return fmt.Sprintf("ipv%d_addr", ipVersion)
+	case ipsets.IPSetTypeHashNetNet:
+		return fmt.Sprintf("ipv%d_addr . ipv%d_addr", ipVersion, ipVersion)
 	case ipsets.IPSetTypeHashIPPort:
 		return fmt.Sprintf("ipv%d_addr . inet_proto . inet_service", ipVersion)
+	case ipsets.IPSetTypeBitmapPort:
+		return "inet_service"
 	}
 	return string(t)
 }

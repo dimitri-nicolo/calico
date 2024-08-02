@@ -202,7 +202,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	// It's fine to always create the directory for felix flow logs, if they
 	// aren't enabled the directory will just stay empty.
 	logDir := path.Join(cwLogDir, uniqueName)
-	Expect(os.MkdirAll(logDir, 0777)).NotTo(HaveOccurred())
+	Expect(os.MkdirAll(logDir, 0o777)).NotTo(HaveOccurred())
 	args = append(args, "-v", logDir+":/var/log/calico/flowlogs")
 
 	if os.Getenv("FELIX_FV_NFTABLES") == "Enabled" {

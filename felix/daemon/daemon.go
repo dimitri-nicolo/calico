@@ -355,6 +355,14 @@ configRetry:
 		break configRetry
 	}
 
+	// If we get here, we've loaded the configuration successfully.
+	// Update log levels before we do anything else.
+	logutils.ConfigureLogging(configParams)
+	// Since we may have enabled more logging, log with the build context
+	// again.
+	buildInfoLogCxt.WithField("config", configParams).Info(
+		"Successfully loaded configuration.")
+
 	if numClientsCreated > 2 {
 		// We don't have a way to close datastore connection so, if we reconnected after
 		// a failure to load config, restart felix to avoid leaking connections.
@@ -431,14 +439,6 @@ configRetry:
 
 	// Enable or disable the health HTTP server according to coalesced config.
 	healthAggregator.ServeHTTP(configParams.HealthEnabled, configParams.HealthHost, configParams.HealthPort)
-
-	// If we get here, we've loaded the configuration successfully.
-	// Update log levels before we do anything else.
-	logutils.ConfigureLogging(configParams)
-	// Since we may have enabled more logging, log with the build context
-	// again.
-	buildInfoLogCxt.WithField("config", configParams).Info(
-		"Successfully loaded configuration.")
 
 	var lookupsCache *calc.LookupsCache
 	var dpStatsCollector collector.Collector
@@ -1001,7 +1001,6 @@ var ErrNotReady = errors.New("datastore is not ready or has not been initialised
 func loadConfigFromDatastore(
 	ctx context.Context, client bapi.Client, cfg apiconfig.CalicoAPIConfig, hostname string,
 ) (globalConfig, hostConfig map[string]string, err error) {
-
 	// The configuration is split over 3 different resource types and 4 different resource
 	// instances in the v3 data model:
 	// -  ClusterInformation (global): name "default"
@@ -1155,7 +1154,7 @@ func newConnector(configParams *config.Config,
 	dataplane dp.DataplaneDriver,
 	failureReportChan chan<- string,
 ) *DataplaneConnector {
-	var captureStatusUpdates = make(chan *proto.PacketCaptureStatusUpdate, 100)
+	captureStatusUpdates := make(chan *proto.PacketCaptureStatusUpdate, 100)
 
 	felixConn := &DataplaneConnector{
 		config:                              configParams,
@@ -1620,7 +1619,6 @@ func (fc *DataplaneConnector) handleConfigUpdate(msg *proto.ConfigUpdate) {
 		newConfigCopy = fc.config.Copy()
 		return err
 	}()
-
 	if err != nil {
 		// This shouldn't happen since the config update was _generated_ by the Config object held
 		// by the calculation graph.

@@ -89,8 +89,7 @@ func (tp TProxyAction) ToFragment(_ *environment.Features) string {
 	if tp.Mask == 0 {
 		return fmt.Sprintf("tproxy <IPV> to :%d meta mark set mark or %#x", tp.Port, tp.Mark)
 	}
-	notMask := tp.Mask ^ 0xffffffff
-	return fmt.Sprintf("tproxy <IPV> to :%d meta mark set xor %#x and %#x", tp.Port, tp.Mark, notMask)
+	return fmt.Sprintf("tproxy <IPV> to :%d meta mark set mark & %#x ^ %#x", tp.Port, (tp.Mask ^ 0xffffffff), tp.Mark)
 }
 
 func (tp TProxyAction) String() string {

@@ -9,12 +9,15 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"gopkg.in/elazarl/goproxy.v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
@@ -28,8 +31,7 @@ import (
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
+	logrus "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/mock"
 
@@ -64,8 +66,8 @@ var (
 
 func init() {
 	var err error
-	log.SetOutput(GinkgoWriter)
-	log.SetLevel(log.DebugLevel)
+	logrus.SetOutput(GinkgoWriter)
+	logrus.SetLevel(logrus.DebugLevel)
 
 	tunnelCert, err = test.CreateSelfSignedX509Cert("voltron", true)
 	if err != nil {
@@ -154,13 +156,15 @@ func (s *testServer) handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, s.msg)
 }
 
-func describe(name string, testFn func(string)) bool {
-	Describe(name+" cluster-scoped", func() { testFn("") })
-	Describe(name+" namespace-scoped", func() { testFn("resource-ns") })
+func describe(name string, testFn func(string, bool)) bool {
+	Describe(name+" cluster-scoped", func() { testFn("", false) })
+	Describe(name+" namespace-scoped", func() { testFn("resource-ns", false) })
+	Describe(name+" cluster-scoped (proxied)", func() { testFn("", true) })
+	Describe(name+" namespace-scoped (proxied)", func() { testFn("resource-ns", true) })
 	return true
 }
 
-var _ = describe("basic functionality", func(clusterNamespace string) {
+var _ = describe("basic functionality", func(clusterNamespace string, proxied bool) {
 	var (
 		voltron   *server.Server
 		lisHTTP11 net.Listener
@@ -175,6 +179,10 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 
 		ts2    *testServer
 		lisTs2 net.Listener
+
+		proxyServer         *http.Server
+		proxyURL            *url.URL
+		proxiedRequestCount int
 
 		wgSrvCnlt                                    sync.WaitGroup
 		certPemID1, keyPemID1, certPemID2, keyPemID2 []byte
@@ -199,6 +207,14 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 		_ = guardian2.Close()
 		_ = ts.http.Close()
 		_ = ts2.http.Close()
+		if proxied {
+			// Cleanup.
+			_ = proxyServer.Close()
+
+			// Validate requests were proxied.
+			Expect(proxiedRequestCount).ToNot(BeZero(), "No requests were received by the proxy - expected traffic to route through it")
+			proxiedRequestCount = 0
+		}
 		close(watchSync)
 
 		wgSrvCnlt.Wait()
@@ -233,7 +249,8 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 		lisHTTP2, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
 
-		lisTun, err = net.Listen("tcp", "localhost:0")
+		// Bind to 0.0.0.0 as localhost addresses cause proxy to be bypassed - we want to test proxying the tunnel connection.
+		lisTun, err = net.Listen("tcp", "0.0.0.0:0")
 		Expect(err).NotTo(HaveOccurred())
 
 		By("starting test servers", func() {
@@ -261,6 +278,41 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 				_ = ts2.http.Serve(lisTs2)
 			}()
 		})
+
+		if proxied {
+			By("starting the HTTP proxy", func() {
+				httpProxy := goproxy.NewProxyHttpServer()
+
+				// Count the amount of CONNECT requests made to the proxy.
+				httpProxy.OnRequest().HandleConnect(goproxy.FuncHttpsHandler(func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
+					proxiedRequestCount++
+					return goproxy.OkConnect, host
+				}))
+
+				// Ensure the proxy does not try to dial through to the configured proxy (i.e. itself)
+				httpProxy.ConnectDial = nil
+
+				// Silence warnings from connections being closed. The proxy server lib only accepts the unstructured std logger.
+				httpProxy.Logger = log.New(io.Discard, "", log.LstdFlags)
+
+				// Instantiate the server.
+				proxyServer = &http.Server{
+					Addr:    ":3128",
+					Handler: httpProxy,
+				}
+				proxyURL = &url.URL{
+					Scheme: "http",
+					Host:   proxyServer.Addr,
+				}
+
+				// Start the proxy.
+				wgSrvCnlt.Add(1)
+				go func() {
+					defer wgSrvCnlt.Done()
+					_ = proxyServer.ListenAndServe()
+				}()
+			})
+		}
 
 		By("starting Voltron", func() {
 			tunnelTargetWhitelist, _ := regex.CompileRegexStrings([]string{
@@ -368,6 +420,7 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 						},
 					},
 				),
+				client.WithHTTPProxyURL(proxyURL),
 			)
 			Expect(err).NotTo(HaveOccurred())
 			wgSrvCnlt.Add(1)
@@ -393,6 +446,7 @@ var _ = describe("basic functionality", func(clusterNamespace string) {
 						},
 					},
 				),
+				client.WithHTTPProxyURL(proxyURL),
 			)
 			Expect(err).NotTo(HaveOccurred())
 			wgSrvCnlt.Add(1)

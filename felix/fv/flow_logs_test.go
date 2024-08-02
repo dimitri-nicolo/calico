@@ -99,7 +99,6 @@ var (
 // better to run with one backend only.  etcdv3 is easier because we create a fresh
 // datastore for every test and so don't need to worry about cleaning resources up.
 var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
-
 	bpfEnabled := os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
 
 	var (
@@ -252,6 +251,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		hostEndpointProgrammed := func() bool {
 			if BPFMode() {
 				return tc.Felixes[1].NumTCBPFProgsEth0() == 2
+			} else if NFTMode() {
+				out, err := tc.Felixes[1].ExecOutput("nft", "list", "ruleset")
+				Expect(err).NotTo(HaveOccurred())
+				return (strings.Count(out, "cali-thfw-eth0") > 0)
 			} else {
 				out, err := tc.Felixes[1].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
@@ -272,10 +275,22 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				if strings.Count(out1, "default.gnp-1") == 0 {
 					return false
 				}
-				if !applyOnForwardSupported && strings.Count(out1, "default.np-1") == 0 {
-					return false
-				}
 				return true
+			}
+			if NFTMode() {
+				rulesProgrammed = func() bool {
+					out0, err := tc.Felixes[0].ExecOutput("nft", "list", "ruleset")
+					Expect(err).NotTo(HaveOccurred())
+					out1, err := tc.Felixes[1].ExecOutput("nft", "list", "ruleset")
+					Expect(err).NotTo(HaveOccurred())
+					if strings.Count(out0, "ARE0|default") == 0 {
+						return false
+					}
+					if strings.Count(out1, "default.gnp-1") == 0 {
+						return false
+					}
+					return true
+				}
 			}
 			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected iptables rules to appear on the correct felix instances")
@@ -513,7 +528,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, expectation.labels, expectation.policies, 8055)
 			err := flowTester.PopulateFromFlowLogs(flowLogsOutput)
 			if err != nil {
-				return err
+				return fmt.Errorf("error populating from flow logs: %s", err)
 			}
 
 			// Only report errors at the end.
@@ -776,7 +791,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with endpoint labels", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
 				expectation.labels = true
@@ -788,7 +802,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with allowed aggregation none", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
 				expectation.aggregationForAllowed = AggrNone
@@ -800,7 +813,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with allowed aggregation by source port", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrBySourcePort))
 				expectation.aggregationForAllowed = AggrBySourcePort
@@ -812,7 +824,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with allowed aggregation by pod prefix", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrByPodPrefix))
 				expectation.aggregationForAllowed = AggrByPodPrefix
@@ -824,7 +835,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with denied aggregation none", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
 				expectation.aggregationForDenied = AggrNone
@@ -836,7 +846,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with denied aggregation by source port", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrBySourcePort))
 				expectation.aggregationForDenied = AggrBySourcePort
@@ -848,7 +857,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with denied aggregation by pod prefix", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrByPodPrefix))
 				expectation.aggregationForDenied = AggrByPodPrefix
@@ -860,7 +868,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		})
 
 		Context("with policies", func() {
-
 			BeforeEach(func() {
 				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
 				expectation.policies = true
@@ -870,7 +877,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				checkFlowLogs(flowLogsOutput)
 			})
 		})
-
 	}
 
 	Context("File flow logs", func() {
@@ -878,7 +884,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	})
 
 	Context("File flow logs only", func() {
-
 		BeforeEach(func() {
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
@@ -921,6 +926,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("iptables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
@@ -1058,9 +1064,11 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 	BeforeEach(func() {
 		var err error
 
-		iOpts := []infrastructure.CreateOption{infrastructure.K8sWithDualStack(),
+		iOpts := []infrastructure.CreateOption{
+			infrastructure.K8sWithDualStack(),
 			infrastructure.K8sWithAPIServerBindAddress("::"),
-			infrastructure.K8sWithServiceClusterIPRange("dead:beef::abcd:0:0:0/112,10.101.0.0/16")}
+			infrastructure.K8sWithServiceClusterIPRange("dead:beef::abcd:0:0:0/112,10.101.0.0/16"),
+		}
 
 		infra = getInfra(iOpts...)
 		opts := infrastructure.DefaultTopologyOptions()
@@ -1155,7 +1163,13 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 
 		if !BPFMode() {
 			rulesProgrammed := func() bool {
-				out, err := tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+				var out string
+				var err error
+				if NFTMode() {
+					out, err = tc.Felixes[0].ExecOutput("nft", "list", "ruleset")
+				} else {
+					out, err = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+				}
 				Expect(err).NotTo(HaveOccurred())
 				if strings.Count(out, "default.gnp-1") == 0 {
 					return false
@@ -1196,6 +1210,7 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
 			for _, felix := range tc.Felixes {
+				logNFTDiags(felix)
 				felix.Exec("ip6tables-save", "-c")
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "-6", "r")

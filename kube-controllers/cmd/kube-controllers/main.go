@@ -327,6 +327,7 @@ func main() {
 				server := &http.Server{
 					Addr:      fmt.Sprintf(":%d", runCfg.PrometheusPort),
 					TLSConfig: tlsConfig,
+					Handler:   mux,
 				}
 				err = server.ListenAndServeTLS(cert, certKey)
 				if err != nil {
