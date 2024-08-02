@@ -98,7 +98,6 @@ require (
 	github.com/onsi/gomega v1.33.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/projectcalico/api v0.0.0-00010101000000-000000000000
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus-community/elasticsearch_exporter v1.5.0
@@ -119,6 +118,7 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/tigera/api v0.0.0-20230720165940-e6a43e33c0b4
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
+	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240703200800-b54f85093f4a
 	github.com/willf/bitset v1.1.11
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
@@ -130,7 +130,6 @@ require (
 	golang.org/x/crypto v0.25.0
 	golang.org/x/exp v0.0.0-20240716175740-e3f259677ff7
 	golang.org/x/net v0.27.0
-	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240703200800-b54f85093f4a
 	golang.org/x/sync v0.7.0
 	golang.org/x/sys v0.22.0
 	golang.org/x/text v0.16.0
