@@ -894,6 +894,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	ipsetsManager := dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
 	ipsetsManagerV6 := dpsets.NewIPSetsManager("ipv6", nil, config.MaxIPSetSize, dp.domainInfoStore)
+
 	var mangleTableV6, natTableV6, rawTableV6, filterTableV6 generictables.Table
 	var nftablesV6RootTable generictables.Table
 
