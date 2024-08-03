@@ -15,7 +15,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
@@ -179,7 +178,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		out, err := w[0].ExecOutput("ping", "-c", "1", "-W", "1", pingTarget.IP)
 		log.WithError(err).Infof("ping said:\n%v", out)
 		if err != nil {
-			log.Infof("stderr was:\n%v", string(err.(*exec.ExitError).Stderr))
+			log.Infof("stderr was:\n%v", err)
 		}
 		return err
 	}
