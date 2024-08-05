@@ -145,6 +145,22 @@ EOF
     fi
 }
 
+function add_bgp_layout() {
+    DUAL_TOR_DIR=tests/k8st/dual-tor
+    cat >${DUAL_TOR_DIR}/bgp-layout.yaml <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bgp-layout
+  namespace: tigera-operator
+data:
+  earlyNetworkConfiguration: |
+    apiVersion: projectcalico.org/v3
+EOF
+    sed -e 's/^/    /' ${DUAL_TOR_DIR}/cfg.yaml >>${DUAL_TOR_DIR}/bgp-layout.yaml
+    ${kubectl} create -f ${DUAL_TOR_DIR}/bgp-layout.yaml
+}
+
 function install_tsee() {
 
     # Load the locally built images into the KIND cluster nodes.
@@ -161,15 +177,14 @@ function install_tsee() {
     # Create BGPConfiguration, BGPPeers and IPPools.
     add_calico_resources
 
+    # Create bgp-layout ConfigMap.
+    add_bgp_layout
+
     # Label and annotate nodes.
     ${kubectl} label node kind-control-plane rack=ra
     ${kubectl} label node kind-worker rack=ra
     ${kubectl} label node kind-worker2 rack=rb
     ${kubectl} label node kind-worker3 rack=rb
-    ${kubectl} annotate node kind-control-plane projectcalico.org/ASNumber=65001
-    ${kubectl} annotate node kind-worker projectcalico.org/ASNumber=65001
-    ${kubectl} annotate node kind-worker2 projectcalico.org/ASNumber=65002
-    ${kubectl} annotate node kind-worker3 projectcalico.org/ASNumber=65002
 
     # Create Installation resource to kick off the install.
     ${kubectl} apply -f - <<EOF
