@@ -145,7 +145,7 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 		// Never include source port as it is usually ephemeral and difficult to test for.  Instead if the source port
 		// is 0 then leave as 0 (since it is aggregated out), otherwise set to -1.
 		if fl.FlowMeta.Tuple.GetSourcePort() != SourcePortIsNotIncluded {
-			fl.FlowMeta.Tuple.SetSourcePort(SourcePortIsIncluded)
+			fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(SourcePortIsIncluded)
 		}
 
 		fm := t.flowMetaFromFlowLog(fl)
