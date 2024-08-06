@@ -21,30 +21,30 @@ func AddErrorToFeedStatus(feedCacher cacher.GlobalThreatFeedCacher, errType stri
 	getCachedFeedResponse := feedCacher.GetGlobalThreatFeed()
 	if getCachedFeedResponse.Err != nil {
 		log.WithError(getCachedFeedResponse.Err).
-			Error("abort adding error to feed status because failed to retrieve cached GlobalThreatFeed CR")
+			Error("[Global Threat Feeds] abort adding error to feed status because failed to retrieve cached GlobalThreatFeed CR")
 		return
 	}
 	if getCachedFeedResponse.GlobalThreatFeed == nil {
-		log.Error("abort adding error to feed status because cached GlobalThreatFeed CR cannot be empty")
+		log.Error("[Global Threat Feeds] abort adding error to feed status because cached GlobalThreatFeed CR cannot be empty")
 		return
 	}
 
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
-		log.Debug(fmt.Sprintf("%d/%d attempt to add error to feed status", i, cacher.MaxUpdateRetry))
+		log.Debug(fmt.Sprintf("[Global Threat Feeds] %d/%d attempt to add error to feed status", i, cacher.MaxUpdateRetry))
 		errorcondition.AddError(&toBeUpdated.Status, errType, err)
 		updateResponse := feedCacher.UpdateGlobalThreatFeedStatus(toBeUpdated)
 		updateErr := updateResponse.Err
 		if updateErr == nil {
-			log.Debug("attempt to add error to feed status succeeded, exiting the loop")
+			log.Debug("[Global Threat Feeds] attempt to add error to feed status succeeded, exiting the loop")
 			return
 		}
 		statusErr, ok := updateErr.(*apiErrors.StatusError)
 		if !ok || statusErr.Status().Code != http.StatusConflict {
-			log.WithError(updateErr).Error("abort adding error to feed status due to unrecoverable failure")
+			log.WithError(updateErr).Error("[Global Threat Feeds] abort adding error to feed status due to unrecoverable failure")
 			return
 		}
-		log.WithError(updateErr).Error("failed adding error to feed status")
+		log.WithError(updateErr).Error("[Global Threat Feeds] failed adding error to feed status")
 		toBeUpdated = updateResponse.GlobalThreatFeed
 	}
 }
@@ -56,30 +56,30 @@ func ClearErrorFromFeedStatus(feedCacher cacher.GlobalThreatFeedCacher, errType 
 	getCachedFeedResponse := feedCacher.GetGlobalThreatFeed()
 	if getCachedFeedResponse.Err != nil {
 		log.WithError(getCachedFeedResponse.Err).
-			Error("abort clearing error from feed status because failed to retrieve cached GlobalThreatFeed CR")
+			Error("[Global Threat Feeds] abort clearing error from feed status because failed to retrieve cached GlobalThreatFeed CR")
 		return
 	}
 	if getCachedFeedResponse.GlobalThreatFeed == nil {
-		log.Error("abort clearing error from feed status because cached GlobalThreatFeed CR cannot be empty")
+		log.Error("[Global Threat Feeds] abort clearing error from feed status because cached GlobalThreatFeed CR cannot be empty")
 		return
 	}
 
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
-		log.Debug(fmt.Sprintf("%d/%d attempt to clear error from feed status", i, cacher.MaxUpdateRetry))
+		log.Debug(fmt.Sprintf("[Global Threat Feeds] %d/%d attempt to clear error from feed status", i, cacher.MaxUpdateRetry))
 		errorcondition.ClearError(&toBeUpdated.Status, errType)
 		updateResponse := feedCacher.UpdateGlobalThreatFeedStatus(toBeUpdated)
 		updateErr := updateResponse.Err
 		if updateErr == nil {
-			log.Debug("attempt to clear error from feed status succeeded, exiting the loop")
+			log.Debug("[Global Threat Feeds] attempt to clear error from feed status succeeded, exiting the loop")
 			return
 		}
 		statusErr, ok := updateErr.(*apiErrors.StatusError)
 		if !ok || statusErr.Status().Code != http.StatusConflict {
-			log.WithError(updateErr).Error("abort removing error from feed status due to unrecoverable failure")
+			log.WithError(updateErr).Error("[Global Threat Feeds] abort removing error from feed status due to unrecoverable failure")
 			return
 		}
-		log.WithError(updateErr).Error("failed removing error from feed status")
+		log.WithError(updateErr).Error("[Global Threat Feeds] failed removing error from feed status")
 		toBeUpdated = updateResponse.GlobalThreatFeed
 	}
 }

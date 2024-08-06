@@ -58,8 +58,8 @@ func jsonParser(path string) parser {
 
 		lines, ok := i2.([]interface{})
 		if !ok {
-			log.WithField("output", i2).Warn("path does not produce an array of strings")
-			return fmt.Errorf("path does not produce an array of strings")
+			log.WithField("output", i2).Warn("[Global Threat Feeds] path does not produce an array of strings")
+			return fmt.Errorf("[Global Threat Feeds] path does not produce an array of strings")
 		}
 
 		var once sync.Once
@@ -72,7 +72,7 @@ func jsonParser(path string) parser {
 					log.WithFields(log.Fields{
 						"object_num": idx,
 						"object":     e,
-					}).Warn("expected string")
+					}).Warn("[Global Threat Feeds] expected string")
 				})
 			}
 		}
@@ -116,7 +116,7 @@ func csvParser(f *v3.ThreatFeedFormatCSV) parser {
 					}
 				}
 				if !found {
-					return fmt.Errorf("header %s not found", f.FieldName)
+					return fmt.Errorf("[Global Threat Feeds] header %s not found", f.FieldName)
 				}
 			}
 		}

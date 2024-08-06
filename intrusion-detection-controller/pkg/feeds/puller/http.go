@@ -84,7 +84,7 @@ func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeed
 	h.once.Do(func() {
 
 		h.lock.RLock()
-		log.WithField("feed", h.feed.Name).Debug("started HTTP puller")
+		log.WithField("feed", h.feed.Name).Debug("[Global Threat Feeds] started HTTP puller")
 		h.lock.RUnlock()
 		ctx, h.cancel = context.WithCancel(ctx)
 
@@ -110,7 +110,7 @@ func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeed
 			delay := h.getStartupDelay(ctx)
 			if delay > 0 {
 				h.lock.RLock()
-				log.WithField("delay", delay).WithField("feed", h.feed.Name).Info("Delaying start")
+				log.WithField("delay", delay).WithField("feed", h.feed.Name).Info("[Global Threat Feeds] Delaying start")
 				h.lock.RUnlock()
 			}
 
@@ -146,43 +146,43 @@ func (h *httpPuller) setFeedURIAndHeader(ctx context.Context, f *calico.GlobalTh
 				configMap, err := h.configMapClient.Get(ctx, header.ValueFrom.ConfigMapKeyRef.Name, meta.GetOptions{})
 				if err != nil {
 					if header.ValueFrom.ConfigMapKeyRef.Optional != nil && *header.ValueFrom.ConfigMapKeyRef.Optional {
-						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("Skipping header")
+						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("[Global Threat Feeds] Skipping header")
 						continue
 					}
-					return FatalError("could not get ConfigMap %s, %s", header.ValueFrom.ConfigMapKeyRef.Name, err.Error())
+					return FatalError("[Global Threat Feeds] could not get ConfigMap %s, %s", header.ValueFrom.ConfigMapKeyRef.Name, err.Error())
 				}
 				value, ok = configMap.Data[header.ValueFrom.ConfigMapKeyRef.Key]
 				if ok {
-					log.WithField("value", value).Debug("Loaded config")
+					log.WithField("value", value).Debug("[Global Threat Feeds] Loaded config")
 				} else if header.ValueFrom.ConfigMapKeyRef.Optional != nil && *header.ValueFrom.ConfigMapKeyRef.Optional {
-					log.WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("Skipping header")
+					log.WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("[Global Threat Feeds] Skipping header")
 					continue
 				} else {
-					return FatalError("configMap %s key %s not found", header.ValueFrom.ConfigMapKeyRef.Name, header.ValueFrom.ConfigMapKeyRef.Key)
+					return FatalError("[Global Threat Feeds] configMap %s key %s not found", header.ValueFrom.ConfigMapKeyRef.Name, header.ValueFrom.ConfigMapKeyRef.Key)
 				}
 			case header.ValueFrom.SecretKeyRef != nil:
 				secret, err := h.secretsClient.Get(ctx, header.ValueFrom.SecretKeyRef.Name, meta.GetOptions{})
 				if err != nil {
 					if header.ValueFrom.SecretKeyRef.Optional != nil && *header.ValueFrom.SecretKeyRef.Optional {
-						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("Skipping header")
+						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("[Global Threat Feeds] Skipping header")
 						continue
 					}
-					return FatalError("could not get Secret %s, %s", header.ValueFrom.SecretKeyRef.Name, err.Error())
+					return FatalError("[Global Threat Feeds] could not get Secret %s, %s", header.ValueFrom.SecretKeyRef.Name, err.Error())
 				}
 
 				var bvalue []byte
 				bvalue, ok = secret.Data[header.ValueFrom.SecretKeyRef.Key]
 				value = string(bvalue)
 				if ok {
-					log.Debug("Loaded secret")
+					log.Debug("[Global Threat Feeds] Loaded secret")
 				} else if header.ValueFrom.SecretKeyRef.Optional != nil && *header.ValueFrom.SecretKeyRef.Optional {
-					log.WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("Skipping header")
+					log.WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("[Global Threat Feeds] Skipping header")
 					continue
 				} else {
-					return FatalError("secrets %s key %s not found", header.ValueFrom.SecretKeyRef.Name, header.ValueFrom.SecretKeyRef.Key)
+					return FatalError("[Global Threat Feeds] secrets %s key %s not found", header.ValueFrom.SecretKeyRef.Name, header.ValueFrom.SecretKeyRef.Key)
 				}
 			default:
-				return FatalError("neither ConfigMap nor SecretKey was set")
+				return FatalError("[Global Threat Feeds] neither ConfigMap nor SecretKey was set")
 			}
 		}
 		headers.Add(header.Name, value)
@@ -239,11 +239,11 @@ func (h *httpPuller) queryInfo(ctx context.Context) (name string, u *url.URL, he
 func (h *httpPuller) queryURL(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher, attempts uint, delay time.Duration) error {
 	name, u, header, err := h.queryInfo(ctx)
 	if err != nil {
-		log.WithError(err).Error("failed to query")
+		log.WithError(err).Error("[Global Threat Feeds] failed to query")
 		utils.AddErrorToFeedStatus(feedCacher, cacher.PullFailed, err)
 		return err
 	}
-	log.WithField("feed", name).Debug("querying HTTP feed")
+	log.WithField("feed", name).Debugf("[Global Threat Feeds] querying HTTP feed for %v", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 
 	req := &http.Request{Method: "GET", Header: header, URL: u}
 	req = req.WithContext(ctx)
@@ -288,12 +288,12 @@ func (h *httpPuller) queryURL(ctx context.Context, feedCacher cacher.GlobalThrea
 				log.WithError(err).WithFields(log.Fields{
 					"n":   n,
 					"url": u,
-				}).Infof("Retrying")
+				}).Infof("[Global Threat Feeds] Retrying for feed %v", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			},
 		),
 	)
 	if err != nil {
-		log.WithError(err).Error("failed to query")
+		log.WithError(err).Errorf("[Global Threat Feeds] failed to query HTTP feed for %v", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 		utils.AddErrorToFeedStatus(feedCacher, cacher.PullFailed, err)
 		return err
 	}
@@ -303,7 +303,7 @@ func (h *httpPuller) queryURL(ctx context.Context, feedCacher cacher.GlobalThrea
 
 	snapshot, err := h.setHandler.snapshot(resp.Body)
 	if err != nil {
-		log.WithError(err).Error("failed to parse snapshot")
+		log.WithError(err).Error("[Global Threat Feeds] failed to parse snapshot for feed", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 		utils.AddErrorToFeedStatus(feedCacher, cacher.PullFailed, err)
 		return err
 	}
@@ -322,36 +322,36 @@ func updateFeedStatusAfterSuccessfulPull(feedCacher cacher.GlobalThreatFeedCache
 	getCachedFeedResponse := feedCacher.GetGlobalThreatFeed()
 	if getCachedFeedResponse.Err != nil {
 		log.WithError(getCachedFeedResponse.Err).
-			Error("abort updating feed status after successful pull because failed to retrieve cached GlobalThreatFeed CR")
+			Error("[Global Threat Feeds] abort updating feed status after successful pull because failed to retrieve cached GlobalThreatFeed CR")
 		return
 	}
 	if getCachedFeedResponse.GlobalThreatFeed == nil {
-		log.Error("abort updating feed status after successful pull because cached GlobalThreatFeed CR cannot be empty")
+		log.Error("[Global Threat Feeds] abort updating feed status after successful pull because cached GlobalThreatFeed CR cannot be empty")
 		return
 	}
 
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
-		log.Debug(fmt.Sprintf("%d/%d attempt to update feed status after successful pull", i, cacher.MaxUpdateRetry))
+		log.Debug(fmt.Sprintf("[Global Threat Feeds] %d/%d attempt to update feed %v status after successful pull", i, cacher.MaxUpdateRetry, feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name))
 		if toBeUpdated.Status.LastSuccessfulSync == nil || lastSuccessfulSync.After(toBeUpdated.Status.LastSuccessfulSync.Time) {
 			toBeUpdated.Status.LastSuccessfulSync = &meta.Time{Time: lastSuccessfulSync}
 		} else {
-			log.Error("abort updating feed status after successful pull because the current attempt is out of date")
+			log.Errorf("[Global Threat Feeds] abort updating feed %v status after successful pull because the current attempt is out of date", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			return
 		}
 		errorcondition.ClearError(&toBeUpdated.Status, cacher.PullFailed)
 		updateResponse := feedCacher.UpdateGlobalThreatFeedStatus(toBeUpdated)
 		updateErr := updateResponse.Err
 		if updateErr == nil {
-			log.Debug("attempt to update feed status after successful pull succeeded, exiting the loop")
+			log.Debugf("[Global Threat Feeds] attempt to update feed %v status after successful pull succeeded, exiting the loop", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			return
 		}
 		statusErr, ok := updateErr.(*apiErrors.StatusError)
 		if !ok || statusErr.Status().Code != http.StatusConflict {
-			log.WithError(updateErr).Error("abort updating feed status after successful pull due to unrecoverable failure")
+			log.WithError(updateErr).Errorf("[Global Threat Feeds] abort updating feed %v status after successful pull due to unrecoverable failure", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			return
 		}
-		log.WithError(updateErr).Error("failed updating feed status after successful pull")
+		log.WithError(updateErr).Errorf("[Global Threat Feeds] failed updating feed %v status after successful pull", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 		toBeUpdated = updateResponse.GlobalThreatFeed
 	}
 }
