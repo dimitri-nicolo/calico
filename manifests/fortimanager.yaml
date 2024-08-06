@@ -74,7 +74,7 @@ spec:
         - name: tigera-pull-secret
       containers:
         - name: tigera-firewall-controlller
-          image: gcr.io/unique-caldron-775/cnx/tigera/firewall-integration:master
+          image: quay.io/tigera/firewall-integration:v3.20.0-1.0
           imagePullPolicy: IfNotPresent
           env:
             - name: ENABLED_CONTROLLERS

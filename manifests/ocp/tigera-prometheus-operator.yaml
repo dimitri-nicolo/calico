@@ -57,9 +57,9 @@ spec:
         - name: tigera-pull-secret
       containers:
       - name: calico-prometheus-operator
-        image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:master
+        image: quay.io/tigera/prometheus-operator:v3.20.0-1.0
         args:
-          - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:master
+          - --prometheus-config-reloader=quay.io/tigera/prometheus-config-reloader:v3.20.0-1.0
           - --config-reloader-memory-request=50Mi
           - --namespaces=tigera-prometheus
           - --cluster-domain=cluster.local

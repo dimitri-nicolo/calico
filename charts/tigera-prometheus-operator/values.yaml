@@ -4,22 +4,17 @@
 #
 # Example: --set-file imagePullSecrets.gcr=./pull-secret.json
 imagePullSecrets: {}
-
-
 # imagePullSecretReferences are configured on all images deployed by the chart.
 # secrets specified here must already exist; they won't be created by the helm chart.
 # imagePullSecretReferences are a slice of LocalObjectReferences, which is the same format they appear as on deployments.
 #
 # Example: --set imagePullSecretReferences[0].name=my-existing-secret
 imagePullSecretReferences: []
-
 installation:
   kubernetesProvider: ""
-
 prometheusOperator:
-  image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator
-  tag: master
-
+  image: quay.io/tigera/prometheus-operator
+  tag: v3.20.0-1.0
 prometheusConfigReloader:
-  image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader
-  tag: master
+  image: quay.io/tigera/prometheus-config-reloader
+  tag: v3.20.0-1.0
