@@ -788,7 +788,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								Expect(table).To(Equal("250"))
 							})
 
-							It("FOCUS should reuse existing route rule and table", func() {
+							It("should reuse existing route rule and table", func() {
 								triggerStartup := tc.Felixes[0].RestartWithDelayedStartup()
 
 								// Add route rule and table for client, to check if egress ip manager picks table 220 for this client
