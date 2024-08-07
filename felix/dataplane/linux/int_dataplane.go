@@ -1669,8 +1669,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		if config.FlowLogsCollectProcessInfo || config.FlowLogsCollectTcpStats {
 			log.Debug("Process/TCP stats collection is required, create process info cache")
-			gcInterval := time.Second * 1
-			entryTTL := time.Second * 10
+			infoEntryTTL := 10 * time.Second
+			infoGCInterval := infoEntryTTL / 5
+			procEntryTTL := 30 * time.Second
+			procGCInterval := procEntryTTL / 5
+
 			var eventProcessC <-chan events.EventProtoStats
 			var eventTcpC <-chan events.EventTcpStats
 			var eventProcessPathC <-chan events.ProcessPath
@@ -1678,13 +1681,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				eventProcessC = eventProtoStatsSink.EventProtoStatsChan()
 				if config.FlowLogsCollectProcessPath {
 					eventProcessPathC = eventProcessPathSink.EventProcessPathChan()
-					processPathInfoCache = events.NewBPFProcessPathCache(eventProcessPathC, gcInterval, entryTTL*30)
+					processPathInfoCache = events.NewBPFProcessPathCache(eventProcessPathC, procGCInterval, procEntryTTL)
 				}
 			}
 			if config.FlowLogsCollectTcpStats {
 				eventTcpC = eventTcpStatsSink.EventTcpStatsChan()
 			}
-			prd := events.NewBPFProcessInfoCache(eventProcessC, eventTcpC, gcInterval, entryTTL, processPathInfoCache)
+			prd := events.NewBPFProcessInfoCache(eventProcessC, eventTcpC, infoGCInterval, infoEntryTTL, processPathInfoCache)
 			processInfoCache = prd
 		}
 
