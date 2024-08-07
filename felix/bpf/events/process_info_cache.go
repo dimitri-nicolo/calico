@@ -28,7 +28,7 @@ type BPFProcessInfoCache struct {
 	cache map[tuple.Tuple]ProcessEntry
 
 	// Ticker for running the GC thread that reaps expired entries.
-	expireTicker jitter.JitterTicker
+	expireTicker jitter.TickerInterface
 	// Max time for which an entry is retained.
 	entryTTL time.Duration
 

@@ -37,7 +37,7 @@ type PrometheusReporter struct {
 	registry        *prometheus.Registry
 	reportChan      chan metric.Update
 	retentionTime   time.Duration
-	retentionTicker jitter.JitterTicker
+	retentionTicker jitter.TickerInterface
 	aggregators     []PromAggregator
 
 	// Allow the time function to be mocked for test purposes.
@@ -107,7 +107,7 @@ func (pr *PrometheusReporter) startReporter() {
 				agg.OnUpdate(mu)
 			}
 		case <-pr.retentionTicker.Channel():
-			//TODO: RLB: Maybe improve this processing using a linked-list (ordered by time)
+			// TODO: RLB: Maybe improve this processing using a linked-list (ordered by time)
 			now := pr.timeNowFn()
 			for _, agg := range pr.aggregators {
 				agg.CheckRetainedMetrics(now)
