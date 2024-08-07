@@ -12,16 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cache_test
+package cache
 
 import (
 	"fmt"
 	"reflect"
+	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	gocache "github.com/patrickmn/go-cache"
+
+	"k8s.io/client-go/util/workqueue"
 )
 
 type resource struct {
@@ -43,14 +47,14 @@ func listFunc() (map[string]interface{}, error) {
 
 var _ = Describe("Cache", func() {
 
-	rcargs := cache.ResourceCacheArgs{
+	rcargs := ResourceCacheArgs{
 		ListFunc:   listFunc,
 		ObjectType: reflect.TypeOf(resource{}),
 	}
 
 	Context("Get operation", func() {
 		Context("With non-existing key", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			returnedObject, exists := rc.Get("nokey")
@@ -61,7 +65,7 @@ var _ = Describe("Cache", func() {
 		})
 
 		Context("With empty key", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			returnedObject, exists := rc.Get("")
@@ -72,7 +76,7 @@ var _ = Describe("Cache", func() {
 		})
 
 		Context("With key/value present in cache", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			resourceName := "namespace1"
@@ -90,7 +94,7 @@ var _ = Describe("Cache", func() {
 
 	Context("Prime operation", func() {
 		Context("When key not present in cache", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			resourceName := "namespace1"
@@ -111,7 +115,7 @@ var _ = Describe("Cache", func() {
 		})
 
 		Context("With the duplicate key", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			resourceName := "namespace1"
@@ -134,7 +138,7 @@ var _ = Describe("Cache", func() {
 
 	Context("Set Operation", func() {
 		Context("when resource already not present in cache", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			resourceName := "namespace1"
@@ -142,7 +146,7 @@ var _ = Describe("Cache", func() {
 				name: resourceName,
 			}
 
-			// Set the resource in resource cache.
+			// Set the resource in resource
 			rc.Set(resourceName, obj)
 			It("should store resource in cache", func() {
 				storedobj, exists := rc.Get(resourceName)
@@ -159,7 +163,7 @@ var _ = Describe("Cache", func() {
 		})
 
 		Context("when exact resource already present in cache", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			resourceName := "namespace1"
@@ -167,14 +171,14 @@ var _ = Describe("Cache", func() {
 				name: resourceName,
 			}
 
-			// Set resource to cache.
+			// Set resource to
 			rc.Set(resourceName, obj)
 			queue := rc.GetQueue()
 
 			// Remove the key for already added resource
 			queue.Get()
 
-			// Set same resource in cache.
+			// Set same resource in
 			rc.Set(resourceName, obj)
 
 			// Assert that cache does not queue new key for already existing resource
@@ -186,7 +190,7 @@ var _ = Describe("Cache", func() {
 
 	Context("Delete Operation", func() {
 		Context("delete valid resource in cache", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			resourceName := "namespace1"
@@ -194,7 +198,7 @@ var _ = Describe("Cache", func() {
 				name: resourceName,
 			}
 
-			// Add resource in cache.
+			// Add resource in
 			rc.Set(resourceName, obj)
 			_, exists := rc.Get(resourceName)
 			It("should add resource to cache", func() {
@@ -220,7 +224,7 @@ var _ = Describe("Cache", func() {
 
 	Context("Clean Operation", func() {
 		Context("With resource present in cache", func() {
-			rc := cache.NewResourceCache(rcargs)
+			rc := NewResourceCache(rcargs)
 			rc.Run("0m")
 
 			resourceName := "namespace1"
@@ -228,7 +232,7 @@ var _ = Describe("Cache", func() {
 				name: resourceName,
 			}
 
-			// Add resource in cache.
+			// Add resource in
 			rc.Set(resourceName, obj)
 			_, exists := rc.Get(resourceName)
 			It("should add resource to cache", func() {
@@ -243,6 +247,59 @@ var _ = Describe("Cache", func() {
 			It("should remove resource from cache", func() {
 				Expect(existsAfterClean).To(BeFalse())
 				Expect(storedObj).To(BeNil())
+			})
+		})
+	})
+
+	Context("Stop operation", func() {
+		var (
+			c           *calicoCache
+			mockQueue   workqueue.RateLimitingInterface
+			mockCache   *gocache.Cache
+			stopChannel chan struct{}
+		)
+
+		const (
+			noExpiration      = 0
+			defaultExpiration = 5 * time.Minute
+		)
+		BeforeEach(func() {
+			mockQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+			mockCache = gocache.New(noExpiration, defaultExpiration)
+			mockCache.Set("namespace1", resource{name: "namespace1"}, gocache.NoExpiration)
+			mockCache.Set("namespace2", resource{name: "namespace2"}, gocache.NoExpiration)
+			stopChannel = make(chan struct{})
+
+			c = &calicoCache{
+				threadSafeCache: mockCache,
+				workqueue:       mockQueue,
+				stopChan:        stopChannel,
+				running:         true,
+				mut:             &sync.Mutex{},
+			}
+		})
+
+		Describe("Stop", func() {
+			It("should shut down the workqueue", func() {
+				c.Stop()
+				Expect(mockQueue.ShuttingDown()).To(BeTrue())
+			})
+
+			It("should flush the cache", func() {
+				Expect(mockCache.ItemCount()).To(Equal(2))
+				c.Stop()
+				Expect(mockCache.ItemCount()).To(Equal(0))
+			})
+
+			It("should set running to false", func() {
+				c.Stop()
+				Expect(c.running).To(BeFalse())
+			})
+
+			It("should close the stop channel", func() {
+				c.Stop()
+				_, open := <-stopChannel
+				Expect(open).To(BeFalse())
 			})
 		})
 	})
