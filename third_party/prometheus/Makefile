@@ -26,6 +26,7 @@ $(PROMETHEUS_DOWNLOADED):
 	curl -sfL https://github.com/prometheus/prometheus/archive/refs/tags/$(PROMETHEUS_VERSION).tar.gz | tar xz --strip-components 1 -C prometheus
 	patch -d prometheus -p1 < patches/0001-String-Go-binary-debug-symbols.patch
 	patch -d prometheus -p1 < patches/0002-Update-boring-crypto-to-v0.18.0.patch
+	patch -d prometheus -p1 < patches/0003-CVE-fix-update-docker-to-v25.0.6.patch
 	touch $@
 
 .PHONY: build
