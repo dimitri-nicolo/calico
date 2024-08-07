@@ -191,7 +191,7 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 		log.WithField("template", template).WithField("meta", fl.FlowMeta).Info("Looking for")
 		if t.expectPolicies {
 			for meta, actualPolicies := range t.policies[ii] {
-				fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
+				fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(meta.Tuple.GetSourcePort())
 				if meta != fl.FlowMeta {
 					continue
 				}
@@ -207,12 +207,12 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 				// Record that we've ticked off this flow.
 				t.policies[ii][meta] = []string{}
 			}
-			fl.FlowMeta.Tuple.SetSourcePort(0)
+			fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(0)
 		}
 
 		matchingMetas := 0
 		for meta, count := range t.flowsCompleted[ii] {
-			fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
+			fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(meta.Tuple.GetSourcePort())
 			if meta == fl.FlowMeta {
 				// This flow log matches what
 				// we're looking for.
@@ -226,7 +226,7 @@ func (t *FlowTesterDeprecated) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc 
 				t.flowsCompleted[ii][meta] = 0
 			}
 		}
-		fl.FlowMeta.Tuple.SetSourcePort(0)
+		fl.FlowMeta.Tuple = fl.FlowMeta.Tuple.WithSourcePort(0)
 		if matchingMetas != numMatchingMetas {
 			errs = append(errs, fmt.Sprintf("Wrong log count (%d != %d) for %v", matchingMetas, numMatchingMetas, fl.FlowMeta))
 		}

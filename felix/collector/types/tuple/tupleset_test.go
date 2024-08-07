@@ -3,6 +3,7 @@
 package tuple
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -66,6 +67,21 @@ var _ = Describe("Set", func() {
 				Expect(s.Contains(t3)).To(BeFalse())
 			})
 		})
+	})
+
+	It("should stringify as pointer or non-pointer type", func() {
+		t1 := Make(localIp1, localIp2, proto_tcp, 1, 1)
+		f1 := fmt.Sprintf("%v", t1)
+		Expect(f1).To(Equal("src=10.0.0.1 dst=10.0.0.2 proto=6 sport=1 dport=1"))
+		f2 := fmt.Sprintf("%v", &t1)
+		Expect(f1).To(Equal(f2))
+	})
+
+	It("should support making a copy with updated source port", func() {
+		t1 := Make(localIp1, localIp2, proto_tcp, 1, 1)
+		t2 = t1.WithSourcePort(2)
+		Expect(t1.L4Src).To(Equal(1))
+		Expect(t2.L4Src).To(Equal(2))
 	})
 })
 

@@ -71,14 +71,14 @@ func ConvertFlowLog(flowLog v1.FlowLog, key storage.QueryKey, geoDB geodb.GeoDat
 	if err != nil {
 		log.WithFields(log.Fields{
 			"feeds": feeds,
-		}).Error("Could not find City/Country of origin for destination IP")
+		}).Error("[Global Threat Feeds] Could not find City/Country of origin for destination IP")
 	}
 
 	geoInfo.ASN, err = geoDB.ASN(parsedIP)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"feeds": feeds,
-		}).Warn("Could not find ASN for destination IP")
+		}).Warn("[Global Threat Feeds] Could not find ASN for destination IP")
 	}
 
 	return v1.Event{
@@ -160,7 +160,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 			log.WithFields(log.Fields{
 				"feeds":  feeds,
 				"rrsets": l.RRSets,
-			}).Warn("couldn't determine which rrset.name triggered suspicious domains search hit")
+			}).Warn("[Global Threat Feeds] couldn't determine which rrset.name triggered suspicious domains search hit")
 
 			// But, press on anyway.
 		}
@@ -186,7 +186,7 @@ func ConvertDNSLog(l v1.DNSLog, key storage.QueryKey, domains map[string]struct{
 			log.WithFields(log.Fields{
 				"feeds":  feeds,
 				"rrsets": l.RRSets,
-			}).Warn("couldn't determine which rrset.rdata triggered suspicious domains search hit")
+			}).Warn("[Global Threat Feeds] couldn't determine which rrset.rdata triggered suspicious domains search hit")
 
 			// But, press on anyway.
 		}

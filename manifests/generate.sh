@@ -123,6 +123,7 @@ for FILE in $VALUES_FILES; do
 	        --set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	        --set calicoctl.tag=$CALICO_VERSION \
 	        --include-crds \
+	        --no-hooks \
 		-f ../charts/values/$FILE > $FILE
 done
 

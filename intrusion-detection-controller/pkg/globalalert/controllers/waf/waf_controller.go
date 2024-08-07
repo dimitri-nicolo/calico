@@ -56,11 +56,11 @@ func NewWafAlertController(linseedClient client.Client, clusterName string, tena
 func (c *wafAlertController) Run(parentCtx context.Context) {
 	var ctx context.Context
 	ctx, c.cancel = context.WithCancel(parentCtx)
-	log.Infof("Starting waf alert controller for cluster %s", c.clusterName)
+	log.Infof("[WAF] Starting waf alert controller for cluster %s", c.clusterName)
 
 	err := c.InitLogsCache(ctx)
 	if err != nil {
-		log.WithError(err).Warn("failed to init logs cache")
+		log.WithError(err).Warn("[WAF] failed to init logs cache")
 	}
 
 	go c.runWafLogsProcessingLoop(ctx)
@@ -70,7 +70,7 @@ func (c *wafAlertController) runWafLogsProcessingLoop(ctx context.Context) {
 	for {
 		err := c.ProcessWafLogs(ctx)
 		if err != nil {
-			log.WithError(err).Error("error while processing waf logs")
+			log.WithError(err).Error("[WAF] error while processing waf logs")
 		}
 
 		timer := time.NewTimer(controllerInterval)
@@ -79,7 +79,7 @@ func (c *wafAlertController) runWafLogsProcessingLoop(ctx context.Context) {
 		case <-timer.C:
 			timer.Stop()
 		case <-ctx.Done():
-			log.Debug("Stop handling WAF events due to context cancellation")
+			log.Debug("[WAF] Stop handling WAF events due to context cancellation")
 			timer.Stop()
 			return
 		}
@@ -95,7 +95,7 @@ func (c *wafAlertController) timeRangeTo() time.Time {
 }
 
 func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
-	log.Debug("Building Cache of existing waf Logs")
+	log.Debug("[WAF] Building Cache of existing waf Logs")
 	// we only want to cache logs that have already been an event/alert
 	// fill the cache up to capacity according to max ttl value
 	fromPeriod := c.lastQueryTimestamp.Add(-(logsCacheTTL))
@@ -119,7 +119,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 	}
 	events, err := c.events.List(ctx, eventParams)
 	if err != nil {
-		log.WithError(err).WithField("params", eventParams).Error("error reading events logs from linseed")
+		log.WithError(err).WithField("params", eventParams).Error("[WAF] error reading events logs from linseed")
 		return err
 	}
 
@@ -129,7 +129,7 @@ func (c *wafAlertController) InitLogsCache(ctx context.Context) error {
 		if err := event.GetRecord(&v); err != nil {
 			log.
 				WithField("event", event).
-				Error("cannot add event to cache")
+				Error("[WAF] cannot add event to cache")
 			continue
 		}
 		c.logsCache.Add(&v)
@@ -147,7 +147,7 @@ func (c *wafAlertController) Close() {
 }
 
 func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
-	log.Debug("Processing WAF logs")
+	log.Debug("[WAF] Processing WAF logs")
 	// prune cache first
 	c.logsCache.Purge()
 	// then we're ready for new entries
@@ -170,7 +170,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 
 	logs, err := c.wafLogs.List(ctx, params)
 	if err != nil {
-		log.WithError(err).WithField("params", params).Error("error reading WAF logs from linseed")
+		log.WithError(err).WithField("params", params).Error("[WAF] error reading WAF logs from linseed")
 		return err
 	}
 
@@ -189,7 +189,7 @@ func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {
 	}
 
 	if len(wafEvents) > 0 {
-		log.Debugf("About to create %d WAF Events", len(wafEvents))
+		log.Debugf("[WAF] About to create %d WAF Events", len(wafEvents))
 		_, err = c.events.Create(ctx, wafEvents)
 		if err != nil {
 			return err

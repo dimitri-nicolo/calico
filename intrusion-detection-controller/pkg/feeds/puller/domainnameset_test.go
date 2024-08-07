@@ -132,7 +132,7 @@ func TestQueryDomainNameSet_WithGNS(t *testing.T) {
 	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
 	g.Expect(status.LastSuccessfulSearch).Should(BeNil(), "Search time was not set")
 	g.Expect(status.ErrorConditions).
-		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
+		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "[Global Threat Feeds] sync not supported for domain name set"}}))
 }
 
 func TestGetStartupDelayDomainNameSet(t *testing.T) {
@@ -189,5 +189,5 @@ func TestSyncGNSFromDB_DomainNameSet(t *testing.T) {
 	puller.setHandler.syncFromDB(ctx, feedCacher)
 
 	g.Expect(feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions).
-		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
+		Should(ConsistOf([]v3.ErrorCondition{{Type: cacher.GlobalNetworkSetSyncFailed, Message: "[Global Threat Feeds] sync not supported for domain name set"}}))
 }
