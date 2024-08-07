@@ -3,9 +3,10 @@
 package events
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,247 +14,254 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+
 	"github.com/projectcalico/calico/felix/jitter"
 )
 
-type ProcessPathData struct {
+// processPathCacheEntry is a cache entry for process path information.
+// It wraps the ProcessPathInfo with cache-tracking metadata.
+type processPathCacheEntry struct {
+	source    pidInfoSource
+	expiresAt time.Time
+
+	ProcessPathInfo
+}
+
+type ProcessPathInfo struct {
 	Path string
 	Args string
 }
 
-type ProcessPathInfo struct {
-	Pid int
-	ProcessPathData
-}
+type pidInfoSource int
 
-type ProcessPathEntry struct {
-	ProcessPathInfo
-	expiresAt  time.Time
-	fromKprobe bool
-}
+const (
+	sourceKprobe pidInfoSource = iota
+	sourceProc
+)
 
-var numbersRegex = regexp.MustCompile(`\d+`)
+func (p pidInfoSource) String() string {
+	switch p {
+	case sourceKprobe:
+		return "kprobe"
+	case sourceProc:
+		return "proc"
+	default:
+		return fmt.Sprintf("unknown(%d)", p)
+	}
+}
 
 // BPFProcessPathCache caches process path and args read via kprobes/proc
 type BPFProcessPathCache struct {
 	// Read-Write mutex for process path info
 	lock sync.Mutex
 	// Map of PID to process path information
-	cache map[int]ProcessPathEntry
+	cache map[int]processPathCacheEntry
 
-	// Ticker for running the GC thread that reaps expired entries.
-	expireTicker jitter.JitterTicker
 	// Max time for which an entry is retained.
-	entryTTL time.Duration
+	entryTTL   time.Duration
+	gcInterval time.Duration
 
-	stopOnce         sync.Once
-	wg               sync.WaitGroup
-	stopC            chan struct{}
+	stopOnce sync.Once
+	wg       sync.WaitGroup
+	stopC    chan struct{}
+
 	eventProcessPath <-chan ProcessPath
+	rll              *logutils.RateLimitedLogger
+	procfs           readDirReadFileFS
 }
 
-// NewBPFProcessPathCache returns a new BPFProcessPathCache
-func NewBPFProcessPathCache(eventProcessPathChan <-chan ProcessPath, gcInterval time.Duration,
-	entryTTL time.Duration) *BPFProcessPathCache {
-	return &BPFProcessPathCache{
-		stopC:            make(chan struct{}),
-		eventProcessPath: eventProcessPathChan,
-		expireTicker:     jitter.NewTicker(gcInterval, gcInterval/10),
-		entryTTL:         entryTTL,
-		cache:            make(map[int]ProcessPathEntry),
-		lock:             sync.Mutex{},
+type readDirReadFileFS interface {
+	fs.ReadFileFS
+	fs.ReadDirFS
+}
+
+type ProcPathCacheOpt func(*BPFProcessPathCache)
+
+func WithProcfs(fs readDirReadFileFS) ProcPathCacheOpt {
+	return func(cache *BPFProcessPathCache) {
+		cache.procfs = fs
 	}
 }
 
-func (r *BPFProcessPathCache) Start() error {
+// NewBPFProcessPathCache returns a new BPFProcessPathCache
+func NewBPFProcessPathCache(
+	eventProcessPathChan <-chan ProcessPath,
+	gcInterval time.Duration,
+	entryTTL time.Duration,
+	opts ...ProcPathCacheOpt,
+) *BPFProcessPathCache {
+	c := &BPFProcessPathCache{
+		stopC:            make(chan struct{}),
+		eventProcessPath: eventProcessPathChan,
+		gcInterval:       gcInterval,
+		entryTTL:         entryTTL,
+		cache:            make(map[int]processPathCacheEntry),
+		lock:             sync.Mutex{},
+		rll:              logutils.NewRateLimitedLogger(),
+		procfs:           os.DirFS("/proc").(readDirReadFileFS),
+	}
+	for _, o := range opts {
+		o(c)
+	}
+	return c
+}
+
+func (r *BPFProcessPathCache) Start() {
+	if r.eventProcessPath == nil {
+		return
+	}
 	log.Debugf("starting BPFProcessPathCache")
 	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
-		if r.eventProcessPath != nil {
-			r.run()
-		}
-	}()
-
-	return nil
+	go r.run()
 }
 
 func (r *BPFProcessPathCache) run() {
-	defer r.expireTicker.Stop()
+	defer r.wg.Done()
+
+	expireTicker := jitter.NewTicker(r.gcInterval, r.gcInterval/10)
+	defer expireTicker.Stop()
+
+	refreshTicker := jitter.NewTicker(r.entryTTL/2, r.entryTTL/20)
+	defer refreshTicker.Stop()
+
 	for {
 		select {
 		case <-r.stopC:
+			log.Info("BPFProcessPathCache background loop stopping.")
 			return
 		case processEvent, ok := <-r.eventProcessPath:
-			log.Debugf("Received process path event")
+			log.Debugf("Received process path event: %v", processEvent)
 			if ok {
-				info := convertPathEventToProcessPath(processEvent)
-				log.Debugf("Converted event %+v to process path %+v", processEvent, info)
-				r.updateCacheWithProcessPathInfo(info, true)
+				info := ProcessPathInfo{
+					Path: processEvent.Filename,
+					Args: processEvent.Arguments,
+				}
+				r.updateCache(sourceKprobe, processEvent.Pid, info)
 			}
-		case <-r.expireTicker.Channel():
+		case <-expireTicker.Channel():
 			r.expireCacheEntries()
+		case <-refreshTicker.Channel():
+			err := r.updateAllPIDsFromProcFS()
+			if err != nil {
+				log.WithError(err).Error("Failed to scan procfs to refresh PID cache.")
+			}
 		}
 	}
 }
 
 func (r *BPFProcessPathCache) Stop() {
 	r.stopOnce.Do(func() {
+		log.Info("Stopping BPFProcessPathCache")
 		close(r.stopC)
 	})
 	r.wg.Wait()
 }
 
-// Whenever process information is updated in the processInfoCache,
-// process path cache is referred to see if there is path information.
-// Process path information is updated either via the kprobes or
-// by reading the /proc/pid/cmdline
-func (r *BPFProcessPathCache) Lookup(Pid int) (ProcessPathInfo, bool) {
+// Lookup returns the process path and args for a given PID.  The cache is
+// used if possible, otherwise, it consults /proc and stores the result in
+// the cache.
+func (r *BPFProcessPathCache) Lookup(pid int) (ProcessPathInfo, bool) {
 	r.lock.Lock()
-
-	if entry, ok := r.cache[Pid]; ok {
+	entry, ok := r.cache[pid]
+	r.lock.Unlock()
+	if !ok || entry.source == sourceKprobe {
 		// Though the data is available from kprobes, we still do a check in /proc.
 		// This is to avoid inconsistencies especially in cases like nginx deployments
 		// where the kprobe data is that of the container process and proc data is
 		// that of nginx. Hence if /proc/pid/cmdline is available that takes the higher
 		// precedence.
-		if entry.fromKprobe {
-			procPath := fmt.Sprintf("/proc/%d/cmdline", Pid)
-			_, err := os.Stat(procPath)
-			if err == nil {
-				log.Debugf("Process path found from kprobe. Reading /proc/%+v/cmdline", Pid)
-				r.lock.Unlock()
-				return r.getPathFromProc(Pid)
-			}
-		}
-		log.Debugf("Found process path %+v for Pid %+v", entry.ProcessPathInfo, Pid)
-		entry.expiresAt = time.Now().Add(r.entryTTL)
-		r.cache[Pid] = entry
-		r.lock.Unlock()
-		return entry.ProcessPathInfo, true
+		entry = r.updateSinglePIDFromProcfs(pid)
 	}
-	r.lock.Unlock()
-	log.Debugf("Process path not found in cache, reading /proc/%+v/cmdline", Pid)
-	return r.getPathFromProc(Pid)
+	// If the lookup failed, updateSinglePIDFromProcfs will have written a
+	// tombstone entry to the cache.  Caller only cares about whether we have
+	// a path or not.
+	ok = entry.ProcessPathInfo.Path != ""
+	return entry.ProcessPathInfo, ok
 }
 
-func (r *BPFProcessPathCache) getPathFromProc(Pid int) (ProcessPathInfo, bool) {
-	// Read data from /proc/pid/cmdline
-	// Add to processPathCache
-	path, args, err := r.readProcCmdline(Pid)
+// updateAllPIDsFromProcFS reads all of /proc, refreshing all the cache
+// entries that it sees.
+func (r *BPFProcessPathCache) updateAllPIDsFromProcFS() error {
+	proc, err := r.procfs.ReadDir(".")
 	if err != nil {
-		log.WithError(err).Debug("error reading /proc dir")
-	} else {
-		return ProcessPathInfo{
-			Pid: Pid,
-			ProcessPathData: ProcessPathData{
-				Path: path,
-				Args: args,
-			},
-		}, true
+		return fmt.Errorf("failed to read /proc: %w", err)
 	}
-	log.Debugf("Process path not found for PID %+v", Pid)
-	return ProcessPathInfo{}, false
+	for _, f := range proc {
+		if !f.IsDir() {
+			continue
+		}
+		name := f.Name()
+		pid, err := strconv.Atoi(name)
+		if err != nil {
+			// Skip non-numeric directories...
+			continue
+		}
+		r.updateSinglePIDFromProcfs(pid)
+	}
+	return nil
 }
 
-func (r *BPFProcessPathCache) updateCacheWithProcessPathInfo(info ProcessPathInfo, fromKprobe bool) {
+func (r *BPFProcessPathCache) updateSinglePIDFromProcfs(pid int) processPathCacheEntry {
+	cmdlinePath := fmt.Sprintf("%d/cmdline", pid)
+	pathInfo := ProcessPathInfo{}
+	content, err := r.procfs.ReadFile(cmdlinePath)
+	if errors.Is(err, fs.ErrNotExist) {
+		log.Debugf("PID not found in /proc: %d", pid)
+	} else if err != nil {
+		r.rll.WithError(err).Warnf("Unexpected error when trying to read /proc/%d/cmdline, ignoring.", pid)
+	} else {
+		path, args, _ := strings.Cut(string(content), "\x00")
+		pathInfo.Path = path
+		pathInfo.Args = args
+	}
+	return r.updateCache(sourceProc, pid, pathInfo)
+}
+
+func (r *BPFProcessPathCache) updateCache(source pidInfoSource, pid int, info ProcessPathInfo) processPathCacheEntry {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	log.Debugf("Updating process path info %+v", info)
-	pid := info.Pid
+
+	log.Debugf("Updating process path info pid=%d %+v", pid, info)
 	entry, ok := r.cache[pid]
-	if ok {
-		entry.ProcessPathData = info.ProcessPathData
-		entry.expiresAt = time.Now().Add(r.entryTTL)
-		log.Debugf("Process path cache updated with process data %+v", entry)
-		r.cache[pid] = entry
-	} else {
-		entry := ProcessPathEntry{
+	if !ok {
+		// Cache miss, take what we're given.
+		entry = processPathCacheEntry{
 			ProcessPathInfo: info,
-			expiresAt:       time.Now().Add(r.entryTTL),
+			source:          source,
 		}
-		r.cache[pid] = entry
+	} else {
+		// Merge the info into the current entry.
+		if info.Path != "" {
+			entry.Path = info.Path
+			entry.Args = info.Args
+
+		}
+		// Record the most recent source that has checked the cache.
+		entry.source = source
 	}
+
+	// Update the cache.
+	entry.expiresAt = time.Now().Add(r.entryTTL)
+	r.cache[pid] = entry
+
+	// Return the updated entry to save the caller from having to re-take
+	// the lock.
+	return entry
 }
 
 func (r *BPFProcessPathCache) expireCacheEntries() {
 	r.lock.Lock()
 	defer r.lock.Unlock()
+	log.Debug("Running PID cache GC.")
 
 	for pid, entry := range r.cache {
-		if time.Until(entry.expiresAt) <= 0 {
-			log.Debugf("Expiring process path %+v. Time until expiration %v", entry, time.Until(entry.expiresAt))
-			delete(r.cache, pid)
+		if entry.expiresAt.After(time.Now()) {
 			continue
 		}
-	}
-}
-
-func convertPathEventToProcessPath(event ProcessPath) ProcessPathInfo {
-	return ProcessPathInfo{
-		Pid: event.Pid,
-		ProcessPathData: ProcessPathData{
-			Path: event.Filename,
-			Args: event.Arguments,
-		},
-	}
-}
-
-// readProcCmdline reads /proc/pid/cmdline to get the process path and the arguments.
-// For this feature, hostPID will be set to true, thus enabling access to the complete
-// /proc/pid inside the host
-func (r *BPFProcessPathCache) readProcCmdline(procId int) (string, string, error) {
-	var rpath, rargs, args string
-	var rerror error
-	IsPidPresent := false
-	proc, err := os.ReadDir("/proc")
-	if err != nil {
-		return "", "", err
-	}
-	for _, f := range proc {
-		if !f.IsDir() || !numbersRegex.MatchString(f.Name()) {
-			continue
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.Debugf("Expiring PID %d -> name cache %+v.", pid, entry)
 		}
-		pid, err := strconv.Atoi(f.Name())
-		if err != nil {
-			log.Debugf("pid directory not numeric, skipping %+v", err)
-			continue
-		}
-		procPath := fmt.Sprintf("/proc/%d/cmdline", pid)
-		content, err := os.ReadFile(procPath)
-		if err != nil {
-			log.WithError(err).Debugf("error reading %v", procPath)
-			if pid == procId {
-				rerror = err
-				IsPidPresent = true
-			}
-		} else {
-			str := string(content)
-			if len(str) == 0 {
-				continue
-			}
-			pathArgs := strings.SplitN(strings.Replace(str, "\x00", " ", -1), " ", 2)
-			path := pathArgs[0]
-			if len(pathArgs) == 2 {
-				args = pathArgs[1]
-			}
-			if pid == procId {
-				rpath = path
-				rargs = args
-				IsPidPresent = true
-			}
-			pathInfo := ProcessPathInfo{
-				Pid: pid,
-				ProcessPathData: ProcessPathData{
-					Path: path,
-					Args: args,
-				},
-			}
-			r.updateCacheWithProcessPathInfo(pathInfo, false)
-		}
+		delete(r.cache, pid)
 	}
-	if !IsPidPresent {
-		rerror = fmt.Errorf("pid %v directory not found in /proc", procId)
-	}
-	return rpath, rargs, rerror
 }
