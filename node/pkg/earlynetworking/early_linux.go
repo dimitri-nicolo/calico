@@ -86,7 +86,7 @@ func Run() {
 	}
 	var routerID net.IP
 	for _, route := range routes {
-		if route.Dst == nil || route.Dst.IP == nil {
+		if isDefaultCIDR(route.Dst) {
 			logrus.Infof("Got default route %+v", route)
 			if route.Src != nil {
 				logrus.Infof("Default route has source address %v", route.Src)
@@ -198,6 +198,16 @@ nodeLoop:
 	// Loop deciding whether to run early BIRD or not.
 	logrus.Info("Early networking set up; now monitoring BIRD")
 	monitorOngoing(thisNode)
+}
+
+func isDefaultCIDR(dst *net.IPNet) bool {
+	if dst == nil {
+		return true
+	}
+	if ones, _ := dst.Mask.Size(); ones == 0 {
+		return true
+	}
+	return false
 }
 
 func monitorOngoing(thisNode *ConfigNode) {

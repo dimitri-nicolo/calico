@@ -32,18 +32,22 @@ func nlGetDefaultRouteLink(family int) (string, error) {
 	}
 
 	for _, rt := range routes {
-		if rt.Dst == nil {
-			link, err := netlink.LinkByIndex(rt.LinkIndex)
-			if err != nil {
-				return "", fmt.Errorf("link index %d: %q", rt.LinkIndex, err)
+		if rt.Dst != nil {
+			if ones, _ := rt.Dst.Mask.Size(); ones != 0 {
+				continue
 			}
-
-			if attrs := link.Attrs(); attrs != nil {
-				return attrs.Name, nil
-			}
-
-			return "", fmt.Errorf("link index %d: no attributes", rt.LinkIndex)
 		}
+		// nil or explicitly 0.0.0.0/0.
+		link, err := netlink.LinkByIndex(rt.LinkIndex)
+		if err != nil {
+			return "", fmt.Errorf("link index %d: %q", rt.LinkIndex, err)
+		}
+
+		if attrs := link.Attrs(); attrs != nil {
+			return attrs.Name, nil
+		}
+
+		return "", fmt.Errorf("link index %d: no attributes", rt.LinkIndex)
 	}
 
 	return "", fmt.Errorf("no default route")
