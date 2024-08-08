@@ -429,6 +429,7 @@ func (m *InterfaceMonitor) resync() error {
 			log.WithError(err).Warn("Netlink list operation failed.")
 			return err
 		}
+		break
 	}
 	currentIfaces := set.New[string]()
 	for _, link := range links {
