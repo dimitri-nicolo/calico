@@ -17,7 +17,6 @@ package syncher
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -45,8 +44,6 @@ type SyncClient struct {
 	inSync           bool
 	storeManager     policystore.PolicyStoreManager
 	stats            chan map[statscache.Tuple]statscache.Values
-
-	mu sync.Mutex
 }
 
 type ClientOptions func(*SyncClient)
@@ -111,7 +108,7 @@ func (s *SyncClient) connectAndSync(ptx context.Context, cb ...statscache.StatsC
 	ctx, cancel := context.WithCancel(ptx)
 	defer cancel()
 
-	s.setInSync(false)
+	s.inSync = false
 	s.storeManager.OnReconnecting()
 
 	if err := ctx.Err(); err != nil {
@@ -142,7 +139,7 @@ func (s *SyncClient) sync(stream proto.PolicySync_SyncClient, ctx context.Contex
 		}
 		switch update.Payload.(type) {
 		case *proto.ToDataplane_InSync:
-			s.setInSync(true)
+			s.inSync = true
 			s.storeManager.OnInSync()
 		default:
 			s.storeManager.Write(func(ps *policystore.PolicyStore) {
@@ -154,17 +151,8 @@ func (s *SyncClient) sync(stream proto.PolicySync_SyncClient, ctx context.Contex
 
 // Readiness returns whether the SyncClient is InSync.
 func (s *SyncClient) Readiness() (ready bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	return s.inSync
-}
-
-func (s *SyncClient) setInSync(v bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.inSync = v
 }
 
 // sendStats is the main stats reporting loop.

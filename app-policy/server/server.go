@@ -172,7 +172,7 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 
 	if s.wafEnabled {
 		wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
-		events := waf.NewEventsPipeline(policyStoreManager, wafLogHandler.Process)
+		events := waf.NewEventsPipeline(wafLogHandler.Process)
 		go events.Start(ctx, s.wafEventsFlushDuration)
 		wafServer, err := waf.New(s.wafRulesetFiles, s.wafDirectives, events)
 		if err != nil {

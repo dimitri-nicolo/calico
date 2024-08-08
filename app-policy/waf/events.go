@@ -32,10 +32,12 @@ type cacheEntry struct {
 }
 
 type wafEventsPipeline struct {
-	store         policystore.PolicyStoreManager
 	cache         map[cacheKey]*cacheEntry
 	flushCallback eventCallbackFn
-	mu            sync.Locker
+	mu            sync.Mutex
+	events        []interface{}
+
+	currPolicyStore *policystore.PolicyStore
 }
 
 type txHttpInfo struct {
@@ -46,12 +48,10 @@ type txHttpInfo struct {
 	srcName, srcNamespace string
 }
 
-func NewEventsPipeline(store policystore.PolicyStoreManager, cb eventCallbackFn) *wafEventsPipeline {
+func NewEventsPipeline(cb eventCallbackFn) *wafEventsPipeline {
 	return &wafEventsPipeline{
-		store:         store,
 		cache:         make(map[cacheKey]*cacheEntry),
 		flushCallback: cb,
-		mu:            &sync.Mutex{},
 	}
 }
 
@@ -63,15 +63,9 @@ func NewEventsPipeline(store policystore.PolicyStoreManager, cb eventCallbackFn)
 //
 // if the cached entries do not have the missing info yet and flush comes along
 // that's okay, we'll just fill in the missing info with the default values
-func (p *wafEventsPipeline) Process(event interface{}) {
-	switch e := event.(type) {
-	case corazatypes.MatchedRule:
-		p.processMatchedRule(e)
-	case *txHttpInfo:
-		p.processTxHttpInfo(e)
-	default:
-		log.WithField("event", e).Warn("Unknown event type")
-	}
+func (p *wafEventsPipeline) Process(ps *policystore.PolicyStore, event interface{}) {
+	p.currPolicyStore = ps
+	p.events = append(p.events, event)
 }
 
 func (p *wafEventsPipeline) processMatchedRule(matchedRule corazatypes.MatchedRule) {
@@ -79,8 +73,6 @@ func (p *wafEventsPipeline) processMatchedRule(matchedRule corazatypes.MatchedRu
 	if rule == nil {
 		return
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
 
 	log.WithFields(log.Fields{
 		"rule":  rule.ID(),
@@ -108,9 +100,6 @@ func (p *wafEventsPipeline) processMatchedRule(matchedRule corazatypes.MatchedRu
 }
 
 func (p *wafEventsPipeline) processTxHttpInfo(info *txHttpInfo) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	key := cacheKey{info.destIP}
 	entry, ok := p.cache[key]
 	if !ok {
@@ -137,54 +126,54 @@ func firstNonEmpty(v ...string) string {
 	return ""
 }
 
-func (p *wafEventsPipeline) cacheEntryToLog(entry cacheEntry) *linseedv1.WAFLog {
-	var srcEp, dstEp *linseedv1.WAFEndpoint
-	p.store.Read(
-		func(ps *policystore.PolicyStore) {
-			log.WithFields(log.Fields{
-				"srcIP": entry.srcIP,
-				"dstIP": entry.destIP,
-			}).Debug("Looking up endpoint keys")
-			src, dst, err := checker.LookupEndpointKeysFromSrcDst(
-				ps,
-				entry.srcIP,
-				entry.destIP,
-			)
-			if err != nil {
-				log.WithError(err).Debug("Failed to lookup endpoint keys")
-				return
-			}
-			log.WithFields(log.Fields{
-				"src": src,
-				"dst": dst,
-			}).Debug("Found endpoint keys")
-
-			srcNamespaceFromCache, srcNameFromCache := extractFirstWepNameAndNamespace(src)
-			dstNamespaceFromCache, dstNameFromCache := extractFirstWepNameAndNamespace(dst)
-
-			// prioritize src info from the cache, then use the info from the entry.
-			// use "-" for empty values as that is a special value for ES log entries
-			srcName := firstNonEmpty(srcNameFromCache, entry.srcName, "-")
-			srcNamespace := firstNonEmpty(srcNamespaceFromCache, entry.srcNamespace, "-")
-
-			dstName := firstNonEmpty(dstNameFromCache, "-")
-			dstNamespace := firstNonEmpty(dstNamespaceFromCache, "-")
-
-			srcEp = &linseedv1.WAFEndpoint{
-				IP:           entry.srcIP,
-				PodName:      srcName,
-				PodNameSpace: srcNamespace,
-				PortNum:      int32(entry.srcPort),
-			}
-
-			dstEp = &linseedv1.WAFEndpoint{
-				IP:           entry.destIP,
-				PodName:      dstName,
-				PodNameSpace: dstNamespace,
-				PortNum:      int32(entry.dstPort),
-			}
-		},
+func lookupSrcDstEps(entry *cacheEntry, ps *policystore.PolicyStore) (srcEp, dstEp *linseedv1.WAFEndpoint) {
+	log.WithFields(log.Fields{
+		"srcIP": entry.srcIP,
+		"dstIP": entry.destIP,
+	}).Debug("Looking up endpoint keys")
+	src, dst, err := checker.LookupEndpointKeysFromSrcDst(
+		ps,
+		entry.srcIP,
+		entry.destIP,
 	)
+	if err != nil {
+		log.WithError(err).Debug("Failed to lookup endpoint keys")
+		return
+	}
+	log.WithFields(log.Fields{
+		"src": src,
+		"dst": dst,
+	}).Debug("Found endpoint keys")
+
+	srcNamespaceFromCache, srcNameFromCache := extractFirstWepNameAndNamespace(src)
+	dstNamespaceFromCache, dstNameFromCache := extractFirstWepNameAndNamespace(dst)
+
+	// prioritize src info from the cache, then use the info from the entry.
+	// use "-" for empty values as that is a special value for ES log entries
+	srcName := firstNonEmpty(srcNameFromCache, entry.srcName, "-")
+	srcNamespace := firstNonEmpty(srcNamespaceFromCache, entry.srcNamespace, "-")
+
+	dstName := firstNonEmpty(dstNameFromCache, "-")
+	dstNamespace := firstNonEmpty(dstNamespaceFromCache, "-")
+
+	srcEp = &linseedv1.WAFEndpoint{
+		IP:           entry.srcIP,
+		PodName:      srcName,
+		PodNameSpace: srcNamespace,
+		PortNum:      int32(entry.srcPort),
+	}
+
+	dstEp = &linseedv1.WAFEndpoint{
+		IP:           entry.destIP,
+		PodName:      dstName,
+		PodNameSpace: dstNamespace,
+		PortNum:      int32(entry.dstPort),
+	}
+	return
+}
+
+func (p *wafEventsPipeline) cacheEntryToLog(entry *cacheEntry) *linseedv1.WAFLog {
+	srcEp, dstEp := lookupSrcDstEps(entry, p.currPolicyStore)
 
 	log := &linseedv1.WAFLog{
 		RequestId:   entry.transactionID,
@@ -213,14 +202,30 @@ func bracket(s string) string {
 	return "[" + s + "]"
 }
 
+func (p *wafEventsPipeline) processEvents() {
+	for _, event := range p.events {
+		switch e := event.(type) {
+		case corazatypes.MatchedRule:
+			p.processMatchedRule(e)
+		case *txHttpInfo:
+			p.processTxHttpInfo(e)
+		default:
+			log.WithField("event", e).Warn("Unknown event type")
+		}
+	}
+	p.events = nil
+}
+
 func (p *wafEventsPipeline) Flush() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	for k, v := range p.cache {
-		p.flushCallback(p.cacheEntryToLog(*v))
-		delete(p.cache, k)
+	p.processEvents()
+
+	for _, v := range p.cache {
+		p.flushCallback(p.cacheEntryToLog(v))
 	}
+	p.cache = map[cacheKey]*cacheEntry{}
 }
 
 func (p *wafEventsPipeline) Start(ctx context.Context, interval time.Duration) {

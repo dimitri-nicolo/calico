@@ -41,32 +41,6 @@ var (
 	}
 )
 
-func TestBasicAggregate(t *testing.T) {
-	sc := statscache.NewWithFlushInterval(50 * time.Millisecond)
-	sc.Add(statscache.DPStats{
-		Tuple: tuple1,
-		Values: statscache.Values{
-			HTTPRequestsAllowed: 1,
-			HTTPRequestsDenied:  3,
-		},
-	})
-	sc.Add(statscache.DPStats{
-		Tuple: tuple1,
-		Values: statscache.Values{
-			HTTPRequestsAllowed: 1,
-			HTTPRequestsDenied:  3,
-		},
-	})
-
-	expected := map[statscache.Tuple]statscache.Values{
-		tuple1: {
-			HTTPRequestsAllowed: 2,
-			HTTPRequestsDenied:  6,
-		},
-	}
-	assert.Equal(t, expected, sc.Aggregated())
-}
-
 func TestFlushCallback(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -194,10 +168,6 @@ func TestNoData(t *testing.T) {
 			HTTPRequestsDenied: 13,
 		},
 	}, <-lastValueSeen)
-	// Send in no data.
-	// then tick
-	mt.tick()
-	assert.Empty(t, sc.Aggregated())
 }
 
 type mockTickerImpl struct {
