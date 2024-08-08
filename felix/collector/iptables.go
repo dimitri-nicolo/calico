@@ -214,7 +214,7 @@ type NetLinkConntrackReader struct {
 	wg       sync.WaitGroup
 	stopC    chan struct{}
 
-	ticker    jitter.JitterTicker
+	ticker    jitter.TickerInterface
 	outC      chan []ConntrackInfo
 	markProxy uint32
 }

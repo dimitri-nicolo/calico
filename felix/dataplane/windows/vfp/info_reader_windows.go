@@ -97,7 +97,7 @@ type InfoReader struct {
 	packetInfoC    chan collector.PacketInfo
 	bufferedEvents []*collector.PacketInfo
 
-	ticker             jitter.JitterTicker
+	ticker             jitter.TickerInterface
 	conntrackInfoC     chan []collector.ConntrackInfo
 	bufferedConntracks []collector.ConntrackInfo
 

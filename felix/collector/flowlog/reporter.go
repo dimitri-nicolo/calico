@@ -44,7 +44,7 @@ type FlowLogReporter struct {
 	dispatchers           map[string]types.Reporter
 	aggregators           []aggregatorRef
 	flushInterval         time.Duration
-	flushTicker           jitter.JitterTicker
+	flushTicker           jitter.TickerInterface
 	hepEnabled            bool
 	displayDebugTraceLogs bool
 
@@ -86,7 +86,7 @@ func newReporterTest(
 	dispatchers map[string]types.Reporter,
 	healthAggregator *health.HealthAggregator,
 	hepEnabled bool,
-	flushTicker jitter.JitterTicker,
+	flushTicker jitter.TickerInterface,
 	logOffset LogOffset,
 ) *FlowLogReporter {
 	if healthAggregator != nil {
