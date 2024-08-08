@@ -113,6 +113,8 @@ const (
 
 	ChainRpfSkip = ChainNamePrefix + "rpf-skip"
 
+	ChainDNSLog = ChainNamePrefix + "log-dns"
+
 	WorkloadToEndpointPfx   = ChainNamePrefix + "tw-"
 	WorkloadPfxSpecialAllow = "ALLOW"
 	WorkloadFromEndpointPfx = ChainNamePrefix + "fw-"
