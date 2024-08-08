@@ -492,6 +492,13 @@ func (s *IPSets) tryResync() error {
 				} else {
 					unknownElems.Add(UnknownMember(e.Key))
 				}
+			case ipsets.IPSetTypeHashNetNet:
+				if len(e.Key) == 2 {
+					// This is a concatination of two CIDRs. Format it back into Felix's internal representation.
+					strElems = append(strElems, fmt.Sprintf("%s,%s", e.Key[0], e.Key[1]))
+				} else {
+					unknownElems.Add(UnknownMember(e.Key))
+				}
 			default:
 				unknownElems.Add(UnknownMember(e.Key))
 			}
@@ -867,7 +874,7 @@ func CanonicaliseMember(t ipsets.IPSetType, member string) SetMember {
 		return simpleMember(ip.MustParseCIDROrIP(member).String())
 	case ipsets.IPSetTypeHashNetNet:
 		cidrs := strings.Split(member, ",")
-		return &netNet{
+		return netNet{
 			net1: ip.MustParseCIDROrIP(cidrs[0]),
 			net2: ip.MustParseCIDROrIP(cidrs[1]),
 		}
@@ -898,6 +905,8 @@ func setType(t ipsets.IPSetType, ipVersion int) string {
 		return fmt.Sprintf("ipv%d_addr . inet_proto . inet_service", ipVersion)
 	case ipsets.IPSetTypeBitmapPort:
 		return "inet_service"
+	default:
+		log.WithField("type", string(t)).Panic("Unknown IPSetType")
 	}
-	return string(t)
+	return ""
 }
