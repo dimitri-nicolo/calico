@@ -34,7 +34,7 @@ func (i ipSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatabase, fee
 		sEvent := ConvertFlowLog(val, key, geoDB, feed.Name)
 		results = append(results, sEvent)
 	}
-	log.WithField("num", c).Debug("got events")
+	log.WithField("num", c).Debugf("[Global Threat Feeds] got events for %v", feed.Name)
 	return results, lastSuccessfulSearch, ipSetHash, iter.Err()
 }
 
@@ -73,7 +73,7 @@ func (d domainNameSetQuerier) QuerySet(ctx context.Context, geoDB geodb.GeoDatab
 			results = append(results, sEvent)
 		}
 	}
-	log.WithField("num", c).Debug("got events")
+	log.WithField("num", c).Debugf("[Global Threat Feeds] got events for %v", feed.Name)
 	return results, lastSuccessfulSearch, domainNameSetHash, iter.Err()
 }
 

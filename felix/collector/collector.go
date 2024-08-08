@@ -47,7 +47,7 @@ var (
 	})
 
 	// TODO: find a way to track errors for conntrack processing as there are no
-	//indicative method to track errors currently
+	// indicative method to track errors currently
 
 	// process info processing prometheus metrics
 	histogramPacketInfoLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -56,7 +56,7 @@ var (
 	})
 
 	// TODO: find a way to track errors for process info processing as there are no
-	//indicative method to track errors currently
+	// indicative method to track errors currently
 
 	// dumpStats processing prometheus metrics
 	histogramDumpStatsLatency = prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -65,7 +65,7 @@ var (
 	})
 
 	// TODO: find a way to track errors for epStats dump processing as there are no
-	//indicative method to track errors currently
+	// indicative method to track errors currently
 
 	// dataplaneStatsUpdate processing prometheus metrics
 	histogramDataplaneStatsUpdate = prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -127,7 +127,7 @@ type collector struct {
 	domainLookup          EgressDomainCache
 	luc                   *calc.LookupsCache
 	epStats               map[tuple.Tuple]*Data
-	ticker                jitter.JitterTicker
+	ticker                jitter.TickerInterface
 	sigChan               chan os.Signal
 	config                *Config
 	dumpLog               *log.Logger

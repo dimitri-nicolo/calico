@@ -144,7 +144,7 @@ func NewWatcher(
 
 func (s *watcher) Run(ctx context.Context) {
 	s.once.Do(func() {
-		log.Info("Start Feeds controller")
+		log.Info("[Global Threat Feeds] Start Feeds controller")
 
 		s.ctx, s.cancel = context.WithCancel(ctx)
 
@@ -172,10 +172,10 @@ func (s *watcher) Run(ctx context.Context) {
 			if !cache.WaitForCacheSync(s.ctx.Done(), s.controller.HasSynced) {
 				// WaitForCacheSync returns false if the context expires before sync is successful.
 				// If that happens, the controller is no longer needed, so just log the error.
-				log.Error("Failed to sync GlobalThreatFeed controller")
+				log.Error("[Global Threat Feeds] Failed to sync GlobalThreatFeed controller")
 				return
 			}
-			log.Debug("GlobalThreatFeed controller synced")
+			log.Debug("[Global Threat Feeds] GlobalThreatFeed controller synced")
 			s.gnsController.Run(s.ctx)
 			s.ipsController.StartReconciliation(s.ctx)
 			s.dnsController.StartReconciliation(s.ctx)
@@ -226,7 +226,7 @@ func (s *watcher) processQueue(obj interface{}, isInInitialList bool) error {
 			case cache.DeletedFinalStateUnknown:
 				name = f.Key
 			default:
-				panic(fmt.Sprintf("unknown FIFO delta type %v", d.Object))
+				panic(fmt.Sprintf("[Global Threat Feeds] unknown FIFO delta type %v", d.Object))
 			}
 			_, exists := s.getFeedWatcher(name)
 			if exists {
@@ -249,7 +249,7 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 
 func (s *watcher) startFeedWatcherIP(ctx context.Context, geodb geodb.GeoDatabase, f *v3.GlobalThreatFeed) {
 	if _, ok := s.getFeedWatcher(f.Name); ok {
-		panic(fmt.Sprintf("Feed %s already started", f.Name))
+		panic(fmt.Sprintf("[Global Threat Feeds] Feed %s already started", f.Name))
 	}
 
 	fCopy := f.DeepCopy()
@@ -282,7 +282,7 @@ func (s *watcher) startFeedWatcherIP(ctx context.Context, geodb geodb.GeoDatabas
 
 func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThreatFeed) {
 	if _, ok := s.getFeedWatcher(f.Name); ok {
-		panic(fmt.Sprintf("Feed %s already started", f.Name))
+		panic(fmt.Sprintf("[Global Threat Feeds] Feed %s already started", f.Name))
 	}
 
 	fCopy := f.DeepCopy()
@@ -312,7 +312,7 @@ func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThrea
 func (s *watcher) updateFeedWatcher(ctx context.Context, oldFeed, newFeed *v3.GlobalThreatFeed) {
 	fw, ok := s.getFeedWatcher(newFeed.Name)
 	if !ok {
-		panic(fmt.Sprintf("Feed %s not started", newFeed.Name))
+		panic(fmt.Sprintf("[Global Threat Feeds] Feed %s not started", newFeed.Name))
 	}
 
 	fw.feed = newFeed.DeepCopy()
@@ -362,7 +362,7 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 
 	fw, ok := s.getFeedWatcher(name)
 	if !ok {
-		panic(fmt.Sprintf("feed %s not running", name))
+		panic(fmt.Sprintf("[Global Threat Feeds] feed %s not running", name))
 	}
 
 	fw.feed = f.DeepCopy()
@@ -387,10 +387,10 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 func (s *watcher) stopFeedWatcher(ctx context.Context, name string) {
 	fw, ok := s.getFeedWatcher(name)
 	if !ok {
-		panic(fmt.Sprintf("feed %s not running", name))
+		panic(fmt.Sprintf("[Global Threat Feeds] feed %s not running", name))
 	}
 
-	log.WithField("feed", name).Info("Stopping feed")
+	log.WithField("feed", name).Info("[Global Threat Feeds] Stopping feed")
 
 	if fw.puller != nil {
 		fw.puller.Close()

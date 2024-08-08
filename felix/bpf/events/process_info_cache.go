@@ -28,7 +28,7 @@ type BPFProcessInfoCache struct {
 	cache map[tuple.Tuple]ProcessEntry
 
 	// Ticker for running the GC thread that reaps expired entries.
-	expireTicker jitter.JitterTicker
+	expireTicker jitter.TickerInterface
 	// Max time for which an entry is retained.
 	entryTTL time.Duration
 
@@ -57,10 +57,7 @@ func NewBPFProcessInfoCache(eventProcessInfoChan <-chan EventProtoStats, eventTc
 
 func (r *BPFProcessInfoCache) Start() error {
 	if r.processPathCache != nil {
-		err := r.processPathCache.Start()
-		if err != nil {
-			log.WithError(err).Error("error starting processPathCache")
-		}
+		r.processPathCache.Start()
 	}
 	r.wg.Add(1)
 	go func() {
@@ -116,7 +113,7 @@ func (r *BPFProcessInfoCache) Lookup(tuple tuple.Tuple, direction types.TrafficD
 		// Inbound data is stored in the reverse order.
 		t = t.Reverse()
 	}
-	log.Debugf("Looking up process info for tuple %+v in direction %v", tuple, direction)
+	log.Debugf("Looking up process info for tuple %v in direction %v", tuple, direction)
 	if entry, ok := r.cache[t]; ok {
 		log.Debugf("Found process info %+v for tuple %+v in direction %v", entry.ProcessInfo, tuple, direction)
 		return entry.ProcessInfo, true

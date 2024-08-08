@@ -18,9 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/config"
@@ -35,6 +34,11 @@ func (r *DefaultRuleRenderer) StaticFilterTableChains(ipVersion uint8) (chains [
 	chains = append(chains, r.StaticFilterForwardChains(ipVersion)...)
 	chains = append(chains, r.StaticFilterInputChains(ipVersion)...)
 	chains = append(chains, r.StaticFilterOutputChains(ipVersion)...)
+
+	// Include the DNS log chain; depending on configuration it may not get
+	// used but the iptables layer will filter it out if it's not needed.
+	chains = append(chains, r.dnsLogChain())
+
 	return
 }
 
@@ -873,11 +877,8 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 						ConntrackState("ESTABLISHED").
 						ConntrackOrigDstPort(server.Port).
 						ConntrackOrigDst(server.IP),
-					Action: r.Nflog(
-						NFLOGDomainGroup,
-						DNSActionPrefix,
-						// Don't truncate the DNS packet when copying it to Felix.
-						-1,
+					Action: r.Jump(
+						ChainDNSLog,
 					),
 				},
 			)
@@ -910,11 +911,8 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 					ConntrackState("NEW").
 					ConntrackOrigDstPort(server.Port).
 					ConntrackOrigDst(server.IP),
-				Action: r.Nflog(
-					NFLOGDomainGroup,
-					DNSActionPrefix,
-					// Don't truncate the DNS packet when copying it to Felix.
-					-1,
+				Action: r.Jump(
+					ChainDNSLog,
 				),
 			},
 		)
@@ -1756,6 +1754,10 @@ func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*genericta
 		r.StaticRawPreroutingChain(ipVersion, nil),
 		r.WireguardIncomingMarkChain(),
 		r.StaticRawOutputChain(0, nil),
+
+		// Include the DNS log chain; depending on configuration it may not get
+		// used but the iptables layer will filter it out if it's not needed.
+		r.dnsLogChain(),
 	}
 }
 
@@ -1881,8 +1883,11 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 		r.WireguardIncomingMarkChain(),
 	}
 
-	chains = append(chains,
-		r.StaticRawOutputChain(tcdefs.MarkSeenBypass, nil))
+	chains = append(chains, r.StaticRawOutputChain(tcdefs.MarkSeenBypass, nil))
+
+	// Include the DNS log chain; depending on configuration it may not get
+	// used but the iptables layer will filter it out if it's not needed.
+	chains = append(chains, r.dnsLogChain())
 
 	return chains
 }
@@ -2068,22 +2073,16 @@ func (r *DefaultRuleRenderer) nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs []co
 				Match: r.NewMatch().Protocol("udp").
 					DestPorts(server.Port).
 					DestNet(server.IP),
-				Action: r.Nflog(
-					NFLOGDomainGroup,
-					DNSActionPrefix,
-					// Don't truncate the DNS packet when copying it to Felix.
-					-1,
+				Action: r.Jump(
+					ChainDNSLog,
 				),
 			},
 			{
 				Match: r.NewMatch().Protocol("tcp").
 					DestPorts(server.Port).
 					DestNet(server.IP),
-				Action: r.Nflog(
-					NFLOGDomainGroup,
-					DNSActionPrefix,
-					// Don't truncate the DNS packet when copying it to Felix.
-					-1,
+				Action: r.Jump(
+					ChainDNSLog,
 				),
 			},
 		}
@@ -2092,6 +2091,31 @@ func (r *DefaultRuleRenderer) nodeLocalDNSPreRoutingRules(nodeLocalDNSAddrs []co
 	}
 
 	return rules
+}
+
+func (r *DefaultRuleRenderer) dnsLogChain() *generictables.Chain {
+	rules := []generictables.Rule{
+		{
+			Action: r.Nflog(
+				NFLOGDomainGroup,
+				DNSActionPrefix,
+				// Don't truncate the DNS packet when copying it to Felix.
+				-1,
+			),
+		},
+	}
+	if r.IptablesMarkSkipDNSPolicyNfqueue != 0 {
+		rules = append(rules, generictables.Rule{
+			Action: r.SetMaskedMark(
+				r.IptablesMarkSkipDNSPolicyNfqueue,
+				r.IptablesMarkSkipDNSPolicyNfqueue,
+			),
+		})
+	}
+	return &generictables.Chain{
+		Name:  ChainDNSLog,
+		Rules: rules,
+	}
 }
 
 func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, nodeLocalDNSAddrs []config.ServerPort) *generictables.Chain {
@@ -2145,22 +2169,16 @@ func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config
 				Match: r.NewMatch().Protocol("udp").
 					SourcePorts(server.Port).
 					SourceNet(server.IP),
-				Action: r.Nflog(
-					NFLOGDomainGroup,
-					DNSActionPrefix,
-					// Don't truncate the DNS packet when copying it to Felix.
-					-1,
+				Action: r.Jump(
+					ChainDNSLog,
 				),
 			},
 			{
 				Match: r.NewMatch().Protocol("tcp").
 					SourcePorts(server.Port).
 					SourceNet(server.IP),
-				Action: r.Nflog(
-					NFLOGDomainGroup,
-					DNSActionPrefix,
-					// Don't truncate the DNS packet when copying it to Felix.
-					-1,
+				Action: r.Jump(
+					ChainDNSLog,
 				),
 			},
 		}
@@ -2176,7 +2194,7 @@ func (r *DefaultRuleRenderer) nodeLocalDNSOutputRules(nodeLocalDNSAddrs []config
 //
 // If the original drop rules have MatchCriteria the matchCriteria is combined with the existing MatchCritera on the
 // rule.
-func (r DefaultRuleRenderer) DropRules(matchCriteria generictables.MatchCriteria, comments ...string) []generictables.Rule {
+func (r *DefaultRuleRenderer) DropRules(matchCriteria generictables.MatchCriteria, comments ...string) []generictables.Rule {
 	rules := []generictables.Rule{}
 
 	for _, rule := range r.dropRules {
@@ -2192,7 +2210,7 @@ func (r DefaultRuleRenderer) DropRules(matchCriteria generictables.MatchCriteria
 
 // NfqueueRuleDelayDeniedPacket combines the matchCritera and comments given in the function parameters to the delay-denied packet
 // nfqueue rule calculated when the DefaultRenderer was constructed.
-func (r DefaultRuleRenderer) NfqueueRuleDelayDeniedPacket(matchCriteria generictables.MatchCriteria, comments ...string) *generictables.Rule {
+func (r *DefaultRuleRenderer) NfqueueRuleDelayDeniedPacket(matchCriteria generictables.MatchCriteria, comments ...string) *generictables.Rule {
 	if r.nfqueueRuleDelayDeniedPacket != nil {
 		nfqueueRule := *r.nfqueueRuleDelayDeniedPacket
 

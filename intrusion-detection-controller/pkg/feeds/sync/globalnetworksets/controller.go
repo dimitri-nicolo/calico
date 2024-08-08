@@ -201,7 +201,7 @@ func (c *controller) run(ctx context.Context) {
 
 	// Let the workers stop when we are done
 	defer c.queue.ShutDown()
-	log.Info("Starting GlobalNetworkSet controller")
+	log.Info("[Global Threat Feeds] Starting GlobalNetworkSet controller")
 
 	go c.informer.Run(ctx.Done())
 
@@ -209,14 +209,14 @@ func (c *controller) run(ctx context.Context) {
 	if !cache.WaitForCacheSync(ctx.Done(), c.informer.HasSynced) {
 		// WaitForCacheSync returns false if the context expires before sync is successful.
 		// If that happens, the controller is no longer needed, so just log the error.
-		log.Error("Failed to sync GlobalNetworkSet controller")
+		log.Error("[Global Threat Feeds] Failed to sync GlobalNetworkSet controller")
 		return
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Stopping GlobalNetworkSet controller")
+			log.Info("[Global Threat Feeds] Stopping GlobalNetworkSet controller")
 			return
 		default:
 			c.processNextItem(ctx)
@@ -227,13 +227,13 @@ func (c *controller) run(ctx context.Context) {
 func (c *controller) processNextItem(ctx context.Context) {
 	item, shutdown := c.queue.Get()
 	if shutdown {
-		log.Info("GlobalNetworkSet workqueue shut down")
+		log.Info("[Global Threat Feeds] GlobalNetworkSet workqueue shut down")
 		return
 	}
 	defer c.queue.Done(item)
 	key := item.(string)
 	logCtx := log.WithField("name", key)
-	logCtx.Debug("processing GlobalNetworkSet")
+	logCtx.Debug("[Global Threat Feeds] processing GlobalNetworkSet")
 
 	il, okl, err := c.local.GetByKey(key)
 	if err != nil {
@@ -251,32 +251,32 @@ func (c *controller) processNextItem(ctx context.Context) {
 		// Local and remote copies exist.  Are they identical?
 		sl := il.(*v3.GlobalNetworkSet)
 		sr := ir.(*v3.GlobalNetworkSet)
-		logCtx.Debug("local & remote GNS exist")
+		logCtx.Debug("[Global Threat Feeds] local & remote GNS exist")
 		if setIdentical(sl, sr) {
-			logCtx.Debug("local & remote identical, no update")
+			logCtx.Debug("[Global Threat Feeds] local & remote identical, no update")
 			return
 		} else {
-			logCtx.Debug("updating GNS")
+			logCtx.Debug("[Global Threat Feeds] updating GNS")
 			c.update(ctx, sl, sr)
 		}
 	case okl && !okr:
 		// Local exists, but remote does not.
 		sl := il.(*v3.GlobalNetworkSet)
-		logCtx.Debug("local GNS exists")
+		logCtx.Debug("[Global Threat Feeds] local GNS exists")
 		c.create(ctx, sl)
 	case !okl && okr:
 		// Local does not exist, but remote does.
-		logCtx.Debug("remote GNS exists")
+		logCtx.Debug("[Global Threat Feeds] remote GNS exists")
 		if c.okToGC(key) {
 			sr := ir.(*v3.GlobalNetworkSet)
-			logCtx.Debug("garbage collect GNS")
+			logCtx.Debug("[Global Threat Feeds] garbage collect GNS")
 			c.delete(ctx, sr)
 		} else {
-			logCtx.Debug("skip GC of GNS")
+			logCtx.Debug("[Global Threat Feeds] skip GC of GNS")
 		}
 	case !okl && !okr:
 		// Neither local nor remote exist
-		logCtx.Debug("neither local nor remote GNS exist")
+		logCtx.Debug("[Global Threat Feeds] neither local nor remote GNS exist")
 		return
 	}
 }
@@ -286,7 +286,7 @@ func (c *controller) processNextItem(ctx context.Context) {
 func (c *controller) handleErr(key string) {
 	e := recover()
 	if e == nil {
-		log.WithField("name", key).Debug("successfully processed GNS")
+		log.WithField("name", key).Debug("[Global Threat Feeds] successfully processed GNS")
 
 		// Forget any rate limiting history for this key.
 		c.queue.Forget(key)
@@ -309,13 +309,13 @@ func (c *controller) handleErr(key string) {
 	// Try to requeue and reprocess.  But, if we try and fail too many times,
 	// give up.  The hourly full resync will try again later.
 	if c.queue.NumRequeues(key) < DefaultClientRetries {
-		log.WithError(f.e).Errorf("Error handling %v, will retry", key)
+		log.WithError(f.e).Errorf("[Global Threat Feeds] Error handling %v, will retry", key)
 		c.queue.AddRateLimited(key)
 		return
 	}
 	// Give up
 	c.queue.Forget(key)
-	log.WithError(f.e).Errorf("Dropping key %q out of the work queue", key)
+	log.WithError(f.e).Errorf("[Global Threat Feeds] Dropping key %q out of the work queue", key)
 
 	// Inform Puller of failure, if it has registered to be notified.
 	if f.op == opDelete {

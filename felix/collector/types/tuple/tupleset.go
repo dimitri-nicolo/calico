@@ -33,34 +33,35 @@ func Make(src [16]byte, dst [16]byte, proto int, l4Src int, l4Dst int) Tuple {
 	}
 }
 
-func (t *Tuple) String() string {
+func (t Tuple) String() string {
 	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", net.IP(t.Src[:16]).String(), net.IP(t.Dst[:16]).String(), t.Proto, t.L4Src, t.L4Dst)
 }
 
-func (t *Tuple) GetSourcePort() int {
+func (t Tuple) GetSourcePort() int {
 	return t.L4Src
 }
 
-func (t *Tuple) SetSourcePort(port int) {
+func (t Tuple) WithSourcePort(port int) Tuple {
 	t.L4Src = port
+	return t
 }
 
-func (t *Tuple) GetDestPort() int {
+func (t Tuple) GetDestPort() int {
 	return t.L4Dst
 }
 
-func (t *Tuple) SourceNet() net.IP {
+func (t Tuple) SourceNet() net.IP {
 	return net.IP(t.Src[:16])
 }
 
-func (t *Tuple) DestNet() net.IP {
+func (t Tuple) DestNet() net.IP {
 	return net.IP(t.Dst[:16])
 }
 
 // Reverse reverses the tuple by swapping the source and destination fields.
 // This is *not* equivalent to the reply tuple and is intented as a convenience
 // method only.
-func (t *Tuple) Reverse() Tuple {
+func (t Tuple) Reverse() Tuple {
 	return Make(t.Dst, t.Src, t.Proto, t.L4Dst, t.L4Src)
 }
 

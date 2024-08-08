@@ -63,11 +63,11 @@ func (d *searcher) Close() {
 func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
 	getCachedFeedResponse := feedCacher.GetGlobalThreatFeed()
 	if getCachedFeedResponse.Err != nil {
-		log.WithError(getCachedFeedResponse.Err).Error("search failed due to failure to retrieve feed")
+		log.WithError(getCachedFeedResponse.Err).Error("[Global Threat Feeds] search failed due to failure to retrieve feed")
 		return
 	}
 	if getCachedFeedResponse.GlobalThreatFeed == nil {
-		log.Error("can't perform search because the feed doesn't exist")
+		log.Error("[Global Threat Feeds] can't perform search because the feed doesn't exist")
 		return
 	}
 
@@ -76,10 +76,10 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	// Ensure Global Threat Feed is Enabled before querying Linseed and sending event.
 	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
 	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
-		log.Debug("Check if any flow logs have been generated with a suspicious IP")
+		log.Debug("[Global Threat Feeds] Check if any flow logs have been generated with a suspicious IP")
 		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, d.geoDB, getCachedFeedResponse.GlobalThreatFeed)
 		if err != nil {
-			log.WithError(err).Error("query failed")
+			log.WithError(err).Errorf("[Global Threat Feeds] query failed for %v", getCachedFeedResponse.GlobalThreatFeed.Name)
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
 			return
 		}
@@ -94,18 +94,18 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 
 		err = d.events.PutSecurityEventWithID(ctx, newEvents)
 		if err != nil {
-			log.WithError(err).Error("failed to store events")
+			log.WithError(err).Errorf("[Global Threat Feeds] failed to store events for %v", getCachedFeedResponse.GlobalThreatFeed.Name)
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
 			return
 		}
 
-		log.Debug("Update feed status")
+		log.Debugf("[Global Threat Feeds] Update feed statusfor %v", getCachedFeedResponse.GlobalThreatFeed.Name)
 		updateFeedStatusAfterSuccessfulSearch(feedCacher, lastSuccessfulSearch)
-		log.Debug("Update feed after search")
+		log.Debugf("[Global Threat Feeds] Update feed after searchfor %v", getCachedFeedResponse.GlobalThreatFeed.Name)
 		updateFeedAfterSuccessfulSearch(feedCacher, setHash)
 
 	} else {
-		log.WithFields(log.Fields{"feedName": getCachedFeedResponse.GlobalThreatFeed.Name}).Debug("Feed is currently not enabled.")
+		log.WithFields(log.Fields{"feedName": getCachedFeedResponse.GlobalThreatFeed.Name}).Debug("[Global Threat Feeds] Feed is currently not enabled.")
 	}
 }
 
@@ -127,17 +127,17 @@ func updateFeedAfterSuccessfulSearch(feedCacher cacher.GlobalThreatFeedCacher, s
 	getCachedFeedResponse := feedCacher.GetGlobalThreatFeed()
 	if getCachedFeedResponse.Err != nil {
 		log.WithError(getCachedFeedResponse.Err).
-			Error("abort updating feed because failed to retrieve cached GlobalThreatFeed CR")
+			Error("[Global Threat Feeds] abort updating feed because failed to retrieve cached GlobalThreatFeed CR")
 		return
 	}
 	if getCachedFeedResponse.GlobalThreatFeed == nil {
-		log.Error("abort updating feed because cached GlobalThreatFeed CR cannot be empty")
+		log.Error("[Global Threat Feeds] abort updating feed because cached GlobalThreatFeed CR cannot be empty")
 		return
 	}
 
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
-		log.Debug(fmt.Sprintf("%d/%d attempt to update feed after successful search", i, cacher.MaxUpdateRetry))
+		log.Debug(fmt.Sprintf("[Global Threat Feeds] %d/%d attempt to update feed after successful search", i, cacher.MaxUpdateRetry))
 		if toBeUpdated.Spec.Content == v3.ThreatFeedContentDomainNameSet {
 			updateAnnotation(toBeUpdated, storage.DomainNameSetHashKey, setHash)
 		} else {
@@ -146,15 +146,15 @@ func updateFeedAfterSuccessfulSearch(feedCacher cacher.GlobalThreatFeedCacher, s
 		updateResponse := feedCacher.UpdateGlobalThreatFeed(toBeUpdated)
 		updateErr := updateResponse.Err
 		if updateErr == nil {
-			log.Debug("attempt to update feed after successful search succeeded, exiting the loop")
+			log.Debugf("[Global Threat Feeds] attempt to update feed %v after successful search succeeded, exiting the loop", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			return
 		}
 		statusErr, ok := updateErr.(*errors.StatusError)
 		if !ok || statusErr.Status().Code != http.StatusConflict {
-			log.WithError(updateErr).Error("abort updating feed after successful search due to unrecoverable failure")
+			log.WithError(updateErr).Errorf("[Global Threat Feeds] abort updating feed %v after successful search due to unrecoverable failure", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			return
 		}
-		log.WithError(updateErr).Error("failed updating feed after successful search")
+		log.WithError(updateErr).Errorf("[Global Threat Feeds] failed updating feed %v after successful search", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 		toBeUpdated = updateResponse.GlobalThreatFeed
 	}
 }
@@ -168,36 +168,36 @@ func updateFeedStatusAfterSuccessfulSearch(feedCacher cacher.GlobalThreatFeedCac
 	getCachedFeedResponse := feedCacher.GetGlobalThreatFeed()
 	if getCachedFeedResponse.Err != nil {
 		log.WithError(getCachedFeedResponse.Err).
-			Error("abort updating feed status after successful search because failed to retrieve cached GlobalThreatFeed CR")
+			Error("[Global Threat Feeds] abort updating feed status after successful search because failed to retrieve cached GlobalThreatFeed CR")
 		return
 	}
 	if getCachedFeedResponse.GlobalThreatFeed == nil {
-		log.Error("abort updating feed status after successful search because cached GlobalThreatFeed CR cannot be empty")
+		log.Error("[Global Threat Feeds] abort updating feed status after successful search because cached GlobalThreatFeed CR cannot be empty")
 		return
 	}
 
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
-		log.Debug(fmt.Sprintf("%d/%d attempt to update feed status after successful search", i, cacher.MaxUpdateRetry))
+		log.Debug(fmt.Sprintf("[Global Threat Feeds] %d/%d attempt to update feed %v status after successful search", i, cacher.MaxUpdateRetry, getCachedFeedResponse.GlobalThreatFeed.Name))
 		if toBeUpdated.Status.LastSuccessfulSearch == nil || lastSuccessfulSearch.After(toBeUpdated.Status.LastSuccessfulSearch.Time) {
 			toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: lastSuccessfulSearch}
 		} else {
-			log.Error("abort updating feed status after successful search because the current attempt is out of date")
+			log.Errorf("[Global Threat Feeds] abort updating feed %v status after successful search because the current attempt is out of date", getCachedFeedResponse.GlobalThreatFeed.Name)
 			return
 		}
 		errorcondition.ClearError(&toBeUpdated.Status, cacher.SearchFailed)
 		updateResponse := feedCacher.UpdateGlobalThreatFeedStatus(toBeUpdated)
 		updateErr := updateResponse.Err
 		if updateErr == nil {
-			log.Debug("attempt to update feed status after successful search succeeded, exiting the loop")
+			log.Debugf("[Global Threat Feeds] attempt to update feed %v status after successful search succeeded, exiting the loop", getCachedFeedResponse.GlobalThreatFeed.Name)
 			return
 		}
 		statusErr, ok := updateErr.(*errors.StatusError)
 		if !ok || statusErr.Status().Code != http.StatusConflict {
-			log.WithError(updateErr).Error("abort updating feed status after successful search due to unrecoverable failure")
+			log.WithError(updateErr).Errorf("[Global Threat Feeds] abort updating feed %v status after successful search due to unrecoverable failure", getCachedFeedResponse.GlobalThreatFeed.Name)
 			return
 		}
-		log.WithError(updateErr).Error("failed updating feed status after successful search")
+		log.WithError(updateErr).Errorf("[Global Threat Feeds] failed updating feed %v status after successful search", getCachedFeedResponse.GlobalThreatFeed.Name)
 		toBeUpdated = updateResponse.GlobalThreatFeed
 	}
 }
@@ -209,7 +209,7 @@ func updateAnnotation(globalThreatFeed *v3.GlobalThreatFeed, key, val string) {
 	}
 	annotations[key] = val
 	globalThreatFeed.SetAnnotations(annotations)
-	log.WithField("name", globalThreatFeed.Name).Debug("updated global threat feed annotation")
+	log.WithField("name", globalThreatFeed.Name).Debug("[Global Threat Feeds] updated global threat feed annotation")
 }
 
 type cacheKey struct {

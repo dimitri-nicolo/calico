@@ -143,7 +143,7 @@ func (c *globalThreatFeedCacher) handleCacheRequest(ctx context.Context, req cac
 	if c.cachedGlobalThreatFeed == nil {
 		if err := c.reloadCache(ctx); err != nil {
 			log.WithError(err).WithField("feedName", c.feedName).
-				Error("unable to handle cache request because GlobalThreatFeed cache failed to load")
+				Error("[Global Threat Feeds] unable to handle cache request because GlobalThreatFeed cache failed to load")
 			req.responseChannel <- CacheResponse{GlobalThreatFeed: nil, Err: err}
 			return
 		}
@@ -156,7 +156,7 @@ func (c *globalThreatFeedCacher) handleCacheRequest(ctx context.Context, req cac
 	case RequestTypeUpdateStatus:
 		c.handleCacheUpdateStatusRequest(ctx, req)
 	default:
-		log.WithField("feedName", c.feedName).Error("unknown cache request type, unable to handle")
+		log.WithField("feedName", c.feedName).Error("[Global Threat Feeds] unknown cache request type, unable to handle")
 	}
 }
 
@@ -167,24 +167,24 @@ func (c *globalThreatFeedCacher) handleCacheGetRequest(req cacheRequest) {
 func (c *globalThreatFeedCacher) handleCacheUpdateStatusRequest(ctx context.Context, req cacheRequest) {
 	newCachedGlobalThreatFeed, err := c.globalThreatFeedClient.UpdateStatus(ctx, req.globalThreatFeed, v1.UpdateOptions{})
 	if err == nil {
-		log.WithField("feedName", c.feedName).Debug("updating GlobalThreatFeed CR status subresource succeeded")
+		log.WithField("feedName", c.feedName).Debug("[Global Threat Feeds] updating GlobalThreatFeed CR status subresource succeeded")
 		c.cachedGlobalThreatFeed = newCachedGlobalThreatFeed
 		req.responseChannel <- CacheResponse{GlobalThreatFeed: newCachedGlobalThreatFeed.DeepCopy(), Err: nil}
 		return
 	}
-	log.WithError(err).WithField("feedName", c.feedName).Error("failed to update GlobalThreatFeed CR status subresource")
+	log.WithError(err).WithField("feedName", c.feedName).Error("[Global Threat Feeds] failed to update GlobalThreatFeed CR status subresource")
 	c.handleUpdateFailure(ctx, req, err)
 }
 
 func (c *globalThreatFeedCacher) handleCacheUpdateRequest(ctx context.Context, req cacheRequest) {
 	newCachedGlobalThreatFeed, err := c.globalThreatFeedClient.Update(ctx, req.globalThreatFeed, v1.UpdateOptions{})
 	if err == nil {
-		log.WithField("feedName", c.feedName).Debug("updating GlobalThreatFeed CR succeeded")
+		log.WithField("feedName", c.feedName).Debug("[Global Threat Feeds] updating GlobalThreatFeed CR succeeded")
 		c.cachedGlobalThreatFeed = newCachedGlobalThreatFeed
 		req.responseChannel <- CacheResponse{GlobalThreatFeed: newCachedGlobalThreatFeed.DeepCopy(), Err: nil}
 		return
 	}
-	log.WithError(err).WithField("feedName", c.feedName).Error("failed to update GlobalThreatFeed CR")
+	log.WithError(err).WithField("feedName", c.feedName).Error("[Global Threat Feeds] failed to update GlobalThreatFeed CR")
 	c.handleUpdateFailure(ctx, req, err)
 }
 

@@ -58,6 +58,10 @@ type ResourceCache interface {
 	// GetQueue returns the cache's output queue, which emits a stream
 	// of any keys which have been created, modified, or deleted.
 	GetQueue() workqueue.RateLimitingInterface
+
+	// Stop stops the cache from generating events on the output queue and stops the
+	// reconciliation loop.
+	Stop()
 }
 
 // ResourceCacheArgs struct passed to constructor of ResourceCache.
@@ -101,6 +105,7 @@ type calicoCache struct {
 	running          bool
 	mut              *sync.Mutex
 	reconcilerConfig ReconcilerConfig
+	stopChan         chan struct{}
 }
 
 // NewResourceCache builds and returns a resource cache using the provided arguments.
@@ -119,6 +124,7 @@ func NewResourceCache(args ResourceCacheArgs) ResourceCache {
 		}(),
 		mut:              &sync.Mutex{},
 		reconcilerConfig: args.ReconcilerConfig,
+		stopChan:         make(chan struct{}),
 	}
 }
 
@@ -190,6 +196,19 @@ func (c *calicoCache) GetQueue() workqueue.RateLimitingInterface {
 	return c.workqueue
 }
 
+// Stop shuts down the workqueue, flushes the cache, sets the running flag to false and closes the
+// stopChan. This will stop the cache from generating events on the output queue and stop the
+// reconciliation loop.
+func (c *calicoCache) Stop() {
+	c.mut.Lock()
+	defer c.mut.Unlock()
+
+	c.workqueue.ShutDown()
+	c.threadSafeCache.Flush()
+	c.running = false
+	close(c.stopChan)
+}
+
 // Run starts the cache.  Any Set() calls prior to calling Run() will
 // prime the cache, but not trigger any updates on the output queue.
 func (c *calicoCache) Run(reconcilerPeriod string) {
@@ -216,6 +235,7 @@ func (c *calicoCache) reconcile(reconcilerPeriod string) {
 	if err != nil {
 		c.log.Fatalf("Invalid time duration format for reconciler: %s. Some valid examples: 5m, 30s, 2m30s etc.", reconcilerPeriod)
 	}
+	c.log.Infof("Reconciler period set to %f seconds", duration.Seconds())
 
 	// If user has set duration to 0 then disable the reconciler job.
 	if duration.Nanoseconds() == 0 {
@@ -225,16 +245,18 @@ func (c *calicoCache) reconcile(reconcilerPeriod string) {
 
 	// Loop forever, performing a datastore reconciliation periodically.
 	for {
-		c.log.Debugf("Performing reconciliation")
-		err := c.performDatastoreSync()
-		if err != nil {
-			c.log.WithError(err).Error("Reconciliation failed")
-			continue
+		select {
+		case <-c.stopChan:
+			c.log.Debug("Stopping reconciliation")
+			return
+		case <-time.After(duration):
+			c.log.Debug("Performing reconciliation")
+			err := c.performDatastoreSync()
+			if err != nil {
+				c.log.WithError(err).Error("Reconciliation failed")
+				continue
+			}
 		}
-
-		// Reconciliation was successful, sleep the configured duration.
-		c.log.Debugf("Reconciliation complete, %+v until next one.", duration)
-		time.Sleep(duration)
 	}
 }
 
