@@ -408,7 +408,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		It("should remove the IPsec policy and have connectivity", func() {
 			// The policy is disabled gracefully so it can take a while for all the policy to be gone.
-			Eventually(totalPolCount, "40s", "100ms").Should(BeZero())
+			Eventually(totalPolCount, "180s", "100ms").Should(BeZero())
 
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])

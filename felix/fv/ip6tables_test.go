@@ -203,7 +203,7 @@ var _ = infrastructure.DatastoreDescribe("IPv6 iptables/nftables tests", []apico
 
 			listCmd := []string{"iptables-save", "-t", "filter"}
 			if NFTMode() {
-				listCmd = []string{"nft", "list", "table", "calico"}
+				listCmd = []string{"nft", "list", "ruleset"}
 			}
 
 			By("Syncing with policy that blocks ICMPv6")
