@@ -225,6 +225,14 @@ func (m *InterfaceMonitor) handleNetlinkRouteUpdate(update netlink.RouteUpdate) 
 	if update.Dst == nil {
 		return
 	}
+	if update.Dst.IP.IsUnspecified() {
+		if ones, _ := update.Dst.Mask.Size(); ones == 0 {
+			// Default route, ignore.  These used to be filtered out by the
+			// nil check above, but the netlink library was changed to return
+			// an explicit unspecified CIDR in that case.
+			return
+		}
+	}
 
 	addr := update.Dst.IP.String()
 	exists := update.Type == unix.RTM_NEWROUTE
@@ -406,10 +414,22 @@ func (m *InterfaceMonitor) storeAndNotifyLinkInner(ifaceExists bool, ifaceName s
 
 func (m *InterfaceMonitor) resync() error {
 	log.Debug("Resyncing interface state.")
-	links, err := m.netlinkStub.LinkList()
-	if err != nil {
-		log.WithError(err).Warn("Netlink list operation failed.")
-		return err
+	// we need to retry when the error returned is EINTR.
+	var links []netlink.Link
+	var err error
+	retries := 3
+	for {
+		links, err = m.netlinkStub.LinkList()
+		if err != nil {
+			if err == syscall.EINTR && retries > 0 {
+				log.WithError(err).Warn("Netlink list operation failed. Retrying")
+				retries--
+				continue
+			}
+			log.WithError(err).Warn("Netlink list operation failed.")
+			return err
+		}
+		break
 	}
 	currentIfaces := set.New[string]()
 	for _, link := range links {

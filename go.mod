@@ -119,7 +119,7 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/tigera/api v0.0.0-20230720165940-e6a43e33c0b4
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
-	github.com/vishvananda/netlink v1.2.1-beta.2.0.20230206183746-70ca0345eede
+	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240703200800-b54f85093f4a
 	github.com/willf/bitset v1.1.11
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0

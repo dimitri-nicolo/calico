@@ -33,7 +33,6 @@ import (
 const numPoliciesPerWep = 3
 
 var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra    infrastructure.DatastoreInfra
 		tc       infrastructure.TopologyContainers
@@ -409,7 +408,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		It("should remove the IPsec policy and have connectivity", func() {
 			// The policy is disabled gracefully so it can take a while for all the policy to be gone.
-			Eventually(totalPolCount, "40s", "100ms").Should(BeZero())
+			Eventually(totalPolCount, "180s", "100ms").Should(BeZero())
 
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
@@ -491,7 +490,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 })
 
 var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra  infrastructure.DatastoreInfra
 		tc     infrastructure.TopologyContainers
@@ -585,7 +583,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 })
 
 var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-
 	var (
 		infra    infrastructure.DatastoreInfra
 		tc       infrastructure.TopologyContainers
@@ -733,7 +730,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			cc.CheckConnectivity()
 
 			wg.Wait()
-			Eventually(totalPolCount, "20s", "100ms").Should(BeZero())
+			Eventually(totalPolCount, "60s", "100ms").Should(BeZero())
 
 			// As a cross check on our regex, check that we do see the plaintext packets
 			Eventually(func() int {

@@ -44,7 +44,8 @@ type hostIPManager struct {
 func newHostIPManager(wlIfacesPrefixes []string,
 	ipSetID string,
 	ipsets dpsets.IPSetsDataplane,
-	maxIPSetSize int, tunIpSetID string,
+	maxIPSetSize int,
+	tunIpSetID string,
 ) *hostIPManager {
 	return newHostIPManagerWithShims(
 		wlIfacesPrefixes,
@@ -58,7 +59,8 @@ func newHostIPManager(wlIfacesPrefixes []string,
 func newHostIPManagerWithShims(wlIfacesPrefixes []string,
 	ipSetID string,
 	ipsets dpsets.IPSetsDataplane,
-	maxIPSetSize int, tunIpSetID string,
+	maxIPSetSize int,
+	tunIpSetID string,
 ) *hostIPManager {
 	wlIfacesPattern := "^(" + strings.Join(wlIfacesPrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)

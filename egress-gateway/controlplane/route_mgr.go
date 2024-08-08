@@ -532,18 +532,19 @@ func ensureRouting(nl netlinkshim.Handle, routesByDstCIDR map[string]netlink.Rou
 	kernelRoutesByDst := make(map[string]netlink.Route)
 	for _, kr := range kernelRoutes {
 		// ignore default routes
-		if kr.Dst != nil {
-			dstCIDR := kr.Dst.String()
-			if _, ok := routesByDstCIDR[dstCIDR]; !ok {
-				// the route does not exist in memory, so delete it from the kernel
-				if err = nl.RouteDel(&kr); err != nil {
-					lastErr = err
-					log.WithError(err).Warnf("could not delete stale route %+v", kr)
-				}
-			} else {
-				// collect routes that have not been deleted
-				kernelRoutesByDst[dstCIDR] = kr
+		if isDefaultCIDR(kr.Dst) {
+			continue
+		}
+		dstCIDR := kr.Dst.String()
+		if _, ok := routesByDstCIDR[dstCIDR]; !ok {
+			// the route does not exist in memory, so delete it from the kernel
+			if err = nl.RouteDel(&kr); err != nil {
+				lastErr = err
+				log.WithError(err).Warnf("could not delete stale route %+v", kr)
 			}
+		} else {
+			// collect routes that have not been deleted
+			kernelRoutesByDst[dstCIDR] = kr
 		}
 	}
 
@@ -567,6 +568,16 @@ func ensureRouting(nl netlinkshim.Handle, routesByDstCIDR map[string]netlink.Rou
 	}
 
 	return lastErr
+}
+
+func isDefaultCIDR(dst *net.IPNet) bool {
+	if dst == nil {
+		return true
+	}
+	if ones, _ := dst.Mask.Size(); ones == 0 {
+		return true
+	}
+	return false
 }
 
 // ensureNeighs applies in-memory link data to the kernel, updating or deleting stale kernel entries.

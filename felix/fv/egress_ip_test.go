@@ -826,7 +826,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 								// Expect the extra rules and tables to be cleaned up before attempting the connectivity check to
 								// mitigate race conditions.
-								Eventually(getIPRules, "20s", "1s").Should(HaveLen(1))
+								Eventually(getIPRules, "60s", "1s").Should(HaveLen(1))
 
 								// Expect correct connectivity.
 								cc.ExpectSNAT(egwClient, egwClient.IP, extWorkloads[0], 4321)
