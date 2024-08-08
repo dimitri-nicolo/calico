@@ -78,6 +78,7 @@ type AttachPoint struct {
 	EGWVxlanPort            uint16
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
+	DNSInlineProcessing     bool
 }
 
 var ErrDeviceNotFound = errors.New("device not found")
@@ -538,6 +539,9 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	}
 	if ap.IsEgressClient {
 		globalData.Flags |= libbpf.GlobalsIsEgressClient
+	}
+	if ap.DNSInlineProcessing {
+		globalData.Flags |= libbpf.GlobalsDNSInline
 	}
 
 	globalData.HostTunnelIPv4 = globalData.HostIPv4

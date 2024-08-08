@@ -112,6 +112,7 @@ func testDnsPolicy(zeroLatency bool) {
 	msWildcards := []string{"microsoft.*", "*.microsoft.com"}
 	if zeroLatency {
 		msWildcards = []string{"*.microsoft.com"}
+		dnsMode = string(api.DNSPolicyModeInline)
 	}
 
 	logAndReport := func(out string, err error) error {
@@ -467,6 +468,9 @@ func testDnsPolicy(zeroLatency bool) {
 		} {
 			localMode := m
 			Context("with DNSPolicyMode explicitly set to "+string(localMode), func() {
+				if zeroLatency {
+					return
+				}
 				BeforeEach(func() {
 					dnsMode = string(localMode)
 				})

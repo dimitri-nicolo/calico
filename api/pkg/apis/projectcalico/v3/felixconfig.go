@@ -81,6 +81,7 @@ const (
 	DNSPolicyModeNoDelay           DNSPolicyMode = "NoDelay"
 	DNSPolicyModeDelayDeniedPacket DNSPolicyMode = "DelayDeniedPacket"
 	DNSPolicyModeDelayDNSResponse  DNSPolicyMode = "DelayDNSResponse"
+	DNSPolicyModeInline            DNSPolicyMode = "Inline"
 )
 
 // +kubebuilder:validation:Enum=Enabled;Disabled

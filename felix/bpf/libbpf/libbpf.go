@@ -400,6 +400,7 @@ const (
 	GlobalsEgressIPEnabled  uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
 	GlobalsNoDSRCidrs       uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
 	GlobalsLoUDPOnly        uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
+	GlobalsDNSInline        uint32 = C.CALI_GLOBALS_DNS_INLINE
 )
 
 func TcSetGlobals(

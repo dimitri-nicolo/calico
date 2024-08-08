@@ -275,7 +275,7 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 		  skb_mark_equals(ctx->skb, CALI_SKB_MARK_BYPASS_MASK, CALI_SKB_MARK_SKIP_FIB)));
 
 	/* Handle reporting DNS packets up to Felix userspace. */
-	if (calico_dns_check(ctx)) {
+	if (calico_dns_check(ctx) && DNS_INLINE_PROCESSING) {
 		/* calico_dns_check decides when/where to do the check. It does not quite
 		 * matter if the parsing is done 2x, but lets avoid it.
 		 *

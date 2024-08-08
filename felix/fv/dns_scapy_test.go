@@ -187,8 +187,14 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		api.DNSPolicyModeNoDelay,
 		api.DNSPolicyModeDelayDNSResponse,
 		api.DNSPolicyModeDelayDeniedPacket,
+		api.DNSPolicyModeInline,
 	} {
 		mode := m
+
+		if m == api.DNSPolicyModeInline && !BPFMode() {
+			continue
+		}
+
 		Describe("DNSPolicyMode is "+string(mode), func() {
 			BeforeEach(func() {
 				opts := infrastructure.DefaultTopologyOptions()
@@ -682,6 +688,10 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			})
 
 			Context("with a chain of DNS info for xyz.com while felix is restaring", func() {
+				if m != api.DNSPolicyModeInline || !BPFMode() {
+					return
+				}
+
 				BeforeEach(func() {
 					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
