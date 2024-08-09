@@ -27,11 +27,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -41,7 +41,6 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
-
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
@@ -75,9 +74,6 @@ import (
 	"github.com/projectcalico/calico/licensing/monitor"
 	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
 	"github.com/projectcalico/calico/typha/pkg/tlsutils"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -151,11 +147,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Configure log formatting.
-	log.SetFormatter(&logutils.Formatter{})
-
-	// Install a hook that adds file/line no information.
-	log.AddHook(&logutils.ContextHook{})
+	// Set up logging formatting.
+	logutils.ConfigureFormatter("kube-controllers")
 
 	// Attempt to load configuration.
 	cfg := new(config.Config)

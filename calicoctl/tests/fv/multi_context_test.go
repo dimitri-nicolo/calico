@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,19 +18,16 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
-
-	licutils "github.com/projectcalico/calico/licensing/utils"
-
 	. "github.com/onsi/gomega"
 
 	. "github.com/projectcalico/calico/calicoctl/tests/fv/utils"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	licutils "github.com/projectcalico/calico/licensing/utils"
 )
 
 func init() {
-	log.AddHook(logutils.ContextHook{})
-	log.SetFormatter(&logutils.Formatter{})
+	// Set up logging formatting.
+	logutils.ConfigureFormatter("test")
 }
 
 func TestMultiCluster(t *testing.T) {
