@@ -15,8 +15,7 @@ import (
 )
 
 func init() {
-	logrus.AddHook(logutils.ContextHook{})
-	logrus.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("test")
 }
 
 func TestDiags(t *testing.T) {

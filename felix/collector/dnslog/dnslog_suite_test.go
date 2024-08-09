@@ -17,8 +17,7 @@ import (
 
 func init() {
 	testutils.HookLogrusForGinkgo()
-	logrus.AddHook(&logutils.ContextHook{})
-	logrus.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("test")
 	logrus.SetLevel(logrus.DebugLevel)
 }
 

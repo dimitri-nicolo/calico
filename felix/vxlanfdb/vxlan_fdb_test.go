@@ -32,7 +32,7 @@ import (
 )
 
 func init() {
-	logrus.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("test")
 	logrus.SetLevel(logrus.DebugLevel)
 }
 

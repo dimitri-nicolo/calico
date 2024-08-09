@@ -18,10 +18,7 @@ import (
 )
 
 func init() {
-	log.SetFormatter(&logutils.Formatter{Component: "flowgen"})
-
-	// Install a hook that adds file/line no information.
-	log.AddHook(&logutils.ContextHook{})
+	logutils.ConfigureFormatter("flowgen")
 }
 
 func CreateConfig(directoutput bool) Config {

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/onsi/ginkgo/reporters"
-	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
@@ -17,8 +16,7 @@ import (
 
 func init() {
 	testutils.HookLogrusForGinkgo()
-	logrus.AddHook(&logutils.ContextHook{})
-	logrus.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("test")
 }
 
 func TestCounter(t *testing.T) {

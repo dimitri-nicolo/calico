@@ -22,7 +22,7 @@ import (
 
 func BenchmarkLogWithOurFormat(b *testing.B) {
 	logger := logrus.New()
-	logger.SetFormatter(&Formatter{})
+	ConfigureFormatter("test")
 	logger.SetReportCaller(true)
 	logger.SetOutput(&NullWriter{})
 

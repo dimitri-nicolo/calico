@@ -15,8 +15,7 @@ import (
 // The output will be set to STDOUT and the format is TextFormat
 func ConfigureLogging(logLevel string) {
 	// Install a hook that adds file/line number information.
-	log.AddHook(&logutils.ContextHook{})
-	log.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("dpi")
 	log.SetOutput(os.Stdout)
 
 	// Override with desired log level

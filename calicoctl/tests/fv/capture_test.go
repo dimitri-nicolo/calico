@@ -14,8 +14,7 @@ import (
 )
 
 func init() {
-	log.AddHook(logutils.ContextHook{})
-	log.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("test")
 }
 
 func TestCaptureArgs(t *testing.T) {
@@ -32,11 +31,11 @@ func TestCaptureArgs(t *testing.T) {
 		// TODO: Need to re-enable these when fixes to the version mismatch logic go in
 		// that prevent these from being called properly. Fixes will be merged in OS and
 		// ported accordingly (CORE-7042).
-		//{[]string{"captured-packets"}, "Invalid option", true},
-		//{[]string{"captured-packets", "--any_command"}, "Invalid option", true},
-		//{[]string{"captured-packets", "any_command"}, "Invalid option", true},
-		//{[]string{"captured-packets", "copy"}, "Invalid option", true},
-		//{[]string{"captured-packets", "clean"}, "Invalid option", true},
+		// {[]string{"captured-packets"}, "Invalid option", true},
+		// {[]string{"captured-packets", "--any_command"}, "Invalid option", true},
+		// {[]string{"captured-packets", "any_command"}, "Invalid option", true},
+		// {[]string{"captured-packets", "copy"}, "Invalid option", true},
+		// {[]string{"captured-packets", "clean"}, "Invalid option", true},
 		{[]string{"--help", "captured-packets"}, usageCalicoctl, false},
 		{[]string{"-h", "captured-packets"}, usageCalicoctl, false},
 	}

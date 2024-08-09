@@ -16,9 +16,7 @@ import (
 // be used is passed in as a parameter. Otherwise, it will default to WARN
 // The output will be set to STDOUT and the format is TextFormat
 func ConfigureLogging(logLevel string) {
-	// Install a hook that adds file/line number information.
-	log.AddHook(&logutils.ContextHook{})
-	log.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("voltron")
 	log.SetOutput(os.Stdout)
 
 	// Override with desired log level

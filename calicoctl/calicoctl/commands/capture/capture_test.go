@@ -13,13 +13,10 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
-	log.AddHook(logutils.ContextHook{})
-	log.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("test")
 }
 
 type MockCmd struct {

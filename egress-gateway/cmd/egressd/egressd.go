@@ -90,9 +90,7 @@ func main() {
 	}
 	// Replace logrus' formatter with a custom one using our time format,
 	// shared with the Python code.
-	log.SetFormatter(&logutils.Formatter{Component: "egressd"})
-	// Install a hook that adds file/line no information.
-	log.AddHook(&logutils.ContextHook{})
+	logutils.ConfigureFormatter("egressd")
 	log.Info("Egress gateway daemon starting up...")
 
 	// Set up health reporting; this will be polled both by local kubelet and, if configured, remote Felix nodes.

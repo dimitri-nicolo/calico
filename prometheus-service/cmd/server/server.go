@@ -30,7 +30,7 @@ func main() {
 func setLogger() {
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv(LOG_LEVEL_ENV_VAR)
-	log.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("promsvc")
 	parsedLogLevel, err := log.ParseLevel(logLevelStr)
 
 	if err == nil {
@@ -40,6 +40,4 @@ func setLogger() {
 	}
 	log.SetLevel(logLevel)
 
-	// Install a hook that adds file/line number information.
-	log.AddHook(&logutils.ContextHook{})
 }

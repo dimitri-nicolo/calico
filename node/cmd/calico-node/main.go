@@ -133,30 +133,31 @@ func main() {
 		fmt.Printf("Version: %s; Release Version: %s\n", startup.CNXVERSION, startup.CNXRELEASEVERSION)
 		os.Exit(0)
 	} else if *runFelix {
-		logrus.SetFormatter(&logutils.Formatter{Component: "felix"})
+		logutils.ConfigureFormatter("felix")
 		felix.Run("/etc/calico/felix.cfg", buildinfo.GitVersion, buildinfo.BuildDate, buildinfo.GitRevision)
 	} else if *runBPF {
 		// Command-line tools should log to stderr to avoid confusion with the output.
 		logrus.SetOutput(os.Stderr)
 		bpf.RunBPFCmd()
 	} else if *runInit {
-		logrus.SetFormatter(&logutils.Formatter{Component: "init"})
 		if *bestEffort {
-			logrus.SetFormatter(&logutils.Formatter{Component: "init-best-effort"})
+			logutils.ConfigureFormatter("init-best-effort")
+		} else {
+			logutils.ConfigureFormatter("init")
 		}
 		nodeinit.Run(*bestEffort)
 	} else if *runStartup {
-		logrus.SetFormatter(&logutils.Formatter{Component: "startup"})
+		logutils.ConfigureFormatter("startup")
 		startup.Run()
 	} else if *runShutdown {
-		logrus.SetFormatter(&logutils.Formatter{Component: "shutdown"})
+		logutils.ConfigureFormatter("shutdown")
 		shutdown.Run()
 	} else if *monitorAddrs {
-		logrus.SetFormatter(&logutils.Formatter{Component: "monitor-addresses"})
+		logutils.ConfigureFormatter("monitor-addresses")
 		startup.ConfigureLogging()
 		startup.MonitorIPAddressSubnets()
 	} else if *runConfd {
-		logrus.SetFormatter(&logutils.Formatter{Component: "confd"})
+		logutils.ConfigureFormatter("confd")
 		cfg, err := confdConfig.InitConfig(true)
 		if err != nil {
 			panic(err)
@@ -167,28 +168,28 @@ func main() {
 		cfg.CalicoConfig = *confdCalicoConfig
 		confd.Run(cfg)
 	} else if *runAllocateTunnelAddrs {
-		logrus.SetFormatter(&logutils.Formatter{Component: "tunnel-ip-allocator"})
+		logutils.ConfigureFormatter("tunnel-ip-allocator")
 		if *allocateTunnelAddrsRunOnce {
 			allocateip.Run(nil)
 		} else {
 			allocateip.Run(make(chan struct{}))
 		}
 	} else if *monitorToken {
-		logrus.SetFormatter(&logutils.Formatter{Component: "cni-config-monitor"})
+		logutils.ConfigureFormatter("cni-config-monitor")
 		cni.Run()
 	} else if *runBGPMetrics {
-		logrus.SetFormatter(&logutils.Formatter{Component: "bgp-metrics"})
+		logutils.ConfigureFormatter("bgp-metrics")
 		// To halt the metrics process, close the signal
 		signal := make(chan struct{})
 		metrics.Run(signal)
 	} else if *runEarlyNetworking {
-		logrus.SetFormatter(&logutils.Formatter{Component: "early-networking"})
+		logutils.ConfigureFormatter("early-networking")
 		earlynetworking.Run()
 	} else if *initHostpaths {
-		logrus.SetFormatter(&logutils.Formatter{Component: "hostpath-init"})
+		logutils.ConfigureFormatter("hostpath-init")
 		hostpathinit.Run()
 	} else if *runStatusReporter {
-		logrus.SetFormatter(&logutils.Formatter{Component: "status-reporter"})
+		logutils.ConfigureFormatter("status-reporter")
 		status.Run()
 	} else if *showStatus {
 		status.Show()
