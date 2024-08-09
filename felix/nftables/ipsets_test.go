@@ -90,7 +90,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 		It(fmt.Sprintf("should program IP sets of type %s", t), func() {
 			meta := ipsets.IPSetMetadata{SetID: "test", Type: t}
 			s.AddOrReplaceIPSet(meta, []string{})
-			Expect(s.ApplyUpdates).NotTo(Panic())
+			Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 			sets, err := f.List(context.Background(), "sets")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sets).To(HaveLen(1))
@@ -101,7 +101,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 		// Create an IP set in the dataplane via the IPSets object.
 		meta := ipsets.IPSetMetadata{SetID: "test", Type: ipsets.IPSetTypeHashIP}
 		s.AddOrReplaceIPSet(meta, []string{"10.0.0.1", "10.0.0.2"})
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 
 		// Create an IP set in the dataplane directly.
 		tx := f.NewTransaction()
@@ -123,7 +123,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 
 		// Trigger a resync.
 		s.QueueResync()
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 		Expect(s.ApplyDeletions()).To(BeFalse())
 
 		// We expect:
@@ -156,7 +156,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 
 		// Trigger a resync. We should delete the unexpected set.
 		s.QueueResync()
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 		Expect(s.ApplyDeletions()).To(BeFalse())
 
 		// We expect the set to be deleted.
@@ -185,7 +185,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 
 		// Apply.
 		s.QueueResync()
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 
 		// Expect the set to exist.
 		sets, err := f.List(context.Background(), "sets")
@@ -205,7 +205,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 	It("should program a hash:net,net IP set", func() {
 		meta := ipsets.IPSetMetadata{SetID: "test", Type: ipsets.IPSetTypeHashNetNet}
 		s.AddOrReplaceIPSet(meta, []string{"10.0.0.0/32,11.0.0.0/32"})
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 		sets, err := f.List(context.Background(), "sets")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(sets).To(Equal([]string{"cali40test"}))
