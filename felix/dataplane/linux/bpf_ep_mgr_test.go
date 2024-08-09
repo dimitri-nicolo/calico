@@ -1080,21 +1080,25 @@ var _ = Describe("BPF Endpoint Manager", func() {
 	})
 
 	Describe("bpfnatip", func() {
+		JustBeforeEach(func() {
+			newBpfEpMgr(true)
+		})
 		It("should program the routes reflecting service state", func() {
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
-				Name:      "service",
-				Namespace: "test",
-				ClusterIp: "1.2.3.4",
+				Name:       "service",
+				Namespace:  "test",
+				ClusterIps: []string{"1.2.3.4", "1::2"},
 			})
 			err := bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(dp.routes).To(HaveLen(1))
+			Expect(dp.routes).To(HaveLen(2))
 			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.2.3.4")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1::2")))
 
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
 				Name:           "service",
 				Namespace:      "test",
-				ClusterIp:      "1.2.3.4",
+				ClusterIps:     []string{"1.2.3.4"},
 				LoadbalancerIp: "5.6.7.8",
 			})
 			err = bpfEpMgr.CompleteDeferredWork()
@@ -1106,7 +1110,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
 				Name:           "service",
 				Namespace:      "test",
-				ClusterIp:      "1.2.3.4",
+				ClusterIps:     []string{"1.2.3.4"},
 				LoadbalancerIp: "5.6.7.8",
 				ExternalIps:    []string{"1.0.0.1", "1.0.0.2"},
 			})
@@ -1117,9 +1121,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("5.6.7.8")))
 
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
-				Name:      "service",
-				Namespace: "test",
-				ClusterIp: "1.2.3.4",
+				Name:       "service",
+				Namespace:  "test",
+				ClusterIps: []string{"1.2.3.4"},
 			})
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
@@ -1137,7 +1141,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
 				Name:           "service",
 				Namespace:      "test",
-				ClusterIp:      "1.2.3.4",
+				ClusterIps:     []string{"1.2.3.4"},
 				LoadbalancerIp: "5.6.7.8",
 			})
 			err = bpfEpMgr.CompleteDeferredWork()
