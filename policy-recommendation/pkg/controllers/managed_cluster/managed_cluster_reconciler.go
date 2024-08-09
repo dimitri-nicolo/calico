@@ -40,9 +40,6 @@ type managedClusterReconciler struct {
 	// tenantNamespace is the namespace where the tenant resources are stored.
 	tenantNamespace string
 
-	// clog is the logger for the controller.
-	clog *log.Entry
-
 	// mutex is used to synchronize updates from managed clusters.
 	mutex sync.Mutex
 }
@@ -51,12 +48,10 @@ func newManagedClusterReconciler(
 	ctx context.Context,
 	client ctrlclient.WithWatch,
 	clientFactory lmak8s.ClientSetFactory,
-	clientSet lmak8s.ClientSet,
 	linseed lsclient.Client,
 	managedClusters map[string]*managedClusterCtrlContext,
 	newScopeController func(context.Context, string, lmak8s.ClientSet, lsclient.Client) (controller.Controller, error),
 	tenantNamespace string,
-	clog *log.Entry,
 ) controller.Reconciler {
 	return &managedClusterReconciler{
 		ctx:                              ctx,
@@ -66,7 +61,6 @@ func newManagedClusterReconciler(
 		managedClusters:                  managedClusters,
 		newRecommendationScopeController: newScopeController,
 		tenantNamespace:                  tenantNamespace,
-		clog:                             clog,
 	}
 }
 
@@ -84,6 +78,7 @@ func (r *managedClusterReconciler) Reconcile(key types.NamespacedName) error {
 				// Close the stop channel and delete the key
 				close(mc.stopChan)
 				delete(r.managedClusters, key.Name)
+				log.WithField("clusterID", key.Name).Info("ManagedCluster has been deleted")
 			}
 			return nil
 		} else {
@@ -98,7 +93,7 @@ func (r *managedClusterReconciler) Reconcile(key types.NamespacedName) error {
 	}
 
 	clusterID := mc.Name
-	r.clog.Debugf("Add managed cluster: %s", clusterID)
+	log.WithField("clusterID", clusterID).Info("Adding ManagedCluster")
 
 	// Create clientSet for application for the managed cluster indexed by the clusterID.
 	clientSet, err := r.clientFactory.NewClientSetForApplication(clusterID)

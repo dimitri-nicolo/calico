@@ -123,11 +123,7 @@ func NewRecommendationEngine(
 	scope *v3.PolicyRecommendationScope,
 	clock Clock,
 ) *RecommendationEngine {
-	logEntry := log.WithField("cluster", clusterID)
-	if clusterID == "cluster" {
-		logEntry = log.WithField("cluster", "management")
-	}
-	logEntry.Info("Creating engine")
+	logEntry := log.WithField("clusterID", utils.GetLogClusterID(clusterID))
 
 	clusterDomain, err := utils.GetClusterDomain(utils.DefaultResolveConfPath)
 	if err != nil {

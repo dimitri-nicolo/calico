@@ -2,7 +2,6 @@
 package watcher
 
 import (
-	"fmt"
 	"reflect"
 	"time"
 
@@ -81,14 +80,16 @@ func (w *watcher) Run(stopChan chan struct{}) {
 	go informer.Run(stopChan)
 
 	if !cache.WaitForNamedCacheSync(reflect.TypeOf(w.resource.obj).String(), stopChan, informer.HasSynced) {
-		log.Errorf("failed to sync resource %T", w.resource.obj)
-		uruntime.HandleError(fmt.Errorf("timed out waiting for caches to sync"))
+		log.Infof("Failed to sync resource %T which may have received signal for controller to shut down.", w.resource.obj)
+
 		return
 	}
 
 	go wait.Until(w.startWatch, time.Second, stopChan)
 
 	<-stopChan
+
+	log.Infof("Stopped watching resource %T", w.resource.obj)
 }
 
 func (w *watcher) resourceEventHandlerFuncs() cache.ResourceEventHandlerFuncs {

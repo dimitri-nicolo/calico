@@ -95,7 +95,7 @@ func (r *recommendationScopeReconciler) Reconcile(key types.NamespacedName) erro
 		return nil
 	}
 
-	if scope, err := r.clientSet.ProjectcalicoV3().PolicyRecommendationScopes().Get(r.ctx, key.Name, metav1.GetOptions{}); err == nil {
+	if scope, err := r.clientSet.ProjectcalicoV3().PolicyRecommendationScopes().Get(r.ctx, key.Name, metav1.GetOptions{}); err == nil && scope != nil {
 		status := scope.Spec.NamespaceSpec.RecStatus
 		if r.enabled != status {
 			if status == v3.PolicyRecommendationScopeEnabled {
@@ -184,4 +184,14 @@ func (r *recommendationScopeReconciler) newRecommendationResourceCache() rcache.
 	}
 
 	return rcache.NewResourceCache(cacheArgs)
+}
+
+// stop stops the recommendation scope reconciler.
+func (r *recommendationScopeReconciler) stop() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if r.ctrl != nil {
+		close(r.stopChan)
+	}
 }
