@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	log.AddHook(logutils.ContextHook{})
+	logutils.ConfigureFormatter("test")
 	log.SetLevel(log.DebugLevel)
 }
 

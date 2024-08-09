@@ -198,8 +198,7 @@ func getMyCPUTime() time.Duration {
 func configureLogging() {
 	logLevel := logrus.InfoLevel
 	logrus.SetLevel(logLevel)
-	logrus.SetFormatter(&logutils.Formatter{Component: "mocknode"})
-	logrus.AddHook(&logutils.ContextHook{})
+	logutils.ConfigureFormatter("mocknode")
 
 	// Disable logrus' default output, which only supports a single destination.  We use the
 	// hook above to fan out logs to multiple destinations.

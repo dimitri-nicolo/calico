@@ -42,7 +42,7 @@ func main() {
 
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
-	log.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("license")
 	parsedLogLevel, err := log.ParseLevel(logLevelStr)
 	if err == nil {
 		logLevel = parsedLogLevel
@@ -54,14 +54,14 @@ func main() {
 	// Load env config
 	cfg := config.MustLoadConfig()
 
-	//Find file path
+	// Find file path
 	cert := checkFileExists(cfg.MetricsCertFile)
 	ca := checkFileExists(cfg.MetricsCaFile)
 	key := checkFileExists(cfg.MetricsKeyFile)
 
-	//Create New Instance of License reporter
+	// Create New Instance of License reporter
 	lr := metrics.NewLicenseReporter(cfg.MetricsHost, cert, key, ca, cfg.MetricPollInterval, cfg.MetricsPort)
-	//Start License metric server and scraper
+	// Start License metric server and scraper
 	lr.Start()
 }
 

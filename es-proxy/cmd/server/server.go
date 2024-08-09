@@ -39,9 +39,10 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Install a hook that adds file/line number information.
+	logutils.ConfigureFormatter("es-proxy")
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
-	log.SetFormatter(&logutils.Formatter{})
 	parsedLogLevel, err := log.ParseLevel(logLevelStr)
 	if err == nil {
 		logLevel = parsedLogLevel
@@ -49,8 +50,6 @@ func main() {
 		log.Warnf("Could not parse log level %v, setting log level to %v", logLevelStr, logLevel)
 	}
 	log.SetLevel(logLevel)
-	// Install a hook that adds file/line number information.
-	log.AddHook(&logutils.ContextHook{})
 
 	config, err := server.NewConfigFromEnv()
 	if err != nil {

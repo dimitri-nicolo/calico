@@ -176,86 +176,89 @@ var _ = Describe("Test Pod conversion", func() {
 	c := NewConverter()
 
 	It("should parse a Pod with an IP to a WorkloadEndpoint", func() {
-		pod := kapiv1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "podA",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"arbitrary": "annotation",
-					"egress.projectcalico.org/namespaceSelector":    "wblack == 'white'",
-					"egress.projectcalico.org/selector":             "wred == 'green'",
-					"cni.projectcalico.org/awsElasticIPs":           "[\"44.55.66.77\",\"88.55.66.77\"]",
-					"egress.projectcalico.org/externalNetworkNames": "[\"net0\",\"net1\"]",
+		makePod := func() kapiv1.Pod {
+			return kapiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "podA",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"arbitrary": "annotation",
+						"egress.projectcalico.org/namespaceSelector":    "wblack == 'white'",
+						"egress.projectcalico.org/selector":             "wred == 'green'",
+						"cni.projectcalico.org/awsElasticIPs":           "[\"44.55.66.77\",\"88.55.66.77\"]",
+						"egress.projectcalico.org/externalNetworkNames": "[\"net0\",\"net1\"]",
+					},
+					Labels: map[string]string{
+						"labelA": "valueA",
+						"labelB": "valueB",
+					},
+					ResourceVersion: "1234",
+					UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 				},
-				Labels: map[string]string{
-					"labelA": "valueA",
-					"labelB": "valueB",
-				},
-				ResourceVersion: "1234",
-				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
-			},
-			Spec: kapiv1.PodSpec{
-				NodeName: "nodeA",
-				Containers: []kapiv1.Container{
-					{
-						Ports: []kapiv1.ContainerPort{
-							{
-								ContainerPort: 5678,
+				Spec: kapiv1.PodSpec{
+					NodeName: "nodeA",
+					Containers: []kapiv1.Container{
+						{
+							Ports: []kapiv1.ContainerPort{
+								{
+									ContainerPort: 5678,
+								},
+								{
+									Name:          "no-proto",
+									ContainerPort: 1234,
+								},
 							},
-							{
-								Name:          "no-proto",
-								ContainerPort: 1234,
+						},
+						{
+							Ports: []kapiv1.ContainerPort{
+								{
+									Name:          "tcp-proto",
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 1024,
+								},
+								{
+									Name:          "tcp-proto-with-host-port",
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 8080,
+									HostPort:      5678,
+								},
+								{
+									Name:          "tcp-proto-with-host-port-and-ip",
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 8081,
+									HostPort:      6789,
+									HostIP:        "1.2.3.4",
+								},
+								{
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 500,
+									HostPort:      5000,
+								},
+								{
+									Name:          "udp-proto",
+									Protocol:      kapiv1.ProtocolUDP,
+									ContainerPort: 432,
+								},
+								{
+									Name:          "sctp-proto",
+									Protocol:      kapiv1.ProtocolSCTP,
+									ContainerPort: 891,
+								},
+								{
+									Name:          "unkn-proto",
+									Protocol:      kapiv1.Protocol("unknown"),
+									ContainerPort: 567,
+								},
 							},
 						},
 					},
-					{
-						Ports: []kapiv1.ContainerPort{
-							{
-								Name:          "tcp-proto",
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 1024,
-							},
-							{
-								Name:          "tcp-proto-with-host-port",
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 8080,
-								HostPort:      5678,
-							},
-							{
-								Name:          "tcp-proto-with-host-port-and-ip",
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 8081,
-								HostPort:      6789,
-								HostIP:        "1.2.3.4",
-							},
-							{
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 500,
-								HostPort:      5000,
-							},
-							{
-								Name:          "udp-proto",
-								Protocol:      kapiv1.ProtocolUDP,
-								ContainerPort: 432,
-							},
-							{
-								Name:          "sctp-proto",
-								Protocol:      kapiv1.ProtocolSCTP,
-								ContainerPort: 891,
-							},
-							{
-								Name:          "unkn-proto",
-								Protocol:      kapiv1.Protocol("unknown"),
-								ContainerPort: 567,
-							},
-						},
-					},
 				},
-			},
-			Status: kapiv1.PodStatus{
-				PodIP: "192.168.0.1",
-			},
+				Status: kapiv1.PodStatus{
+					PodIP: "192.168.0.1",
+				},
+			}
 		}
+		pod := makePod()
 
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
@@ -322,90 +325,95 @@ var _ = Describe("Test Pod conversion", func() {
 
 		// Check external networks
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.ExternalNetworkNames).To(ConsistOf("net0", "net1"))
+
+		Expect(pod).To(Equal(makePod()), "Original pod should not be modified")
 	})
 
 	It("should parse a pod with an IP and egress gateway policy to a WorkloadEndpoint", func() {
-		pod := kapiv1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "podA",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"arbitrary": "annotation",
-					"egress.projectcalico.org/egressGatewayPolicy":  "egw-policy1",
-					"egress.projectcalico.org/namespaceSelector":    "wblack == 'white'",
-					"egress.projectcalico.org/selector":             "wred == 'green'",
-					"cni.projectcalico.org/awsElasticIPs":           "[\"44.55.66.77\",\"88.55.66.77\"]",
-					"egress.projectcalico.org/externalNetworkNames": "[\"net0\",\"net1\"]",
+		makePod := func() kapiv1.Pod {
+			return kapiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "podA",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"arbitrary": "annotation",
+						"egress.projectcalico.org/egressGatewayPolicy":  "egw-policy1",
+						"egress.projectcalico.org/namespaceSelector":    "wblack == 'white'",
+						"egress.projectcalico.org/selector":             "wred == 'green'",
+						"cni.projectcalico.org/awsElasticIPs":           "[\"44.55.66.77\",\"88.55.66.77\"]",
+						"egress.projectcalico.org/externalNetworkNames": "[\"net0\",\"net1\"]",
+					},
+					Labels: map[string]string{
+						"labelA": "valueA",
+						"labelB": "valueB",
+					},
+					ResourceVersion: "1234",
+					UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
 				},
-				Labels: map[string]string{
-					"labelA": "valueA",
-					"labelB": "valueB",
-				},
-				ResourceVersion: "1234",
-				UID:             types.UID("30316465-6365-4463-ad63-3564622d3638"),
-			},
-			Spec: kapiv1.PodSpec{
-				NodeName: "nodeA",
-				Containers: []kapiv1.Container{
-					{
-						Ports: []kapiv1.ContainerPort{
-							{
-								ContainerPort: 5678,
+				Spec: kapiv1.PodSpec{
+					NodeName: "nodeA",
+					Containers: []kapiv1.Container{
+						{
+							Ports: []kapiv1.ContainerPort{
+								{
+									ContainerPort: 5678,
+								},
+								{
+									Name:          "no-proto",
+									ContainerPort: 1234,
+								},
 							},
-							{
-								Name:          "no-proto",
-								ContainerPort: 1234,
+						},
+						{
+							Ports: []kapiv1.ContainerPort{
+								{
+									Name:          "tcp-proto",
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 1024,
+								},
+								{
+									Name:          "tcp-proto-with-host-port",
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 8080,
+									HostPort:      5678,
+								},
+								{
+									Name:          "tcp-proto-with-host-port-and-ip",
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 8081,
+									HostPort:      6789,
+									HostIP:        "1.2.3.4",
+								},
+								{
+									Protocol:      kapiv1.ProtocolTCP,
+									ContainerPort: 500,
+									HostPort:      5000,
+								},
+								{
+									Name:          "udp-proto",
+									Protocol:      kapiv1.ProtocolUDP,
+									ContainerPort: 432,
+								},
+								{
+									Name:          "sctp-proto",
+									Protocol:      kapiv1.ProtocolSCTP,
+									ContainerPort: 891,
+								},
+								{
+									Name:          "unkn-proto",
+									Protocol:      kapiv1.Protocol("unknown"),
+									ContainerPort: 567,
+								},
 							},
 						},
 					},
-					{
-						Ports: []kapiv1.ContainerPort{
-							{
-								Name:          "tcp-proto",
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 1024,
-							},
-							{
-								Name:          "tcp-proto-with-host-port",
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 8080,
-								HostPort:      5678,
-							},
-							{
-								Name:          "tcp-proto-with-host-port-and-ip",
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 8081,
-								HostPort:      6789,
-								HostIP:        "1.2.3.4",
-							},
-							{
-								Protocol:      kapiv1.ProtocolTCP,
-								ContainerPort: 500,
-								HostPort:      5000,
-							},
-							{
-								Name:          "udp-proto",
-								Protocol:      kapiv1.ProtocolUDP,
-								ContainerPort: 432,
-							},
-							{
-								Name:          "sctp-proto",
-								Protocol:      kapiv1.ProtocolSCTP,
-								ContainerPort: 891,
-							},
-							{
-								Name:          "unkn-proto",
-								Protocol:      kapiv1.Protocol("unknown"),
-								ContainerPort: 567,
-							},
-						},
-					},
 				},
-			},
-			Status: kapiv1.PodStatus{
-				PodIP: "192.168.0.1",
-			},
+				Status: kapiv1.PodStatus{
+					PodIP: "192.168.0.1",
+				},
+			}
 		}
+		pod := makePod()
 
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
@@ -470,6 +478,7 @@ var _ = Describe("Test Pod conversion", func() {
 
 		// Check external networks
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.ExternalNetworkNames).To(ConsistOf("net0", "net1"))
+		Expect(pod).To(Equal(makePod()), "Original pod should not be modified")
 	})
 
 	It("should parse a Pod with dual stack IPs to a WorkloadEndpoint", func() {
@@ -1326,12 +1335,13 @@ var _ = Describe("Test Pod conversion", func() {
 	})
 
 	It("should pass network-status annotations from pod to workloadendpoint", func() {
-		pod := kapiv1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "pod",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"k8s.v1.cni.cncf.io/network-status": `
+		makePod := func() kapiv1.Pod {
+			return kapiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"k8s.v1.cni.cncf.io/network-status": `
 					[{
 						"name": "k8s-pod-network",
 						"ips": [
@@ -1340,13 +1350,15 @@ var _ = Describe("Test Pod conversion", func() {
 						"default": true,
 						"dns": {}
 					}]`,
+					},
 				},
-			},
-			Spec: kapiv1.PodSpec{
-				NodeName: "nodeA",
-			},
-			Status: kapiv1.PodStatus{},
+				Spec: kapiv1.PodSpec{
+					NodeName: "nodeA",
+				},
+				Status: kapiv1.PodStatus{},
+			}
 		}
+		pod := makePod()
 		wep, err := podToWorkloadEndpoint(c, &pod)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -1359,6 +1371,8 @@ var _ = Describe("Test Pod conversion", func() {
 						"default": true,
 						"dns": {}
 					}]`))
+
+		Expect(pod).To(Equal(makePod()), "Original pod should not be modified")
 	})
 
 	It("should convert without egress control when egress annotations are invalid", func() {
@@ -1469,7 +1483,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 	c := NewConverter()
 
 	It("should parse a basic k8s NetworkPolicy to a NetworkPolicy", func() {
-		port80 := intstr.FromInt(80)
+		port80 := intstr.FromInt32(80)
 		portFoo := intstr.FromString("foo")
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1593,7 +1607,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 	})
 
 	It("should parse a k8s NetworkPolicy with blank ports", func() {
-		port80 := intstr.FromInt(80)
+		port80 := intstr.FromInt32(80)
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
@@ -1644,8 +1658,8 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 	})
 
 	It("should parse a k8s egress NetworkPolicy with blank ports", func() {
-		port53 := intstr.FromInt(53)
-		port80 := intstr.FromInt(80)
+		port53 := intstr.FromInt32(53)
+		port80 := intstr.FromInt32(80)
 		protoUDP := kapiv1.ProtocolUDP
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1709,7 +1723,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 	})
 
 	It("should drop rules with invalid ports in a k8s NetworkPolicy", func() {
-		port80 := intstr.FromInt(80)
+		port80 := intstr.FromInt32(80)
 		portFoo := intstr.FromString("foo")
 		portBad1 := intstr.FromString("-50:-1")
 		portBad2 := intstr.FromString("-22:-3")
@@ -2116,7 +2130,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 	})
 
 	It("should parse a k8s NetworkPolicy with a DoesNotExist expression ", func() {
-		port80 := intstr.FromInt(80)
+		port80 := intstr.FromInt32(80)
 		portFoo := intstr.FromString("foo")
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -2193,8 +2207,8 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 	It("should parse a NetworkPolicy with multiple peers and ports", func() {
 		tcp := kapiv1.ProtocolTCP
 		udp := kapiv1.ProtocolUDP
-		eighty := intstr.FromInt(80)
-		ninety := intstr.FromInt(90)
+		eighty := intstr.FromInt32(80)
+		ninety := intstr.FromInt32(90)
 
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -2561,7 +2575,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 
 	It("should parse a NetworkPolicy with Ports only", func() {
 		protocol := kapiv1.ProtocolTCP
-		port := intstr.FromInt(80)
+		port := intstr.FromInt32(80)
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
@@ -2609,7 +2623,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 
 	It("should parse a NetworkPolicy with Port Range only", func() {
 		protocol := kapiv1.ProtocolTCP
-		port := intstr.FromInt(32000)
+		port := intstr.FromInt32(32000)
 		endPort := int32(32768)
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -2658,7 +2672,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 
 	It("should parse a NetworkPolicy with Ports only (egress)", func() {
 		protocol := kapiv1.ProtocolTCP
-		port := intstr.FromInt(80)
+		port := intstr.FromInt32(80)
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
@@ -2706,7 +2720,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 
 	It("should parse a NetworkPolicy with Port Range only (egress)", func() {
 		protocol := kapiv1.ProtocolTCP
-		port := intstr.FromInt(32000)
+		port := intstr.FromInt32(32000)
 		endPort := int32(32768)
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -2854,8 +2868,8 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 	It("should parse a NetworkPolicy with an Egress rule with IPBlock and Ports", func() {
 		tcp := kapiv1.ProtocolTCP
 		udp := kapiv1.ProtocolUDP
-		eighty := intstr.FromInt(80)
-		ninety := intstr.FromInt(90)
+		eighty := intstr.FromInt32(80)
+		ninety := intstr.FromInt32(90)
 
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -3059,7 +3073,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 	c := NewConverter()
 
 	It("should parse a basic NetworkPolicy to a Policy", func() {
-		port80 := intstr.FromInt(80)
+		port80 := intstr.FromInt32(80)
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",
@@ -3230,8 +3244,8 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 	It("should parse a NetworkPolicy with multiple peers and ports", func() {
 		tcp := kapiv1.ProtocolTCP
 		udp := kapiv1.ProtocolUDP
-		eighty := intstr.FromInt(80)
-		ninety := intstr.FromInt(90)
+		eighty := intstr.FromInt32(80)
+		ninety := intstr.FromInt32(90)
 
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -3392,7 +3406,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 
 	It("should parse a NetworkPolicy with Ports only", func() {
 		protocol := kapiv1.ProtocolTCP
-		port := intstr.FromInt(80)
+		port := intstr.FromInt32(80)
 		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test.policy",

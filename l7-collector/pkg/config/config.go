@@ -84,7 +84,6 @@ func LoadConfig() (*Config, error) {
 }
 
 func (c *Config) InitializeLogging() {
-	log.SetFormatter(&logutils.Formatter{})
-	log.AddHook(&logutils.ContextHook{})
+	logutils.ConfigureFormatter("l7collector")
 	log.SetLevel(c.ParsedLogLevel)
 }

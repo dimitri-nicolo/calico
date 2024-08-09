@@ -48,7 +48,6 @@ func LoadConfig() (*Config, error) {
 }
 
 func (c *Config) InitializeLogging() {
-	log.SetFormatter(&logutils.Formatter{})
-	log.AddHook(&logutils.ContextHook{})
+	logutils.ConfigureFormatter("polrec")
 	log.SetLevel(c.LogLevel)
 }

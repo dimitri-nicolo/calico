@@ -65,7 +65,7 @@ func main() {
 
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
-	log.SetFormatter(&logutils.Formatter{})
+	logutils.ConfigureFormatter("fwinteg")
 	parsedLogLevel, err := log.ParseLevel(logLevelStr)
 	if err == nil {
 		logLevel = parsedLogLevel
@@ -73,8 +73,6 @@ func main() {
 		log.Warnf("Could not parse log level %v, setting log level to %v", logLevelStr, logLevel)
 	}
 	log.SetLevel(logLevel)
-	// Install a hook that adds file/line no information.
-	log.AddHook(&logutils.ContextHook{})
 
 	// Signal setup.
 	sigs := make(chan os.Signal, 1)
@@ -258,7 +256,7 @@ func getKubernetesClient(kubeconfig string) (*kubernetes.Clientset, error) {
 
 func getCalicoClient(kubeconfig string) (clientv3.ProjectcalicoV3Interface, error) {
 
-	//Build the calico enterprise client
+	// Build the calico enterprise client
 	calicoConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build calico api client config: %s", err)

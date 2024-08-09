@@ -98,10 +98,7 @@ func main() {
 
 	// Replace logrus' formatter with a custom one using our time format,
 	// shared with the Python code.
-	log.SetFormatter(&logutils.Formatter{Component: "flowgen"})
-
-	// Install a hook that adds file/line no information.
-	log.AddHook(&logutils.ContextHook{})
+	logutils.ConfigureFormatter("flowgen")
 
 	var cfg Config
 	cfg.loaded = loadConfig()
