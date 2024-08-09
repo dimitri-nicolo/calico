@@ -17,6 +17,7 @@ import (
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/watcher"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
 const KindPolicyRecommendationScopes = "policyrecommendationscopes"
@@ -37,6 +38,9 @@ type recommendationScopeController struct {
 	// The enabled flag is used keep track of the engine status.
 	enabled v3.PolicyRecommendationNamespaceStatus
 
+	// The reconciler is used to reconcile the recommendation scope resource.
+	reconciler *recommendationScopeReconciler
+
 	// The watcher is used to watch for updates to the PolicyRecommendationScope resource.
 	watcher watcher.Watcher
 
@@ -53,26 +57,23 @@ func NewRecommendationScopeController(
 	clientSet lmak8s.ClientSet,
 	linseed lsclient.Client,
 ) (controller.Controller, error) {
-	logEntry := log.WithField("cluster", clusterID)
-	if clusterID == "cluster" {
-		logEntry = log.WithField("cluster", "management")
-	}
-	logEntry.Info("Creating controller")
+	logEntry := log.WithField("clusterID", utils.GetLogClusterID(clusterID))
 
-	recReconciler := newRecommendationScopeReconciler(ctx, clusterID, clientSet, linseed, logEntry)
-	if recReconciler == nil {
+	reconciler := newRecommendationScopeReconciler(ctx, clusterID, clientSet, linseed, logEntry)
+	if reconciler == nil {
 		return nil, errors.New("failed to create recommendation scope reconciler")
 	}
 
 	return &recommendationScopeController{
-		clog:      logEntry,
-		ctx:       ctx,
-		clientSet: clientSet,
-		clusterID: clusterID,
-		linseed:   linseed,
-		enabled:   v3.PolicyRecommendationScopeDisabled,
+		clog:       logEntry,
+		ctx:        ctx,
+		clientSet:  clientSet,
+		clusterID:  clusterID,
+		linseed:    linseed,
+		enabled:    v3.PolicyRecommendationScopeDisabled,
+		reconciler: reconciler,
 		watcher: watcher.NewWatcher(
-			recReconciler,
+			reconciler,
 			// TODO(dimitrin): [EV-4647] add a filter to only watch for scope with name equal to "default"
 			// for the cluster (https://tigera.atlassian.net/browse/EV-4647).
 			// Currently, the client may print messages like:
@@ -94,10 +95,12 @@ func (c *recommendationScopeController) Run(stopChan chan struct{}) {
 	// Start the PolicyRecommendationScope watcher
 	go c.watcher.Run(stopChan)
 
-	c.clog.Info("Started controller")
+	c.clog.Info("Started RecommendationScope controller")
 
 	// Listen for the stop signal. Blocks until we receive a stop signal.
 	<-stopChan
 
-	c.clog.Info("Stopped controller")
+	c.reconciler.stop()
+
+	c.clog.Info("Stopped RecommendationScope controller")
 }

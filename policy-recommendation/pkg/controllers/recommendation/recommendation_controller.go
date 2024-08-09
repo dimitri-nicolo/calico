@@ -29,6 +29,7 @@ import (
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/watcher"
 	recengine "github.com/projectcalico/calico/policy-recommendation/pkg/engine"
 	rectypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
+	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
 const (
@@ -83,12 +84,7 @@ type recommendationController struct {
 func NewRecommendationController(
 	ctx context.Context, clusterID string, clientSet lmak8s.ClientSet, engine *recengine.RecommendationEngine, cache rcache.ResourceCache,
 ) (controller.Controller, error) {
-	logEntry := log.WithField("cluster", clusterID)
-	if clusterID == "cluster" {
-		logEntry = log.WithField("cluster", "management")
-	}
-	clog := logEntry
-	clog.Info("Creating recommendation controller")
+	clog := log.WithField("clusterID", utils.GetLogClusterID(clusterID))
 
 	return &recommendationController{
 		ctx:       ctx,
@@ -168,17 +164,12 @@ func (c *recommendationController) Run(stopChan chan struct{}) {
 		go wait.Until(c.runWorker, time.Second, c.ctx.Done())
 	}
 
-	c.clog.Info("Started controller")
+	c.clog.Info("Started Recommendation controller")
 
 	<-stopChan
 
-	c.cache.GetQueue().ShutDown()
-	// Clear the cache
-	for _, key := range c.cache.ListKeys() {
-		c.cache.Delete(key)
-	}
-	c.clog.Info("Cleared cache")
-	c.clog.Info("Stopped controller")
+	c.cache.Stop()
+	c.clog.Info("Stopped Recommendation cache and controller")
 }
 
 // GetEngine returns the recommendation engine.

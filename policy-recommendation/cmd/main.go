@@ -132,7 +132,7 @@ func main() {
 		}
 		clientFactory = clientFactory.Impersonate(&impersonationInfo)
 	}
-	mctrl, err := mscontroller.NewManagedClusterController(ctx, client, clientFactory, clientSet, linseedClient, config.TenantNamespace)
+	mctrl, err := mscontroller.NewManagedClusterController(ctx, client, clientFactory, linseedClient, config.TenantNamespace)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create ManagedCluster controller")
 	}

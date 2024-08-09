@@ -8,7 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -70,7 +69,6 @@ var _ = Describe("ManagedClusterReconciler", func() {
 			managedClusters:                  make(map[string]*managedClusterCtrlContext),
 			mutex:                            sync.Mutex{},
 			newRecommendationScopeController: newMockRecommendationScopeControllers,
-			clog:                             logrus.NewEntry(logrus.New()),
 		}
 	})
 
