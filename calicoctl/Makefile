@@ -165,7 +165,7 @@ st: bin/calicoctl-linux-$(ARCH) version-helper
 	$(MAKE) stop-kubernetes-master
 
 ## Run a local kubernetes master with API
-# TODO: Commonize this with the functions in lib.Makefile. 
+# TODO: Commonize this with the functions in lib.Makefile.
 # For now, these tests do something special and launch two apiserver on different ports, so it makes sense
 # to keep them separate.
 run-kubernetes-master: stop-kubernetes-master
@@ -227,7 +227,7 @@ run-kubernetes-master: stop-kubernetes-master
 	-docker exec -ti st-apiserver-${KUBE_APISERVER_PORT} kubectl \
 		--server=https://127.0.0.1:${KUBE_APISERVER_PORT} \
 		create namespace test
-	
+
 ## Stop the local kubernetes master
 stop-kubernetes-master:
 	# Delete the cluster role binding.
