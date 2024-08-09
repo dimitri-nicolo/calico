@@ -27,7 +27,7 @@ set -o nounset
 set -o pipefail
 
 GIT_VERSION=$(git describe --tags --dirty --long --always --abbrev=12)
-CALICO_HOME=$(cd $(dirname $0)/../../../; pwd)
+CALICO_HOME=$(cd "$(dirname $0)"/../../../; pwd)
 CAPZ_LOCATION=$CALICO_HOME/process/testing/winfv-felix/capz
 KUBECONFIG=$CALICO_HOME/process/testing/winfv-felix/capz/kubeconfig
 KUBECTL=$CAPZ_LOCATION/bin/kubectl
