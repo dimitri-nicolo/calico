@@ -115,6 +115,12 @@ func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
 			continue
 		}
 
+		if size := maps.Size(mapName); size != 0 {
+			if err := m.SetSize(size); err != nil {
+				return fmt.Errorf("error resizing map %s: %w", mapName, err)
+			}
+		}
+
 		pinPath := path.Join(baseDir, mapName)
 		perr := m.SetPinPath(pinPath)
 		if perr != nil {
