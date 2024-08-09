@@ -221,6 +221,12 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 			continue
 		}
 
+		if size := maps.Size(mapName); size != 0 {
+			if err := m.SetSize(size); err != nil {
+				return fmt.Errorf("error resizing map %s: %w", mapName, err)
+			}
+		}
+
 		pinPath := path.Join(baseDir, mapName)
 		err := m.SetPinPath(pinPath)
 		if err != nil {
