@@ -13,6 +13,21 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 )
 
+const (
+	// ClusterLoggingID is the field used to identify the cluster logging resource.
+	ManagementLoggingID = "management"
+)
+
+// GetLogClusterID returns the field used to identify the cluster resource for logging purposes.
+func GetLogClusterID(id string) string {
+	field := ManagementLoggingID
+	if field != "cluster" {
+		// If the cluster ID is not "cluster", use the managed cluster ID.
+		field = id
+	}
+	return field
+}
+
 // GenerateRecommendationName returns a policy name with tier prefix and 5 char hash suffix. If there is an
 // error in generating the policy name, it returns an empty string.
 func GenerateRecommendationName(tier, name string, suffixGenerator func() string) string {

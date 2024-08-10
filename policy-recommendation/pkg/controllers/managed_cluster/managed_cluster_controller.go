@@ -24,9 +24,6 @@ import (
 )
 
 type managedClusterController struct {
-	// clog is the logger for the controller.
-	clog *log.Entry
-
 	// ctx is the context for the controller.
 	ctx context.Context
 
@@ -53,13 +50,9 @@ func NewManagedClusterController(
 	ctx context.Context,
 	client ctrlclient.WithWatch,
 	clientFactory lmak8s.ClientSetFactory,
-	clientSet lmak8s.ClientSet,
 	linseed lsclient.Client,
 	tenantNamespace string,
 ) (controller.Controller, error) {
-	logEntry := log.WithField("controller", v3.KindManagedCluster)
-	logEntry.Info("Creating ManagedCluster controller")
-
 	// The mapping of managed cluster names to PolicyRecommendationScope controllers.
 	managedClusters := make(map[string]*managedClusterCtrlContext)
 
@@ -68,12 +61,11 @@ func NewManagedClusterController(
 		managedClusters: managedClusters,
 		watcher: watcher.NewWatcher(
 			newManagedClusterReconciler(
-				ctx, client, clientFactory, clientSet, linseed, managedClusters,
-				rscope.NewRecommendationScopeController, tenantNamespace, logEntry),
+				ctx, client, clientFactory, linseed, managedClusters,
+				rscope.NewRecommendationScopeController, tenantNamespace),
 			newManagedClusterListWatcher(ctx, client, tenantNamespace),
 			&v3.ManagedCluster{},
 		),
-		clog: logEntry,
 	}, nil
 }
 
@@ -85,7 +77,7 @@ func (c *managedClusterController) Run(stopChan chan struct{}) {
 	// PolicyRecommendationScope controller per cluster.
 	go c.watcher.Run(stopChan)
 
-	c.clog.Info("Started controller")
+	log.Info("Started ManagedCluster controller")
 
 	// Listen for the stop signal. Blocks until we receive a stop signal.
 	<-stopChan
@@ -93,7 +85,7 @@ func (c *managedClusterController) Run(stopChan chan struct{}) {
 	// Stop the ManagedCluster recommendation scope controllers.
 	c.stopControllers()
 
-	c.clog.Info("Stopped controller")
+	log.Info("Stopped ManagedCluster controller")
 }
 
 // stopControllers stops the recommendation scope controllers for every managed cluster.
@@ -101,7 +93,7 @@ func (c *managedClusterController) stopControllers() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.clog.Debug("Stopping PolicyRecommendationScope controllers for every managed cluster.")
+	log.Debug("Stopping all managed cluster PolicyRecommendationScope controllers.")
 	for key, mc := range c.managedClusters {
 		close(mc.stopChan)
 		delete(c.managedClusters, key)
