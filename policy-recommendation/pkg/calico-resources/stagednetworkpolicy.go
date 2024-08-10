@@ -8,10 +8,12 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/compliance/pkg/hashutils"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )
 
@@ -315,9 +317,15 @@ func GetNetworkSetV3Rule(data types.FlowLogData, direction DirectionType) *v3.Ru
 		Protocol: &data.Protocol,
 	}
 
+	// The implicit label of every network set (or global network set) uses the
+	// "github.com/projectcalico/calico/compliance/pkg/hashutils.GetLengthLimitedName" function to
+	// generate a name limited to 63 characters. The rule selector matches that label.
+	// The limit was added in: https://github.com/tigera/calico-private/pull/7766.
+	name := getNetworkSetLabelLengthLimitedName(data.Name)
+
 	entityRule := getEntityRuleReference(direction, rule)
 	entityRule.Selector = fmt.Sprintf("%s/name == '%s' && %s/kind == '%s'",
-		projectCalicoKeyName, data.Name, projectCalicoKeyName, string(NetworkSetScope))
+		projectCalicoKeyName, name, projectCalicoKeyName, string(NetworkSetScope))
 	if data.Global {
 		entityRule.NamespaceSelector = "global()"
 	} else {
@@ -413,6 +421,12 @@ func getEntityRuleReference(direction DirectionType, rule *v3.Rule) *v3.EntityRu
 	}
 
 	return entityRule
+}
+
+// getNetworkSetLabelLengthLimitedName returns a label length limited to 63 characters name for the
+// network set.
+func getNetworkSetLabelLengthLimitedName(name string) string {
+	return hashutils.GetLengthLimitedName(name, k8svalidation.DNS1123LabelMaxLength)
 }
 
 // sortPorts returns a sorted list of ports, sorted by min port.

@@ -19,13 +19,14 @@ import (
 )
 
 const (
-	domainNamespace  = "test_domainset_namespace"
-	name             = "test_name"
-	namespace        = "test_namespace"
-	tier             = "test_policy_tier"
+	domainNamespace  = "test-domainset-namespace"
+	name             = "test-name"
+	longName         = "this-is-a-very-long-networkset-name-that-exceeds-the-sixty-three-character-limit"
+	namespace        = "test-namespace"
+	tier             = "test-policy-tier"
 	selector         = "namespace1 AND namespace2"
-	service          = "test_service_name"
-	serviceNamespace = "test_service_namespace"
+	service          = "test-service-name"
+	serviceNamespace = "test-service-namespace"
 
 	rfc3339Time = "2002-10-02T10:00:00-05:00"
 )
@@ -115,8 +116,8 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/name":        "test_domainset_namespace-egress-domains",
-					"policyrecommendation.tigera.io/namespace":   "test_domainset_namespace",
+					"policyrecommendation.tigera.io/name":        "test-domainset-namespace-egress-domains",
+					"policyrecommendation.tigera.io/namespace":   "test-domainset-namespace",
 					"policyrecommendation.tigera.io/scope":       "DomainSet",
 				},
 			},
@@ -145,8 +146,8 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/name":        "test_domainset_namespace-egress-domains",
-					"policyrecommendation.tigera.io/namespace":   "test_domainset_namespace",
+					"policyrecommendation.tigera.io/name":        "test-domainset-namespace-egress-domains",
+					"policyrecommendation.tigera.io/namespace":   "test-domainset-namespace",
 					"policyrecommendation.tigera.io/scope":       "DomainSet",
 				},
 			},
@@ -229,8 +230,8 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/name":        "test_service_name",
-					"policyrecommendation.tigera.io/namespace":   "test_service_namespace",
+					"policyrecommendation.tigera.io/name":        "test-service-name",
+					"policyrecommendation.tigera.io/namespace":   "test-service-namespace",
 					"policyrecommendation.tigera.io/scope":       "Service",
 				},
 			},
@@ -239,8 +240,8 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Destination: v3.EntityRule{
 				Ports: orderedPorts,
 				Services: &v3.ServiceMatch{
-					Name:      "test_service_name",
-					Namespace: "test_service_namespace",
+					Name:      "test-service-name",
+					Namespace: "test-service-namespace",
 				},
 			},
 		}
@@ -263,8 +264,8 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/name":        "test_service_name",
-					"policyrecommendation.tigera.io/namespace":   "test_service_namespace",
+					"policyrecommendation.tigera.io/name":        "test-service-name",
+					"policyrecommendation.tigera.io/namespace":   "test-service-namespace",
 					"policyrecommendation.tigera.io/scope":       "Service",
 				},
 			},
@@ -272,8 +273,8 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Protocol: &protocolICMP,
 			Destination: v3.EntityRule{
 				Services: &v3.ServiceMatch{
-					Name:      "test_service_name",
-					Namespace: "test_service_namespace",
+					Name:      "test-service-name",
+					Namespace: "test-service-namespace",
 				},
 			},
 		}
@@ -296,14 +297,14 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/namespace":   "test_namespace",
+					"policyrecommendation.tigera.io/namespace":   "test-namespace",
 					"policyrecommendation.tigera.io/scope":       "Namespace",
 				},
 			},
 			Action:   v3.Allow,
 			Protocol: &protocolTCP,
 			Source: v3.EntityRule{
-				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
+				NamespaceSelector: "projectcalico.org/name == 'test-namespace'",
 			},
 			Destination: v3.EntityRule{
 				Ports: orderedPorts,
@@ -327,14 +328,14 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/namespace":   "test_namespace",
+					"policyrecommendation.tigera.io/namespace":   "test-namespace",
 					"policyrecommendation.tigera.io/scope":       "Namespace",
 				},
 			},
 			Action:   v3.Allow,
 			Protocol: &protocolICMP,
 			Source: v3.EntityRule{
-				NamespaceSelector: "projectcalico.org/name == 'test_namespace'",
+				NamespaceSelector: "projectcalico.org/name == 'test-namespace'",
 			},
 			Destination: v3.EntityRule{},
 		}
@@ -356,15 +357,15 @@ var _ = Describe("Policy Recommendation Rules", func() {
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/name":        "test_name",
-					"policyrecommendation.tigera.io/namespace":   "test_namespace",
+					"policyrecommendation.tigera.io/name":        "test-name",
+					"policyrecommendation.tigera.io/namespace":   "test-namespace",
 					"policyrecommendation.tigera.io/scope":       "NetworkSet",
 				},
 			},
 			Action:   v3.Allow,
 			Protocol: &protocolTCP,
 			Source: v3.EntityRule{
-				Selector:          "projectcalico.org/name == 'test_name' && projectcalico.org/kind == 'NetworkSet'",
+				Selector:          "projectcalico.org/name == 'test-name' && projectcalico.org/kind == 'NetworkSet'",
 				NamespaceSelector: "global()",
 			},
 			Destination: v3.EntityRule{
@@ -388,20 +389,57 @@ var _ = Describe("Policy Recommendation Rules", func() {
 		testRuleEquality(rule, expectedRule)
 	})
 
+	It("returns a valid GetNetworkSetV3Rule with a network set name larger than 63 characters", func() {
+		expectedRule := &v3.Rule{
+			Metadata: &v3.RuleMetadata{
+				Annotations: map[string]string{
+					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
+					"policyrecommendation.tigera.io/name":        "this-is-a-very-long-networkset-name-that-exceeds-the-sixty-three-character-limit",
+					"policyrecommendation.tigera.io/namespace":   "test-namespace",
+					"policyrecommendation.tigera.io/scope":       "NetworkSet",
+				},
+			},
+			Action:   v3.Allow,
+			Protocol: &protocolTCP,
+			Source: v3.EntityRule{
+				Selector:          "projectcalico.org/name == 'this-is-a-very-long-networkset-name-that-exceeds-the-si-04iv1q2' && projectcalico.org/kind == 'NetworkSet'",
+				NamespaceSelector: "global()",
+			},
+			Destination: v3.EntityRule{
+				Ports: orderedPorts,
+			},
+		}
+
+		data := types.FlowLogData{
+			Action:    v3.Allow,
+			Global:    true,
+			Name:      longName,
+			Namespace: namespace,
+			Ports:     ports,
+			Protocol:  protocolTCP,
+			Timestamp: rfc3339Time,
+		}
+
+		rule := GetNetworkSetV3Rule(data, IngressTraffic)
+		fmt.Print(rule.Destination.Ports)
+		fmt.Print(expectedRule.Destination.Ports)
+		testRuleEquality(rule, expectedRule)
+	})
+
 	It("returns a valid GetNetworkSetV3Rule with ICMP protocol", func() {
 		expectedRule := &v3.Rule{
 			Metadata: &v3.RuleMetadata{
 				Annotations: map[string]string{
 					"policyrecommendation.tigera.io/lastUpdated": time.Now().Format(policyRecommendationTimeFormat),
-					"policyrecommendation.tigera.io/name":        "test_name",
-					"policyrecommendation.tigera.io/namespace":   "test_namespace",
+					"policyrecommendation.tigera.io/name":        "test-name",
+					"policyrecommendation.tigera.io/namespace":   "test-namespace",
 					"policyrecommendation.tigera.io/scope":       "NetworkSet",
 				},
 			},
 			Action:   v3.Allow,
 			Protocol: &protocolICMP,
 			Source: v3.EntityRule{
-				Selector:          "projectcalico.org/name == 'test_name' && projectcalico.org/kind == 'NetworkSet'",
+				Selector:          "projectcalico.org/name == 'test-name' && projectcalico.org/kind == 'NetworkSet'",
 				NamespaceSelector: "global()",
 			},
 			Destination: v3.EntityRule{},
