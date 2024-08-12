@@ -15,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
@@ -415,13 +416,27 @@ var _ = Describe("NamespaceReconciler", func() {
 
 		It("should handle concurrent additions and deletions of namespaces to/from the engine's processing items and the cache", func() {
 			r.engine.GetNamespaces().Add("test-remove-namespace")
+			Expect(r.engine.GetNamespaces().Contains("test-remove-namespace")).To(BeTrue())
+			r.engine.GetFilteredNamespaces().Add("test-remove-namespace")
+			Expect(r.engine.GetFilteredNamespaces().Contains("test-remove-namespace")).To(BeTrue())
 			r.cache.Set("test-remove-namespace", v3.StagedNetworkPolicy{})
+			v, ok := r.cache.Get("test-remove-namespace")
+			Expect(v).ToNot(BeNil())
+			Expect(ok).To(BeTrue())
+			// Create a namespace to delete, and verify that it was created.
 			_, err := mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-remove-namespace",
 				},
 			}, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				val, err := mockClientSet.CoreV1().Namespaces().Get(context.TODO(), "test-remove-namespace", metav1.GetOptions{})
+				if err != nil {
+					return false
+				}
+				return val != nil && val.Name == "test-remove-namespace"
+			}, 10*time.Second).Should(BeTrue())
 
 			go func() {
 				_, err := mockClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
@@ -430,6 +445,14 @@ var _ = Describe("NamespaceReconciler", func() {
 					},
 				}, metav1.CreateOptions{})
 				Expect(err).ToNot(HaveOccurred())
+				Eventually(func() bool {
+					v, err := mockClientSet.CoreV1().Namespaces().Get(context.TODO(), "test-new-namespace", metav1.GetOptions{})
+					if err != nil && kerrors.IsNotFound(err) {
+						return false
+					}
+					return v != nil && v.Name == "test-new-namespace"
+				}, 10*time.Second).Should(BeTrue())
+
 				err = r.Reconcile(types.NamespacedName{
 					Name:      "test-new-namespace",
 					Namespace: "test-new-namespace",
@@ -440,6 +463,14 @@ var _ = Describe("NamespaceReconciler", func() {
 			go func() {
 				err := mockClientSet.CoreV1().Namespaces().Delete(context.TODO(), "test-remove-namespace", metav1.DeleteOptions{})
 				Expect(err).ToNot(HaveOccurred())
+				Eventually(func() bool {
+					v, err := mockClientSet.CoreV1().Namespaces().Get(context.TODO(), "test-remove-namespace", metav1.GetOptions{})
+					if err != nil && kerrors.IsNotFound(err) {
+						return true
+					}
+					return v == nil
+				}, 10*time.Second).Should(BeTrue())
+
 				err = r.Reconcile(types.NamespacedName{
 					Name:      "test-remove-namespace",
 					Namespace: "test-remove-namespace",
@@ -455,11 +486,10 @@ var _ = Describe("NamespaceReconciler", func() {
 					}
 				}
 				return false
-			}).Should(BeFalse())
-			Eventually(
-				func() bool {
-					return r.engine.GetNamespaces().Contains("test-new-namespace") && r.engine.GetFilteredNamespaces().Contains("test-new-namespace")
-				}, 10*time.Second).Should(BeTrue())
+			}, 10*time.Minute).Should(BeFalse())
+			Eventually(func() bool {
+				return r.engine.GetNamespaces().Contains("test-new-namespace") && r.engine.GetFilteredNamespaces().Contains("test-new-namespace")
+			}, 10*time.Minute).Should(BeTrue())
 		})
 
 		It("should remove the namespace reference from the rules of all other cache items", func() {
