@@ -24,7 +24,7 @@ LOCAL_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 # with windows ssh servers, but older versions don't know about that flag. Only use
 # it when necessary (i.e. supported).
 OFLAG="-O "
-if scp -O 2>&1 | grep -q "unknown option -- O"; then
+if [ "$(scp -O 2>&1 | grep -c 'unknown option -- O')" -gt 0 ]; then
     OFLAG=""
 fi
 
