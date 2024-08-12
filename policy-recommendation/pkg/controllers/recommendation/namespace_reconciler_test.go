@@ -486,10 +486,10 @@ var _ = Describe("NamespaceReconciler", func() {
 					}
 				}
 				return false
-			}, 10*time.Minute).Should(BeFalse())
+			}).Should(BeFalse())
 			Eventually(func() bool {
 				return r.engine.GetNamespaces().Contains("test-new-namespace") && r.engine.GetFilteredNamespaces().Contains("test-new-namespace")
-			}, 10*time.Minute).Should(BeTrue())
+			}, 10*time.Second).Should(BeTrue())
 		})
 
 		It("should remove the namespace reference from the rules of all other cache items", func() {
