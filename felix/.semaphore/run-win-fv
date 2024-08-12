@@ -58,9 +58,9 @@ if [[ $FV_PROVISIONER == "aws" ]]; then
 elif [[ $FV_PROVISIONER == "capz" ]]; then
   export KUBE_VERSION="$K8S_VERSION"
   mkdir -p /home/semaphore/report
-  /bin/bash -x ./setup-fv-capz.sh -q | tee setup-fv.log
-  if [[ ${PIPESTATUS[0]} != 0 ]]; then
-    EXIT_CODE=${PIPESTATUS[0]}
+  /bin/bash -x ./setup-fv-capz.sh -q | tee setup-fv.log; pstat=${PIPESTATUS[0]}
+  if [[ $pstat != 0 ]]; then
+    EXIT_CODE=$pstat
   fi
   mv ./report /home/semaphore/report
   mv ./setup-fv.log /home/semaphore/report/setup-fv.log
