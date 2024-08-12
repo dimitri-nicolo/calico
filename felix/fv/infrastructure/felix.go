@@ -342,6 +342,12 @@ func (f *Felix) Stop() {
 	} else {
 		Expect(cwLogDir + "/" + f.cwlFile).NotTo(BeAnExistingFile())
 	}
+
+	if CurrentGinkgoTestDescription().Failed {
+		Expect(f.DataRaces()).To(BeEmpty(), "Test FAILED and data races were detected in the logs at teardown.")
+	} else {
+		Expect(f.DataRaces()).To(BeEmpty(), "Test PASSED but data races were detected in the logs at teardown.")
+	}
 }
 
 func (f *Felix) Restart() {
