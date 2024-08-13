@@ -72,24 +72,7 @@ Description:
   The label command is used to add or update a label on a resource. Resource types
   that can be labeled are:
 
-    * bgpConfiguration
-    * bgpPeer
-    * felixConfiguration
-    * globalNetworkPolicy
-    * stagedGlobalNetworkPolicy
-    * globalNetworkSet
-    * globalThreatFeed
-    * hostEndpoint
-    * ipPool
-    * ipReservation
-    * kubeControllersConfiguration
-    * networkPolicy
-    * stagedNetworkPolicy
-    * stagedKubernetesNetworkPolicy
-    * node
-    * profile
-    * workloadEndpoint
-
+<RESOURCE_LIST>
   The resource type is case-insensitive and may be pluralized.
 
   Attempting to label resources that do not exist will get an error.
@@ -103,6 +86,9 @@ Description:
 	// Replace all instances of BINARY_NAME with the name of the binary.
 	binaryName, _ := util.NameAndDescription()
 	doc = strings.ReplaceAll(doc, "<BINARY_NAME>", binaryName)
+
+	// Replace <RESOURCE_LIST> with the list of resource types.
+	doc = strings.Replace(doc, "<RESOURCE_LIST>", util.Resources(), 1)
 
 	parsedArgs, err := docopt.ParseArgs(doc, args, "")
 	if err != nil {
