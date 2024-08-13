@@ -117,10 +117,10 @@ func DefaultTopologyOptions() TopologyOptions {
 		TyphaLogSeverity:      "info",
 		IPIPEnabled:           true,
 		IPIPRoutesEnabled:     true,
-		UseIPPools:        true,
-		IPPoolCIDR:        DefaultIPPoolCIDR,
-		IPv6PoolCIDR:      DefaultIPv6PoolCIDR,
-		PerNodeOptions:    []PerNodeOptions{},
+		UseIPPools:            true,
+		IPPoolCIDR:            DefaultIPPoolCIDR,
+		IPv6PoolCIDR:          DefaultIPv6PoolCIDR,
+		PerNodeOptions:        []PerNodeOptions{},
 	}
 }
 
