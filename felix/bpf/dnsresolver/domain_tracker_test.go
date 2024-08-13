@@ -46,6 +46,7 @@ func TestDomainTracker(t *testing.T) {
 	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
 		return ids[s]
 	})
+	Expect(err).NotTo(HaveOccurred())
 	defer tracker.Close()
 
 	dnsPfxMap := tracker.Map()
@@ -132,6 +133,7 @@ func TestDomainTracker(t *testing.T) {
 	tracker, err = dnsresolver.NewDomainTracker(func(s string) uint64 {
 		return ids[s]
 	})
+	Expect(err).NotTo(HaveOccurred())
 	defer tracker.Close()
 
 	tracker.Add("ubuntu.com", "4")
@@ -140,7 +142,7 @@ func TestDomainTracker(t *testing.T) {
 	err = tracker.ApplyAllChanges()
 	Expect(err).NotTo(HaveOccurred())
 
-	v, err := dnsPfxMap.Get(dnsresolver.NewPfxKey("ubuntu.com").AsBytes())
+	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("ubuntu.com").AsBytes())
 	Expect(err).NotTo(HaveOccurred())
 	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(123), uint64(4)))
 

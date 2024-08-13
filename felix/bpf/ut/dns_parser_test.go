@@ -62,8 +62,8 @@ func TestDNSParser(t *testing.T) {
 	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
 		return ids[s]
 	})
-	defer tracker.Close()
 	Expect(err).NotTo(HaveOccurred())
+	defer tracker.Close()
 
 	tracker.Add("ubuntu.com", "123")
 	tracker.Add("*.ubuntu.com", "1234")
@@ -118,7 +118,7 @@ func TestDNSParser(t *testing.T) {
 		117, 45}
 
 	tracker.Add("*.idnes.cz", "666", "3")
-	tracker.ApplyAllChanges()
+	_ = tracker.ApplyAllChanges()
 
 	runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
 		res, err := bpfrun(pktBytes)
@@ -165,8 +165,8 @@ func TestDNSParserMicrosoftFV(t *testing.T) {
 	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
 		return ids[s]
 	})
-	defer tracker.Close()
 	Expect(err).NotTo(HaveOccurred())
+	defer tracker.Close()
 
 	tracker.Add("microsoft.com", "545")
 	err = tracker.ApplyAllChanges()
