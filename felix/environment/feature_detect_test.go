@@ -194,6 +194,16 @@ func TestFeatureDetection(t *testing.T) {
 				BPFKprobes:            true,
 			},
 		},
+		{
+			"iptables v1.8.4",
+			"Linux version 5.8.0",
+			Features{
+				RestoreSupportsLock:   true,
+				SNATFullyRandom:       true,
+				MASQFullyRandom:       true,
+				ChecksumOffloadBroken: false,
+			},
+		},
 	} {
 		tst := tst
 		t.Run("iptables version "+tst.iptablesVersion+" kernel "+tst.kernelVersion, func(t *testing.T) {
