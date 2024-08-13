@@ -48,7 +48,6 @@ import (
 
 	extensionsv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 
-	flowcontrolv1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
 
 	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 
@@ -580,21 +579,6 @@ func (_m *MockClientSet) ExtensionsV1beta1() extensionsv1beta1.ExtensionsV1beta1
 	return r0
 }
 
-// FlowcontrolV1alpha1 provides a mock function with given fields:
-func (_m *MockClientSet) FlowcontrolV1alpha1() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface {
-	ret := _m.Called()
-
-	var r0 flowcontrolv1alpha1.FlowcontrolV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(flowcontrolv1alpha1.FlowcontrolV1alpha1Interface)
-		}
-	}
-
-	return r0
-}
 
 // FlowcontrolV1beta1 provides a mock function with given fields:
 func (_m *MockClientSet) FlowcontrolV1beta1() flowcontrolv1beta1.FlowcontrolV1beta1Interface {
