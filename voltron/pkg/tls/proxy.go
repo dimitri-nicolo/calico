@@ -192,7 +192,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 		}
 	}
 
-	if serverName == linseedService {
+	if serverName == linseedService || serverName == linseedService+".cluster.local" {
 		// This connection is destined to Linseed from over the mTLS tunnel with Guardian.
 		// Rather than forward the connection, we should handle it ourselves. Terminate TLS and proxy onwards.
 		c := NewLocalConnection(srcConn, bytesRead)
