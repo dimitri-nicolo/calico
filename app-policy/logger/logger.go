@@ -31,13 +31,12 @@ func New(writers ...io.Writer) *LogHandler {
 		},
 	}
 
-	return &LogHandler{
-		logger: &log.Logger{
-			Level:     log.WarnLevel,
-			Formatter: formatter,
-			Out:       io.MultiWriter(writers...),
-		},
-	}
+	logger := log.New()
+	logger.SetLevel(log.WarnLevel)
+	logger.SetFormatter(formatter)
+	logger.SetOutput(io.MultiWriter(writers...))
+
+	return &LogHandler{logger: logger}
 }
 
 func (l *LogHandler) Process(v interface{}) {

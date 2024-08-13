@@ -50,9 +50,12 @@ var _ checker.CheckProvider = (*Server)(nil)
 type Server struct {
 	coraza.WAF
 	evp *wafEventsPipeline
+
+	currPolicyStore *policystore.PolicyStore
 }
 
 func New(files, directives []string, evp *wafEventsPipeline) (*Server, error) {
+	srv := &Server{evp: evp}
 	cfg := coraza.NewWAFConfig().
 		WithRootFS(mergefs.Merge(
 			coreruleset.FS,
@@ -60,7 +63,7 @@ func New(files, directives []string, evp *wafEventsPipeline) (*Server, error) {
 		)).
 		WithRequestBodyAccess().
 		WithErrorCallback(func(rule corazatypes.MatchedRule) {
-			evp.Process(rule)
+			evp.Process(srv.currPolicyStore, rule)
 		})
 
 	for _, f := range files {
@@ -77,11 +80,9 @@ func New(files, directives []string, evp *wafEventsPipeline) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	srv.WAF = waf
 
-	return &Server{
-		WAF: waf,
-		evp: evp,
-	}, nil
+	return srv, nil
 }
 
 func (w *Server) Name() string {
@@ -89,6 +90,9 @@ func (w *Server) Name() string {
 }
 
 func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
+	// Update current policystore
+	w.currPolicyStore = st
+
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{"attributes": checkReq.Attributes}).Debug("check request received")
 	}
@@ -165,7 +169,7 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		if in := tx.Interruption(); in != nil {
 			action = in.Action
 		}
-		w.evp.Process(&txHttpInfo{
+		w.evp.Process(st, &txHttpInfo{
 			txID:         tx.ID(),
 			destIP:       dstHost,
 			uri:          httpReq.Path,

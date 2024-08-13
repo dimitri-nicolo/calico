@@ -70,7 +70,6 @@ func (d DPStats) String() string {
 // The statscache interface.
 type StatsCache interface {
 	Start(context.Context)
-	Aggregated() map[Tuple]Values
 	Add(DPStats)
 	Flush()
 	RegisterFlushCallback(StatsCacheFlushCallback)
@@ -127,6 +126,7 @@ func (s *statsCache) Start(cxt context.Context) {
 
 type statsCache struct {
 	ticker    LazyTicker
+	events    []DPStats
 	stats     map[Tuple]Values
 	mu        sync.Mutex
 	callbacks []StatsCacheFlushCallback
@@ -139,24 +139,29 @@ func (s *statsCache) RegisterFlushCallback(cb StatsCacheFlushCallback) {
 // Add adds the supplied DPStats to the current cache, either creating a new entry, or aggregating
 // into the existing entry.
 func (s *statsCache) Add(d DPStats) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.events = append(s.events, d)
+}
 
-	log.Debugf("Caching statistic: %v", d)
-	if v, ok := s.stats[d.Tuple]; ok {
-		// Entry already exists in cache, increment stats in existing entry.
-		s.stats[d.Tuple] = v.add(d.Values)
-		return
+func (s *statsCache) processEvents() {
+	for _, d := range s.events {
+		log.Debugf("Caching statistic: %v", d)
+		if v, ok := s.stats[d.Tuple]; ok {
+			// Entry already exists in cache, increment stats in existing entry.
+			s.stats[d.Tuple] = v.add(d.Values)
+			return
+		}
+		// Entry does not exist, add new entry.
+		s.stats[d.Tuple] = d.Values
 	}
-	// Entry does not exist, add new entry.
-	s.stats[d.Tuple] = d.Values
 }
 
 // Flush sends the current aggregated cache, and creates a new empty cache.
 func (s *statsCache) Flush() {
-	log.Trace("Flushing cached statistics")
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	log.Trace("Flushing cached statistics")
+
+	s.processEvents()
 
 	if len(s.stats) == 0 {
 		// No stats, so nothing to report.
@@ -169,13 +174,6 @@ func (s *statsCache) Flush() {
 		cb(s.stats)
 	}
 	log.Trace("Clearing cached statistics")
-	s.stats = make(map[Tuple]Values)
-}
-
-// Aggregated returns current aggregated stats.
-func (s *statsCache) Aggregated() map[Tuple]Values {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.stats
+	s.events = nil
+	s.stats = map[Tuple]Values{}
 }

@@ -77,7 +77,7 @@ func NewPolicyStore() *PolicyStore {
 
 type policyStoreManager struct {
 	current, pending *PolicyStore
-	rl, wl           sync.Locker
+	mu               sync.RWMutex
 	toActive         bool
 }
 
@@ -97,23 +97,8 @@ type PolicyStoreManager interface {
 
 type PolicyStoreManagerOption func(*policyStoreManager)
 
-func WithLocker(mu sync.Locker) PolicyStoreManagerOption {
-	return func(psm *policyStoreManager) {
-		switch l := mu.(type) {
-		case *sync.Mutex:
-			psm.rl = l
-			psm.wl = l
-		case *sync.RWMutex:
-			psm.rl = l.RLocker()
-			psm.wl = l
-		default:
-			panic("unknown locker type")
-		}
-	}
-}
-
 func NewPolicyStoreManager() PolicyStoreManager {
-	return NewPolicyStoreManagerWithOpts(WithLocker(&sync.Mutex{}))
+	return NewPolicyStoreManagerWithOpts()
 }
 
 func NewPolicyStoreManagerWithOpts(opts ...PolicyStoreManagerOption) *policyStoreManager {
@@ -128,31 +113,26 @@ func NewPolicyStoreManagerWithOpts(opts ...PolicyStoreManagerOption) *policyStor
 }
 
 func (m *policyStoreManager) Read(cb func(*PolicyStore)) {
-	m.rl.Lock()
-	defer m.rl.Unlock()
 	log.Debugf("storeManager reading from current store at %p", m.current)
 
 	cb(m.current)
 }
 
 func (m *policyStoreManager) Write(cb func(*PolicyStore)) {
-	m.wl.Lock()
-	defer m.wl.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.toActive {
 		log.Debugf("storeManager writing to current store at %p", m.current)
 		cb(m.current)
 		return
 	}
 
-	log.Debugf("storeManager writing to pending store at %p", m.current)
+	log.Debugf("storeManager writing to pending store at %p", m.pending)
 	cb(m.pending)
 }
 
 // OnReconnecting - PSM creates a pending store and starts writing to it
 func (m *policyStoreManager) OnReconnecting() {
-	m.wl.Lock()
-	defer m.wl.Unlock()
-
 	// create store
 	m.pending = NewPolicyStore()
 
@@ -161,8 +141,8 @@ func (m *policyStoreManager) OnReconnecting() {
 }
 
 func (m *policyStoreManager) OnInSync() {
-	m.wl.Lock()
-	defer m.wl.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	if m.toActive {
 		// we're already in-sync..

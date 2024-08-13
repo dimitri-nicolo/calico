@@ -107,7 +107,7 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 			observedLogs = append(observedLogs, v)
 		}
 	}
-	evp := waf.NewEventsPipeline(psm, cb)
+	evp := waf.NewEventsPipeline(cb)
 	waf, err := waf.New(
 		files,
 		scenario.directives,
