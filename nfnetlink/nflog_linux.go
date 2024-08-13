@@ -7,9 +7,12 @@ package nfnetlink
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
 
@@ -31,6 +34,54 @@ const (
 )
 
 const AggregationDuration = time.Duration(10) * time.Millisecond
+
+var (
+	counterVecMessagesReceived = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_nflog_netlink_messages_received",
+		Help: "Total number of netlink envelope messages received broken down by group.",
+	}, []string{"groupNum"})
+	counterVecNFLOGSReceived = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_nflog_logs_received",
+		Help: "Total number of individual NFLOG messages received broken down by group.",
+	}, []string{"groupNum"})
+	counterVecBufferOverruns = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_nflog_buffer_overruns",
+		Help: "Total number of times that the kernel's NFLOG bugger overran causing NFLOGs to be dropped.",
+	}, []string{"groupNum"})
+	counterVecChanWaitTime = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_nflog_block_time_seconds",
+		Help: "Total amount of time the NFLOG reader has spent blocking waiting " +
+			"to send data to the NFLOG aggregator.",
+	}, []string{"groupNum"})
+	counterVecParseErrors = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_nflog_parse_errors",
+		Help: "Total number of errors encountered when parsing NFLOG messages.",
+	}, []string{"groupNum"})
+	counterVecAggregatesCreated = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_nflog_aggregates_created",
+		Help: "Total number of NFLOG aggregates created.",
+	}, []string{"groupNum"})
+	counterVecAggregatesFlushed = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "felix_nflog_aggregates_flushed",
+		Help: "Total number of NFLOG aggregates flushed to the flow logs collector.",
+	}, []string{"groupNum"})
+)
+
+func init() {
+	prometheus.MustRegister(
+		counterVecMessagesReceived,
+		counterVecNFLOGSReceived,
+		counterVecBufferOverruns,
+		counterVecChanWaitTime,
+		counterVecParseErrors,
+		counterVecAggregatesCreated,
+		counterVecAggregatesFlushed,
+	)
+}
+
+var (
+	rll = logutils.NewRateLimitedLogger(logutils.OptInterval(time.Minute))
+)
 
 func SubscribeDNS(groupNum int, bufSize int, callback func(data []byte, timestamp uint64), done <-chan struct{}) error {
 	log.Infof("Subscribe to NFLOG group %v for DNS responses", groupNum)
@@ -58,10 +109,12 @@ func openAndReadNFNLSocket(
 	if err != nil {
 		return nil, err
 	}
-	// TODO(doublek): Move all this someplace nice.
+
 	nlMsgType := nfnl.NFNL_SUBSYS_ULOG<<8 | nfnl.NFULNL_MSG_CONFIG
 	nlMsgFlags := syscall.NLM_F_REQUEST
 
+	// Globally unbind NFLOG from the protocol family.  Not sure why this is
+	// done: it also affects other users of NFLOG!
 	req := nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
 	nfgenmsg := nfnl.NewNfGenMsg(syscall.AF_INET, nfnl.NFNETLINK_V0, 0)
 	req.AddData(nfgenmsg)
@@ -72,6 +125,7 @@ func openAndReadNFNLSocket(
 		return nil, err
 	}
 
+	// Globally bind NFLOG to the protocol family.
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
 	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_INET, nfnl.NFNETLINK_V0, 0)
 	req.AddData(nfgenmsg)
@@ -82,6 +136,7 @@ func openAndReadNFNLSocket(
 		return nil, err
 	}
 
+	// Bind our socket to the group number so we get the expected messages.
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
 	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_INET, nfnl.NFNETLINK_V0, groupNum)
 	req.AddData(nfgenmsg)
@@ -92,6 +147,7 @@ func openAndReadNFNLSocket(
 		return nil, err
 	}
 
+	// Set the packet copy mode; we need to receive a prefix of the packet.
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
 	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
 	req.AddData(nfgenmsg)
@@ -103,7 +159,8 @@ func openAndReadNFNLSocket(
 	}
 
 	if includeConnTrack {
-		// Conntrack
+		// Ask NFLOG to append the conntrack entry to the packet metadata, so
+		// that we can see any NAT.
 		req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
 		nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
 		req.AddData(nfgenmsg)
@@ -115,6 +172,14 @@ func openAndReadNFNLSocket(
 		}
 	}
 
+	// Set the kernel's SKB buffer size.  This needs to be no bigger than the
+	// kernel/netlink library limits.
+	const kernelBufSzLimit = 131072
+	const bufSizeLimit = min(nl.RECEIVE_BUFFER_SIZE, kernelBufSzLimit)
+	if bufSize > bufSizeLimit {
+		log.WithField("bufSize", bufSize).Warnf("Reducing NFLOG buffer size to kernel/netlink limit (%d).", bufSizeLimit)
+		bufSize = bufSizeLimit
+	}
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
 	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
 	req.AddData(nfgenmsg)
@@ -126,6 +191,8 @@ func openAndReadNFNLSocket(
 	}
 
 	if immediateFlush {
+		// Disable the kernel's batching delay so that it sends every NFLOG
+		// immediately.  This minimises latency for things like DNS logs.
 		req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
 		nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
 		req.AddData(nfgenmsg)
@@ -151,6 +218,13 @@ func openAndReadNFNLSocket(
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
+		groupNumStr := fmt.Sprint(groupNum)
+		msgsReceived := counterVecMessagesReceived.WithLabelValues(groupNumStr)
+		nflogsReceived := counterVecNFLOGSReceived.WithLabelValues(groupNumStr)
+		numOverruns := counterVecBufferOverruns.WithLabelValues(groupNumStr)
+		chanWait := counterVecChanWaitTime.WithLabelValues(groupNumStr)
+		var lastChanDelay time.Duration
+
 	Recvloop:
 		for {
 			var res [][]byte
@@ -158,7 +232,12 @@ func openAndReadNFNLSocket(
 			if err != nil {
 				switch err := err.(type) {
 				case syscall.Errno:
-					if err.Temporary() || err == syscall.ENOBUFS {
+					if err == syscall.ENOBUFS {
+						logCtx.WithField("chanDelay", lastChanDelay).Warnf(
+							"NFLOG buffer overrun (ENOBUFS), some NFLOG messages lost.")
+						numOverruns.Inc()
+						continue
+					} else if err.Temporary() {
 						logCtx.Warnf("NflogSubscribe Receive: %v", err)
 						continue
 					}
@@ -166,6 +245,8 @@ func openAndReadNFNLSocket(
 					logCtx.Fatalf("NflogSubscribe Receive: %v", err)
 				}
 			}
+			msgsReceived.Inc()
+			nflogsReceived.Add(float64(len(msgs)))
 			for _, m := range msgs {
 				mType := m.Header.Type
 				if mType == syscall.NLMSG_DONE {
@@ -179,7 +260,10 @@ func openAndReadNFNLSocket(
 				}
 				res = append(res, m.Data)
 			}
+			chanWaitStart := time.Now()
 			resChan <- res
+			lastChanDelay = time.Since(chanWaitStart)
+			chanWait.Add(lastChanDelay.Seconds())
 		}
 	}()
 
@@ -190,9 +274,15 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 	// Start another goroutine for parsing netlink messages into nflog objects
 	go func() {
 		defer close(ch)
-		logCtx := log.WithFields(log.Fields{
+		logCtx := rll.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
+
+		groupNumStr := fmt.Sprint(groupNum)
+		numParseErrors := counterVecParseErrors.WithLabelValues(groupNumStr)
+		numAggregatesCreated := counterVecAggregatesCreated.WithLabelValues(groupNumStr)
+		numAggregatesFlushed := counterVecAggregatesFlushed.WithLabelValues(groupNumStr)
+
 		// We batch NFLOG objects and send them to the subscriber every
 		// "AggregationDuration" time interval.
 		sendTicker := time.NewTicker(AggregationDuration)
@@ -209,6 +299,7 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 					nflogPacket, err := parseNflog(m[msg.Len():])
 					if err != nil {
 						logCtx.Warnf("Error parsing NFLOG %v", err)
+						numParseErrors.Inc()
 						continue
 					}
 					var pktAggr *NflogPacketAggregate
@@ -230,6 +321,7 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 						pktAggr = &NflogPacketAggregate{
 							Tuple: nflogPacket.Tuple,
 						}
+						numAggregatesCreated.Inc()
 					}
 					if updatePrefix {
 						pktAggr.Prefixes = append(pktAggr.Prefixes, nflogPacket.Prefix)
@@ -249,6 +341,7 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 					// retry sending next time around.
 					select {
 					case ch <- pktAddr:
+						numAggregatesFlushed.Inc()
 						delete(aggregate, t)
 					default:
 					}
@@ -307,6 +400,8 @@ func getNflogPacketData(m []byte) (packetData []byte, timestamp uint64, err erro
 			timestamp = uint64(tv.Usec*1000 + tv.Sec*1000000000)
 		case nfnl.NFULA_PAYLOAD:
 			packetData = attr.Value
+		default:
+			// Ignore attributes we don't care about.
 		}
 	}
 	return
@@ -340,7 +435,13 @@ func parseNflog(m []byte) (NflogPacket, error) {
 		case nfnl.NFULA_GID:
 			nflogPacket.Gid = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.NFULA_CT:
-			parseConntrack(&nflogPacket, attr.Value)
+			err := parseConntrack(&nflogPacket, attr.Value)
+			if err != nil {
+				// Not returning error, flow log may still be useful without CT.
+				rll.WithError(err).Warn("Failed to parse conntrack entry.")
+			}
+		default:
+			// Skip attributes we don't need.
 		}
 	}
 	nflogPacket.Prefix.Packets = 1
@@ -348,7 +449,7 @@ func parseNflog(m []byte) (NflogPacket, error) {
 	return nflogPacket, nil
 }
 
-func parsePacketHeader(tuple *NflogPacketTuple, hwProtocol int, nflogPayload []byte) error {
+func parsePacketHeader(tuple *NflogPacketTuple, hwProtocol int, nflogPayload []byte) {
 	switch hwProtocol {
 	case IPv4Proto:
 		ipHeader := pkt.ParseIPv4Header(nflogPayload)
@@ -363,10 +464,9 @@ func parsePacketHeader(tuple *NflogPacketTuple, hwProtocol int, nflogPayload []b
 		tuple.Proto = int(ipHeader.NextHeader)
 		parseLayer4Header(tuple, nflogPayload[pkt.IPv6HeaderLen:])
 	}
-	return nil
 }
 
-func parseLayer4Header(tuple *NflogPacketTuple, l4payload []byte) error {
+func parseLayer4Header(tuple *NflogPacketTuple, l4payload []byte) {
 	switch tuple.Proto {
 	case ProtoIcmp:
 		header := pkt.ParseICMPHeader(l4payload)
@@ -382,7 +482,6 @@ func parseLayer4Header(tuple *NflogPacketTuple, l4payload []byte) error {
 		tuple.L4Src.Port = int(header.Source)
 		tuple.L4Dst.Port = int(header.Dest)
 	}
-	return nil
 }
 
 func parseConntrack(packet *NflogPacket, ct []byte) error {

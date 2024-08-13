@@ -60,14 +60,20 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 		switch attrType {
 		case nfnl.CTA_TUPLE_ORIG:
 			if !isNestedAttr {
-				return ctentry, errors.New("Nested attribute value expected")
+				return ctentry, errors.New("nested attribute value expected")
 			}
-			parseConntrackTuple(&ctentry.OriginalTuple, attr.Value, family)
+			err := parseConntrackTuple(&ctentry.OriginalTuple, attr.Value, family)
+			if err != nil {
+				return CtEntry{}, err
+			}
 		case nfnl.CTA_TUPLE_REPLY:
 			if !isNestedAttr {
-				return ctentry, errors.New("Nested attribute value expected")
+				return ctentry, errors.New("nested attribute value expected")
 			}
-			parseConntrackTuple(&ctentry.ReplyTuple, attr.Value, family)
+			err := parseConntrackTuple(&ctentry.ReplyTuple, attr.Value, family)
+			if err != nil {
+				return CtEntry{}, err
+			}
 		case nfnl.CTA_STATUS:
 			ctentry.Status = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_TIMEOUT:
@@ -76,12 +82,12 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			ctentry.Mark = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_COUNTERS_ORIG:
 			if !isNestedAttr {
-				return ctentry, errors.New("Nested attribute value expected")
+				return ctentry, errors.New("nested attribute value expected")
 			}
 			ctentry.OriginalCounters, _ = parseConntrackCounters(attr.Value)
 		case nfnl.CTA_COUNTERS_REPLY:
 			if !isNestedAttr {
-				return ctentry, errors.New("Nested attribute value expected")
+				return ctentry, errors.New("nested attribute value expected")
 			}
 			ctentry.ReplyCounters, _ = parseConntrackCounters(attr.Value)
 		case nfnl.CTA_ID:
@@ -94,9 +100,14 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			ctentry.Secmark = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_PROTOINFO:
 			if !isNestedAttr {
-				return ctentry, errors.New("Nested attribute value expected")
+				return ctentry, errors.New("nested attribute value expected")
 			}
-			parseProtoInfo(&ctentry.ProtoInfo, attr.Value)
+			err := parseProtoInfo(&ctentry.ProtoInfo, attr.Value)
+			if err != nil {
+				return CtEntry{}, err
+			}
+		default:
+			// Skip attributes we don't care about.
 		}
 	}
 	return ctentry, nil
@@ -121,18 +132,23 @@ func parseConntrackTuple(tuple *CtTuple, value []byte, family uint8) error {
 			if !isNestedAttr {
 				return errors.New("Nested attribute value expected")
 			}
-			parseTupleIp(tuple, attr.Value)
+			err := parseTupleIp(tuple, attr.Value)
+			if err != nil {
+				return err
+			}
 		case nfnl.CTA_TUPLE_PROTO:
 			if !isNestedAttr {
 				return errors.New("Nested attribute value expected")
 			}
-			parseTupleProto(tuple, attr.Value)
+			err := parseTupleProto(tuple, attr.Value)
+			if err != nil {
+				return err
+			}
 		case nfnl.CTA_ZONE:
 			tuple.Zone = int(native.Uint16(attr.Value[0:2]))
+		default:
+			// Skip attributes we don't care about.
 		}
-	}
-	if err != nil {
-		return err
 	}
 	return nil
 }
@@ -151,6 +167,8 @@ func parseTupleIp(tuple *CtTuple, value []byte) error {
 			copy(tuple.Src[:], net.IP(attr.Value).To16()[:16])
 		case nfnl.CTA_IP_V4_DST, nfnl.CTA_IP_V6_DST:
 			copy(tuple.Dst[:], net.IP(attr.Value).To16()[:16])
+		default:
+			// Skip attributes we don't care about.
 		}
 	}
 	return err
@@ -179,6 +197,8 @@ func parseTupleProto(tuple *CtTuple, value []byte) error {
 			tuple.L4Dst.Type = int(attr.Value[0])
 		case nfnl.CTA_PROTO_ICMP_CODE:
 			tuple.L4Dst.Code = int(attr.Value[0])
+		default:
+			// Skip attributes we don't care about.
 		}
 	}
 	return err
@@ -204,6 +224,8 @@ func parseConntrackCounters(value []byte) (CtCounters, error) {
 			counters.Packets = int(native.Uint32(attr.Value[0:8]))
 		case nfnl.CTA_COUNTERS32_BYTES:
 			counters.Bytes = int(native.Uint32(attr.Value[0:8]))
+		default:
+			// Skip attributes we don't care about.
 		}
 	}
 	return counters, err
@@ -224,15 +246,17 @@ func parseProtoInfo(cpi *CtProtoInfo, value []byte) error {
 		switch attrType {
 		case nfnl.CTA_PROTOINFO_TCP:
 			if !isNestedAttr {
-				return errors.New("Nested attribute value expected")
+				return errors.New("nested attribute value expected")
 			}
-			parseProtoInfoTCP(cpi, attr.Value)
+			err := parseProtoInfoTCP(cpi, attr.Value)
+			if err != nil {
+				return err
+			}
 			// We don't support other protoinfo protocols for now.
 			break
+		default:
+			// Skip attributes we don't care about.
 		}
-	}
-	if err != nil {
-		return err
 	}
 	return nil
 }
@@ -251,6 +275,8 @@ func parseProtoInfoTCP(cpi *CtProtoInfo, value []byte) error {
 			cpi.State = int(attr.Value[0])
 			// We don't support other TCP protoinfo parameters for now.
 			break
+		default:
+			// Skip attributes we don't care about.
 		}
 	}
 	return nil
