@@ -8,6 +8,8 @@ After=network.target
 Type=simple
 EnvironmentFile=-/etc/calico/calico-fluent-bit/calico-fluent-bit.env
 ExecStart=/usr/bin/calico-fluent-bit -c /etc/calico/calico-fluent-bit/calico-fluent-bit.conf
+User=calico
+Group=calico
 Restart=always
 
 [Install]

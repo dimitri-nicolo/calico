@@ -75,6 +75,10 @@ rm -rvf %{buildroot}%{_includedir}
 %check
 %ctest
 
+%pre
+/usr/sbin/groupadd -r calico >/dev/null 2>&1 || :
+/usr/sbin/useradd -M -d /var/lib/calico -g calico -r -s /sbin/nologin -c "Calico user" calico >/dev/null 2>&1 || :
+
 %preun
 %systemd_preun %{name}.service
 
