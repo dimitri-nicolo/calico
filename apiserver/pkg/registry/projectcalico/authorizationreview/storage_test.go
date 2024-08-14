@@ -4,8 +4,6 @@ package authorizationreview_test
 import (
 	"context"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -17,6 +15,8 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	rbacmock "github.com/projectcalico/calico/apiserver/pkg/rbac/mock"
 	. "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("AuthorizationReview storage tests", func() {
@@ -44,6 +44,114 @@ var _ = Describe("AuthorizationReview storage tests", func() {
 		}
 		myContext = request.WithUser(context.Background(), myUser)
 		rest = NewREST(calc)
+	})
+
+	It("handle getting user info from spec when passed in both the spec and the context", func() {
+		mock.ClusterRoleBindings = []string{"get-namespaces"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-namespaces": {{Verbs: []string{"get"}, Resources: []string{"namespaces"}, APIGroups: []string{""}}},
+		}
+
+		res, err := rest.Create(context.Background(), &v3.AuthorizationReview{
+			Spec: v3.AuthorizationReviewSpec{
+				ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
+					{
+						APIGroup:  "",
+						Resources: []string{"namespaces"},
+						Verbs:     []string{"get"},
+					},
+				},
+				User:   myUser.GetName(),
+				Groups: myUser.GetGroups(),
+				Extra:  myUser.GetExtra(),
+			},
+		}, nil, nil)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		ar := res.(*v3.AuthorizationReview)
+		// get for namespace is expanded across configured namespaces.
+		contextUser, ok := request.UserFrom(myContext)
+		Expect(ok).NotTo(BeFalse())
+		Expect(ar.Spec.User).To(Equal(contextUser.GetName()))
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]v3.AuthorizedResourceVerbs{
+			{
+				Resource: "namespaces",
+				Verbs: []v3.AuthorizedResourceVerb{
+					{
+						Verb: "get",
+						ResourceGroups: []v3.AuthorizedResourceGroup{
+							{Namespace: "ns1"}, {Namespace: "ns2"}, {Namespace: "ns3"}, {Namespace: "ns4"}, {Namespace: "ns5"},
+						},
+					},
+				},
+			},
+		}))
+
+	})
+
+	It("return empty authorization review when user is neither passed in the context, nor in the spec", func() {
+		mock.ClusterRoleBindings = []string{"get-namespaces"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-namespaces": {{Verbs: []string{"get"}, Resources: []string{"namespaces"}, APIGroups: []string{""}}},
+		}
+
+		res, err := rest.Create(context.Background(), &v3.AuthorizationReview{
+			Spec: v3.AuthorizationReviewSpec{
+				ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
+					{
+						APIGroup:  "",
+						Resources: []string{"namespaces"},
+						Verbs:     []string{"get"},
+					},
+				},
+			},
+		}, nil, nil)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		ar := res.(*v3.AuthorizationReview)
+		// User should be empty since it's not passed in the context or spec
+		Expect(ar.Spec.User).To(Equal(""))
+		Expect(ar.Status.AuthorizedResourceVerbs).To(BeNil())
+	})
+
+	It("prioritize user info passed in the spec over the context user in calculating the permissions", func() {
+		mock.ClusterRoleBindings = []string{"get-namespaces"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-namespaces": {{Verbs: []string{"get"}, Resources: []string{"namespaces"}, APIGroups: []string{""}}},
+		}
+
+		res, err := rest.Create(myContext, &v3.AuthorizationReview{
+			Spec: v3.AuthorizationReviewSpec{
+				ResourceAttributes: []v3.AuthorizationReviewResourceAttributes{
+					{
+						APIGroup:  "",
+						Resources: []string{"namespaces"},
+						Verbs:     []string{"get"},
+					},
+				},
+				User:   "second-user",
+				Groups: []string{""},
+			},
+		}, nil, nil)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(res).NotTo(BeNil())
+		ar := res.(*v3.AuthorizationReview)
+		Expect(ar.Spec.User).To(Equal("second-user"))
+		Expect(ar.Status.AuthorizedResourceVerbs).To(Equal([]v3.AuthorizedResourceVerbs{
+			{
+				APIGroup: "",
+				Resource: "namespaces",
+				Verbs: []v3.AuthorizedResourceVerb{
+					{
+						Verb:           "get",
+						ResourceGroups: nil,
+					},
+				},
+			},
+		}))
 	})
 
 	It("handles errors in the Namespace enumeration", func() {

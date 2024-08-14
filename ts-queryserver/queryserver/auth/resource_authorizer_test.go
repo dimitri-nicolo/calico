@@ -26,7 +26,7 @@ var _ = Describe("queryserver resource authorizer tests", func() {
 	BeforeEach(func() {
 		mockClientSet := &lmak8s.MockClientSet{}
 		mockClientSetFactory = lmak8s.NewMockClientSetFactory(GinkgoT())
-		mockClientSetFactory.On("NewClientSetForUser", mock.Anything, mock.Anything).Return(mockClientSet, nil)
+		mockClientSetFactory.On("NewClientSetForApplication", mock.Anything, mock.Anything).Return(mockClientSet, nil)
 		mockClientSet.On("ProjectcalicoV3").Return(clientsetfake.NewSimpleClientset().ProjectcalicoV3())
 
 		authz = NewAuthorizer(mockClientSetFactory)
@@ -37,7 +37,7 @@ var _ = Describe("queryserver resource authorizer tests", func() {
 			_, err := authz.PerformUserAuthorizationReview(context.TODO(), nil)
 			Expect(err).Should(HaveOccurred())
 		})
-		It("return permissions if user is passed in the context", func() {
+		It("return permissions for the set user", func() {
 			ctx := request.WithUser(context.TODO(), &user.DefaultInfo{
 				Name:   "qs-authz-test",
 				UID:    "id-12345",

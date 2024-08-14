@@ -58,7 +58,7 @@ func main() {
 	}
 	log.SetLevel(logLevel)
 
-	// Load the client config. Currently we only support loading from environment.
+	// Load the client config. Currently, we only support loading from environment.
 	cfg, err := clientmgr.LoadClientConfig(cfFromEnv)
 	if err != nil {
 		log.Error("Error loading config")

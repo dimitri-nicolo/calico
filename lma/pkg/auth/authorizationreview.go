@@ -15,15 +15,41 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
-// PerformAuthorizationReview performs an authorization review.
-func PerformAuthorizationReview(
+// PerformAuthorizationReviewWithContext performs an authorization review with context.
+func PerformAuthorizationReviewWithContext(
 	ctx context.Context, client k8s.ClientSet, attr []v3.AuthorizationReviewResourceAttributes,
 ) ([]v3.AuthorizedResourceVerbs, error) {
-	ar, err := client.ProjectcalicoV3().AuthorizationReviews().Create(
+	return performAuthorizationReview(
 		ctx,
-		&v3.AuthorizationReview{Spec: v3.AuthorizationReviewSpec{
+		client,
+		v3.AuthorizationReview{Spec: v3.AuthorizationReviewSpec{
 			ResourceAttributes: attr,
 		}},
+	)
+}
+
+// PerformAuthorizationReviewWithUser function performs an authorization review for a specific user by creating  the
+// AuthorizationReview resource with userinfo and passing that to performAuthorizationReview using the background context.
+// This function is used when application doesn't have impersonate rbac to pass in the userinfo via the context.
+func PerformAuthorizationReviewWithUser(usr user.Info, client k8s.ClientSet, attr []v3.AuthorizationReviewResourceAttributes,
+) ([]v3.AuthorizedResourceVerbs, error) {
+	return performAuthorizationReview(
+		context.Background(),
+		client,
+		v3.AuthorizationReview{Spec: v3.AuthorizationReviewSpec{
+			ResourceAttributes: attr,
+			User:               usr.GetName(),
+			Groups:             usr.GetGroups(),
+			Extra:              usr.GetExtra(),
+		}},
+	)
+}
+
+// performAuthorizationReview performs an authorization review.
+func performAuthorizationReview(ctx context.Context, client k8s.ClientSet, authReview v3.AuthorizationReview) ([]v3.AuthorizedResourceVerbs, error) {
+	ar, err := client.ProjectcalicoV3().AuthorizationReviews().Create(
+		ctx,
+		&authReview,
 		metav1.CreateOptions{},
 	)
 	if err != nil {
@@ -67,5 +93,5 @@ func PerformUserAuthorizationReviewForLogs(ctx context.Context, csFactory k8s.Cl
 		return nil, err
 	}
 
-	return PerformAuthorizationReview(ctx, cs, authReviewAttrListEndpoints)
+	return PerformAuthorizationReviewWithContext(ctx, cs, authReviewAttrListEndpoints)
 }
