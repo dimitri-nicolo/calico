@@ -86,12 +86,12 @@ rm -rvf %{buildroot}%{_includedir}
 %systemd_postun_with_restart %{name}.service
 
 %files
-%config(noreplace) %{_sysconfdir}/calico/%{name}/*.conf
+%config %{_sysconfdir}/calico/%{name}/*.conf
 %config(noreplace) %{_sysconfdir}/calico/%{name}/*.env
 %dir %{_sysconfdir}/calico/%{name}
 %{_bindir}/%{name}
-%{_sysconfdir}/calico/%{name}/record_transformer.lua
 %{_sysconfdir}/calico/%{name}/out_linseed.so
+%{_sysconfdir}/calico/%{name}/record_transformer.lua
 %{_unitdir}/%{name}.service
 
 %exclude /usr/bin/luajit
