@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -493,16 +494,17 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.CheckConnectivity()
 
 						// Connection should be proxied on the pod's local node
+						duration := 5 * time.Second
+						retry := 1 * time.Second
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(Equal(0))
 
-						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
-
-						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(Equal(0))
 					})
 				})
 
