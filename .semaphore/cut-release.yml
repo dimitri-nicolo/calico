@@ -115,6 +115,10 @@ promotions:
     pipeline_file: ../intrusion-detection-controller/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut L7 Admission Controller Release
+    pipeline_file: ../l7admissioncontroller/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Key-cert-provisioner Release
     pipeline_file: ../key-cert-provisioner/.semaphore/cut-release.yml
     auto_promote:
