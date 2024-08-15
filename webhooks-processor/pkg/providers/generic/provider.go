@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
@@ -45,7 +46,7 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *GenericProvider) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
+func (p *GenericProvider) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderRespose, err error) {
 	payload, err := json.Marshal(GenericProviderPayload{Event: event, Labels: labels})
 	if err != nil {
 		return
@@ -91,6 +92,13 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
+		httpResponse = providers.ProviderRespose{
+			Timestamp:             time.Now(),
+			HttpStatusCode:        response.StatusCode,
+			HttpPayload:           responseText,
+			HttpStatusDescription: http.StatusText(response.StatusCode),
+		}
+
 		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 			return
 		}
@@ -98,7 +106,7 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		return fmt.Errorf("unexpected response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
+	return httpResponse, helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
 }
 
 func (p *GenericProvider) Config() providers.Config {
