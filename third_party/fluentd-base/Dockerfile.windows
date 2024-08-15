@@ -1,7 +1,5 @@
 # Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-ARG FLUENTD_VERSION
-
 ARG FLUENTD_UPSTREAM_VERSION
 
 FROM fluent/fluentd:${FLUENTD_UPSTREAM_VERSION}
@@ -10,8 +8,6 @@ USER ContainerAdministrator
 
 # The ROOT_DIR is set for Windows only.
 ENV ROOT_DIR=c:
-
-ENV FLUENTD_VERSION=${FLUENTD_VERSION}
 
 # - Add symlink to ruby install path.
 #   - The ruby version gets updated occasionally so using a symlink
@@ -48,9 +44,3 @@ RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc" && \
 RUN c:\ruby\msys64\usr\bin\bash.exe -lc "curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/download/jq-1.7.1/jq-win64.exe"
 
 COPY rubyplugin/out_http.rb /fluentd/plugins/out_http.rb
-
-# We are currently doing this because fluentd executed the http plugin from the standard library
-# instead the linseed plugin defined in rubyplugin folder
-# Upgrading to a newer ruby will require a change to the commands below
-RUN powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby31\lib\ruby\gems\3.1.0\gems\fluentd-$env:FLUENTD_VERSION-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb" && \
-        powershell -command "copy c:\fluentd\plugins\out_http.rb c:\ruby\lib\ruby\gems\3.1.0\gems\fluentd-$env:FLUENTD_VERSION-x64-mingw-ucrt\lib\fluent\plugin\out_http.rb"
