@@ -376,6 +376,15 @@ class DockerHost(object):
 
         self.attach_log_analyzer()
 
+    def wait_for_mtu_file(self, retries=15):
+        """
+        wait_for_mtu_file waits until the /var/lib/calico/mtu file is created by Felix, indicating
+        that MTU auto detection has occurred. This is a prerequisite for launching workloads with
+        the CNI plugin on this host.
+        """
+        cmd = partial(self.execute, "cat /var/lib/calico/mtu")
+        retry_until_success(cmd, ex_class=CommandExecError, retries=retries)
+
     def wait_for_ippools(self, retries=15):
         for retry in range(retries + 1):
             if self.ippools_exist():
