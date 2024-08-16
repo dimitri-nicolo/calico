@@ -160,6 +160,7 @@ type Policy struct {
 	ApplyOnForward   bool                          `json:"apply_on_forward,omitempty"`
 	Types            []string                      `json:"types,omitempty"`
 	PerformanceHints []apiv3.PolicyPerformanceHint `json:"performance_hints,omitempty" validate:"omitempty,unique,dive,oneof=AssumeNeededOnEveryNode"`
+	StagedAction     *apiv3.StagedAction           `json:"staged_action,omitempty"`
 }
 
 func (p Policy) String() string {

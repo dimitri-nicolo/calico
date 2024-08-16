@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 package cache
 
 import (
@@ -580,6 +580,14 @@ func (d *policyData) GetOrder() *float64 {
 		log.Debugf("order is not defined for policy of type: %v", r.GetObjectKind())
 	}
 	return nil
+}
+
+func (d *policyData) GetStagedAction() *apiv3.StagedAction {
+	if d.v1Policy != nil {
+		return d.v1Policy.StagedAction
+	} else {
+		return nil
+	}
 }
 
 func (d *policyData) IsUnmatched() bool {

@@ -1,5 +1,7 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2014 Tigera, Inc. All rights reserved.
 package api
+
+import v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 type Policy interface {
 	GetAnnotations() map[string]string
@@ -9,6 +11,7 @@ type Policy interface {
 	GetRuleEndpointCounts() Rule
 	IsUnmatched() bool
 	GetOrder() *float64
+	GetStagedAction() *v3.StagedAction
 }
 
 type PolicyCounts struct {
