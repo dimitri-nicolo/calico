@@ -23,6 +23,7 @@ import yaml
 import functools
 from functools import partial
 from subprocess import CalledProcessError, check_output
+from time import sleep
 
 from log_analyzer import LogAnalyzer, FELIX_LOG_FORMAT, TIMESTAMP_FORMAT
 from network import DummyNetwork
@@ -374,6 +375,27 @@ class DockerHost(object):
             self.calicoctl(cmd)
 
         self.attach_log_analyzer()
+
+    def wait_for_mtu_file(self, retries=15):
+        """
+        wait_for_mtu_file waits until the /var/lib/calico/mtu file is created by Felix, indicating
+        that MTU auto detection has occurred. This is a prerequisite for launching workloads with
+        the CNI plugin on this host.
+        """
+        cmd = partial(self.execute, "cat /var/lib/calico/mtu")
+        retry_until_success(cmd, ex_class=CommandExecError, retries=retries)
+
+    def wait_for_ippools(self, retries=15):
+        for retry in range(retries + 1):
+            if self.ippools_exist():
+                return
+            sleep(1)
+        raise AssertionError("IP pools were never created")
+
+    def ippools_exist(self):
+        pools_output = self.calicoctl("get ippool -o yaml")
+        pools_dict = yaml.safe_load(pools_output)
+        return len(pools_dict['items']) > 0
 
     def set_ipip_enabled(self, enabled):
         pools_output = self.calicoctl("get ippool -o yaml")
