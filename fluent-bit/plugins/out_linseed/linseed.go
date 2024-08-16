@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"unsafe"
 
@@ -40,13 +39,6 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		logrus.WithError(err).Error("failed to create config")
 		return output.FLB_ERROR
 	}
-
-	endpoint := output.FLBPluginConfigKey(plugin, "Endpoint")
-	if _, err := url.Parse(endpoint); err != nil {
-		logrus.WithError(err).Errorf("failed to parse endpoint %q", endpoint)
-		return output.FLB_ERROR
-	}
-	cfg.endpoint = endpoint
 
 	fields := logrus.Fields{
 		"endpoint":       cfg.endpoint,

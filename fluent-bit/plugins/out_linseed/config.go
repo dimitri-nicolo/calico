@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -33,6 +34,12 @@ func NewConfig(plugin unsafe.Pointer) (*Config, error) {
 	}
 	logrus.Debugf("read kubeconfig from %q", kubeconfig)
 
+	endpoint := os.Getenv("ENDPOINT")
+	if _, err := url.Parse(endpoint); err != nil {
+		return nil, err
+	}
+	logrus.Debugf("log ingestion endpoint %q", endpoint)
+
 	skipVerify := false
 	if b, err := strconv.ParseBool(os.Getenv("TLS_VERIFY")); err == nil {
 		skipVerify = !b
@@ -43,6 +50,7 @@ func NewConfig(plugin unsafe.Pointer) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	logrus.Debugf("service_account=%v", serviceAccountName)
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -57,7 +65,7 @@ func NewConfig(plugin unsafe.Pointer) (*Config, error) {
 	return &Config{
 		clientset: clientset,
 
-		endpoint:           output.FLBPluginConfigKey(plugin, "Endpoint"),
+		endpoint:           endpoint,
 		insecureSkipVerify: skipVerify,
 
 		serviceAccountName: serviceAccountName,
