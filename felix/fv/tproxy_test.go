@@ -40,6 +40,14 @@ var _ = describeTProxyTest(false, "Enabled")
 var _ = describeTProxyTest(true, "Enabled")
 var _ = describeTProxyTest(false, "EnabledAllServices")
 
+const (
+	// duration is how long to wait for a condition to become true.
+	duration = 5 * time.Second
+
+	// retry is how often to check the condition.
+	retry = 1 * time.Second
+)
+
 func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 	const (
 		l7LoggingAnnotation = "projectcalico.org/l7-logging"
@@ -365,14 +373,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					cc.CheckConnectivity()
 
 					// Connection should be proxied on the pod's local node
-					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the backend pod's node
-					Eventually(proxies[0].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
-					Eventually(proxies[0].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[0].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(Equal(0))
+					Eventually(proxies[0].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(Equal(0))
 				})
 
 				Context("With ingress traffic denied from w[0][1] and w[1][1]", func() {
@@ -406,29 +414,29 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.CheckConnectivity()
 
 						// w[0][0] goes through the proxy and back to itself.  No policy to block it.
-						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeZero(),
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeZero(),
 							"w[0][0]'s traffic should go to its local proxy only")
 
 						// w[0][1] reaches the local proxy but the proxy's connection gets blocked by the ingress policy.
-						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeZero())
-						Eventually(proxies[1].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeZero(),
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeZero())
+						Eventually(proxies[1].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeZero(),
 							"w[0][0]'s traffic should go to its local proxy only")
 
 						// w[1][0] goes through both proxies and reaches w[0][0].
-						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].AcceptedCountFn(w[1][0].IP, pod, pod)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].ProxiedCountFn(w[1][0].IP, pod, pod)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[1][0].IP, pod, pod), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[1][0].IP, pod, pod), duration, retry).Should(BeNumerically(">", 0))
 
 						// w[1][1] reaches its local proxy, which successfully connects to the remote proxy
 						// but its connection is blocked by policy.
-						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].AcceptedCountFn(w[1][1].IP, pod, pod)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].ProxiedCountFn(w[1][1].IP, pod, pod)).Should(BeZero())
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[1][1].IP, pod, pod), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[1][1].IP, pod, pod), duration, retry).Should(BeZero())
 					})
 				})
 
@@ -463,8 +471,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.CheckConnectivity()
 
 						// Connection should be proxied on the pod's local node
-						duration := 5 * time.Second
-						retry := 1 * time.Second
 						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
@@ -508,15 +514,15 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 						// Connection should be proxied on the pod's local node
 
-						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
-						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(Equal(0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 					})
 				})
 
@@ -551,15 +557,15 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 						// Connection should be proxied on the pod's local node
 
-						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
-						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(Equal(0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 					})
 				})
 			})
@@ -650,14 +656,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					cc.CheckConnectivity()
 
 					// Connection should be proxied at the nodeport's node
-					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 					// Due to NAT outgoing
-					Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the client pod's node
-					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
-					Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(Equal(0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(Equal(0))
 				})
 
 				It("should have connectivity from all workloads via NodePort on node 1", func() {
@@ -671,14 +677,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					cc.CheckConnectivity()
 
 					// Connection should be proxied at the nodeport's node
-					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 					// Due to NAT outgoing
-					Eventually(proxies[1].ProxiedCountFn(tc.Felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(tc.Felixes[0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the client pod's node
-					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
-					Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(Equal(0))
+					Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(Equal(0))
 				})
 
 				// The ingress policy tests are not realistinc policies for NodePorts.
@@ -728,16 +734,16 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.CheckConnectivity()
 
 						// Connection should be proxied at the nodeport's node
-						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(Equal(0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(Equal(0))
 						// Due to NAT outgoing
-						Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
 						// Connection should not be proxied on the client pod's node
-						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(Equal(0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(Equal(0))
 					})
 				})
 
@@ -781,14 +787,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.CheckConnectivity()
 
 						// Connection should be proxied at the nodeport's node
-						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 						// Due to NAT outgoing
-						Eventually(proxies[1].AcceptedCountFn(tc.Felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(tc.Felixes[0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
 						// Connection should not be proxied on the client pod's node
-						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc), duration, retry).Should(Equal(0))
 					})
 				})
 
@@ -808,7 +814,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							ExpectWithSrcIPs(tc.Felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
 						cc.CheckConnectivity()
 
-						Eventually(proxies[0].ProxiedCountFn(externalClient.IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(externalClient.IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 					})
 
 					It("should have connectivity via node 1", func() {
@@ -816,9 +822,9 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.Expect(Some, externalClient, TargetIP(tc.Felixes[1].IP),
 							expectedFelix1IP, ExpectWithPorts(nodeport))
 						cc.CheckConnectivity()
-						Eventually(proxies[1].ProxiedCountFn(externalClient.IP, pod, svc)).Should(BeNumerically(">", 0))
-						Eventually(proxies[0].AcceptedCountFn(externalClient.IP, pod, svc)).Should(Equal(0))
-						Eventually(proxies[0].AcceptedCountFn(tc.Felixes[1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[1].ProxiedCountFn(externalClient.IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(externalClient.IP, pod, svc), duration, retry).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(tc.Felixes[1].IP, pod, svc), duration, retry).Should(Equal(0))
 					})
 
 					It("should not have connectivity when denied by preDNAT policy", func() {
@@ -913,11 +919,11 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090), ExpectWithSrcIPs(tc.Felixes[1].IP))
 					cc.CheckConnectivity()
 
-					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
-					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 				})
 
 				It("should have connectivity via NodePorts", func() {
@@ -938,13 +944,13 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					svc = tc.Felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
 
 					// Connection should be proxied at the nodeport's node
-					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(tc.Felixes[1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 
 					svc = tc.Felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
 
-					Eventually(proxies[1].ProxiedCountFn(tc.Felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(tc.Felixes[0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 				})
 			})
 
@@ -1070,8 +1076,8 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					log.Info("Pongs received within last 1s")
 
 					// Connection should be proxied on the pod's local node
-					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(Equal(0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(Equal(0))
 
 					By("Enabling TPROXY")
 					utils.UpdateFelixConfig(calicoClient, func(fc *api.FelixConfiguration) {
@@ -1092,17 +1098,17 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					log.Info("Pongs received within last 1s")
 
 					// Connection should be proxied on the pod's local node
-					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(Equal(0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(Equal(0))
 
 					// New connection should be proxied
 					cc.ResetExpectations()
 					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090))
 					cc.CheckConnectivity()
 
-					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
-					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc), duration, retry).Should(BeNumerically(">", 0))
 				})
 			})
 		})
