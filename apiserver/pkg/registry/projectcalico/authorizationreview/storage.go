@@ -6,12 +6,13 @@ import (
 	"context"
 	"sort"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
@@ -38,10 +39,22 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 		Spec:       in.Spec,
 	}
 
-	// Extract user info from the request.
-	user, ok := request.UserFrom(ctx)
-	if !ok {
-		return out, nil
+	var userInfo user.Info
+
+	if in.Spec.User != "" {
+		// Extract user from spec
+		userInfo = &user.DefaultInfo{
+			Name:   in.Spec.User,
+			UID:    in.Spec.UID,
+			Groups: in.Spec.Groups,
+		}
+	} else {
+		// Extract user info from the request context.
+		var ok bool
+		userInfo, ok = request.UserFrom(ctx)
+		if !ok {
+			return out, nil
+		}
 	}
 
 	// Expand the request into a set of ResourceVerbs as input to the RBAC calculator.
@@ -68,7 +81,7 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 	}
 
 	// Calculate the set of permissions.
-	results, err := r.calculator.CalculatePermissions(user, rvs)
+	results, err := r.calculator.CalculatePermissions(userInfo, rvs)
 	if err != nil {
 		return nil, err
 	}

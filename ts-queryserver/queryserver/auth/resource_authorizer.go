@@ -121,12 +121,16 @@ func (authz *authorizer) PerformUserAuthorizationReview(ctx context.Context,
 	}
 
 	// since each cluster has its own queryserver, we do not need to pass clusterID to get the clientSet.
-	cs, err := authz.clientSetFactory.NewClientSetForUser(user, "")
+	cs, err := authz.clientSetFactory.NewClientSetForApplication("")
 	if err != nil {
 		return nil, err
 	}
 
-	authorizedResourceVerbs, err := auth.PerformAuthorizationReview(ctx, cs, authReviewattributes)
+	// we cannot use the current context to PerformAuthorizationReviewContext because it contains the userInfo and queryserver
+	// does not have impersonate rbac to execute calls on behalf of users. However, we still need to run AuthorizationReview
+	// for the user. Thus, we use PerformAuthroizationReviewWithUser which is using the background context to execute the request
+	// and allows us to pass in user info to be used in the authorization.
+	authorizedResourceVerbs, err := auth.PerformAuthorizationReviewWithUser(user, cs, authReviewattributes)
 
 	if err != nil {
 		return nil, &httputils.HttpStatusError{

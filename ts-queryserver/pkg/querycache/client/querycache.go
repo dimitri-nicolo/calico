@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 package client
 
 import (
@@ -562,6 +562,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 		EgressRules:          c.convertRules(p.GetRuleEndpointCounts().Egress),
 		Order:                p.GetOrder(),
 		CreationTime:         &creationTime,
+		StagedAction:         p.GetStagedAction(),
 	}
 
 	if fieldSelector != nil {

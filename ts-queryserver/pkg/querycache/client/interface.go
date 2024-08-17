@@ -10,6 +10,8 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // TODO (rlb):  These data types are basically focussed on the requirements of the web server
@@ -121,6 +123,7 @@ type Policy struct {
 	EgressRules          []RuleDirection   `json:"egressRules,omitempty"`
 	Order                *float64          `json:"order,omitempty"`
 	CreationTime         *v1.Time          `json:"creationTime,omitempty"`
+	StagedAction         *v3.StagedAction  `json:"stagedAction,omitempty" validate:"omitempty"`
 }
 
 type RuleDirection struct {

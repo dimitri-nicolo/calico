@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 package fv
 
 import (
@@ -1788,13 +1788,22 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
+		if er.Spec.StagedAction != "" {
+			p.StagedAction = &er.Spec.StagedAction
+		}
 	case *apiv3.StagedKubernetesNetworkPolicy:
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
+		if er.Spec.StagedAction != "" {
+			p.StagedAction = &er.Spec.StagedAction
+		}
 	case *apiv3.StagedGlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
+		if er.Spec.StagedAction != "" {
+			p.StagedAction = &er.Spec.StagedAction
+		}
 	}
 
 	return p

@@ -98,9 +98,9 @@ ENV SYSLOG_PACKET_SIZE=1024
 # LINSEED DEFAULT PARAMS
 ENV LINSEED_ENABLED=false
 ENV LINSEED_ENDPOINT=ENDPOINT
-ENV LINSEED_CA_PATH=/etc/flu/ca.pem
-ENV LINSEED_CERT_PATH=/etc/flu/crt.pem
-ENV LINSEED_KEY_PATH=/etc/flu/key.pem
+ENV LINSEED_CA_PATH=${ROOT_DIR}/etc/flu/ca.pem
+ENV LINSEED_CERT_PATH=${ROOT_DIR}/etc/flu/crt.pem
+ENV LINSEED_KEY_PATH=${ROOT_DIR}/etc/flu/key.pem
 ENV LINSEED_FLUSH_INTERVAL=5s
 ENV LINSEED_TOKEN="${ROOT_DIR}/var/run/secrets/kubernetes.io/serviceaccount/token"
 
@@ -124,4 +124,4 @@ ENTRYPOINT []
 #
 # Must use the "exec" form of CMD to work for both docker and containerd
 # https://github.com/containerd/containerd/issues/5067
-CMD ["c:/ruby/msys64/usr/bin/bash.exe", "-lc", "c:/bin/ee_entrypoint.sh c:/ruby31/bin/fluentd -c c:/fluentd/etc/fluent.conf"]
+CMD ["c:/ruby/msys64/usr/bin/bash.exe", "-lc", "c:/bin/ee_entrypoint.sh c:/ruby31/bin/fluentd -c c:/fluentd/etc/fluent.conf -p c:/fluentd/plugins"]

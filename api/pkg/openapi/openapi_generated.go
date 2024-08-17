@@ -1139,6 +1139,58 @@ func schema_pkg_apis_projectcalico_v3_AuthorizationReviewSpec(ref common.Referen
 							},
 						},
 					},
+					"user": {
+						SchemaProps: spec.SchemaProps{
+							Description: "User is the user you're testing for. If you specify \"User\" but not \"Groups\", then is it interpreted as \"What if User were not a member of any groups\"",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"groups": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Groups is the groups you're testing for.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"extra": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extra corresponds to the user.Info.GetExtra() method from the authenticator.  Since that is input to the authorizer it needs a reflection here.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Default: "",
+													Type:    []string{"string"},
+													Format:  "",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					"uid": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UID information about the requesting user.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

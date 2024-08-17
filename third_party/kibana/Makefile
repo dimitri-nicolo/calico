@@ -34,6 +34,7 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0003-Support-UBI-arm64-builds.patch
 	patch -d kibana -p1 < patches/0004-Kibana-186491.patch
 	patch -d kibana -p1 < patches/0005-Bump-puppeteer-to-v22.11.2.patch
+	patch -d kibana -p1 < patches/0006-Update-axios-to-remediate-CVE-2024-39338.patch
 	touch $@
 
 # always register because build target will build images for all supported arches
