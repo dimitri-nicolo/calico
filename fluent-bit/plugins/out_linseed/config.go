@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -30,16 +31,10 @@ type Config struct {
 }
 
 func NewConfig(plugin unsafe.Pointer) (*Config, error) {
-	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig == "" {
-		kubeconfig = output.FLBPluginConfigKey(plugin, "Kubeconfig")
-	}
+	kubeconfig := getEnvOrPluginConfig(plugin, "Kubeconfig")
 	logrus.Debugf("read kubeconfig from %q", kubeconfig)
 
-	endpoint := os.Getenv("ENDPOINT")
-	if endpoint == "" {
-		endpoint = output.FLBPluginConfigKey(plugin, "Endpoint")
-	}
+	endpoint := getEnvOrPluginConfig(plugin, "Endpoint")
 	if _, err := url.Parse(endpoint); err != nil {
 		return nil, err
 	}
@@ -94,4 +89,12 @@ func getServiceAccountName(kubeconfig string) (string, error) {
 		return "", fmt.Errorf("context %q not found in kubeconfig", currentContext)
 	}
 	return ctx.AuthInfo, nil
+}
+
+func getEnvOrPluginConfig(plugin unsafe.Pointer, key string) string {
+	val := os.Getenv(strings.ToUpper(key))
+	if val == "" {
+		val = output.FLBPluginConfigKey(plugin, key)
+	}
+	return val
 }
