@@ -72,6 +72,13 @@ clean:
 ###############################################################################
 # Tests
 ###############################################################################
+GINKGO_ARGS += -cover -timeout 20m
+GINKGO = ginkgo $(GINKGO_ARGS)
+
+.PHONY: ut
+ut:
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r plugins/'
+
 ZONE ?= us-central1-a
 VM_PREFIX ?= $(USER)-fluent-bit
 
@@ -83,5 +90,7 @@ fv: package
 ###############################################################################
 # CI
 ###############################################################################
+LINT_ARGS += --exclude-dirs="(^|/)package($$|/)"
+
 .PHONY: ci
-ci: clean fv
+ci: clean static-checks fv

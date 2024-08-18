@@ -16,6 +16,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+import "C"
+
 type Config struct {
 	clientset *kubernetes.Clientset
 
@@ -35,13 +37,17 @@ func NewConfig(plugin unsafe.Pointer) (*Config, error) {
 	logrus.Debugf("read kubeconfig from %q", kubeconfig)
 
 	endpoint := os.Getenv("ENDPOINT")
+	if endpoint == "" {
+		endpoint = output.FLBPluginConfigKey(plugin, "Endpoint")
+	}
 	if _, err := url.Parse(endpoint); err != nil {
 		return nil, err
 	}
 	logrus.Debugf("log ingestion endpoint %q", endpoint)
 
 	skipVerify := false
-	if b, err := strconv.ParseBool(os.Getenv("TLS_VERIFY")); err == nil {
+	tlsVerify := output.FLBPluginConfigKey(plugin, "tls.verify")
+	if b, err := strconv.ParseBool(tlsVerify); err == nil {
 		skipVerify = !b
 	}
 	logrus.Debugf("skip_verify=%v", skipVerify)
