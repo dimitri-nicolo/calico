@@ -92,8 +92,7 @@ rm -rvf %{buildroot}%{_includedir}
 %files
 %config %{_sysconfdir}/calico/%{name}/*.conf
 %config(noreplace) %{_sysconfdir}/calico/%{name}/*.env
-%dir %{_localstatedir}/log/calico/%{name}
-%attr(0755,calico,calico) %{_localstatedir}/log/calico/%{name}
+%attr(0755,calico,calico) %dir %{_localstatedir}/log/calico/%{name}
 %dir %{_sysconfdir}/calico/%{name}
 %{_bindir}/%{name}
 %{_sysconfdir}/calico/%{name}/out_linseed.so

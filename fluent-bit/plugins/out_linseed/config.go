@@ -10,14 +10,13 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/fluent/fluent-bit-go/output"
 	"github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-import "C"
+type PluginConfigKeyFunc func(pointer unsafe.Pointer, key string) string
 
 type Config struct {
 	clientset *kubernetes.Clientset
@@ -28,30 +27,40 @@ type Config struct {
 	serviceAccountName string
 	expiration         time.Time
 	token              string
+
+	pluginConfigKeyFn PluginConfigKeyFunc
 }
 
-func NewConfig(plugin unsafe.Pointer) (*Config, error) {
-	kubeconfig := getEnvOrPluginConfig(plugin, "Kubeconfig")
+func NewConfig(plugin unsafe.Pointer, fn PluginConfigKeyFunc) (*Config, error) {
+	cfg := &Config{
+		insecureSkipVerify: false,
+		pluginConfigKeyFn:  fn,
+	}
+
+	kubeconfig := cfg.getEnvOrPluginConfig(plugin, "Kubeconfig")
 	logrus.Debugf("read kubeconfig from %q", kubeconfig)
 
-	endpoint := getEnvOrPluginConfig(plugin, "Endpoint")
+	endpoint := cfg.getEnvOrPluginConfig(plugin, "Endpoint")
 	if _, err := url.Parse(endpoint); err != nil {
 		return nil, err
 	}
-	logrus.Debugf("log ingestion endpoint %q", endpoint)
+	cfg.endpoint = endpoint
+	logrus.Debugf("log ingestion endpoint %q", cfg.endpoint)
 
 	skipVerify := false
-	tlsVerify := output.FLBPluginConfigKey(plugin, "tls.verify")
+	tlsVerify := cfg.pluginConfigKeyFn(plugin, "tls.verify")
 	if b, err := strconv.ParseBool(tlsVerify); err == nil {
 		skipVerify = !b
 	}
-	logrus.Debugf("skip_verify=%v", skipVerify)
+	cfg.insecureSkipVerify = skipVerify
+	logrus.Debugf("skip_verify=%v", cfg.insecureSkipVerify)
 
-	serviceAccountName, err := getServiceAccountName(kubeconfig)
+	serviceAccountName, err := cfg.extractServiceAccountName(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
-	logrus.Debugf("service_account=%v", serviceAccountName)
+	cfg.serviceAccountName = serviceAccountName
+	logrus.Debugf("service_account=%v", cfg.serviceAccountName)
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -62,18 +71,20 @@ func NewConfig(plugin unsafe.Pointer) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	cfg.clientset = clientset
 
-	return &Config{
-		clientset: clientset,
-
-		endpoint:           endpoint,
-		insecureSkipVerify: skipVerify,
-
-		serviceAccountName: serviceAccountName,
-	}, nil
+	return cfg, nil
 }
 
-func getServiceAccountName(kubeconfig string) (string, error) {
+func (c *Config) getEnvOrPluginConfig(plugin unsafe.Pointer, key string) string {
+	val := os.Getenv(strings.ToUpper(key))
+	if val == "" {
+		val = cfg.pluginConfigKeyFn(plugin, key)
+	}
+	return val
+}
+
+func (c *Config) extractServiceAccountName(kubeconfig string) (string, error) {
 	config, err := clientcmd.LoadFromFile(kubeconfig)
 	if err != nil {
 		return "", fmt.Errorf("failed to load kubeconfig: %q", kubeconfig)
@@ -89,12 +100,4 @@ func getServiceAccountName(kubeconfig string) (string, error) {
 		return "", fmt.Errorf("context %q not found in kubeconfig", currentContext)
 	}
 	return ctx.AuthInfo, nil
-}
-
-func getEnvOrPluginConfig(plugin unsafe.Pointer, key string) string {
-	val := os.Getenv(strings.ToUpper(key))
-	if val == "" {
-		val = output.FLBPluginConfigKey(plugin, key)
-	}
-	return val
 }

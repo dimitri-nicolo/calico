@@ -34,7 +34,7 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 func FLBPluginInit(plugin unsafe.Pointer) int {
 	var err error
 
-	cfg, err = NewConfig(plugin)
+	cfg, err = NewConfig(plugin, output.FLBPluginConfigKey)
 	if err != nil {
 		logrus.WithError(err).Error("failed to create config")
 		return output.FLB_ERROR
