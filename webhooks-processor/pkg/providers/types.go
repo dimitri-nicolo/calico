@@ -7,8 +7,9 @@ import (
 	"encoding/json"
 	"time"
 
-	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/sirupsen/logrus"
+
+	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 type ProviderResponse struct {
