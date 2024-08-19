@@ -101,5 +101,5 @@ func (m *nodeLocalDNSManager) CompleteDeferredWork() error {
 
 func (m *nodeLocalDNSManager) updateCaliRawChainsWithNodelocalDNSRules(dnsServerPorts []config.ServerPort) {
 	m.rawTables.UpdateChain(m.ruleRenderer.StaticRawPreroutingChain(m.ipVersion, dnsServerPorts))
-	m.rawTables.UpdateChain(m.ruleRenderer.StaticRawOutputChain(0, dnsServerPorts))
+	m.rawTables.UpdateChain(m.ruleRenderer.StaticRawOutputChain(0, m.ipVersion, dnsServerPorts))
 }

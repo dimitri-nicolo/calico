@@ -1217,6 +1217,76 @@ var _ = Describe("Static", func() {
 					}))
 				})
 
+				It("IPv4: Should return expected VXLAN notrack PREROUTING chain", func() {
+					allCalicoMarkBits := rr.IptablesMarkAccept |
+						rr.IptablesMarkPass |
+						rr.IptablesMarkScratch0 |
+						rr.IptablesMarkScratch1 |
+						rr.IptablesMarkIPsec |
+						rr.IptablesMarkDNSPolicy
+					markFromWorkload := rr.IptablesMarkScratch0
+
+					chain := &generictables.Chain{
+						Name: "cali-PREROUTING",
+						Rules: []generictables.Rule{
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: allCalicoMarkBits},
+							},
+							{
+								Match:  Match().Protocol("udp").DestPort(uint16(rr.VXLANPort)),
+								Action: NoTrackAction{},
+							},
+						},
+					}
+
+					for _, ifacePrefix := range rr.WorkloadIfacePrefixes {
+						chain.Rules = append(chain.Rules, generictables.Rule{
+							Match:  Match().InInterface(ifacePrefix + "+"),
+							Action: SetMarkAction{Mark: markFromWorkload},
+						})
+					}
+
+					chain.Rules = append(chain.Rules, generictables.Rule{
+						Match:  Match().MarkSingleBitSet(markFromWorkload),
+						Action: JumpAction{Target: ChainFromWorkloadDispatch},
+					})
+					chain.Rules = append(chain.Rules, generictables.Rule{
+						Match:  Match().MarkClear(markFromWorkload),
+						Action: JumpAction{Target: ChainDispatchFromHostEndpoint},
+					}, generictables.Rule{
+						Match:  Match().MarkSingleBitSet(rr.IptablesMarkAccept),
+						Action: AcceptAction{},
+					})
+
+					Expect(rr.StaticRawPreroutingChain(4, nil)).To(Equal(chain))
+				})
+
+				It("IPv4: Should return expected VXLAN notrack OUTPUT chain", func() {
+					allCalicoMarkBits := rr.IptablesMarkAccept |
+						rr.IptablesMarkPass |
+						rr.IptablesMarkScratch0 |
+						rr.IptablesMarkScratch1 |
+						rr.IptablesMarkIPsec |
+						rr.IptablesMarkDNSPolicy
+					Expect(rr.StaticRawOutputChain(0, 4, nil)).To(Equal(&generictables.Chain{
+						Name: "cali-OUTPUT",
+						Rules: []generictables.Rule{
+							{Action: ClearMarkAction{Mark: allCalicoMarkBits}},
+							{Action: JumpAction{Target: ChainDispatchToHostEndpoint}},
+							{
+								Match:  Match().Protocol("udp").DestPort(uint16(rr.VXLANPort)),
+								Action: NoTrackAction{},
+							},
+							{
+								Match:  Match().MarkSingleBitSet(rr.IptablesMarkAccept),
+								Action: AcceptAction{},
+							},
+						},
+					},
+					))
+				})
+
 				Describe("and IPv4 tunnel IP", func() {
 					BeforeEach(func() {
 						conf.VXLANTunnelAddress = net.IP{10, 0, 0, 1}
@@ -1267,6 +1337,53 @@ var _ = Describe("Static", func() {
 							},
 						},
 					}))
+				})
+
+				It("IPv6: Should return expected VXLAN notrack PREROUTING chain", func() {
+					allCalicoMarkBits := rr.IptablesMarkAccept |
+						rr.IptablesMarkPass |
+						rr.IptablesMarkScratch0 |
+						rr.IptablesMarkScratch1 |
+						rr.IptablesMarkIPsec |
+						rr.IptablesMarkDNSPolicy
+					markFromWorkload := rr.IptablesMarkScratch0
+
+					chain := &generictables.Chain{
+						Name: "cali-PREROUTING",
+						Rules: []generictables.Rule{
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: allCalicoMarkBits},
+							},
+							{
+								Match:  Match().Protocol("udp").DestPort(uint16(rr.VXLANPort)),
+								Action: NoTrackAction{},
+							},
+						},
+					}
+
+					for _, ifacePrefix := range rr.WorkloadIfacePrefixes {
+						chain.Rules = append(chain.Rules, generictables.Rule{
+							Match:  Match().InInterface(ifacePrefix + "+"),
+							Action: SetMarkAction{Mark: markFromWorkload},
+						})
+					}
+
+					chain.Rules = append(chain.Rules, generictables.Rule{
+						Match:  Match().MarkMatchesWithMask(markFromWorkload, markFromWorkload),
+						Action: JumpAction{Target: ChainRpfSkip},
+					})
+
+					chain.Rules = append(chain.Rules, rr.RPFilter(6, markFromWorkload, markFromWorkload, rr.OpenStackSpecialCasesEnabled)...)
+					chain.Rules = append(chain.Rules, generictables.Rule{
+						Match:  Match().MarkClear(markFromWorkload),
+						Action: JumpAction{Target: ChainDispatchFromHostEndpoint},
+					}, generictables.Rule{
+						Match:  Match().MarkSingleBitSet(rr.IptablesMarkAccept),
+						Action: AcceptAction{},
+					})
+
+					Expect(rr.StaticRawPreroutingChain(6, nil)).To(Equal(chain))
 				})
 
 				Describe("and IPv6 tunnel IP", func() {
@@ -2197,7 +2314,7 @@ var _ = Describe("Static", func() {
 		})
 
 		It("should include the expected rules in the raw output chains", func() {
-			caliRawPreRoutingChain := rr.StaticRawOutputChain(4, testNodelocalDNSBroadcastedIPs)
+			caliRawPreRoutingChain := rr.StaticRawOutputChain(4, 4, testNodelocalDNSBroadcastedIPs)
 			for _, serverPort := range testNodelocalDNSBroadcastedIPs {
 				Expect(caliRawPreRoutingChain.Rules).To(ContainElement(
 					generictables.Rule{

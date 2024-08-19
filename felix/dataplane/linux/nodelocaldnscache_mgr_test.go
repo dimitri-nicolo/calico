@@ -61,7 +61,7 @@ var _ = Describe("NodeLocalDNSCache", func() {
 			ContainElements(ruleRenderer.StaticRawPreroutingChain(mgr.ipVersion, nil).Rules),
 		)
 		Expect(rawTable.getCurrentChainByName("cali-OUTPUT").Rules).To(
-			ContainElements(ruleRenderer.StaticRawOutputChain(uint32(0), nil).Rules),
+			ContainElements(ruleRenderer.StaticRawOutputChain(uint32(0), mgr.ipVersion, nil).Rules),
 		)
 	}
 
@@ -153,7 +153,7 @@ var _ = Describe("NodeLocalDNSCache", func() {
 			ContainElements(ruleRenderer.StaticRawPreroutingChain(mgr.ipVersion, serverPorts).Rules),
 		)
 		Expect(rawTable.getCurrentChainByName("cali-OUTPUT").Rules).To(
-			ContainElements(ruleRenderer.StaticRawOutputChain(uint32(0), serverPorts).Rules),
+			ContainElements(ruleRenderer.StaticRawOutputChain(uint32(0), mgr.ipVersion, serverPorts).Rules),
 		)
 	})
 

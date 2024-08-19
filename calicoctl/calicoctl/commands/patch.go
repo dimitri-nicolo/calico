@@ -61,25 +61,7 @@ Description:
 
   Valid resource types are:
 
-    * bgpConfiguration
-    * bgpPeer
-    * felixConfiguration
-    * globalNetworkPolicy
-    * stagedGlobalNetworkPolicy
-    * globalNetworkSet
-    * hostEndpoint
-    * ipPool
-    * ipReservation
-    * kubeControllersConfiguration
-    * networkPolicy
-    * stagedNetworkPolicy
-    * stagedKubernetesNetworkPolicy
-    * networkSet
-    * node
-    * profile
-    * workloadEndpoint
-    * packetCapture
-
+<RESOURCE_LIST>
   The resource type is case-insensitive and may be pluralized.
 
   Attempting to patch a resource that does not exists is treated as a
@@ -94,6 +76,9 @@ Description:
 	// Replace all instances of BINARY_NAME with the name of the binary.
 	name, _ := util.NameAndDescription()
 	doc = strings.ReplaceAll(doc, "<BINARY_NAME>", name)
+
+	// Replace <RESOURCE_LIST> with the list of resource types.
+	doc = strings.Replace(doc, "<RESOURCE_LIST>", util.Resources(), 1)
 
 	parsedArgs, err := docopt.ParseArgs(doc, args, "")
 	if err != nil {

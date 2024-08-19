@@ -68,31 +68,10 @@ Description:
   The delete command is used to delete a set of resources by filename or stdin,
   or by type and identifiers.  JSON and YAML formats are accepted for file and
   stdin format.
-  
+
   Valid resource types are:
 
-    * bgpConfiguration
-    * bgpPeer
-    * felixConfiguration
-    * globalNetworkPolicy
-    * stagedGlobalNetworkPolicy
-    * globalNetworkSet
-    * globalThreatFeed
-    * hostEndpoint
-    * ipPool
-    * ipReservation
-    * kubeControllersConfiguration
-    * tier
-    * networkPolicy
-    * stagedNetworkPolicy
-    * stagedKubernetesNetworkPolicy
-    * networkSet
-    * node
-    * profile
-    * workloadEndpoint
-    * remoteClusterConfiguration
-    * packetCapture
-
+<RESOURCE_LIST>
   The resource type is case-insensitive and may be pluralized.
 
   Attempting to delete a resource that does not exists is treated as a
@@ -114,6 +93,9 @@ Description:
 	// Replace all instances of BINARY_NAME with the name of the binary.
 	name, _ := util.NameAndDescription()
 	doc = strings.ReplaceAll(doc, "<BINARY_NAME>", name)
+
+	// Replace <RESOURCE_LIST> with the list of resource types.
+	doc = strings.Replace(doc, "<RESOURCE_LIST>", util.Resources(), 1)
 
 	parsedArgs, err := docopt.ParseArgs(doc, args, "")
 	if err != nil {

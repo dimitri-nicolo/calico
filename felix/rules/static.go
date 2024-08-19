@@ -1753,7 +1753,7 @@ func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*genericta
 		r.failsafeOutChain("raw", ipVersion),
 		r.StaticRawPreroutingChain(ipVersion, nil),
 		r.WireguardIncomingMarkChain(),
-		r.StaticRawOutputChain(0, nil),
+		r.StaticRawOutputChain(0, ipVersion, nil),
 
 		// Include the DNS log chain; depending on configuration it may not get
 		// used but the iptables layer will filter it out if it's not needed.
@@ -1883,7 +1883,7 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 		r.WireguardIncomingMarkChain(),
 	}
 
-	chains = append(chains, r.StaticRawOutputChain(tcdefs.MarkSeenBypass, nil))
+	chains = append(chains, r.StaticRawOutputChain(tcdefs.MarkSeenBypass, ipVersion, nil))
 
 	// Include the DNS log chain; depending on configuration it may not get
 	// used but the iptables layer will filter it out if it's not needed.
@@ -1910,6 +1910,17 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 		rules = append(rules, generictables.Rule{
 			Match:  r.NewMatch(),
 			Action: r.Jump(ChainSetWireguardIncomingMark),
+		})
+	}
+
+	// Ensure VXLAN UDP Flows are not tracked in conntrack.
+	// VXLAN uses different source ports in each direction so
+	// tracking results in unreplied flows.
+	if (ipVersion == 4 && r.VXLANEnabled) || (ipVersion == 6 && r.VXLANEnabledV6) {
+		log.Debug("Adding VXLAN NOTRACK iptables rule to PREROUTING chain")
+		rules = append(rules, generictables.Rule{
+			Match:  r.NewMatch().Protocol("udp").DestPort(uint16(r.VXLANPort)),
+			Action: r.NoTrack(),
 		})
 	}
 
@@ -2118,7 +2129,7 @@ func (r *DefaultRuleRenderer) dnsLogChain() *generictables.Chain {
 	}
 }
 
-func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, nodeLocalDNSAddrs []config.ServerPort) *generictables.Chain {
+func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, ipVersion uint8, nodeLocalDNSAddrs []config.ServerPort) *generictables.Chain {
 	rules := []generictables.Rule{
 		// For safety, clear all our mark bits before we start.  (We could be in
 		// append mode and another process' rules could have left the mark bit set.)
@@ -2133,6 +2144,15 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, nodeLoca
 	if len(nodeLocalDNSAddrs) > 0 {
 		log.Debug("Adding nodelocaldns iptables rule to cali-OUTPUT")
 		rules = append(rules, r.nodeLocalDNSOutputRules(nodeLocalDNSAddrs)...)
+	}
+
+	// Ensure VXLAN UDP Flows are not tracked in conntrack.
+	if (ipVersion == 4 && r.VXLANEnabled) || (ipVersion == 6 && r.VXLANEnabledV6) {
+		log.Debug("Adding VXLAN NOTRACK iptables rule")
+		rules = append(rules, generictables.Rule{
+			Match:  r.NewMatch().Protocol("udp").DestPort(uint16(r.VXLANPort)),
+			Action: r.NoTrack(),
+		})
 	}
 
 	if tcBypassMark == 0 {

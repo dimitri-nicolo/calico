@@ -194,6 +194,21 @@ func TestFeatureDetection(t *testing.T) {
 				BPFKprobes:            true,
 			},
 		},
+		{
+			"iptables v1.8.4",
+			"Linux version 5.8.0",
+			Features{
+				RestoreSupportsLock:      true,
+				SNATFullyRandom:          true,
+				MASQFullyRandom:          true,
+				ChecksumOffloadBroken:    false,
+				NFLogSize:                true,
+				NFQueueBypass:            true,
+				BPFKprobes:               true,
+				IPIPDeviceIsL3:           false,
+				KernelSideRouteFiltering: false,
+			},
+		},
 	} {
 		tst := tst
 		t.Run("iptables version "+tst.iptablesVersion+" kernel "+tst.kernelVersion, func(t *testing.T) {
@@ -568,7 +583,7 @@ func TestBPFFeatureDetection(t *testing.T) {
 				NFLogSize:             true,
 				NFQueueBypass:         true,
 				IPIPDeviceIsL3:        false,
-				ChecksumOffloadBroken: true,
+				ChecksumOffloadBroken: false,
 			},
 			map[string]string{},
 		},
@@ -579,7 +594,7 @@ func TestBPFFeatureDetection(t *testing.T) {
 				NFLogSize:             true,
 				NFQueueBypass:         true,
 				IPIPDeviceIsL3:        true,
-				ChecksumOffloadBroken: true,
+				ChecksumOffloadBroken: false,
 			},
 			map[string]string{},
 		},
@@ -590,7 +605,7 @@ func TestBPFFeatureDetection(t *testing.T) {
 				NFLogSize:             true,
 				NFQueueBypass:         true,
 				IPIPDeviceIsL3:        true,
-				ChecksumOffloadBroken: true,
+				ChecksumOffloadBroken: false,
 			},
 			map[string]string{},
 		},
@@ -601,7 +616,7 @@ func TestBPFFeatureDetection(t *testing.T) {
 				NFLogSize:             true,
 				NFQueueBypass:         true,
 				IPIPDeviceIsL3:        true,
-				ChecksumOffloadBroken: true,
+				ChecksumOffloadBroken: false,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "true",
@@ -614,7 +629,7 @@ func TestBPFFeatureDetection(t *testing.T) {
 				NFLogSize:             true,
 				NFQueueBypass:         true,
 				IPIPDeviceIsL3:        false,
-				ChecksumOffloadBroken: true,
+				ChecksumOffloadBroken: false,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
@@ -627,7 +642,7 @@ func TestBPFFeatureDetection(t *testing.T) {
 				NFLogSize:             true,
 				NFQueueBypass:         true,
 				IPIPDeviceIsL3:        false,
-				ChecksumOffloadBroken: true,
+				ChecksumOffloadBroken: false,
 			},
 			map[string]string{
 				"IPIPDeviceIsL3": "false",
