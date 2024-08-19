@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	WebhooksWatcherSleepOnErr = 5 * time.Second
+	WebhooksWatcherTimeout = 1 * time.Minute
 )
 
 type WebhookWatcherUpdater struct {
@@ -93,7 +93,7 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 		case <-ctx.Done():
 			return
 		case err = <-errorCh:
-			logrus.Debug(err)
+			logrus.Fatal(err)
 		}
 
 		if useConfigmaps && cmWatcher == nil {
@@ -142,22 +142,23 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (w *WebhookWatcherUpdater) webhookRetryWatcher(ptx context.Context, errorCh chan<- error) {
+func (w *WebhookWatcherUpdater) webhookRetryWatcher(ctx context.Context, errorCh chan<- error) {
 	logrus.Info("webhook watcher is starting")
 	defer logrus.Info("webhook watcher is terminating")
 
-	ctx, cancel := context.WithCancel(ptx)
-	defer cancel()
-	watcher, err := w.whClient.Watch(ctx, options.ListOptions{})
-	if err != nil {
-		logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
-		errorCh <- err
-		return
-	}
-	// if watcher.Stop is called or if watcher encounters the error, ResultChan will be closed
-	// so it's fine to range over it
-	for webhookEvent := range watcher.ResultChan() {
-		w.controller.WebhookEventsChan() <- webhookEvent
+	for ctx.Err() == nil {
+		watcherCtx, watcherCtxCancel := context.WithTimeout(ctx, WebhooksWatcherTimeout)
+		watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{})
+		if err != nil {
+			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
+			errorCh <- err
+			watcherCtxCancel()
+			return
+		}
+		for event := range watcher.ResultChan() {
+			w.controller.WebhookEventsChan() <- event
+		}
+		watcherCtxCancel()
 	}
 }
 
