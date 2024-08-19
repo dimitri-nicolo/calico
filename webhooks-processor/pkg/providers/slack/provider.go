@@ -39,7 +39,7 @@ func (p *Slack) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *Slack) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderRespose, err error) {
+func (p *Slack) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderResponse, err error) {
 	payload, err := p.message(event, labels).JSON()
 	if err != nil {
 		return
@@ -71,7 +71,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, labels ma
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
-		httpResponse = providers.ProviderRespose{
+		httpResponse = providers.ProviderResponse{
 			Timestamp:             time.Now(),
 			HttpStatusCode:        response.StatusCode,
 			HttpPayload:           responseText,

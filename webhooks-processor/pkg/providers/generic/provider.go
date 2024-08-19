@@ -46,7 +46,7 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *GenericProvider) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderRespose, err error) {
+func (p *GenericProvider) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderResponse, err error) {
 	payload, err := json.Marshal(GenericProviderPayload{Event: event, Labels: labels})
 	if err != nil {
 		return
@@ -92,7 +92,7 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
-		httpResponse = providers.ProviderRespose{
+		httpResponse = providers.ProviderResponse{
 			Timestamp:             time.Now(),
 			HttpStatusCode:        response.StatusCode,
 			HttpPayload:           responseText,

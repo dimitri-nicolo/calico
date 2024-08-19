@@ -332,9 +332,9 @@ func (s *ControllerState) extractDependencies(webhook *api.SecurityEventWebhook)
 }
 
 func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) ProcessFunc {
-	return func(context.Context, map[string]string, map[string]string, *lsApi.Event) (providers.ProviderRespose, error) {
+	return func(context.Context, map[string]string, map[string]string, *lsApi.Event) (providers.ProviderResponse, error) {
 		logEntry(webhook).Info("Processing Security Events for a webhook in 'Debug' state")
-		return providers.ProviderRespose{
+		return providers.ProviderResponse{
 			Timestamp:             time.Now(),
 			HttpStatusCode:        http.StatusOK,
 			HttpStatusDescription: http.StatusText(http.StatusOK),

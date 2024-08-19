@@ -48,7 +48,7 @@ func (p *Jira) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *Jira) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderRespose, err error) {
+func (p *Jira) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderResponse, err error) {
 	payload := new(jiraPayload)
 	payload.Fields.Project.Key = config["project"]
 	payload.Fields.IssueType.Name = config["issueType"]
@@ -93,7 +93,7 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, labels map
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
-		httpResponse = providers.ProviderRespose{
+		httpResponse = providers.ProviderResponse{
 			Timestamp:             time.Now(),
 			HttpStatusCode:        response.StatusCode,
 			HttpPayload:           responseText,

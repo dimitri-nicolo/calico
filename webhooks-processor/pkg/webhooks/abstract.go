@@ -18,7 +18,7 @@ import (
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-type ProcessFunc func(context.Context, map[string]string, map[string]string, *lsApi.Event) (providers.ProviderRespose, error)
+type ProcessFunc func(context.Context, map[string]string, map[string]string, *lsApi.Event) (providers.ProviderResponse, error)
 
 type EventsFetchFunc func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error)
 

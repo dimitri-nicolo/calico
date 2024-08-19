@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type ProviderRespose struct {
+type ProviderResponse struct {
 	HttpStatusCode        int       `json:"httpResponseCode"`
 	HttpStatusDescription string    `json:"httpResponseDescription"`
 	HttpPayload           string    `json:"payload"`
@@ -20,7 +20,7 @@ type ProviderRespose struct {
 
 type Provider interface {
 	Validate(map[string]string) error
-	Process(context.Context, map[string]string, map[string]string, *lsApi.Event) (ProviderRespose, error)
+	Process(context.Context, map[string]string, map[string]string, *lsApi.Event) (ProviderResponse, error)
 	Config() Config
 }
 
@@ -32,7 +32,7 @@ type Config struct {
 	RetryTimes          uint          `default:"5"`
 }
 
-func (r ProviderRespose) String() string {
+func (r ProviderResponse) String() string {
 	if b, err := json.Marshal(r); err == nil {
 		return string(b)
 	} else {
