@@ -22,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
@@ -82,6 +83,7 @@ type Query interface {
 	Endpoints(w http.ResponseWriter, r *http.Request)
 	Summary(w http.ResponseWriter, r *http.Request)
 	Metrics(w http.ResponseWriter, r *http.Request)
+	Labels(api.ResourceType) http.HandlerFunc
 }
 
 func NewQuery(qi client.QueryInterface, cfg *config.Config, authz authhandler.Authorizer) Query {
@@ -368,6 +370,25 @@ func (q *query) Node(w http.ResponseWriter, r *http.Request) {
 	q.runQuery(w, r, client.QueryNodesReq{
 		Node: node,
 	}, true)
+}
+
+func (q *query) Labels(resourceType api.ResourceType) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+
+		permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), client.LabelsResourceAuthReviewAttrList)
+		if err != nil {
+			log.WithError(err).Debug("PerfomUserAuthorizationReview failed.")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		q.runQuery(w, r, client.QueryLabelsReq{
+			ResourceType: resourceType,
+			Permission:   permissions,
+		}, false)
+
+	}
 }
 
 // Convert a query parameter to a int. We are pretty relaxed about what we accept, using the

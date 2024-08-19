@@ -40,6 +40,7 @@ func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, st
 		nodes:                      cache.NewNodeCache(),
 		networksets:                cache.NewNetworkSetsCache(),
 		policyEndpointLabelHandler: labelhandler.NewLabelHandler(),
+		labelAggregator:            NewLabelsAggregator(k8sClient, ci),
 		wepConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 			updateprocessors.NewWorkloadEndpointUpdateProcessor(),
 		),
@@ -110,6 +111,7 @@ func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, st
 
 	// Start the syncer and return the synchronized query interface.
 	syncer.Start()
+
 	return qi
 }
 
@@ -134,6 +136,9 @@ type cachedQuery struct {
 
 	// A cache of all loaded networksets.
 	networksets cache.NetworkSetsCache
+
+	// An interface for retrieving aggregated resource labels
+	labelAggregator LabelAggregator
 
 	// policyEndpointLabelHandler handles the relationship between policy and rule selectors
 	// and endpoint and networkset labels.
@@ -163,6 +168,8 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 		return c.runQueryPolicies(cxt, qreq)
 	case QueryNodesReq:
 		return c.runQueryNodes(cxt, qreq)
+	case QueryLabelsReq:
+		return c.runQueryLabels(cxt, qreq)
 	default:
 
 		return nil, fmt.Errorf("unhandled query type: %#v", req)
@@ -643,6 +650,50 @@ func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*Qu
 	}, nil
 }
 
+func (c *cachedQuery) runQueryLabels(cxt context.Context, req QueryLabelsReq) (*QueryLabelsResp, error) {
+	var allLabels *api.LabelsMap
+	var err error
+	switch req.ResourceType {
+	case api.LabelsResourceTypePods:
+		allLabels, err = c.labelAggregator.GetPodsLabels(req.Permission, c.endpoints)
+	case api.LabelsResourceTypeNamespaces:
+		allLabels, err = c.labelAggregator.GetNamespacesLabels(req.Permission, cxt)
+	case api.LabelsResourceTypeServiceAccounts:
+		allLabels, err = c.labelAggregator.GetServiceAccountsLabels(req.Permission, cxt)
+	case api.LabelsResourceTypeManagedClusters:
+		allLabels, err = c.labelAggregator.GetManagedClustersLabels(req.Permission, cxt)
+	case api.LabelsResourceTypeGlobalThreatFeeds:
+		allLabels, err = c.labelAggregator.GetGlobalThreatfeedsLabels(req.Permission, cxt)
+	// returns combined policy labels in one response
+	case api.LabelsResourceTypeAllPolicies:
+		allLabels, err = c.labelAggregator.GetAllPoliciesLabels(req.Permission, c.policies)
+	// returns combined networkset / globalnetworkset labels in one response
+	case api.LabelsResourceTypeAllNetworkSets:
+		allLabels, err = c.labelAggregator.GetAllNetworksetsLabels(req.Permission, c.networksets)
+	}
+
+	if err != nil {
+		log.WithError(err).Debug("failed to get labels from Labels.")
+		return nil, err
+	}
+
+	response := &QueryLabelsResp{
+		ResourceTypeLabelMap: map[api.ResourceType][]LabelKeyValuePair{
+			req.ResourceType: {},
+		},
+	}
+
+	for k, v := range allLabels.GetLabels() {
+		response.ResourceTypeLabelMap[req.ResourceType] = append(response.ResourceTypeLabelMap[req.ResourceType],
+			LabelKeyValuePair{
+				LabelKey:    k,
+				LabelValues: v.Slice(),
+			})
+	}
+
+	return response, nil
+}
+
 func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 	ep := n.GetEndpointCounts()
 	node := &Node{
@@ -709,9 +760,7 @@ func getNodeIPAddresses(nr *libapi.Node) []string {
 		for _, nodeAddress := range nr.Spec.Addresses {
 			addressStrings = append(addressStrings, nodeAddress.Address)
 		}
-
 	}
-
 	return addressStrings
 }
 

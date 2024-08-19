@@ -73,6 +73,11 @@ func (ch *endpointsCacheHistory) GetEndpoint(model.Key) api.Endpoint {
 	return nil
 }
 
+func (ch *endpointsCacheHistory) GetEndpoints([]model.Key) []api.Endpoint {
+	// do nothing for historical data cache
+	return nil
+}
+
 func (ch *endpointsCacheHistory) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
 	// do nothing for historical data cache
 }

@@ -12,6 +12,7 @@ import (
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
@@ -68,6 +69,22 @@ func (s *Server) Start() error {
 	sm.HandleFunc("/nodes/", s.authhandler.AuthenticationHandler(qh.Node, authhandler.MethodGET))
 	sm.HandleFunc("/summary", s.authhandler.AuthenticationHandler(qh.Summary, authhandler.MethodGET))
 	sm.HandleFunc("/metrics", s.authhandler.AuthenticationHandler(qh.Metrics, authhandler.MethodGET))
+
+	sm.HandleFunc("/v1/pods/labels",
+		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypePods), authhandler.MethodGET))
+	sm.HandleFunc("/v1/namespaces/labels",
+		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypeNamespaces), authhandler.MethodGET))
+	sm.HandleFunc("/v1/serviceaccounts/labels",
+		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypeServiceAccounts), authhandler.MethodGET))
+	sm.HandleFunc("/projectcalico.org/v3/globalthreatfeeds/labels",
+		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypeGlobalThreatFeeds), authhandler.MethodGET))
+	sm.HandleFunc("/projectcalico.org/v3/managedclusters/labels",
+		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypeManagedClusters), authhandler.MethodGET))
+	sm.HandleFunc("/allpolicies/labels",
+		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypeAllPolicies), authhandler.MethodGET))
+	sm.HandleFunc("/allnetworksets/labels",
+		s.authhandler.AuthenticationHandler(qh.Labels(api.LabelsResourceTypeAllNetworkSets), authhandler.MethodGET))
+
 	sm.HandleFunc("/version", handlers.VersionHandler)
 
 	lic := handlers.License{Client: c}
