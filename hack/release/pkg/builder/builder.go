@@ -121,7 +121,7 @@ func releaseImages(version, operatorVersion, registry string, overrides []string
 			if strings.Contains(img, fmt.Sprintf("%s:", name)) {
 				// Found a match. Override the version.
 				imgs[i] = fmt.Sprintf("%s%s:%s", registry, name, ver)
-				logrus.Info("Using %s instead of %s", imgs[i], img)
+				logrus.Infof("Using %s instead of %s", imgs[i], img)
 			}
 		}
 	}
@@ -144,6 +144,7 @@ func (r *ReleaseBuilder) BuildMetadataWithVersions(dir, calicoVersion, operatorV
 		CalicoVersion    string   `json:"calico_oss_version" yaml:"CalicoOSSVersion"`
 	}
 
+	registry := r.getRegistryFromManifests()
 	m := metadata{
 		Version:          calicoVersion,
 		OperatorVersion:  operatorVersion,
