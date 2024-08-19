@@ -34,7 +34,7 @@ type IPMatch struct {
 }
 
 type FlowLogAggregationParams struct {
-	// Inherit all the normal DNS log selection parameters.
+	// Inherit all the normal flow log selection parameters.
 	FlowLogParams `json:",inline"`
 	Aggregations  map[string]json.RawMessage `json:"aggregations"`
 	NumBuckets    int                        `json:"num_buckets"`
