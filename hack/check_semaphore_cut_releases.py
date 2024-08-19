@@ -22,7 +22,8 @@ SKIP_SUBDIRS = [
     "licensing",
     "lma",
     "networking-calico",
-    "selinux"
+    "selinux",
+    "release"
 ]
 
 if sys.stdout.isatty():
