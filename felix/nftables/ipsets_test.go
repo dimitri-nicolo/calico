@@ -210,7 +210,7 @@ var _ = DescribeTable("IPSets programming v4",
 		ipv := ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil)
 		s := NewIPSets(ipv, f, logutils.NewSummarizer("test loop"))
 		s.AddOrReplaceIPSet(meta, members)
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 
 		// Read it back.
 		sets, err := f.List(context.Background(), "sets")
@@ -223,7 +223,7 @@ var _ = DescribeTable("IPSets programming v4",
 
 		// Trigger a resync to make sure we can handle it.
 		s.QueueResync()
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 
 		// Read it back again.
 		m, err = f.ListElements(context.Background(), "set", "cali40"+meta.SetID)
@@ -264,7 +264,7 @@ var _ = DescribeTable("IPSets programming v6",
 		ipv := ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil)
 		s := NewIPSets(ipv, f, logutils.NewSummarizer("test loop"))
 		s.AddOrReplaceIPSet(meta, members)
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 
 		// Read it back.
 		sets, err := f.List(context.Background(), "sets")
@@ -277,7 +277,7 @@ var _ = DescribeTable("IPSets programming v6",
 
 		// Trigger a resync to make sure we can handle it.
 		s.QueueResync()
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 
 		// Read it back again.
 		m, err = f.ListElements(context.Background(), "set", "cali60"+meta.SetID)
@@ -338,7 +338,7 @@ var _ = DescribeTable("NFTablesSet",
 		ipv := ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil)
 		s := NewIPSets(ipv, f, logutils.NewSummarizer("test loop"))
 		s.AddOrReplaceIPSet(meta, []string{})
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 		Expect(s.NFTablesSet(fmt.Sprintf("cali40%s", meta.SetID))).To(Equal(exp))
 	},
 
