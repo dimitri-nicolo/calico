@@ -30,7 +30,6 @@ const (
 	ConditionHealthy            = "Healthy"
 	ConditionHealthyDesc        = "the webhook is healthy"
 	ConditionLastFetch          = "EventsFetched"
-	ConditionLastFetchDesc      = ""
 )
 
 var (
