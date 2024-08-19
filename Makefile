@@ -262,13 +262,7 @@ manifests/ocp.tgz: bin/yq
 ## Generates release notes for the given version.
 .PHONY: release-notes
 release-notes:
-ifndef GITHUB_TOKEN
-	$(error GITHUB_TOKEN must be set)
-endif
-ifndef VERSION
-	$(error VERSION must be set)
-endif
-	VERSION=$(VERSION) GITHUB_TOKEN=$(GITHUB_TOKEN) python2 ./hack/release/generate-release-notes.py
+	@$(MAKE) -C release release-notes
 
 # Create updates for pre-release
 release-prep: var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-CALICO_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN

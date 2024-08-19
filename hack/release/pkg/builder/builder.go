@@ -129,6 +129,13 @@ func releaseImages(version, operatorVersion, registry string, overrides []string
 }
 
 func (r *ReleaseBuilder) BuildMetadata(dir string, overrides ...string) error {
+	// Determine the versions to use based on the manifests, which should
+	// have already been updated with the correct tags.
+	calicoVersion, operatorVersion := r.getVersionsFromManifests()
+	return r.BuildMetadataWithVersions(dir, calicoVersion, operatorVersion)
+}
+
+func (r *ReleaseBuilder) BuildMetadataWithVersions(dir, calicoVersion, operatorVersion string, overrides ...string) error {
 	type metadata struct {
 		Version          string   `json:"version"`
 		OperatorVersion  string   `json:"operator_version" yaml:"operatorVersion"`
@@ -136,11 +143,6 @@ func (r *ReleaseBuilder) BuildMetadata(dir string, overrides ...string) error {
 		HelmChartVersion string   `json:"helm_chart_version" yaml:"helmChartVersion"`
 		CalicoVersion    string   `json:"calico_oss_version" yaml:"CalicoOSSVersion"`
 	}
-
-	// Determine the versions to use based on the manifests, which should
-	// have already been updated with the correct tags.
-	calicoVersion, operatorVersion := r.getVersionsFromManifests()
-	registry := r.getRegistryFromManifests()
 
 	m := metadata{
 		Version:          calicoVersion,
@@ -672,7 +674,6 @@ func (r *ReleaseBuilder) assertReleaseNotesPresent(ver string) error {
 
 	releaseNotesPath := fmt.Sprintf("release-notes/%s-release-notes.md", ver)
 	releaseNotesStat, err := os.Stat(releaseNotesPath)
-
 	// If we got an error, handle that?
 	if err != nil {
 		return fmt.Errorf("release notes file is invalid: %s", err.Error())
