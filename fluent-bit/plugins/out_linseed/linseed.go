@@ -4,7 +4,6 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,8 +19,6 @@ import (
 import "C"
 
 var cfg *Config
-
-type Record map[interface{}]interface{}
 
 //export FLBPluginRegister
 func FLBPluginRegister(def unsafe.Pointer) int {
@@ -50,26 +47,12 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 //export FLBPluginFlushCtx
 func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int {
-	var ndjsonBuffer bytes.Buffer
-
-	// decode fluent-bit internal msgpack buffer to ndjson
-	dec := output.NewDecoder(data, int(length))
-	count := 0
-	for {
-		rc, _, record := output.GetRecord(dec)
-		if rc != 0 {
-			break
-		}
-
-		jsonData, err := json.Marshal(toStringMap(record))
-		if err != nil {
-			logrus.Error("failed to marshal record")
-			return output.FLB_ERROR
-		}
-
-		ndjsonBuffer.Write(jsonData)
-		ndjsonBuffer.WriteByte('\n')
-		count++
+	// process fluent-bit internal messagepack buffer
+	processor := NewRecordProcessor()
+	ndjsonBuffer, count, err := processor.Process(data, int(length))
+	if err != nil {
+		logrus.WithError(err).Error("failed to process record data")
+		return output.FLB_ERROR
 	}
 
 	// post to ingestion endpoint
@@ -134,46 +117,6 @@ func configureLogging() {
 
 	logrus.SetLevel(logLevel)
 	logrus.Infof("log level set to %q", logLevel)
-}
-
-// prevent base64-encoding []byte values (default json.Encoder rule) by
-// converting them to strings
-func toStringSlice(slice []interface{}) []interface{} {
-	var s []interface{}
-	for _, v := range slice {
-		switch t := v.(type) {
-		case []byte:
-			s = append(s, string(t))
-		case map[interface{}]interface{}:
-			s = append(s, toStringMap(t))
-		case []interface{}:
-			s = append(s, toStringSlice(t))
-		default:
-			s = append(s, t)
-		}
-	}
-	return s
-}
-
-func toStringMap(record map[interface{}]interface{}) map[string]interface{} {
-	m := make(map[string]interface{})
-	for k, v := range record {
-		key, ok := k.(string)
-		if !ok {
-			continue
-		}
-		switch t := v.(type) {
-		case []byte:
-			m[key] = string(t)
-		case map[interface{}]interface{}:
-			m[key] = toStringMap(t)
-		case []interface{}:
-			m[key] = toStringSlice(t)
-		default:
-			m[key] = v
-		}
-	}
-	return m
 }
 
 func main() {
