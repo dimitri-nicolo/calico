@@ -25,6 +25,7 @@ require (
 	github.com/bronze1man/goStrongswanVici v0.0.0-20221114103242-3f6dc524986c
 	github.com/buger/jsonparser v1.1.1
 	github.com/caimeo/iniflags v0.0.0-20171110233946-ef4ae6c5cd79
+	github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08
 	// pod2daemon/cisdriver build failure after upgrading to v1.10.0+
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/containernetworking/cni v1.2.2
@@ -230,7 +231,6 @@ require (
 	github.com/cilium/ebpf v0.9.1 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b // indirect
-	github.com/cnf/structhash v0.0.0-20201127153200-e1b16c1ebc08
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
 	github.com/containerd/console v1.0.3 // indirect
@@ -444,9 +444,6 @@ replace (
 	github.com/prometheus/common => github.com/prometheus/common v0.47.0
 
 	github.com/tigera/api => ./api
-	// Pin the version of grpc temporarily to avoid deprecation error.
-	// This should be removed once the grpc.Dial is update to use grpc.NewClient.
-	google.golang.org/grpc => google.golang.org/grpc v1.61.1
 
 	// Newer versions set the file mode on logs to 0600, which breaks a lot of our tests.
 	gopkg.in/natefinch/lumberjack.v2 => gopkg.in/natefinch/lumberjack.v2 v2.0.0
