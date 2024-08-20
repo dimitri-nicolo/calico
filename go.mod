@@ -38,7 +38,7 @@ require (
 	github.com/dexidp/dex v0.0.0-20240603194342-23efe9200ccd
 	github.com/dexidp/dex/api/v2 v2.1.1-0.20240603194342-23efe9200ccd
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker v27.0.3+incompatible
+	github.com/docker/docker v27.1.1+incompatible
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/elastic/cloud-on-k8s/v2 v2.11.1
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
@@ -149,8 +149,8 @@ require (
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/elazarl/goproxy.v1 v1.0.0-20180725130230-947c36da3153
-  // validator.v9 must be at v9.30.2 for libcalico-go to build. It may be possible to upgrade this
-  // with some changes to libcalico-go, though.
+	// validator.v9 must be at v9.30.2 for libcalico-go to build. It may be possible to upgrade this
+	// with some changes to libcalico-go, though.
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	// Replaced with older version below until we can handle the updated permissions it now puts on log files.
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
