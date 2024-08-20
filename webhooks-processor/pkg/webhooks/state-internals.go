@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"strings"
 	"time"
 
@@ -22,13 +23,13 @@ import (
 )
 
 const (
-	ConfigVarNamespace      = "tigera-intrusion-detection"
-	WebhookLabelsAnnotation = "webhooks.projectcalico.org/labels"
-	WebhookTestAnnotation   = "webhooks.projectcalico.org/testEvent"
-	ConditionHealthy        = "Healthy"
-	ConditionHealthyDesc    = "the webhook is healthy"
-	ConditionLastFetch      = "EventsFetched"
-	ConditionLastFetchDesc  = ""
+	ConfigVarNamespace          = "tigera-intrusion-detection"
+	WebhookLabelsAnnotation     = "webhooks.projectcalico.org/labels"
+	WebhookTestAnnotation       = "webhooks.projectcalico.org/testEvent"
+	WebhookTestResultAnnotation = "webhooks.projectcalico.org/testResult"
+	ConditionHealthy            = "Healthy"
+	ConditionHealthyDesc        = "the webhook is healthy"
+	ConditionLastFetch          = "EventsFetched"
 )
 
 var (
@@ -330,9 +331,14 @@ func (s *ControllerState) extractDependencies(webhook *api.SecurityEventWebhook)
 }
 
 func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) ProcessFunc {
-	return func(context.Context, map[string]string, map[string]string, *lsApi.Event) error {
+	return func(context.Context, map[string]string, map[string]string, *lsApi.Event) (providers.ProviderResponse, error) {
 		logEntry(webhook).Info("Processing Security Events for a webhook in 'Debug' state")
-		return nil
+		return providers.ProviderResponse{
+			Timestamp:             time.Now(),
+			HttpStatusCode:        http.StatusOK,
+			HttpStatusDescription: http.StatusText(http.StatusOK),
+			HttpPayload:           "",
+		}, nil
 	}
 }
 
@@ -341,7 +347,8 @@ func (s *ControllerState) testFire(ctx context.Context, webhook *api.SecurityEve
 	testEvent := s.selectTestEvent(webhook)
 	testEvent.Time = lsApi.NewEventDate(time.Now())
 	webhook.Spec.State = api.SecurityEventWebhookStateEnabled
-	err := provider.Process(ctx, config, s.extractLabels(*webhook), testEvent)
+	testResult, err := provider.Process(ctx, config, s.extractLabels(*webhook), testEvent)
+	webhook.Annotations[WebhookTestResultAnnotation] = testResult.String()
 	s.updateWebhookHealth(webhook, "TestFireProcedure", time.Now(), err)
 	logEntry(webhook).Info("Webhook has been re-enabled")
 }

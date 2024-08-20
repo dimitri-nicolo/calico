@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -47,7 +48,7 @@ func (p *Jira) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *Jira) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
+func (p *Jira) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderResponse, err error) {
 	payload := new(jiraPayload)
 	payload.Fields.Project.Key = config["project"]
 	payload.Fields.IssueType.Name = config["issueType"]
@@ -92,13 +93,20 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, labels map
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
+		httpResponse = providers.ProviderResponse{
+			Timestamp:             time.Now(),
+			HttpStatusCode:        response.StatusCode,
+			HttpPayload:           responseText,
+			HttpStatusDescription: http.StatusText(response.StatusCode),
+		}
+
 		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 			return
 		}
 		return fmt.Errorf("unexpected Jira response [%d]:%s", response.StatusCode, responseText)
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
+	return httpResponse, helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
 }
 
 func (p *Jira) Config() providers.Config {

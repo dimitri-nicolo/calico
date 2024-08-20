@@ -13,11 +13,12 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-type ProcessFunc func(context.Context, map[string]string, map[string]string, *lsApi.Event) error
+type ProcessFunc func(context.Context, map[string]string, map[string]string, *lsApi.Event) (providers.ProviderResponse, error)
 
 type EventsFetchFunc func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error)
 

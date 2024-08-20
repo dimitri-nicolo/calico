@@ -56,7 +56,7 @@ func (s *ControllerState) webhookGoroutine(
 				if err = rateLimiter.Event(); err != nil {
 					break
 				}
-				if err = processFunc(ctx, config, labels, &event); err != nil {
+				if _, err = processFunc(ctx, config, labels, &event); err != nil {
 					break
 				}
 			}

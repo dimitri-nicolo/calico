@@ -112,7 +112,7 @@ func TestJiraProviderProcessing(t *testing.T) {
 		c := sampleValidConfig()
 		c["url"] = fmt.Sprintf("%s/test", fc.Url())
 
-		err := p.Process(ctx, c, sampleLabels(), event)
+		_, err := p.Process(ctx, c, sampleLabels(), event)
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool { return len(fc.Requests) == 1 }, 15*time.Second, 10*time.Millisecond)
@@ -157,7 +157,7 @@ func TestJiraProviderProcessing(t *testing.T) {
 
 		fc.ShouldFail = true
 		// This will take a while and only return once finished
-		err := p.Process(ctx, c, sampleLabels(), event)
+		_, err := p.Process(ctx, c, sampleLabels(), event)
 		require.Error(t, err)
 
 		require.Eventually(t, func() bool { return len(fc.Requests) >= 2 }, time.Second, 10*time.Millisecond)

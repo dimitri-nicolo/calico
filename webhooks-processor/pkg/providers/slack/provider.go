@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -38,7 +39,7 @@ func (p *Slack) Validate(config map[string]string) error {
 	return nil
 }
 
-func (p *Slack) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (err error) {
+func (p *Slack) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderResponse, err error) {
 	payload, err := p.message(event, labels).JSON()
 	if err != nil {
 		return
@@ -70,6 +71,13 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, labels ma
 			WithField("response", responseText).
 			Info("HTTP request processed")
 
+		httpResponse = providers.ProviderResponse{
+			Timestamp:             time.Now(),
+			HttpStatusCode:        response.StatusCode,
+			HttpPayload:           responseText,
+			HttpStatusDescription: http.StatusText(response.StatusCode),
+		}
+
 		_, slackError := SlackErrors[responseText]
 
 		switch {
@@ -82,7 +90,7 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, labels ma
 		}
 	}
 
-	return helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
+	return httpResponse, helpers.RetryWithLinearBackOff(retryFunc, p.config.RetryDuration, p.config.RetryTimes)
 }
 
 func (p *Slack) message(event *lsApi.Event, labels map[string]string) *SlackMessage {
