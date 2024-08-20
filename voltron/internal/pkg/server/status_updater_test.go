@@ -172,6 +172,18 @@ var _ = describe("statusUpdater", func(clusterNamespace string) {
 			}, ".5s").Should(BeFalse())
 		})
 	})
+
+	When("an update is received from voltron for a cluster that doesn't exist in the datastore", func() {
+		It("should process the update without crashing", func() {
+			clusterName := "non-existent-cluster"
+			statusUpdater.SetStatus(clusterName, v3.ManagedClusterStatusValueFalse)
+
+			// Check that we end up in a state where we do not track the cluster and do not seg fault.
+			Consistently(func() *managedClusterStatusState {
+				return statusUpdater.(*statusUpdaterImpl).connectionStatuses[clusterName]
+			}).WithPolling(250 * time.Millisecond).WithTimeout(3 * time.Second).Should(BeNil())
+		})
+	})
 })
 var _ = Describe("statusUpdater should provide metrics", func() {
 	logrus.SetLevel(logrus.DebugLevel)

@@ -139,7 +139,7 @@ func (su *statusUpdaterImpl) run(ctx context.Context) {
 	for {
 		select {
 		case update := <-su.statusUpdateChan:
-			logrus.Debugf("Handling connection status update %v for %s", update.status, update.managedClusterName)
+			logrus.Debugf("Handling connection status event %v for %s", update.status, update.managedClusterName)
 			if x, ok := su.connectionStatuses[update.managedClusterName]; ok && x.updateInProgress {
 				logrus.Infof("New status update received for %s while update is in progress", update.managedClusterName)
 			}
@@ -157,6 +157,11 @@ func (su *statusUpdaterImpl) run(ctx context.Context) {
 		case t = <-retryTicker.C:
 			// Nothing special to do here, fall out of the switch to the code below
 		case uf := <-updateFinished:
+			logrus.Debugf("Handling update attempt event %v for %s", uf.status, uf.managedClusterName)
+			if _, ok := su.connectionStatuses[uf.managedClusterName]; !ok {
+				logrus.Error("BUG: Update attempt event received for managed cluster that is not being tracked")
+				break
+			}
 			setStatus := su.connectionStatuses[uf.managedClusterName].status
 			name := uf.managedClusterName
 			if uf.status == updateStateFailed {
@@ -262,9 +267,9 @@ func (su *statusUpdaterImpl) listenForStatusUpdates(ctx context.Context, client 
 			if err != nil {
 				if kerr.IsNotFound(err) {
 					s.finish(updateStateNotFound, nil)
+				} else {
+					s.finish(updateStateFailed, err)
 				}
-
-				s.finish(updateStateFailed, err)
 			} else {
 				s.finish(updateStateSucceeded, nil)
 			}
