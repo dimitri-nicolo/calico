@@ -755,6 +755,10 @@ var _ = Describe("IPAM controller UTs", func() {
 			// Start the controller.
 			c.Start(make(chan struct{}))
 
+			// Wait for the controller to learn about the nodes in question.
+			var node *v1.Node
+			Eventually(nodes).WithTimeout(time.Second).Should(Receive(&node))
+
 			// Add a new block with one allocation.
 			cidr := net.MustParseCIDR("10.0.0.0/30")
 			aff := "host:cnode"
@@ -793,12 +797,12 @@ var _ = Describe("IPAM controller UTs", func() {
 			// Mark the syncer as InSync so that the GC will be enabled.
 			c.onStatusUpdate(bapi.InSync)
 
-			// Trigger a node deletion. The node referenced in the allocation above
-			// never existed in the k8s API so this should result in a GC.
+			// Trigger a sync.
 			c.OnKubernetesNodeDeleted()
 
 			// Wait for at least one timed sync to complete (we set LeakGracePeriod to 5s, which means syncs
 			// run ever 2.5s).
+			// Ths allocation still belongs to a valid node, so it should not be released.
 			fakeClient := cli.IPAM().(*fakeIPAMClient)
 			Consistently(func() map[string]bool {
 				return fakeClient.handlesReleased
