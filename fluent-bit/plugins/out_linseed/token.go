@@ -36,6 +36,10 @@ func GetToken(cfg *Config) (string, error) {
 func getServiceAccountToken(coreV1Client v1.CoreV1Interface, namespace, serviceAccountName string) (string, time.Time, error) {
 	seconds := int64(tokenExpiration.Seconds())
 	tokenRequest := &authv1.TokenRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceAccountName,
+			Namespace: namespace,
+		},
 		Spec: authv1.TokenRequestSpec{
 			Audiences:         []string{},
 			ExpirationSeconds: &seconds,

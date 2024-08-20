@@ -19,7 +19,7 @@ import (
 type PluginConfigKeyFunc func(pointer unsafe.Pointer, key string) string
 
 type Config struct {
-	clientset *kubernetes.Clientset
+	clientset kubernetes.Interface
 
 	endpoint           string
 	insecureSkipVerify bool

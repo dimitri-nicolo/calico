@@ -19,7 +19,7 @@ var (
 	kubeconfigNoCurrentContext string
 )
 
-var _ = Describe("Linseed out plugin tests", func() {
+var _ = Describe("Linseed out plugin config tests", func() {
 	var (
 		f                 *os.File
 		pluginConfigKeyFn PluginConfigKeyFunc
@@ -32,7 +32,7 @@ var _ = Describe("Linseed out plugin tests", func() {
 
 		pluginConfigKeyFn = func(plugin unsafe.Pointer, key string) string {
 			if key == "tls.verify" {
-				return "false"
+				return "true"
 			}
 			return ""
 		}
@@ -58,7 +58,7 @@ var _ = Describe("Linseed out plugin tests", func() {
 
 			Expect(cfg.clientset).NotTo(BeNil())
 			Expect(cfg.endpoint).To(Equal("https://1.2.3.4:5678"))
-			Expect(cfg.insecureSkipVerify).To(BeTrue())
+			Expect(cfg.insecureSkipVerify).To(BeFalse())
 			Expect(cfg.serviceAccountName).To(Equal("tigera-noncluster-hosts-sa"))
 			Expect(cfg.token).To(BeEmpty())
 		})
