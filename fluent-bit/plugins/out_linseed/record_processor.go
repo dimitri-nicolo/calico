@@ -20,7 +20,7 @@ func NewRecordProcessor() *RecordProcessor {
 func (rp *RecordProcessor) Process(data unsafe.Pointer, length int) (*bytes.Buffer, int, error) {
 	var ndjsonBuffer bytes.Buffer
 
-	// decode fluent-bit internal msgpack buffer to ndjson
+	// decode fluent-bit internal msgpack buffer to ndjson format
 	dec := output.NewDecoder(data, length)
 	count := 0
 	for {
@@ -29,7 +29,7 @@ func (rp *RecordProcessor) Process(data unsafe.Pointer, length int) (*bytes.Buff
 			break
 		}
 
-		jsonData, err := json.Marshal(rp.toStringMap(record))
+		jsonData, err := json.Marshal(toStringMap(record))
 		if err != nil {
 			return nil, count, err
 		}
@@ -44,16 +44,16 @@ func (rp *RecordProcessor) Process(data unsafe.Pointer, length int) (*bytes.Buff
 
 // prevent base64-encoding []byte values (default json.Encoder rule) by
 // converting them to strings
-func (rp *RecordProcessor) toStringSlice(slice []interface{}) []interface{} {
+func toStringSlice(slice []interface{}) []interface{} {
 	var s []interface{}
 	for _, v := range slice {
 		switch t := v.(type) {
 		case []byte:
 			s = append(s, string(t))
 		case map[interface{}]interface{}:
-			s = append(s, rp.toStringMap(t))
+			s = append(s, toStringMap(t))
 		case []interface{}:
-			s = append(s, rp.toStringSlice(t))
+			s = append(s, toStringSlice(t))
 		default:
 			s = append(s, t)
 		}
@@ -61,7 +61,7 @@ func (rp *RecordProcessor) toStringSlice(slice []interface{}) []interface{} {
 	return s
 }
 
-func (rp *RecordProcessor) toStringMap(record Record) map[string]interface{} {
+func toStringMap(record Record) map[string]interface{} {
 	m := make(map[string]interface{})
 	for k, v := range record {
 		key, ok := k.(string)
@@ -72,9 +72,9 @@ func (rp *RecordProcessor) toStringMap(record Record) map[string]interface{} {
 		case []byte:
 			m[key] = string(t)
 		case map[interface{}]interface{}:
-			m[key] = rp.toStringMap(t)
+			m[key] = toStringMap(t)
 		case []interface{}:
-			m[key] = rp.toStringSlice(t)
+			m[key] = toStringSlice(t)
 		default:
 			m[key] = v
 		}

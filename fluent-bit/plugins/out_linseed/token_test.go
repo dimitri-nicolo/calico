@@ -46,6 +46,10 @@ var _ = Describe("Linseed out plugin token tests", func() {
 		}
 	})
 
+	AfterEach(func() {
+		os.Remove(f.Name())
+	})
+
 	Context("Token tests", func() {
 		It("should fetch token when the current one is expired", func() {
 			_, err := f.WriteString(validKubeconfig)
@@ -134,6 +138,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 			_, err = GetToken(cfg)
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(`"invalid-service-account" not found`))
 		})
 	})
 })

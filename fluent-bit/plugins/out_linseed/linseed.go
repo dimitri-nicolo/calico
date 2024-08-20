@@ -56,38 +56,8 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 	}
 
 	// post to ingestion endpoint
-	t := C.GoString(tag)
-	url := fmt.Sprintf("%s/ingestion/api/v1/%s/logs/bulk", cfg.endpoint, t)
-	logrus.Debugf("sending %s logs to %q", t, url)
-	req, err := http.NewRequest("POST", url, io.NopCloser(bytes.NewBuffer(ndjsonBuffer.Bytes())))
-	if err != nil {
-		logrus.WithError(err).Error("failed to create http request")
-		return output.FLB_ERROR
-	}
-
-	token, err := GetToken(cfg)
-	if err != nil {
-		logrus.WithError(err).Error("failed to get authorization token")
-		return output.FLB_ERROR
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	req.Header.Set("Content-Type", "application/x-ndjson")
-
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: cfg.insecureSkipVerify,
-		},
-	}}
-	resp, err := client.Do(req)
-	if err != nil {
-		logrus.WithError(err).Error("failed to send http request")
-		return output.FLB_ERROR
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		logrus.Errorf("error response from server %q", resp.Status)
+	if err := doRequest(cfg, ndjsonBuffer, C.GoString(tag)); err != nil {
+		logrus.WithError(err).Errorf("failed to send %d logs", count)
 		return output.FLB_ERROR
 	}
 
@@ -117,6 +87,47 @@ func configureLogging() {
 
 	logrus.SetLevel(logLevel)
 	logrus.Infof("log level set to %q", logLevel)
+}
+
+func doRequest(c *Config, ndjsonBuffer *bytes.Buffer, tag string) error {
+	url := ""
+	switch tag {
+	case "flows":
+		url = fmt.Sprintf("%s/ingestion/api/v1/%s/logs/bulk", c.endpoint, tag)
+	default:
+		return fmt.Errorf("unknown log type %q", tag)
+	}
+
+	logrus.WithField("tag", tag).Debugf("sending logs to %q", url)
+	req, err := http.NewRequest("POST", url, io.NopCloser(bytes.NewBuffer(ndjsonBuffer.Bytes())))
+	if err != nil {
+		return err
+	}
+
+	token, err := GetToken(c)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Content-Type", "application/x-ndjson")
+
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: c.insecureSkipVerify,
+		},
+	}}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error response from server %q", resp.Status)
+	}
+
+	return nil
 }
 
 func main() {
