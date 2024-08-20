@@ -11,10 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	"golang.org/x/sys/unix"
 

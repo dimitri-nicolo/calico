@@ -459,7 +459,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									}
 								}
 								if BPFMode() {
-									ensureAllNodesBPFProgramsAttached(tc.Felixes)
+									ensureAllNodesBPFProgramsAttached(tc.Felixes, "egress.calico")
 								}
 								if !sameNode && ov == OV_NONE {
 									createHostEndPointPolicy(tc.Felixes[0])
@@ -627,7 +627,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 						extWorkloads[i].C.Exec("ip", "route", "add", "10.65.0.2", "via", tc.Felixes[0].IP)
 					}
 					if BPFMode() {
-						ensureAllNodesBPFProgramsAttached(tc.Felixes)
+						ensureAllNodesBPFProgramsAttached(tc.Felixes, "egress.calico")
 					}
 				})
 				AfterEach(func() {
@@ -747,7 +747,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									gws = append(gws, gw)
 								}
 								if BPFMode() {
-									ensureAllNodesBPFProgramsAttached(tc.Felixes)
+									ensureAllNodesBPFProgramsAttached(tc.Felixes, "egress.calico")
 								}
 								if !sameNode && ov == OV_NONE {
 									createHostEndPointPolicy(tc.Felixes[0])
@@ -823,6 +823,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								Eventually(getIPRules, "10s", "1s").Should(HaveLen(3))
 
 								triggerStartup()
+								if BPFMode() {
+									ensureAllNodesBPFProgramsAttached(tc.Felixes, "egress.calico")
+								}
 
 								// Expect the extra rules and tables to be cleaned up before attempting the connectivity check to
 								// mitigate race conditions.

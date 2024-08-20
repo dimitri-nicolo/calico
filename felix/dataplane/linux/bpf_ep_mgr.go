@@ -2544,7 +2544,6 @@ func (d *bpfEndpointManagerDataplane) wepApplyPolicyToDirection(readiness ifaceR
 		if err != nil {
 			return nil, fmt.Errorf("attaching program to wep: %w", err)
 		}
-		d.mgr.setEgressProgramming(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient)
 		ap.Log().Info("Attached programs to the WEP")
 	}
 
@@ -2654,6 +2653,7 @@ func (d *bpfEndpointManagerDataplane) applyPolicyToWeps(
 	egressAP, egressErr := d.wepApplyPolicyToDirection(readiness,
 		state, endpoint, PolDirnEgress, &egressAttachPoint)
 	parallelWG.Wait()
+	d.mgr.setEgressProgramming(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient)
 
 	return ingressAP, egressAP, errors.Join(ingressErr, egressErr)
 }
