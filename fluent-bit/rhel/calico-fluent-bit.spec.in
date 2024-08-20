@@ -54,7 +54,7 @@ family operating systems. It's part of the Fluentd Ecosystem and a CNCF sub-proj
     -DFLB_PROXY_GO=On \
     -DFLB_RELEASE=On \
     -DFLB_SHARED_LIB=Off \
-    -DFLB_SQLDB=Off \
+    -DFLB_SQLDB=On \
     -DFLB_TESTS_INTERNAL=Off \
     -DFLB_TESTS_RUNTIME=Off \
     -DFLB_TLS=On \

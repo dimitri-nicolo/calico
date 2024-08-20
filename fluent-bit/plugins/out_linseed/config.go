@@ -79,7 +79,7 @@ func NewConfig(plugin unsafe.Pointer, fn PluginConfigKeyFunc) (*Config, error) {
 func (c *Config) getEnvOrPluginConfig(plugin unsafe.Pointer, key string) string {
 	val := os.Getenv(strings.ToUpper(key))
 	if val == "" {
-		val = cfg.pluginConfigKeyFn(plugin, key)
+		val = c.pluginConfigKeyFn(plugin, key)
 	}
 	return val
 }
