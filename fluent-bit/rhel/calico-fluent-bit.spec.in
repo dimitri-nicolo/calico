@@ -103,5 +103,8 @@ rm -rvf %{buildroot}%{_includedir}
 %exclude /usr/lib64/libluajit.a
 
 %changelog
+* Mon Aug 19 2024 Jiawei Huang <jiawei@tigera.io> - 3.1.6-1
+- Update version to 3.1.6
+
 * Sun Aug 11 2024 Jiawei Huang <jiawei@tigera.io> - 3.1.5-1
 - Initial Calico Fluent Bit package
