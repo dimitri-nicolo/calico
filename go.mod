@@ -149,8 +149,8 @@ require (
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/elazarl/goproxy.v1 v1.0.0-20180725130230-947c36da3153
-  // validator.v9 must be at v9.30.2 for libcalico-go to build. It may be possible to upgrade this
-  // with some changes to libcalico-go, though.
+	// validator.v9 must be at v9.30.2 for libcalico-go to build. It may be possible to upgrade this
+	// with some changes to libcalico-go, though.
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	// Replaced with older version below until we can handle the updated permissions it now puts on log files.
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -231,7 +231,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/checkpoint-restore/go-criu/v5 v5.3.0 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
-	github.com/cloudflare/circl v1.3.3 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
