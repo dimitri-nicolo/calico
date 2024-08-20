@@ -33,8 +33,15 @@ const (
 	fileName          = "alert_fast.txt"
 	tailRetryInterval = 30 * time.Second
 	timeLayout        = "06/01/02-15:04:05"
-	description       = "Encountered suspicious traffic matching snort rule for malicious activity"
+	description       = "Deep Packet Inspection found a matching snort rule(s) for some packets in your network"
 	eventType         = "deep_packet_inspection"
+	attackVector      = "Network"
+	mitreTactic       = "n/a"
+)
+
+var (
+	mitreIDs    = []string{"n/a"}
+	mitigations = []string{"n/a"}
 )
 
 type EventGenerator interface {
@@ -213,11 +220,15 @@ func (r *eventGenerator) deleteFile(fileRelativePath, fileAbsolutePath string) {
 // Details about alert format is available in https://github.com/snort3/snort3/blob/35b6804f4506993029221450769a76e6281ae4ec/src/loggers/alert_fast.cc
 func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) v1.Event {
 	event := v1.Event{
-		Host:        r.cfg.NodeName,
-		Type:        eventType,
-		Origin:      fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
-		Severity:    100,
-		Description: description,
+		Host:         r.cfg.NodeName,
+		Type:         eventType,
+		Origin:       fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
+		Severity:     100,
+		Description:  description,
+		AttackVector: attackVector,
+		MitreTactic:  mitreTactic,
+		MitreIDs:     &mitreIDs,
+		Mitigations:  &mitigations,
 	}
 
 	s := strings.Split(alertText, " ")
