@@ -36,12 +36,12 @@ const (
 	description       = "Deep Packet Inspection found a matching snort rule(s) for some packets in your network"
 	eventType         = "deep_packet_inspection"
 	attackVector      = "Network"
-	mitreTactic       = "TBD"
+	mitreTactic       = "n/a"
 )
 
 var (
-	mitreIDs    = []string{"TBD"}
-	mitigations = []string{"TBD"}
+	mitreIDs    = []string{"n/a"}
+	mitigations = []string{"n/a"}
 )
 
 type EventGenerator interface {
