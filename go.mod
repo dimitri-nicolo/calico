@@ -149,6 +149,8 @@ require (
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/elazarl/goproxy.v1 v1.0.0-20180725130230-947c36da3153
+  // validator.v9 must be at v9.30.2 for libcalico-go to build. It may be possible to upgrade this
+  // with some changes to libcalico-go, though.
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	// Replaced with older version below until we can handle the updated permissions it now puts on log files.
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
