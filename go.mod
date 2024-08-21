@@ -38,7 +38,7 @@ require (
 	github.com/dexidp/dex v0.0.0-20240603194342-23efe9200ccd
 	github.com/dexidp/dex/api/v2 v2.1.1-0.20240603194342-23efe9200ccd
 	github.com/docker/distribution v2.8.2+incompatible
-	github.com/docker/docker v27.0.3+incompatible
+	github.com/docker/docker v27.1.1+incompatible
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/elastic/cloud-on-k8s/v2 v2.11.1
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
