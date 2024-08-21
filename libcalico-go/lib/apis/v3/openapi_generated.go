@@ -3558,6 +3558,7 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 						},
 					},
 				},
+				Required: []string{"ApplicationLayer"},
 			},
 		},
 		Dependencies: []string{
