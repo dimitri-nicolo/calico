@@ -22,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
@@ -35,6 +36,7 @@ type Dikastes struct {
 	wafDirectives                []string
 	wafEventsFlushDuration       time.Duration
 	grpcServerOptions            []grpc.ServerOption
+	policyStoreManager           policystore.PolicyStoreManager
 
 	Ready chan struct{}
 }
@@ -112,6 +114,10 @@ func ensureSocketFileAccessible(filePath string) error {
 	return nil
 }
 
+func (d *Dikastes) GetWorkloadEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
+	return d.policyStoreManager.GetCurrentEndpoints()
+}
+
 func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 	if s.listenNetwork == "unix" {
 		if err := ensureSocketFileNone(s.listenAddress); err != nil {
@@ -143,7 +149,8 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 	gs := grpc.NewServer(s.grpcServerOptions...)
 
 	dpStats := statscache.New()
-	policyStoreManager := policystore.NewPolicyStoreManager()
+	s.policyStoreManager = policystore.NewPolicyStoreManager()
+
 	checkServerOptions := []checker.AuthServerOption{}
 
 	if s.policySyncEnabled() {
@@ -154,7 +161,7 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 		opts := uds.GetDialOptionsWithNetwork(s.dialNetwork)
 		syncClient := syncher.NewClient(
 			s.dialAddress,
-			policyStoreManager,
+			s.policyStoreManager,
 			opts,
 			syncher.WithSubscriptionType(s.subscriptionType),
 		)
@@ -187,7 +194,7 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 
 	// checkServer provides envoy v3, v2, v2 alpha ext authz services
 	checkServer := checker.NewServer(
-		ctx, policyStoreManager, dpStats,
+		ctx, s.policyStoreManager, dpStats,
 		checkServerOptions...,
 	)
 	checkServer.RegisterGRPCServices(gs)

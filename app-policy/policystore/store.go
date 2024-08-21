@@ -93,6 +93,8 @@ type PolicyStoreManager interface {
 	OnReconnecting()
 	// tells PSM of syncher state 'connection (re-)established and in-sync'
 	OnInSync()
+
+	GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 }
 
 type PolicyStoreManagerOption func(*policyStoreManager)
@@ -129,6 +131,18 @@ func (m *policyStoreManager) Write(cb func(*PolicyStore)) {
 
 	log.Debugf("storeManager writing to pending store at %p", m.pending)
 	cb(m.pending)
+}
+
+func (m *policyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	copy := make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint, len(m.current.Endpoints))
+	for k, v := range m.current.Endpoints {
+		copy[k] = v
+	}
+
+	return copy
 }
 
 // OnReconnecting - PSM creates a pending store and starts writing to it
