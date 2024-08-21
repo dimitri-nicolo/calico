@@ -10,6 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	authzv1 "k8s.io/api/authorization/v1"
+
 	esauth "github.com/projectcalico/calico/es-proxy/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -97,6 +99,22 @@ func ClusterRequestToResource(resource string, h http.Handler) http.Handler {
 
 		newReq := r.WithContext(auth.NewContextWithReviewResource(
 			r.Context(), esauth.CreateLMAResourceAttributes(clusterName, resource)))
+		h.ServeHTTP(w, newReq)
+	})
+}
+
+// RequestToQueryserver creates a new request given resourceAttributes required for the queryserver/endpoints API.
+func RequestToQueryserverEndpointsResource(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// The RBAC permissions that allow a user to perform an HTTP POST to Queryserver.
+		var resourcePOST = &authzv1.ResourceAttributes{
+			Verb:     "create",
+			Resource: "services/proxy",
+			Name:     "https:tigera-api:8080",
+		}
+
+		newReq := r.WithContext(auth.NewContextWithReviewResource(r.Context(), resourcePOST))
+
 		h.ServeHTTP(w, newReq)
 	})
 }

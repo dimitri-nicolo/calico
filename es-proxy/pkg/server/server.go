@@ -210,11 +210,13 @@ func Start(cfg *Config) error {
 						k8sClientSetFactory,
 						linseed,
 					)))))
+	// checke authorizarion to queryserver endpoints API here and defer checking authorization to flowLogsResourceName
+	// within the EndpointsAggregationHandler only for the call to linseed
 	sm.Handle("/endpoints/aggregation",
-		middleware.ClusterRequestToResource(flowLogsResourceName,
+		middleware.RequestToQueryserverEndpointsResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.EndpointsAggregationHandler(
+					middleware.EndpointsAggregationHandler(authz,
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						qsConfig,
 						linseed,
