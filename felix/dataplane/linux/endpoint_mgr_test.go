@@ -841,7 +841,7 @@ func (t *mockRouteTable) Index() int {
 	return t.index
 }
 
-func (t *mockRouteTable) SetRoutes(ifaceName string, targets []routetable.Target) {
+func (t *mockRouteTable) SetRoutes(routeClass routetable.RouteClass, ifaceName string, targets []routetable.Target) {
 	log.WithFields(log.Fields{
 		"index":     t.index,
 		"ifaceName": ifaceName,
@@ -850,7 +850,7 @@ func (t *mockRouteTable) SetRoutes(ifaceName string, targets []routetable.Target
 	t.currentRoutes[ifaceName] = targets
 }
 
-func (t *mockRouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
+func (t *mockRouteTable) RouteRemove(routeClass routetable.RouteClass, ifaceName string, cidr ip.CIDR) {
 	log.WithFields(log.Fields{
 		"index":     t.index,
 		"ifaceName": ifaceName,
@@ -859,11 +859,11 @@ func (t *mockRouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
 	t.currentRoutes[ifaceName] = nil
 }
 
-func (t *mockRouteTable) RouteUpdate(_ string, _ routetable.Target) {
+func (t *mockRouteTable) RouteUpdate(routeClass routetable.RouteClass, ifaceName string, target routetable.Target) {
 }
 
-func (t *mockRouteTable) OnIfaceStateChanged(string, ifacemonitor.State) {}
-func (t *mockRouteTable) QueueResync()                                   {}
+func (t *mockRouteTable) OnIfaceStateChanged(string, int, ifacemonitor.State) {}
+func (t *mockRouteTable) QueueResync()                                        {}
 func (t *mockRouteTable) QueueResyncIface(string)                        {}
 func (t *mockRouteTable) Apply() error {
 	return nil

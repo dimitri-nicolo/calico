@@ -22,11 +22,9 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
-
 	"github.com/projectcalico/calico/felix/bpf/stats"
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/generictables"
@@ -133,7 +131,7 @@ type endpointManager struct {
 	mangleTable  Table
 	filterTable  Table
 	ruleRenderer rules.RuleRenderer
-	routeTable   routetable.RouteTableInterface
+	routeTable   *routetable.ClassView
 	writeProcSys procSysWriter
 	osStat       func(path string) (os.FileInfo, error)
 	epMarkMapper rules.EndpointMarkMapper
@@ -228,7 +226,7 @@ func newEndpointManager(
 	mangleTable Table,
 	filterTable Table,
 	ruleRenderer rules.RuleRenderer,
-	routeTable routetable.RouteTableInterface,
+	routeTable routetable.Interface,
 	ipVersion uint8,
 	epMarkMapper rules.EndpointMarkMapper,
 	kubeIPVSSupportEnabled bool,
@@ -275,7 +273,7 @@ func newEndpointManagerWithShims(
 	mangleTable Table,
 	filterTable Table,
 	ruleRenderer rules.RuleRenderer,
-	routeTable routetable.RouteTableInterface,
+	routeTable routetable.Interface,
 	ipVersion uint8,
 	epMarkMapper rules.EndpointMarkMapper,
 	kubeIPVSSupportEnabled bool,
@@ -318,7 +316,7 @@ func newEndpointManagerWithShims(
 		mangleTable:  mangleTable,
 		filterTable:  filterTable,
 		ruleRenderer: ruleRenderer,
-		routeTable:   routeTable,
+		routeTable:   routetable.NewClassView(routetable.RouteClassLocalWorkload, routeTable),
 		writeProcSys: procSysWriter,
 		osStat:       osStat,
 		epMarkMapper: epMarkMapper,
@@ -568,10 +566,6 @@ func (m *endpointManager) tiersUseDirtyPolicy(tiers []*proto.TierInfo) bool {
 		}
 	}
 	return false
-}
-
-func (m *endpointManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
-	return []routetable.RouteTableSyncer{m.routeTable}
 }
 
 func (m *endpointManager) markEndpointStatusDirtyByIface(ifaceName string) {

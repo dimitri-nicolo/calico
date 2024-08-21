@@ -17,6 +17,8 @@
 package wireguard_test
 
 import (
+	"golang.org/x/sys/unix"
+
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/logutils"
 	. "github.com/projectcalico/calico/felix/wireguard"
@@ -386,7 +388,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 			// Iface update indicating down.
 			if enableV4 {
 				wgDataplane.ResetDeltas()
-				wg.OnIfaceStateChanged(ifaceName, ifacemonitor.StateDown)
+				wg.OnIfaceStateChanged(ifaceName, 101, ifacemonitor.StateDown)
 				err := wg.Apply()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(wgDataplane.NumLinkAddCalls).To(Equal(0))
@@ -394,7 +396,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 			}
 			if enableV6 {
 				wgDataplaneV6.ResetDeltas()
-				wgV6.OnIfaceStateChanged(ifaceNameV6, ifacemonitor.StateDown)
+				wgV6.OnIfaceStateChanged(ifaceNameV6, 101, ifacemonitor.StateDown)
 				err := wgV6.Apply()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(wgDataplaneV6.NumLinkAddCalls).To(Equal(0))
@@ -407,7 +409,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 			if enableV4 {
 				wgDataplane.ResetDeltas()
 				wgDataplane.AddIface(1919, ifaceName+".foobar", true, true)
-				wg.OnIfaceStateChanged(ifaceName+".foobar", ifacemonitor.StateUp)
+				wg.OnIfaceStateChanged(ifaceName+".foobar", 1919, ifacemonitor.StateUp)
 				err := wg.Apply()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(wgDataplane.NumLinkAddCalls).To(Equal(0))
@@ -416,7 +418,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 			if enableV6 {
 				wgDataplaneV6.ResetDeltas()
 				wgDataplaneV6.AddIface(1919, ifaceNameV6+".foobar", true, true)
-				wgV6.OnIfaceStateChanged(ifaceNameV6+".foobar", ifacemonitor.StateUp)
+				wgV6.OnIfaceStateChanged(ifaceNameV6+".foobar", 1919, ifacemonitor.StateUp)
 				err := wgV6.Apply()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(wgDataplaneV6.NumLinkAddCalls).To(Equal(0))
@@ -427,7 +429,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 		It("should handle status update raising an error", func() {
 			if enableV4 {
 				wgDataplane.SetIface(ifaceName, true, true)
-				wg.OnIfaceStateChanged(ifaceName, ifacemonitor.StateUp)
+				wg.OnIfaceStateChanged(ifaceName, 101, ifacemonitor.StateUp)
 				s.statusErr = errors.New("foobarbaz")
 				err := wg.Apply()
 				Expect(err).To(HaveOccurred())
@@ -435,7 +437,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 			}
 			if enableV6 {
 				wgDataplaneV6.SetIface(ifaceNameV6, true, true)
-				wgV6.OnIfaceStateChanged(ifaceNameV6, ifacemonitor.StateUp)
+				wgV6.OnIfaceStateChanged(ifaceNameV6, 101, ifacemonitor.StateUp)
 				sV6.statusErr = errors.New("foobarbaz")
 				err := wgV6.Apply()
 				Expect(err).To(HaveOccurred())
@@ -447,13 +449,15 @@ func describeEnableTests(enableV4, enableV6 bool) {
 			BeforeEach(func() {
 				if enableV4 {
 					wgDataplane.SetIface(ifaceName, true, true)
-					wg.OnIfaceStateChanged(ifaceName, ifacemonitor.StateUp)
+					rtDataplane.AddIface(101, ifaceName, true, true)
+					wg.OnIfaceStateChanged(ifaceName, 101, ifacemonitor.StateUp)
 					err := wg.Apply()
 					Expect(err).NotTo(HaveOccurred())
 				}
 				if enableV6 {
 					wgDataplaneV6.SetIface(ifaceNameV6, true, true)
-					wgV6.OnIfaceStateChanged(ifaceNameV6, ifacemonitor.StateUp)
+					rtDataplaneV6.AddIface(101, ifaceNameV6, true, true)
+					wgV6.OnIfaceStateChanged(ifaceNameV6, 101, ifacemonitor.StateUp)
 					err := wgV6.Apply()
 					Expect(err).NotTo(HaveOccurred())
 				}
@@ -1127,10 +1131,9 @@ func describeEnableTests(enableV4, enableV6 bool) {
 							err := wg.Apply()
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_6))
-							Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_6))
+							Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
+							Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+							Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_6))
 						}
 						if enableV6 {
 							wgDataplaneV6.ResetDeltas()
@@ -1141,10 +1144,9 @@ func describeEnableTests(enableV4, enableV6 bool) {
 							err := wgV6.Apply()
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_6))
-							Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_6))
+							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
+							Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+							Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_6))
 						}
 					})
 
@@ -1157,10 +1159,9 @@ func describeEnableTests(enableV4, enableV6 bool) {
 							err := wg.Apply()
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_6))
-							Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_6))
+							Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
+							Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+							Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_6))
 						}
 						if enableV6 {
 							wgDataplaneV6.ResetDeltas()
@@ -1170,10 +1171,9 @@ func describeEnableTests(enableV4, enableV6 bool) {
 							err := wgV6.Apply()
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_6))
-							Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_6))
+							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
+							Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+							Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_6))
 						}
 					})
 
@@ -1188,10 +1188,9 @@ func describeEnableTests(enableV4, enableV6 bool) {
 							err := wg.Apply()
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_6))
-							Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_6))
+							Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
+							Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+							Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_6))
 						}
 						if enableV6 {
 							wgDataplaneV6.ResetDeltas()
@@ -1203,10 +1202,9 @@ func describeEnableTests(enableV4, enableV6 bool) {
 							err := wgV6.Apply()
 							Expect(err).NotTo(HaveOccurred())
 
-							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_6))
-							Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-							Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_6))
+							Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
+							Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+							Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_6))
 						}
 					})
 				})
@@ -1470,6 +1468,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_4))
 								Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_4))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_1]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET,
 									LinkIndex: link.LinkAttrs.Index,
 									Dst:       &ipnet_1,
 									Type:      syscall.RTN_UNICAST,
@@ -1478,6 +1477,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 									Table:     tableIndex,
 								}))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_2]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET,
 									LinkIndex: link.LinkAttrs.Index,
 									Dst:       &ipnet_2,
 									Type:      syscall.RTN_UNICAST,
@@ -1486,6 +1486,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 									Table:     tableIndex,
 								}))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET,
 									LinkIndex: link.LinkAttrs.Index,
 									Dst:       &ipnet_3,
 									Type:      syscall.RTN_UNICAST,
@@ -1494,6 +1495,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 									Table:     tableIndex,
 								}))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_4]).To(Equal(netlink.Route{
+									Family:   unix.AF_INET,
 									Dst:      &ipnet_4,
 									Type:     syscall.RTN_THROW,
 									Protocol: FelixRouteProtocol,
@@ -1509,6 +1511,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_3))
 								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_4))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_1]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: linkV6.LinkAttrs.Index,
 									Dst:       &ipnetV6_1,
 									Type:      syscall.RTN_UNICAST,
@@ -1517,6 +1520,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 									Table:     tableIndex,
 								}))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_2]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: linkV6.LinkAttrs.Index,
 									Dst:       &ipnetV6_2,
 									Type:      syscall.RTN_UNICAST,
@@ -1525,6 +1529,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 									Table:     tableIndex,
 								}))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: linkV6.LinkAttrs.Index,
 									Dst:       &ipnetV6_3,
 									Type:      syscall.RTN_UNICAST,
@@ -1533,6 +1538,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 									Table:     tableIndex,
 								}))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_4]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: 1,
 									Dst:       &ipnetV6_4,
 									Type:      syscall.RTN_THROW,
@@ -1715,15 +1721,15 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err := wg.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wg.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_3))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplane.WireguardConfigUpdated).To(BeTrue())
 								Expect(link.WireguardPeers).To(HaveLen(1))
 								Expect(link.WireguardPeers).To(HaveLen(1))
 								Expect(link.WireguardPeers).To(HaveKey(key_peer1))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+									Family:   unix.AF_INET,
 									Dst:      &ipnet_3,
 									Type:     syscall.RTN_THROW,
 									Protocol: FelixRouteProtocol,
@@ -1770,15 +1776,15 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err := wgV6.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wgV6.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_3))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplaneV6.WireguardConfigUpdated).To(BeTrue())
 								Expect(linkV6.WireguardPeers).To(HaveLen(1))
 								Expect(linkV6.WireguardPeers).To(HaveLen(1))
 								Expect(linkV6.WireguardPeers).To(HaveKey(keyV6_peer1))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: 1,
 									Dst:       &ipnetV6_3,
 									Type:      syscall.RTN_THROW,
@@ -1926,12 +1932,12 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err := wg.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wg.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
 								Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_3))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplane.WireguardConfigUpdated).To(BeTrue())
 								Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+									Family:   unix.AF_INET,
 									Dst:      &ipnet_3,
 									Type:     syscall.RTN_THROW,
 									Protocol: FelixRouteProtocol,
@@ -1982,12 +1988,12 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err := wgV6.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wgV6.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_3))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplaneV6.WireguardConfigUpdated).To(BeTrue())
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: 1,
 									Dst:       &ipnetV6_3,
 									Type:      syscall.RTN_THROW,
@@ -2042,14 +2048,14 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err := wg.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wg.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_3))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplane.WireguardConfigUpdated).To(BeTrue())
 								Expect(link.WireguardPeers).To(HaveLen(1))
 								Expect(link.WireguardPeers).To(HaveKey(key_peer1))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+									Family:   unix.AF_INET,
 									Dst:      &ipnet_3,
 									Type:     syscall.RTN_THROW,
 									Protocol: FelixRouteProtocol,
@@ -2065,15 +2071,15 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err = wg.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wg.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_3))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplane.WireguardConfigUpdated).To(BeTrue())
 								Expect(link.WireguardPeers).To(HaveLen(2))
 								Expect(link.WireguardPeers).To(HaveKey(key_peer1))
 								Expect(link.WireguardPeers).To(HaveKey(key_peer2))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET,
 									LinkIndex: link.LinkAttrs.Index,
 									Dst:       &ipnet_3,
 									Type:      syscall.RTN_UNICAST,
@@ -2093,14 +2099,14 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err := wgV6.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wgV6.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_3))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplaneV6.WireguardConfigUpdated).To(BeTrue())
 								Expect(linkV6.WireguardPeers).To(HaveLen(1))
 								Expect(linkV6.WireguardPeers).To(HaveKey(keyV6_peer1))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: 1,
 									Dst:       &ipnetV6_3,
 									Type:      syscall.RTN_THROW,
@@ -2117,15 +2123,15 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err = wgV6.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(wgV6.DebugNodes()).To(HaveLen(4))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_3))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
 								Expect(wgDataplaneV6.WireguardConfigUpdated).To(BeTrue())
 								Expect(linkV6.WireguardPeers).To(HaveLen(2))
 								Expect(linkV6.WireguardPeers).To(HaveKey(keyV6_peer1))
 								Expect(linkV6.WireguardPeers).To(HaveKey(keyV6_peer2))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: linkV6.LinkAttrs.Index,
 									Dst:       &ipnetV6_3,
 									Type:      syscall.RTN_UNICAST,
@@ -2231,9 +2237,10 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								By("Applying deletion and IP moving to local host")
 								err := wg.Apply()
 								Expect(err).NotTo(HaveOccurred())
-								Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_3))
-								Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_3))
+								Expect(rtDataplane.DeletedRouteKeys).To(BeEmpty())
+								Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_3))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+									Family:   unix.AF_INET,
 									Dst:      &ipnet_3,
 									Type:     syscall.RTN_THROW,
 									Protocol: FelixRouteProtocol,
@@ -2260,6 +2267,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
 								Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
 								Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET,
 									LinkIndex: link.LinkAttrs.Index,
 									Dst:       &ipnet_3,
 									Type:      syscall.RTN_UNICAST,
@@ -2278,9 +2286,10 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								By("Applying deletion and IP moving to local host")
 								err := wgV6.Apply()
 								Expect(err).NotTo(HaveOccurred())
-								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_3))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_3))
+								Expect(rtDataplaneV6.DeletedRouteKeys).To(BeEmpty())
+								Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_3))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: 1,
 									Dst:       &ipnetV6_3,
 									Type:      syscall.RTN_THROW,
@@ -2296,7 +2305,6 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								err = wgV6.Apply()
 								Expect(err).NotTo(HaveOccurred())
 								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(0))
 								Expect(rtDataplaneV6.RouteKeyToRoute).NotTo(HaveKey(routekeyV6_3))
 
 								By("Applying the same route to be remote")
@@ -2308,6 +2316,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
 								Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
 								Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+									Family:    unix.AF_INET6,
 									LinkIndex: linkV6.LinkAttrs.Index,
 									Dst:       &ipnetV6_3,
 									Type:      syscall.RTN_UNICAST,
@@ -2382,11 +2391,11 @@ func describeEnableTests(enableV4, enableV6 bool) {
 
 							It("should reprogram the route to the non-wireguard peer only", func() {
 								if enableV4 {
-									Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_3))
+									Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+									Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
 									Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_3))
 									Expect(rtDataplane.RouteKeyToRoute[routekey_3]).To(Equal(netlink.Route{
+										Family:   unix.AF_INET,
 										Dst:      &ipnet_3,
 										Type:     syscall.RTN_THROW,
 										Protocol: FelixRouteProtocol,
@@ -2395,11 +2404,11 @@ func describeEnableTests(enableV4, enableV6 bool) {
 									}))
 								}
 								if enableV6 {
-									Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_3))
+									Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+									Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
 									Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_3))
 									Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_3]).To(Equal(netlink.Route{
+										Family:    unix.AF_INET6,
 										LinkIndex: 1,
 										Dst:       &ipnetV6_3,
 										Type:      syscall.RTN_THROW,
@@ -2494,11 +2503,11 @@ func describeEnableTests(enableV4, enableV6 bool) {
 							It("should reprogram the route to peer3 only", func() {
 								if enableV4 {
 									routekey_4 := fmt.Sprintf("%d-%s", tableIndex, cidr_4)
-									Expect(rtDataplane.AddedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplane.DeletedRouteKeys).To(HaveKey(routekey_4))
-									Expect(rtDataplane.AddedRouteKeys).To(HaveKey(routekey_4))
+									Expect(rtDataplane.UpdatedRouteKeys).To(HaveLen(1))
+									Expect(rtDataplane.DeletedRouteKeys).To(HaveLen(0))
+									Expect(rtDataplane.UpdatedRouteKeys).To(HaveKey(routekey_4))
 									Expect(rtDataplane.RouteKeyToRoute[routekey_4]).To(Equal(netlink.Route{
+										Family:    unix.AF_INET,
 										LinkIndex: link.LinkAttrs.Index,
 										Dst:       &ipnet_4,
 										Type:      syscall.RTN_UNICAST,
@@ -2509,11 +2518,11 @@ func describeEnableTests(enableV4, enableV6 bool) {
 								}
 								if enableV6 {
 									routekeyV6_4 := fmt.Sprintf("%d-%s", tableIndex, cidrV6_4)
-									Expect(rtDataplaneV6.AddedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(1))
-									Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveKey(routekeyV6_4))
-									Expect(rtDataplaneV6.AddedRouteKeys).To(HaveKey(routekeyV6_4))
+									Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveLen(1))
+									Expect(rtDataplaneV6.DeletedRouteKeys).To(HaveLen(0))
+									Expect(rtDataplaneV6.UpdatedRouteKeys).To(HaveKey(routekeyV6_4))
 									Expect(rtDataplaneV6.RouteKeyToRoute[routekeyV6_4]).To(Equal(netlink.Route{
+										Family:    unix.AF_INET6,
 										LinkIndex: linkV6.LinkAttrs.Index,
 										Dst:       &ipnetV6_4,
 										Type:      syscall.RTN_UNICAST,
@@ -2747,7 +2756,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 					// Set the interface to be up
 					wgDataplane.SetIface(ifaceName, true, true)
 					rtDataplane.AddIface(link.LinkAttrs.Index, ifaceName, true, true)
-					wg.OnIfaceStateChanged(ifaceName, ifacemonitor.StateUp)
+					wg.OnIfaceStateChanged(ifaceName, link.LinkAttrs.Index, ifacemonitor.StateUp)
 					err = apply.Apply()
 					Expect(err).NotTo(HaveOccurred())
 
@@ -2803,7 +2812,7 @@ func describeEnableTests(enableV4, enableV6 bool) {
 					// Set the interface to be up
 					wgDataplaneV6.SetIface(ifaceNameV6, true, true)
 					rtDataplaneV6.AddIface(linkV6.LinkAttrs.Index, ifaceNameV6, true, true)
-					wgV6.OnIfaceStateChanged(ifaceNameV6, ifacemonitor.StateUp)
+					wgV6.OnIfaceStateChanged(ifaceNameV6, linkV6.LinkAttrs.Index, ifacemonitor.StateUp)
 					err = apply.Apply()
 					Expect(err).NotTo(HaveOccurred())
 
