@@ -3,10 +3,9 @@
 package calico
 
 import (
+	"context"
 	"reflect"
 	"strings"
-
-	"context"
 
 	features "github.com/projectcalico/calico/licensing/client/features"
 
@@ -101,8 +100,7 @@ func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory
 	return dryRunnableStorage, func() {}
 }
 
-type NetworkPolicyConverter struct {
-}
+type NetworkPolicyConverter struct{}
 
 func (rc NetworkPolicyConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
 	aapiPolicy := aapiObj.(*v3.NetworkPolicy)
