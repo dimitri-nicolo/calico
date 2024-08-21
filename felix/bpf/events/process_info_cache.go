@@ -138,8 +138,6 @@ func (r *BPFProcessInfoCache) updateCacheWithTcpStatsDirty(tuple tuple.Tuple, di
 }
 
 func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessInfo) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
 	log.Debugf("Updating process info %+v", info)
 	t := info.Tuple
 	if r.processPathCache != nil {
@@ -149,6 +147,9 @@ func (r *BPFProcessInfoCache) updateCacheWithProcessInfo(info collector.ProcessI
 			info.ProcessData.Arguments = pathInfo.Args
 		}
 	}
+
+	r.lock.Lock()
+	defer r.lock.Unlock()
 	entry, ok := r.cache[t]
 	if ok {
 		entry.ProcessData = info.ProcessData
