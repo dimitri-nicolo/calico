@@ -705,7 +705,7 @@ func (r *RouteTable) QueueResync() {
 	r.fullResyncNeeded = true
 }
 
-func (r *RouteTable) ReadRoutesFromKernel(ifaceName string) ([]Target, error) {
+func (r *RouteTable) ReadRoutesFromKernel(class RouteClass, ifaceName string) ([]Target, error) {
 	r.logCxt.Debug("Reading routing table from kernel.")
 
 	routes, err := r.readProgrammedRoutes(r.logCxt, ifaceName)

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/golang-collections/collections/stack"
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
@@ -82,7 +83,7 @@ type healthAggregator interface {
 
 type routeTableGenerator interface {
 	NewRouteTable(
-		interfacePrefixes []string,
+		interfaceNames []string,
 		ipVersion uint8,
 		tableIndex int,
 		netlinkTimeout time.Duration,
@@ -91,7 +92,7 @@ type routeTableGenerator interface {
 		removeExternalRoutes bool,
 		opRecorder logutils.OpRecorder,
 		featureDetector environment.FeatureDetectorIface,
-	) routetable.RouteTableInterface
+	) routetable.Interface
 }
 
 type routeTableFactory struct {
@@ -99,7 +100,7 @@ type routeTableFactory struct {
 }
 
 func (f *routeTableFactory) NewRouteTable(
-	interfacePrefixes []string,
+	interfaceNames []string,
 	ipVersion uint8,
 	tableIndex int,
 	netlinkTimeout time.Duration,
@@ -108,10 +109,13 @@ func (f *routeTableFactory) NewRouteTable(
 	removeExternalRoutes bool,
 	opRecorder logutils.OpRecorder,
 	featureDetector environment.FeatureDetectorIface,
-) routetable.RouteTableInterface {
+) routetable.Interface {
 
 	f.count += 1
-	return routetable.New(interfacePrefixes,
+	return routetable.New(
+		&ownershippol.ExclusiveOwnershipPolicy{
+			InterfaceNames: interfaceNames,
+		},
 		ipVersion,
 		netlinkTimeout,
 		deviceRouteSourceAddress,
@@ -119,7 +123,8 @@ func (f *routeTableFactory) NewRouteTable(
 		removeExternalRoutes,
 		tableIndex,
 		opRecorder,
-		featureDetector)
+		featureDetector,
+	)
 }
 
 type routeRulesGenerator interface {
@@ -273,7 +278,7 @@ type egressIPManager struct {
 	// We could have code to free the unused routetable if it is inSync. However, since
 	// the total number of routetables is limited, we may just avoid the complexity.
 	// Just keep it; it could be reused by another EgressIPSet.
-	tableIndexToRouteTable map[int]routetable.RouteTableInterface
+	tableIndexToRouteTable map[int]routetable.Interface
 	// Tracks next hops for all route tables in use.
 	tableIndexToEgressTable map[int]*egressTable
 	egwTracker              *EgressGWTracker
@@ -402,7 +407,7 @@ func newEgressIPManagerWithShims(
 		initialKernelState:         newInitialKernelState(),
 		tableIndexSet:              tableIndexSet,
 		tableIndexStack:            tableIndexStack,
-		tableIndexToRouteTable:     make(map[int]routetable.RouteTableInterface),
+		tableIndexToRouteTable:     make(map[int]routetable.Interface),
 		tableIndexToEgressTable:    make(map[int]*egressTable),
 		pendingWorkloadUpdates:     make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		activeWorkloads:            make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
@@ -1082,13 +1087,13 @@ func sortAddrSlice(s []ip.Addr) {
 }
 
 // Set L3 routes for an EgressIPSet.
-func (m *egressIPManager) setL3Routes(rTable routetable.RouteTableInterface, t *egressTable) {
+func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTable) {
 	var (
 		vxlanRoutes                []routetable.Target
 		noIfaceRoutes              []routetable.Target
 		vxlanSinglePathRouteIsUsed bool
 	)
-
+	rTable := routetable.NewClassView(routetable.RouteClassEgress, rawTable)
 	for dst, r := range t.routes {
 		if r.throwToMain {
 			route := routetable.Target{
@@ -1235,9 +1240,9 @@ func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID
 	delete(m.workloadToTableIndex, id)
 }
 
-func (m *egressIPManager) newRouteTable(tableNum int) routetable.RouteTableInterface {
+func (m *egressIPManager) newRouteTable(tableNum int) routetable.Interface {
 	return m.rtGenerator.NewRouteTable(
-		[]string{"^" + m.vxlanDevice + "$", routetable.InterfaceNone},
+		[]string{m.vxlanDevice, routetable.InterfaceNone},
 		4,
 		tableNum,
 		m.dpConfig.NetlinkTimeout,
@@ -1283,8 +1288,8 @@ func (m *egressIPManager) deleteRouteTable(index int) {
 			"index":       index,
 			"destination": dst,
 		}).Debug("Removing L3 routes.")
-		table.RouteRemove(routetable.InterfaceNone, dst)
-		table.RouteRemove(m.vxlanDevice, dst)
+		table.RouteRemove(routetable.RouteClassEgress, routetable.InterfaceNone, dst)
+		table.RouteRemove(routetable.RouteClassEgress, m.vxlanDevice, dst)
 	}
 	delete(m.tableIndexToEgressTable, index)
 	// Don't remove the entry from m.tableIndexToRouteTable, it is needed in GetRouteTableSyncers()
@@ -1326,11 +1331,11 @@ func (m *egressIPManager) deleteRouteRule(rule *egressRule) {
 func (m *egressIPManager) getTableFromKernel(index int) (*egressTable, error) {
 	table := m.newRouteTable(index)
 	// get targets for both possible interface names
-	vxlanTargets, err := table.ReadRoutesFromKernel(m.vxlanDevice)
+	vxlanTargets, err := table.ReadRoutesFromKernel(routetable.RouteClassEgress, m.vxlanDevice)
 	if err != nil {
 		return nil, err
 	}
-	noneTargets, err := table.ReadRoutesFromKernel(routetable.InterfaceNone)
+	noneTargets, err := table.ReadRoutesFromKernel(routetable.RouteClassEgress, routetable.InterfaceNone)
 	if err != nil {
 		return nil, err
 	}
@@ -1365,10 +1370,10 @@ func updateEgressTableRoutes(eTable *egressTable, targets []routetable.Target) {
 	}
 }
 
-func (m *egressIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
-	rts := make([]routetable.RouteTableSyncer, 0, len(m.tableIndexToRouteTable))
+func (m *egressIPManager) GetRouteTableSyncers() []routetable.SyncerInterface {
+	rts := make([]routetable.SyncerInterface, 0, len(m.tableIndexToRouteTable))
 	for _, t := range m.tableIndexToRouteTable {
-		rts = append(rts, t.(routetable.RouteTableSyncer))
+		rts = append(rts, t.(routetable.SyncerInterface))
 	}
 
 	return rts

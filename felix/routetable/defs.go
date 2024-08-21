@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net"
 	"reflect"
+	"syscall"
 
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -39,6 +40,10 @@ const (
 	RouteClassVXLANSameSubnet
 	RouteClassVXLANTunnel
 	RouteClassIPAMBlockDrop
+	RouteClassEgress
+	RouteClassAWSDefault
+	RouteClassAWSThrow
+	RouteClassTPROXY
 
 	RouteClassMax
 )
@@ -66,12 +71,12 @@ var (
 )
 
 type Target struct {
-	Type     TargetType
-	CIDR     ip.CIDR
-	GW       ip.Addr
-	Src      ip.Addr
-	DestMAC  net.HardwareAddr
-	Protocol netlink.RouteProtocol
+	Type      TargetType
+	CIDR      ip.CIDR
+	GW        ip.Addr
+	Src       ip.Addr
+	DestMAC   net.HardwareAddr
+	MultiPath []NextHop
 }
 
 func (t Target) Equal(t2 Target) bool {
@@ -123,10 +128,41 @@ func (t Target) RouteScope() netlink.Scope {
 func (t Target) Flags() netlink.NextHopFlag {
 	switch t.Type {
 	case TargetTypeVXLAN, TargetTypeNoEncap, TargetTypeOnLink:
-		return unix.RTNH_F_ONLINK
+		return syscall.RTNH_F_ONLINK
 	default:
 		return 0
 	}
+}
+
+func (t Target) EqualGWOrMultiPath(r netlink.Route) bool {
+	if t.GW != nil {
+		if !r.Gw.Equal(t.GW.AsNetIP()) {
+			return false
+		}
+	} else {
+		if len(r.Gw) > 0 {
+			return false
+		}
+	}
+
+	if len(t.MultiPath) != len(r.MultiPath) {
+		return false
+	}
+	for i, tm := range t.MultiPath {
+		rm := r.MultiPath[i]
+		if rm.LinkIndex != tm.LinkIndex {
+			return false
+		}
+		if !rm.Gw.Equal(tm.Gw.AsNetIP()) {
+			return false
+		}
+	}
+	return true
+}
+
+type NextHop struct {
+	Gw        ip.Addr
+	LinkIndex int
 }
 
 type TargetType string
