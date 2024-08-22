@@ -15,7 +15,6 @@ import (
 type ProviderResponse struct {
 	HttpStatusCode        int       `json:"httpResponseCode"`
 	HttpStatusDescription string    `json:"httpResponseDescription"`
-	HttpPayload           string    `json:"payload"`
 	Timestamp             time.Time `json:"timestamp"`
 }
 

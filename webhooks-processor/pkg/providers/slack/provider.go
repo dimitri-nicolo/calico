@@ -74,7 +74,6 @@ func (p *Slack) Process(ctx context.Context, config map[string]string, labels ma
 		httpResponse = providers.ProviderResponse{
 			Timestamp:             time.Now(),
 			HttpStatusCode:        response.StatusCode,
-			HttpPayload:           responseText,
 			HttpStatusDescription: http.StatusText(response.StatusCode),
 		}
 
