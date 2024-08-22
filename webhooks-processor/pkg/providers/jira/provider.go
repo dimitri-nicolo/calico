@@ -96,7 +96,6 @@ func (p *Jira) Process(ctx context.Context, config map[string]string, labels map
 		httpResponse = providers.ProviderResponse{
 			Timestamp:             time.Now(),
 			HttpStatusCode:        response.StatusCode,
-			HttpPayload:           responseText,
 			HttpStatusDescription: http.StatusText(response.StatusCode),
 		}
 

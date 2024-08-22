@@ -95,7 +95,6 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		httpResponse = providers.ProviderResponse{
 			Timestamp:             time.Now(),
 			HttpStatusCode:        response.StatusCode,
-			HttpPayload:           responseText,
 			HttpStatusDescription: http.StatusText(response.StatusCode),
 		}
 
