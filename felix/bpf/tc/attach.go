@@ -177,6 +177,7 @@ func (ap *AttachPoint) AttachProgram() (bpf.AttachResult, error) {
 		return nil, err
 	}
 
+	prio := findFilterPriority(progsToClean)
 	obj, err := ap.loadObject(binaryToLoad)
 	if err != nil {
 		logCxt.Warn("Failed to load program")
@@ -184,7 +185,7 @@ func (ap *AttachPoint) AttachProgram() (bpf.AttachResult, error) {
 	}
 	defer obj.Close()
 
-	res.progId, res.prio, res.handle, err = obj.AttachClassifier("cali_tc_preamble", ap.Iface, ap.Hook == hook.Ingress)
+	res.progId, res.prio, res.handle, err = obj.AttachClassifier("cali_tc_preamble", ap.Iface, ap.Hook == hook.Ingress, prio)
 	if err != nil {
 		logCxt.Warnf("Failed to attach to TC section cali_tc_preamble")
 		return nil, err
@@ -238,7 +239,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 		return fmt.Errorf("error loading program %v", err)
 	}
 
-	_, _, _, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true)
+	_, _, _, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0)
 	return err
 }
 
@@ -459,6 +460,21 @@ func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
 
 func (ap *AttachPoint) HookName() hook.Hook {
 	return ap.Hook
+}
+
+func findFilterPriority(progsToClean []attachedProg) int {
+	prio := 0
+	for _, p := range progsToClean {
+		pref, err := strconv.Atoi(p.pref)
+		if err != nil {
+			continue
+		}
+
+		if pref > prio {
+			prio = pref
+		}
+	}
+	return prio
 }
 
 func (ap *AttachPoint) Config() string {

@@ -66,6 +66,7 @@ type mockDataplane struct {
 	mutex       sync.Mutex
 	lastProgID  int
 	progs       map[string]int
+	numAttaches map[string]int
 	policy      map[string]polprog.Rules
 	routes      map[ip.CIDR]struct{}
 	netlinkShim netlinkshim.Interface
@@ -84,6 +85,7 @@ func newMockDataplane() *mockDataplane {
 	return &mockDataplane{
 		lastProgID:  5,
 		progs:       map[string]int{},
+		numAttaches: map[string]int{},
 		policy:      map[string]polprog.Rules{},
 		routes:      map[ip.CIDR]struct{}{},
 		netlinkShim: netlinkShim,
@@ -113,7 +115,12 @@ func (m *mockDataplane) loadDefaultPolicies() error {
 }
 
 func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (qDiscInfo, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	var qdisc qDiscInfo
+	key := ap.IfaceName() + ":" + ap.HookName().String()
+	m.numAttaches[key] = m.numAttaches[key] + 1
 	return qdisc, nil
 }
 
@@ -246,6 +253,12 @@ func (m *mockDataplane) programAttached(key string) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	return m.progs[key] != 0
+}
+
+func (m *mockDataplane) numOfAttaches(key string) int {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	return m.numAttaches[key]
 }
 
 func (m *mockDataplane) setRoute(cidr ip.CIDR) {
@@ -577,6 +590,28 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 	}
 
+	genHostMetadataUpdate := func(ip string) func() {
+		return func() {
+			bpfEpMgr.OnUpdate(&proto.HostMetadataUpdate{
+				Hostname: "uthost",
+				Ipv4Addr: ip,
+			})
+			err := bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}
+
+	genHostMetadataV6Update := func(ip string) func() {
+		return func() {
+			bpfEpMgr.OnUpdate(&proto.HostMetadataV6Update{
+				Hostname: "uthost",
+				Ipv6Addr: ip,
+			})
+			err := bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}
+
 	hostEp := proto.HostEndpoint{
 		Name: "uthost-eth0",
 		PreDnatTiers: []*proto.TierInfo{
@@ -676,6 +711,34 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				Expect(caliE.HostNormalTiers[0].Policies).To(HaveLen(1))
 				Expect(caliE.SuppressNormalHostPolicy).To(BeTrue())
 			})
+		})
+	})
+
+	Context("with workload endpoints", func() {
+		JustBeforeEach(func() {
+			newBpfEpMgr(true)
+			genWLUpdate("cali12345")()
+			genIfaceUpdate("cali12345", ifacemonitor.StateUp, 15)()
+		})
+
+		It("must re-attach programs when hostIP changes", func() {
+			Expect(dp.programAttached("cali12345:ingress")).To(BeTrue())
+			Expect(dp.programAttached("cali12345:egress")).To(BeTrue())
+			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(1))
+			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(1))
+			genHostMetadataUpdate("5.6.7.8/32")()
+			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(2))
+			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(2))
+			genHostMetadataUpdate("1.2.3.4")()
+			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(3))
+			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(3))
+
+			genHostMetadataV6Update("1::5/128")()
+			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(4))
+			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(4))
+			genHostMetadataV6Update("1::4")()
+			Expect(dp.numOfAttaches("cali12345:ingress")).To(Equal(5))
+			Expect(dp.numOfAttaches("cali12345:egress")).To(Equal(5))
 		})
 	})
 
@@ -1359,6 +1422,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 
 		It("should reclaim indexes for active interfaces", func() {
+
+			bpfEpMgr.bpfLogLevel = "debug"
+			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
+
 			for i := 0; i < 8; i++ {
 				_ = jumpMap.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMap.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
@@ -1400,17 +1467,17 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				123: value123.String(),
 			}))
 
-			// Expect clean-up deletions but no value changes due to mocking.
-			Expect(dumpJumpMap(jumpMap)).To(Equal(map[int]int{
-				0:     1000,
-				2:     1002,
-				3:     1003,
-				4:     1004,
-				10000: 1000,
-				10002: 1002,
-				10003: 1003,
-				10004: 1004,
-			}))
+			// Expect clean-up deletions.
+			jmps := dumpJumpMap(jumpMap)
+			Expect(jmps).To(HaveLen(8))
+			Expect(jmps).To(HaveKey(0)) /* filters reloaded to reflect current expressions */
+			Expect(jmps).To(HaveKey(2))
+			Expect(jmps).To(HaveKey(3))
+			Expect(jmps).To(HaveKey(4))
+			Expect(jmps).To(HaveKeyWithValue(10000, 1000))
+			Expect(jmps).To(HaveKeyWithValue(10002, 1002))
+			Expect(jmps).To(HaveKeyWithValue(10003, 1003))
+			Expect(jmps).To(HaveKeyWithValue(10004, 1004))
 			Expect(dumpJumpMap(xdpJumpMap)).To(Equal(map[int]int{
 				1: 2001,
 			}))
@@ -1729,6 +1796,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			newBpfEpMgr(true)
 		})
 		It("should clean up jump map entries for missing interfaces", func() {
+			bpfEpMgr.bpfLogLevel = "debug"
+			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
+
 			for i := 0; i < 17; i++ {
 				_ = jumpMap.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMap.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
@@ -1793,6 +1863,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 
 		It("should reclaim indexes for active interfaces", func() {
+			bpfEpMgr.bpfLogLevel = "debug"
+			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
+
 			for i := 0; i < 8; i++ {
 				_ = jumpMap.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMap.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
@@ -1835,13 +1908,14 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				123: value123.String(),
 			}))
 
-			// Expect clean-up deletions but no value changes due to mocking.
-			Expect(dumpJumpMap(jumpMap)).To(Equal(map[int]int{
-				2:     1002,
-				3:     1003,
-				10002: 1002,
-				10003: 1003,
-			}))
+			// Expect clean-up deletions.
+			jmps := dumpJumpMap(jumpMap)
+			Expect(jmps).To(HaveLen(5))
+			Expect(jmps).To(HaveKey(2)) /* filters reloaded to reflect current expressions */
+			Expect(jmps).To(HaveKey(3))
+			Expect(jmps).To(HaveKey(4))
+			Expect(jmps).To(HaveKeyWithValue(10002, 1002))
+			Expect(jmps).To(HaveKeyWithValue(10003, 1003))
 			Expect(dumpJumpMap(xdpJumpMap)).To(Equal(map[int]int{
 				1: 2001,
 			}))
