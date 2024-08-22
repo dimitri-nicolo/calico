@@ -707,7 +707,10 @@ func (b *eventsBackend) computeDateHistograms(ctx context.Context, i api.Cluster
 		// Update stats with results for dateHistogram.
 		items, found := results.Aggregations.DateHistogram(histogram.Name)
 		if !found {
-			return fmt.Errorf("Could not find terms results for %s", histogram.Name)
+			// If there is no event found, empty aggregation result will be provided.
+			// This is expected to happen when the events index does not exists.
+			logrus.Debugf("Could not find terms results for %s (expected when index does not exists)", histogram.Name)
+			items = new(elastic.AggregationBucketHistogramItems)
 		}
 
 		values := []v1.HistogramBucket{}

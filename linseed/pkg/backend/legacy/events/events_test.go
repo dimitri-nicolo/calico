@@ -922,6 +922,46 @@ func TestEventsStatistics(t *testing.T) {
 			gjson.Parse(`{"value":"global_alert","count":1,"by_severity":[{"value":90,"count":1}]}`).String(),
 		})
 	})
+
+	RunAllModes(t, "Test with no events", func(t *testing.T) {
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+
+		// Not creating any event (index won't exist in single tenant mode)
+
+		params := &v1.EventStatisticsParams{}
+		params.LogSelectionParams = v1.LogSelectionParams{
+			Selector: "NOT dismissed = true",
+		}
+
+		params.SeverityHistograms = []v1.SeverityHistogramParam{
+			{
+				Name: "severity_over_time",
+			},
+		}
+
+		params.FieldValues = &v1.FieldValuesParam{
+			TypeValues: &v1.FieldValueParam{
+				Count:           true,
+				GroupBySeverity: true,
+			},
+			NameValues: &v1.FieldValueParam{
+				Count: true,
+			},
+		}
+
+		r, e := b.Statistics(ctx, clusterInfo, params)
+		require.NoError(t, e)
+
+		bytes, e := json.Marshal(r)
+		require.NoError(t, e)
+
+		// Requested severity histogram is empty
+		require.Len(t, gjson.Get(string(bytes), "severity_histograms").Map(), 1)
+		require.Len(t, gjson.Get(string(bytes), "severity_histograms.severity_over_time").Array(), 0)
+
+		// Requested field values are empty
+		require.Len(t, gjson.Get(string(bytes), "field_values").Map(), 0)
+	})
 }
 
 func TestPagination(t *testing.T) {
