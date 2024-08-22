@@ -504,7 +504,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -542,7 +541,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -566,7 +564,6 @@ var _ = Describe("VXLANManager", func() {
 			ParentDeviceIp: "172.0.0.3",
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -603,7 +600,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err = manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -655,7 +651,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 
 		Expect(err).NotTo(HaveOccurred())
@@ -733,7 +728,6 @@ var _ = Describe("VXLANManager", func() {
 		manager.OnUpdate(thisNodeVTEPRoute)
 		manager.OnUpdate(localNodeVTEP)
 		manager.OnUpdate(localNodeVTEPRoute)
-		manager.noEncapRouteTable = prt
 		err = manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -800,7 +794,6 @@ var _ = Describe("VXLANManager", func() {
 			DstNodeIp:   "172.0.12.1",
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -852,7 +845,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -912,7 +904,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -990,7 +981,6 @@ var _ = Describe("VXLANManager", func() {
 		manager.OnUpdate(remoteBNodeVTEPRoute)
 		manager.OnUpdate(thisNodeVTEP)
 		manager.OnUpdate(thisNodeVTEPRoute)
-		manager.noEncapRouteTable = prt
 		err = manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -1055,7 +1045,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -1124,7 +1113,6 @@ var _ = Describe("VXLANManager", func() {
 			TunnelType:  &proto.TunnelType{Vxlan: true},
 		})
 
-		manager.noEncapRouteTable = prt
 		err := manager.CompleteDeferredWork()
 		Expect(err).NotTo(HaveOccurred())
 

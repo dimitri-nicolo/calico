@@ -37,6 +37,7 @@ import (
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/vxlanfdb"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // added so that we can shim netlink for tests
@@ -146,12 +147,12 @@ func newVXLANManagerWithShims(
 		fdb:               fdb,
 		routesByDest:      map[string]*proto.RouteUpdate{},
 		localIPAMBlocks:   map[string]*proto.RouteUpdate{},
-		myVTEPChangedC:            make(chan struct{}, 1),
-		vtepsByNode:               map[string]*proto.VXLANTunnelEndpointUpdate{},
-		vxlanDevice:               deviceName,
-		vxlanID:                   dpConfig.RulesConfig.VXLANVNI,
-		vxlanPort:                 dpConfig.RulesConfig.VXLANPort,
-		writeProcSys:              procSysWriter,
+		myVTEPChangedC:    make(chan struct{}, 1),
+		vtepsByNode:       map[string]*proto.VXLANTunnelEndpointUpdate{},
+		vxlanDevice:       deviceName,
+		vxlanID:           dpConfig.RulesConfig.VXLANVNI,
+		vxlanPort:         dpConfig.RulesConfig.VXLANPort,
+		writeProcSys:      procSysWriter,
 		ipVersion:         ipVersion,
 		externalNodeCIDRs: dpConfig.ExternalNodesCidrs,
 		routesDirty:       true,

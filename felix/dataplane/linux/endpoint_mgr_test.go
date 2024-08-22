@@ -864,7 +864,7 @@ func (t *mockRouteTable) RouteUpdate(routeClass routetable.RouteClass, ifaceName
 
 func (t *mockRouteTable) OnIfaceStateChanged(string, int, ifacemonitor.State) {}
 func (t *mockRouteTable) QueueResync()                                        {}
-func (t *mockRouteTable) QueueResyncIface(string)                        {}
+func (t *mockRouteTable) QueueResyncIface(string)                             {}
 func (t *mockRouteTable) Apply() error {
 	return nil
 }

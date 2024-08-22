@@ -35,7 +35,7 @@ type Interface interface {
 	RouteUpdate(routeClass RouteClass, ifaceName string, target Target)
 	Index() int
 	QueueResyncIface(ifaceName string)
-	ReadRoutesFromKernel(routeClass RouteClass, ifaceName string) ([]Target, error)
+	ReadRoutesFromKernel(ifaceName string) ([]Target, error)
 }
 
 // ClassView wraps a RouteTable with a simplified API that removes the need to
@@ -85,7 +85,7 @@ func (cv *ClassView) QueueResyncIface(ifaceName string) {
 }
 
 func (cv *ClassView) ReadRoutesFromKernel(ifaceName string) ([]Target, error) {
-	return cv.routeTable.ReadRoutesFromKernel(cv.class, ifaceName)
+	return cv.routeTable.ReadRoutesFromKernel(ifaceName)
 }
 
 var _ SyncerInterface = (*ClassView)(nil)

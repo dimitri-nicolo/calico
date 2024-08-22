@@ -67,7 +67,8 @@ var (
 		Help: "Number of interfaces that Felix is monitoring for the particular routing table.",
 	}, []string{"table"})
 
-	defaultCidr, _ = ip.ParseCIDROrIP("0.0.0.0/0")
+	defaultCIDRv4, _ = ip.ParseCIDROrIP("0.0.0.0/0")
+	defaultCIDRv6, _ = ip.ParseCIDROrIP("::/0")
 )
 
 func init() {
@@ -135,9 +136,10 @@ type RouteTable struct {
 	ownershipPolicy          OwnershipPolicy
 
 	// Interface update tracking.
-	fullResyncNeeded bool
-	ifacesToRescan   set.Set[string]
-	makeARPEntries   bool
+	fullResyncNeeded    bool
+	ifacesToRescan      set.Set[string]
+	makeARPEntries      bool
+	haveMultiPathRoutes bool
 
 	// ifaceToRoutes and cidrToIfaces are our inputs, updated
 	// eagerly when something in the manager layer tells us to change the
@@ -392,9 +394,24 @@ func (r *RouteTable) OnIfaceStateChanged(ifaceName string, ifIndex int, state if
 		// and its default route disappears.
 		logCxt.Debug("Interface up, marking for route sync")
 		r.ifacesToRescan.Add(ifaceName)
+		if r.haveMultiPathRoutes {
+			// The interface may be used by a next hop on a multi-path route.
+			// so we need to recheck everything.   We only use multi-path
+			// for EGW tunnels right now so this will only be a handful of
+			// routes.
+			logCxt.Debug("Interface up, rechecking all multi-path routes.")
+			r.QueueResync()
+		}
 	}
 
 	r.recheckRouteOwnershipsByIface(ifaceName)
+
+	if r.haveMultiPathRoutes {
+		// Re-check all potential multi-path routes.  We only use multi-path
+		// for EGW tunnels right now so this will only be a handful of routes.
+		logCxt.Debug("Rechecking all multi-path routes.")
+		r.recheckRouteOwnershipsByIface(InterfaceNone)
+	}
 }
 
 func (r *RouteTable) onIfaceSeen(ifIndex int) {
@@ -426,6 +443,7 @@ func (r *RouteTable) SetRoutes(routeClass RouteClass, ifaceName string, targets 
 		"ifaceName":  ifaceName,
 		"targets":    targets,
 	}).Debug("SetRoutes called.")
+	r.checkTargets(ifaceName, targets...)
 
 	if r.ifaceToRoutes[routeClass] == nil {
 		r.ifaceToRoutes[routeClass] = map[string]map[ip.CIDR]Target{}
@@ -471,6 +489,7 @@ func (r *RouteTable) RouteUpdate(routeClass RouteClass, ifaceName string, target
 			"Cannot set route for interface not managed by this routetable.")
 		return
 	}
+	r.checkTargets(ifaceName, target)
 
 	if r.ifaceToRoutes[routeClass] == nil {
 		r.ifaceToRoutes[routeClass] = map[string]map[ip.CIDR]Target{}
@@ -621,6 +640,19 @@ func (r *RouteTable) recalculateDesiredKernelRoute(cidr ip.CIDR) {
 				return nil
 			}
 
+			someUp := false
+			target := r.ifaceToRoutes[routeClass][ifaceName][cidr]
+			for _, nh := range target.MultiPath {
+				if ifIndex, ok := r.ifaceIndexForName(nh.IfaceName); !ok {
+					r.logCxt.WithField("ifaceName", nh.IfaceName).Debug("Skipping multi-path route for missing interface.")
+					return nil
+				} else {
+					if r.ifaceIndexToState[ifIndex] == ifacemonitor.StateUp {
+						someUp = true
+					}
+				}
+			}
+
 			// We've got some routes for this interface, force-expire its
 			// grace period.
 			if graceInf, ok := r.ifaceIndexToGraceInfo[ifIndex]; ok {
@@ -631,6 +663,10 @@ func (r *RouteTable) recalculateDesiredKernelRoute(cidr ip.CIDR) {
 			if ifaceName != InterfaceNone && r.ifaceIndexToState[ifIndex] != ifacemonitor.StateUp {
 				r.logCxt.WithField("ifaceName", ifaceName).Debug("Skipping route for down interface.")
 				return nil
+			} else if len(target.MultiPath) > 0 && !someUp {
+				// Multi-path routes require at least one interface to be up.
+				r.logCxt.Debug("Skipping multi-path route; all interfaces down.")
+				return nil
 			}
 
 			// Main tie-breaker is the RouteClass, which is prioritised
@@ -640,7 +676,7 @@ func (r *RouteTable) recalculateDesiredKernelRoute(cidr ip.CIDR) {
 				bestIface = ifaceName
 				bestIfaceIdx = ifIndex
 				bestRouteClass = routeClass
-				bestTarget = r.ifaceToRoutes[routeClass][ifaceName][cidr]
+				bestTarget = target
 			}
 			return nil
 		})
@@ -681,6 +717,21 @@ func (r *RouteTable) recalculateDesiredKernelRoute(cidr ip.CIDR) {
 		OnLink:   bestTarget.Flags()&unix.RTNH_F_ONLINK != 0,
 		Protocol: proto,
 	}
+	if len(bestTarget.MultiPath) > 0 {
+		for _, nh := range bestTarget.MultiPath {
+			ifIndex, ok := r.ifaceIndexForName(nh.IfaceName)
+			if !ok {
+				log.Panic("Bug: multi-path route had missing interface after we already checked!")
+			}
+			kernRoute.NextHops = append(kernRoute.NextHops, kernelNextHop{
+				GW:      nh.Gw,
+				Ifindex: ifIndex,
+			})
+		}
+	} else {
+		kernRoute.GW = bestTarget.GW
+		kernRoute.Ifindex = bestIfaceIdx
+	}
 	if log.IsLevelEnabled(log.DebugLevel) && !reflect.DeepEqual(oldDesiredRoute, kernRoute) {
 		r.logCxt.WithFields(log.Fields{
 			"dst":      kernKey,
@@ -705,46 +756,76 @@ func (r *RouteTable) QueueResync() {
 	r.fullResyncNeeded = true
 }
 
-func (r *RouteTable) ReadRoutesFromKernel(class RouteClass, ifaceName string) ([]Target, error) {
+func (r *RouteTable) ReadRoutesFromKernel(ifaceName string) ([]Target, error) {
 	r.logCxt.Debug("Reading routing table from kernel.")
-
-	routes, err := r.readProgrammedRoutes(r.logCxt, ifaceName)
+	r.ifacesToRescan.Add(ifaceName)
+	err := r.maybeResyncWithDataplane()
 	if err != nil {
 		return nil, err
 	}
 
+	ifaceIndex, ok := r.ifaceIndexForName(ifaceName)
+	if !ok {
+		return nil, IfaceNotPresent
+	}
+
 	var allTargets []Target
-	for _, route := range routes {
-		target := Target{
-			CIDR: normaliseDestination(route.Dst),
+	r.kernelRoutes.Dataplane().Iter(func(key kernelRouteKey, kernRoute kernelRoute) {
+		if kernRoute.Ifindex != ifaceIndex {
+			return
 		}
-		if route.Type == syscall.RTN_THROW {
+
+		target := Target{
+			CIDR:     key.CIDR,
+			Src:      kernRoute.Src,
+			Protocol: kernRoute.Protocol,
+		}
+
+		switch kernRoute.Type {
+		case unix.RTN_LOCAL:
+			target.Type = TargetTypeLocal
+		case unix.RTN_THROW:
 			target.Type = TargetTypeThrow
-		} else {
-			target.Type = TargetTypeVXLAN
-			if route.Gw != nil {
-				target.GW = ip.FromNetIP(route.Gw)
+		case unix.RTN_UNREACHABLE:
+			target.Type = TargetTypeUnreachable
+		case unix.RTN_BLACKHOLE:
+			target.Type = TargetTypeBlackhole
+		case unix.RTN_PROHIBIT:
+			target.Type = TargetTypeProhibit
+		case unix.RTN_UNICAST:
+			if kernRoute.Scope == unix.RT_SCOPE_LINK {
+				target.Type = TargetTypeLinkLocalUnicast
 			} else {
-				var nextHops []NextHop
-				for _, h := range route.MultiPath {
-					nextHops = append(nextHops, NextHop{
-						Gw:        ip.FromNetIP(h.Gw),
-						LinkIndex: h.LinkIndex,
-					})
+				if kernRoute.OnLink {
+					// Ugh, this is a lossy reverse mapping.
+					// TODO align TargetTypes with kernel types!
+					target.Type = TargetTypeVXLAN
+				} else {
+					target.Type = TargetTypeGlobalUnicast
 				}
-				target.MultiPath = nextHops
 			}
 		}
-		allTargets = append(allTargets, target)
-	}
-	return allTargets, nil
-}
 
-func normaliseDestination(d *net.IPNet) ip.CIDR {
-	if d != nil {
-		return ip.CIDRFromIPNet(d)
-	}
-	return defaultCidr
+		if len(kernRoute.NextHops) > 0 {
+			// Multi-path route.
+			for _, nh := range kernRoute.NextHops {
+				ifaceName, ok := r.ifaceNameForIndex(nh.Ifindex)
+				if !ok {
+					r.logCxt.WithField("ifindex", nh.Ifindex).Warn("Next hop has unknown interface index.")
+				}
+				target.MultiPath = append(target.MultiPath, NextHop{
+					Gw:        nh.GW,
+					IfaceName: ifaceName,
+				})
+			}
+		} else {
+			// Single-path route.
+			target.GW = kernRoute.GW
+		}
+
+		allTargets = append(allTargets, target)
+	})
+	return allTargets, nil
 }
 
 func (r *RouteTable) Apply() (err error) {
@@ -1128,20 +1209,44 @@ func (r *RouteTable) netlinkRouteToKernelRoute(route netlink.Route) (kernKey ker
 		return
 	}
 
+	// Defensive; recent versions of netlink always return a CIDR, but just
+	// in case that gets regressed...
+	cidr := ip.CIDRFromIPNet(route.Dst)
+	if route.Dst == nil {
+		if r.ipVersion == 4 {
+			cidr = defaultCIDRv4
+		} else {
+			cidr = defaultCIDRv6
+		}
+	}
+
 	kernKey = kernelRouteKey{
-		CIDR:     ip.CIDRFromIPNet(route.Dst),
+		CIDR:     cidr,
 		Priority: route.Priority,
 		TOS:      route.Tos,
 	}
 	kernRoute = kernelRoute{
 		Type:     route.Type,
 		Scope:    route.Scope,
-		GW:       ip.FromNetIP(route.Gw),
 		Src:      ip.FromNetIP(route.Src),
-		Ifindex:  route.LinkIndex,
 		OnLink:   route.Flags&unix.RTNH_F_ONLINK != 0,
 		Protocol: route.Protocol,
 	}
+
+	if len(route.MultiPath) > 0 {
+		// Multi-path route.
+		for _, nh := range route.MultiPath {
+			kernRoute.NextHops = append(kernRoute.NextHops, kernelNextHop{
+				GW:      ip.FromNetIP(nh.Gw),
+				Ifindex: nh.LinkIndex,
+			})
+		}
+	} else {
+		// Single-path route.
+		kernRoute.GW = ip.FromNetIP(route.Gw)
+		kernRoute.Ifindex = route.LinkIndex
+	}
+
 	if debug {
 		logCxt.WithFields(log.Fields{
 			"kernRoute": kernRoute,
@@ -1528,6 +1633,25 @@ func (r *RouteTable) updateGauges() {
 	r.gaugeNumIfaces.Set(float64(len(r.ifaceIndexToName)))
 }
 
+func (r *RouteTable) checkTargets(ifaceName string, targets ...Target) {
+	for _, t := range targets {
+		if len(t.MultiPath) > 0 {
+			if t.GW != nil || ifaceName != InterfaceNone {
+				log.Panic("MultiPath routes should have InterfaceNone and no GW")
+			}
+			r.haveMultiPathRoutes = true
+			for _, nh := range t.MultiPath {
+				if nh.Gw == nil {
+					log.Panic("MultiPath route should have GW")
+				}
+				if nh.IfaceName == "" || nh.IfaceName == InterfaceNone {
+					log.Panic("MultiPath route should have interface name")
+				}
+			}
+		}
+	}
+}
+
 // kernelRouteKey represents the kernel's FIB key.  The kernel allows routes
 // to coexist as long as they have different keys.
 type kernelRouteKey struct {
@@ -1556,11 +1680,51 @@ func (k kernelRouteKey) String() string {
 type kernelRoute struct {
 	Type     int // unix.RTN_... constants.
 	Scope    netlink.Scope
-	GW       ip.Addr
 	Src      ip.Addr
-	Ifindex  int
 	Protocol netlink.RouteProtocol
 	OnLink   bool
+
+	// Either GW and Ifindex should be specified (for a gateway route) or
+	// NextHops should be specified (for a multi-path route).  The kernel
+	// maintains the distinction between a gateway route and a multi-path route
+	// with only one hop.
+	GW      ip.Addr
+	Ifindex int
+
+	NextHops []kernelNextHop
+}
+
+func (r kernelRoute) IsZero() bool {
+	if r.Type != 0 {
+		return false
+	}
+	if r.Scope != 0 {
+		return false
+	}
+	if r.Src != nil {
+		return false
+	}
+	if r.Protocol != 0 {
+		return false
+	}
+	if r.OnLink {
+		return false
+	}
+	if r.GW != nil {
+		return false
+	}
+	if r.Ifindex != 0 {
+		return false
+	}
+	if len(r.NextHops) != 0 {
+		return false
+	}
+	return true
+}
+
+type kernelNextHop struct {
+	GW      ip.Addr
+	Ifindex int
 }
 
 func (r kernelRoute) GWAsNetIP() net.IP {
@@ -1578,18 +1742,25 @@ func (r kernelRoute) SrcAsNetIP() net.IP {
 }
 
 func (r kernelRoute) String() string {
-	var zeroVal kernelRoute
-	if r == zeroVal {
+	if r.IsZero() {
 		return "<none>"
-	}
-	gwStr := "<nil>"
-	if r.GW != nil {
-		gwStr = r.GW.String()
 	}
 	srcStr := "<nil>"
 	if r.Src != nil {
 		srcStr = r.Src.String()
 	}
-	return fmt.Sprintf("kernelRoute{Type:%d, Scope=%d, GW=%s, Src=%s, Ifindex=%d, Protocol=%v, OnLink=%v}",
-		r.Type, r.Scope, gwStr, srcStr, r.Ifindex, r.Protocol, r.OnLink)
+
+	nextHopPart := ""
+	if len(r.NextHops) > 0 {
+		nextHopPart = fmt.Sprintf("NextHops=%v", r.NextHops)
+	} else {
+		gwStr := "<nil>"
+		if r.GW != nil {
+			gwStr = r.GW.String()
+		}
+		nextHopPart = fmt.Sprintf("GW=%s, Ifindex=%d", gwStr, r.Ifindex)
+	}
+
+	return fmt.Sprintf("kernelRoute{Type=%d, Scope=%d, Src=%s, Protocol=%v, OnLink=%v, %s}",
+		r.Type, r.Scope, srcStr, r.Protocol, r.OnLink, nextHopPart)
 }

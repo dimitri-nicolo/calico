@@ -22,9 +22,11 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
+
 	"github.com/projectcalico/calico/felix/bpf/stats"
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/generictables"

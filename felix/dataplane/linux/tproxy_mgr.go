@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 
 	"github.com/projectcalico/calico/felix/environment"
 

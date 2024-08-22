@@ -18,9 +18,10 @@ import (
 	"time"
 
 	"github.com/golang-collections/collections/stack"
-	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/environment"
@@ -239,11 +240,11 @@ func newInitialKernelState() *initialKernelState {
 }
 
 func (s *initialKernelState) String() string {
-	var rules []string
+	var ruleStrs []string
 	for _, r := range s.rules {
-		rules = append(rules, fmt.Sprintf("%s: [%#v]", r.srcIP, *r))
+		ruleStrs = append(ruleStrs, fmt.Sprintf("%s: [%#v]", r.srcIP, *r))
 	}
-	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(rules, ","))
+	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(ruleStrs, ","))
 
 	var tables []string
 	for index, t := range s.tables {
@@ -618,9 +619,9 @@ func (m *egressIPManager) readInitialKernelState() error {
 
 	// Read routing rules within the egress manager table range from the kernel.
 	m.routeRules.InitFromKernel()
-	rules := m.routeRules.GetAllActiveRules()
+	activeRules := m.routeRules.GetAllActiveRules()
 	ruleTableIndices := set.New[int]()
-	for _, rule := range rules {
+	for _, rule := range activeRules {
 		nlRule := rule.NetLinkRule()
 		r, err := newEgressRule(nlRule)
 		if err != nil {
@@ -1108,7 +1109,7 @@ func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTa
 			for _, addr := range nextHopsSlice {
 				multipath = append(multipath, routetable.NextHop{
 					Gw:        addr,
-					LinkIndex: m.vxlanDeviceLinkIndex, // we have already acquired a lock for this data further up the call stack
+					IfaceName: m.vxlanDevice,
 				})
 			}
 
@@ -1331,11 +1332,11 @@ func (m *egressIPManager) deleteRouteRule(rule *egressRule) {
 func (m *egressIPManager) getTableFromKernel(index int) (*egressTable, error) {
 	table := m.newRouteTable(index)
 	// get targets for both possible interface names
-	vxlanTargets, err := table.ReadRoutesFromKernel(routetable.RouteClassEgress, m.vxlanDevice)
+	vxlanTargets, err := table.ReadRoutesFromKernel(m.vxlanDevice)
 	if err != nil {
 		return nil, err
 	}
-	noneTargets, err := table.ReadRoutesFromKernel(routetable.RouteClassEgress, routetable.InterfaceNone)
+	noneTargets, err := table.ReadRoutesFromKernel(routetable.InterfaceNone)
 	if err != nil {
 		return nil, err
 	}

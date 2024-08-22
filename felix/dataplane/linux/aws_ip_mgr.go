@@ -12,10 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 
 	"github.com/projectcalico/calico/felix/environment"
 

@@ -18,7 +18,6 @@ import (
 	"errors"
 	"net"
 	"reflect"
-	"syscall"
 
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -76,6 +75,7 @@ type Target struct {
 	GW        ip.Addr
 	Src       ip.Addr
 	DestMAC   net.HardwareAddr
+	Protocol  netlink.RouteProtocol
 	MultiPath []NextHop
 }
 
@@ -128,41 +128,15 @@ func (t Target) RouteScope() netlink.Scope {
 func (t Target) Flags() netlink.NextHopFlag {
 	switch t.Type {
 	case TargetTypeVXLAN, TargetTypeNoEncap, TargetTypeOnLink:
-		return syscall.RTNH_F_ONLINK
+		return unix.RTNH_F_ONLINK
 	default:
 		return 0
 	}
 }
 
-func (t Target) EqualGWOrMultiPath(r netlink.Route) bool {
-	if t.GW != nil {
-		if !r.Gw.Equal(t.GW.AsNetIP()) {
-			return false
-		}
-	} else {
-		if len(r.Gw) > 0 {
-			return false
-		}
-	}
-
-	if len(t.MultiPath) != len(r.MultiPath) {
-		return false
-	}
-	for i, tm := range t.MultiPath {
-		rm := r.MultiPath[i]
-		if rm.LinkIndex != tm.LinkIndex {
-			return false
-		}
-		if !rm.Gw.Equal(tm.Gw.AsNetIP()) {
-			return false
-		}
-	}
-	return true
-}
-
 type NextHop struct {
 	Gw        ip.Addr
-	LinkIndex int
+	IfaceName string
 }
 
 type TargetType string
