@@ -372,6 +372,8 @@ test_image: .calico_test.created
 
 cnx-node.tar: $(NODE_CONTAINER_CREATED)
 	docker save --output $@ $(NODE_IMAGE):latest-$(ARCH)
+	docker tag $(NODE_IMAGE):latest-$(ARCH) gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
+	docker save --output cnx-node-retagged.tar gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
 
 calico-node.tar: cnx-node.tar
 	cp cnx-node.tar calico-node.tar
