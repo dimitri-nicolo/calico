@@ -264,6 +264,9 @@ func New(
 	featureDetector environment.FeatureDetectorIface,
 	opts ...Opt,
 ) *RouteTable {
+	if ownershipPolicy == nil {
+		log.Panic("Must provide an ownership policy.")
+	}
 	if tableIndex == 0 {
 		// If we set route.Table to 0, what we actually get is a route in RT_TABLE_MAIN.  However,
 		// RouteListFiltered is much more efficient if we give it the "real" table number.

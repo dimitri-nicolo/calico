@@ -126,7 +126,9 @@ func newTProxyManager(
 		}
 
 		rt := routetable.New(
-			nil,
+			&ownershippol.ExclusiveOwnershipPolicy{
+				InterfaceNames: []string{"lo"},
+			},
 			6,
 			dpConfig.NetlinkTimeout,
 			nil, // deviceRouteSourceAddress
@@ -160,7 +162,8 @@ func newTProxyManager(
 				routetable.Target{
 					Type: routetable.TargetTypeLocal,
 					CIDR: anyV6,
-				})
+				},
+			)
 
 			rr.SetRule(routerule.NewRule(6, 1).
 				GoToTable(idx6).
