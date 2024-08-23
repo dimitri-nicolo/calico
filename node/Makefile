@@ -180,11 +180,13 @@ clean: clean-windows
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
 	find . -name '*.pyc' -exec rm -f {} +
-	rm -rf certs *.tar $(NODE_CONTAINER_BIN_DIR)
+	rm -f calico-node.tar.gz rhel/calico-node.spec
 	rm -rf $(REMOTE_DEPS)
-	rm -rf filesystem/included-source
-	rm -rf dist
 	rm -rf bin
+	rm -rf certs *.tar $(NODE_CONTAINER_BIN_DIR)
+	rm -rf dist
+	rm -rf filesystem/included-source
+	rm -rf package
 	# We build felix as part of the node build, so clean it as part of the clean.
 	make -C ../felix clean
 	# Delete images that we built in this repo
@@ -285,6 +287,26 @@ $(NODE_CONTAINER_FIPS_CREATED): $(REMOTE_DEPS) Dockerfile.$(ARCH) $(NODE_CONTAIN
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(NODE_CONTAINER_BIN_DIR) --build-arg BIRD_IMAGE=$(BIRD_IMAGE) -t $(NODE_IMAGE):latest-fips-$(ARCH) -f Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
 	touch $@
+
+###############################################################################
+# Package
+###############################################################################
+.PHONY: init-package
+init-package: $(NODE_CONTAINER_BINARY)
+	cp $(NODE_CONTAINER_BINARY) calico-node
+	tar zcf calico-node.tar.gz calico-node calico-node.env calico-node.service filesystem/usr/lib/calico/bpf
+	rm -f calico-node
+
+.PHONY: package
+package: calico-node.rhel8 calico-node.rhel9
+
+.PHONY: calico-node.rhel8
+calico-node.rhel8: host-native-build init-package rhel/calico-node.spec.in
+	$(call host_native_rpm_build,rhel8,calico-node,$(NODE_RELEASE_VERSION))
+
+.PHONY: calico-node.rhel9
+calico-node.rhel9: host-native-build init-package rhel/calico-node.spec.in
+	$(call host_native_rpm_build,rhel9,calico-node,$(NODE_RELEASE_VERSION))
 
 ##########################################################################################
 # TESTING

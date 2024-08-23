@@ -1,0 +1,69 @@
+# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
+Name: calico-node
+Version: @VERSION@
+Release: @RELEASE@%{?dist}
+Summary: Calico node handles networking and policy for Calico.
+License: Proprietary
+URL: https://tigera.io/
+Source0: calico-node.tar.gz
+
+Requires: conntrack-tools
+Requires: cryptsetup-libs
+Requires: gzip
+Requires: iproute
+Requires: iproute-tc
+Requires: ipset
+Requires: iptables
+Requires: iptables-utils
+Requires: iputils
+Requires: kmod
+Requires: libmnl
+Requires: libnetfilter_conntrack
+Requires: libnetfilter_cthelper
+Requires: libnetfilter_cttimeout
+Requires: libnetfilter_queue
+Requires: libnfnetlink
+Requires: libpcap
+Requires: net-tools
+Requires: nftables
+Requires: procps
+
+%description
+Calico node handles networking and policy for Calico.
+
+%prep
+%setup -c %{name} -n %{name}
+
+%install
+install -m 755 -d %{buildroot}%{_bindir}
+install -m 755 %{_builddir}/%{name}/%{name} %{buildroot}%{_bindir}/
+install -m 755 -d %{buildroot}%{_sysconfdir}/calico/%{name}
+install -m 644 %{_builddir}/%{name}/%{name}.env %{buildroot}%{_sysconfdir}/calico/%{name}/
+install -m 755 -d %{buildroot}%{_prefix}/lib/calico/bpf
+install -m 644 %{_builddir}/%{name}/filesystem/usr/lib/calico/bpf/*.o %{buildroot}%{_prefix}/lib/calico/bpf/
+install -m 755 -d %{buildroot}%{_unitdir}
+install -m 644 %{_builddir}/%{name}/%{name}.service %{buildroot}%{_unitdir}/%{name}.service
+install -m 755 -d %{buildroot}%{_rundir}/calico
+
+%pre
+/usr/sbin/groupadd -r calico >/dev/null 2>&1 || :
+/usr/sbin/useradd -M -d /var/lib/calico -g calico -r -s /sbin/nologin -c "Calico user" calico >/dev/null 2>&1 || :
+
+%preun
+%systemd_preun %{name}.service
+
+%postun
+%systemd_postun_with_restart %{name}.service
+
+%files
+%config(noreplace) %{_sysconfdir}/calico/%{name}/%{name}.env
+%attr(0770,root,calico) %dir %{_rundir}/calico
+%dir %{_prefix}/lib/calico
+%{_bindir}/%{name}
+%{_prefix}/lib/calico/bpf/*.o
+%{_unitdir}/%{name}.service
+
+%changelog
+* Thu Aug 22 2024 Jiawei Huang <jiawei@tigera.io> - 3.20.0-1.0-1
+- Initial Calico Node package
