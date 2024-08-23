@@ -206,6 +206,16 @@ func (b *ipSetThreatFeedBackend) Delete(ctx context.Context, i bapi.ClusterInfo,
 		return nil, err
 	}
 
+	if err := b.checkTenancy(ctx, i, feeds); err != nil {
+		return &v1.BulkResponse{
+			Total:     len(feeds),
+			Succeeded: 0,
+			Failed:    len(feeds),
+			Errors:    []v1.BulkError{{Resource: "", Type: "document_missing_exception", Reason: err.Error()}},
+			Deleted:   nil,
+		}, nil
+	}
+
 	alias := b.index.Alias(i)
 
 	// Build a bulk request using the provided feeds.
@@ -213,12 +223,6 @@ func (b *ipSetThreatFeedBackend) Delete(ctx context.Context, i bapi.ClusterInfo,
 	numToDelete := 0
 	bulkErrs := []v1.BulkError{}
 	for _, feed := range feeds {
-		if err := b.checkTenancy(ctx, i, &feed); err != nil {
-			logrus.WithError(err).WithField("id", feed.ID).Warn("Error checking tenancy for feed")
-			bulkErrs = append(bulkErrs, v1.BulkError{Resource: feed.ID, Type: "document_missing_exception", Reason: err.Error()})
-			continue
-		}
-
 		req := elastic.NewBulkDeleteRequest().Index(alias).Id(feed.ID)
 		bulk.Add(req)
 		numToDelete++
@@ -257,21 +261,43 @@ func (b *ipSetThreatFeedBackend) Delete(ctx context.Context, i bapi.ClusterInfo,
 	}, nil
 }
 
-func (b *ipSetThreatFeedBackend) checkTenancy(ctx context.Context, i bapi.ClusterInfo, feed *v1.IPSetThreatFeed) error {
+func (b *ipSetThreatFeedBackend) checkTenancy(ctx context.Context, i bapi.ClusterInfo, feeds []v1.IPSetThreatFeed) error {
 	// If we're in single index mode, we need to check tenancy. Otherwise, we can skip this because
 	// the index name already contains the cluster and tenant ID.
-	if b.singleIndex {
-		// We need to protect against tenancy here. In single index mode without this check, any tenant could send a request which
-		// dismisses or deletes a feed for any other tenant if they guess the right ID.
-		// Query the feed to compare the tenant and cluster to the request. If they don't match, skip.
-		// This is not a perfect solution, but it's better than nothing.
-		// By Listing with the given cluster info and ID, we can ensure that the feed is visible to that tenant.
-		items, err := b.List(ctx, i, &v1.IPSetThreatFeedParams{ID: feed.ID, QueryParams: v1.QueryParams{MaxPageSize: 1}})
-		if err != nil {
-			return err
-		}
-		if len(items.Items) == 0 {
-			return fmt.Errorf("event not found during tenancy check")
+	if !b.singleIndex {
+		return nil
+	}
+
+	// This is a shared index.
+	// We need to protect against tenancy here. In single index mode without this check, any tenant could send a request which
+	// deletes feeds for any other tenant if they guess the right ID.
+	// Query the given feed IDs using the tenant and cluster from the request to ensure that each feed is visible to that tenant.
+	ids := []string{}
+	for _, feed := range feeds {
+		ids = append(ids, feed.ID)
+	}
+
+	// Build a query which matches on:
+	// - The given cluster and tenant (from BaseQuery)
+	// - An OR combintation of the given IDs
+	q := b.queryHelper.BaseQuery(i)
+	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
+	idsQuery := b.client.Search().Index(b.index.Index(i)).Query(q)
+	idsResult, err := idsQuery.Do(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Build a lookup map of the found feeds.
+	foundIDs := map[string]struct{}{}
+	for _, hit := range idsResult.Hits.Hits {
+		foundIDs[hit.Id] = struct{}{}
+	}
+
+	// Now make sure that all of the given feeds were found.
+	for _, feed := range feeds {
+		if _, found := foundIDs[feed.ID]; !found {
+			return fmt.Errorf("feed %s not found", feed.ID)
 		}
 	}
 	return nil
