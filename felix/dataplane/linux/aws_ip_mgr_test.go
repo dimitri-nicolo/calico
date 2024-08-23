@@ -464,6 +464,8 @@ func describeAWSIPMgrCommonTests(mode string) {
 			var secondaryLink *fakeLink
 
 			checkRouteTable := func(rt *fakeRouteTable, ifaceName string) {
+				Expect(rt).ToNot(BeNil())
+				Expect(rt.Routes).ToNot(BeNil())
 				gwAddrAsCIDR := ip.MustParseCIDROrIP("100.64.0.1/32")
 				Expect(rt.Routes[ifaceName]).To(ConsistOf(
 					routetable.Target{
@@ -1285,7 +1287,7 @@ func (f *awsIPMgrFakes) NeighList(linkIndex, family int) ([]netlink.Neigh, error
 }
 
 func (f *awsIPMgrFakes) NewRouteTable(
-	regexes []string,
+	ifaceNames []string,
 	version uint8,
 	timeout time.Duration,
 	deviceRouteSourceAddress net.IP,
@@ -1293,7 +1295,7 @@ func (f *awsIPMgrFakes) NewRouteTable(
 	removeExternalRoutes bool,
 	index int,
 	reporter logutils.OpRecorder,
-	featureDetector environment.FeatureDetectorIface) routetable.RouteTableInterface {
+	featureDetector environment.FeatureDetectorIface) routetable.Interface {
 
 	Expect(version).To(BeNumerically("==", 4))
 	Expect(deviceRouteSourceAddress).To(BeNil())
@@ -1301,12 +1303,12 @@ func (f *awsIPMgrFakes) NewRouteTable(
 	Expect(reporter).ToNot(BeNil())
 
 	rt := &fakeRouteTable{
-		Regexes:  regexes,
-		Timeout:  timeout,
-		Protocol: deviceRouteProtocol,
-		index:    index,
-		Routes:   map[string][]routetable.Target{},
-		Errors:   f.Errors,
+		IfaceNames: ifaceNames,
+		Timeout:    timeout,
+		Protocol:   deviceRouteProtocol,
+		index:      index,
+		Routes:     map[string][]routetable.Target{},
+		Errors:     f.Errors,
 	}
 	f.RouteTables[index] = rt
 	return rt
@@ -1348,7 +1350,7 @@ func (f *awsIPMgrFakes) NewRouteRules(
 
 func (f *awsIPMgrFakes) FindRouteTable(ifaceName string) (int, *fakeRouteTable) {
 	for rtIdx, rt := range f.RouteTables {
-		if rt.Regexes[0] == "^"+ifaceName+"$" {
+		if rt.IfaceNames[0] == ifaceName {
 			return rtIdx, rt
 		}
 	}
@@ -1398,15 +1400,15 @@ func (f *fakeLink) Type() string {
 }
 
 type fakeRouteTable struct {
-	Regexes  []string
-	Timeout  time.Duration
-	Protocol netlink.RouteProtocol
-	index    int
-	Routes   map[string][]routetable.Target
-	Errors   testutils.ErrorProducer
+	IfaceNames []string
+	Timeout    time.Duration
+	Protocol   netlink.RouteProtocol
+	index      int
+	Routes     map[string][]routetable.Target
+	Errors     testutils.ErrorProducer
 }
 
-func (f *fakeRouteTable) OnIfaceStateChanged(s string, state ifacemonitor.State) {
+func (f *fakeRouteTable) OnIfaceStateChanged(s string, idx int, state ifacemonitor.State) {
 }
 
 func (f *fakeRouteTable) QueueResync() {
@@ -1420,18 +1422,18 @@ func (f *fakeRouteTable) Index() int {
 	return f.index
 }
 
-func (f *fakeRouteTable) SetRoutes(ifaceName string, targets []routetable.Target) {
+func (f *fakeRouteTable) SetRoutes(class routetable.RouteClass, ifaceName string, targets []routetable.Target) {
 	if ifaceName != routetable.InterfaceNone {
-		Expect(f.Regexes[0]).To(Or(Equal("^" + ifaceName + "$")))
+		Expect(f.IfaceNames[0]).To(Equal(ifaceName))
 	}
 	f.Routes[ifaceName] = targets
 }
 
-func (f *fakeRouteTable) RouteUpdate(_ string, _ routetable.Target) {
+func (f *fakeRouteTable) RouteUpdate(class routetable.RouteClass, _ string, _ routetable.Target) {
 	panic("implement me")
 }
 
-func (f *fakeRouteTable) RouteRemove(_ string, _ ip.CIDR) {
+func (f *fakeRouteTable) RouteRemove(class routetable.RouteClass, _ string, _ ip.CIDR) {
 	panic("implement me")
 }
 

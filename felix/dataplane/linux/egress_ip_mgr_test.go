@@ -166,7 +166,7 @@ var _ = Describe("EgressIPManager", func() {
 		for _, e := range ips {
 			multipath = append(multipath, routetable.NextHop{
 				Gw:        ip.FromString(e),
-				LinkIndex: manager.vxlanDeviceLinkIndex,
+				IfaceName: manager.vxlanDevice,
 			})
 		}
 		return multipath
@@ -1983,7 +1983,7 @@ func (f *mockRouteTableFactory) NewRouteTable(
 	removeExternalRoutes bool,
 	opRecorder logutils.OpRecorder,
 	featureDetector environment.FeatureDetectorIface,
-) routetable.RouteTableInterface {
+) routetable.Interface {
 
 	table := &mockRouteTable{
 		index:         tableIndex,
