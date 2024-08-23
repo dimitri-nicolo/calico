@@ -1183,6 +1183,7 @@ func TestDismissEvent(t *testing.T) {
 			SourceNamespace: "michigan",
 			SourcePort:      testutils.Int64Ptr(48127),
 		}
+
 		clusterInfo = bapi.ClusterInfo{Cluster: cluster}
 
 		// Create the event in ES.
@@ -1245,6 +1246,82 @@ func TestDismissEvent(t *testing.T) {
 		require.Equal(t, 1, len(results.Items))
 		// Check event for the dismiss flag true.
 		require.Equal(t, true, results.Items[0].Dismissed)
+	})
+
+	RunAllModes(t, "Dismiss two Events at once", func(t *testing.T) {
+		dismissSetup(t)
+
+		// Create a second event.
+		event2 := v1.Event{
+			Time:            v1.NewEventTimestamp(time.Now().Unix()),
+			Description:     "Small down event",
+			Origin:          "Lonely world",
+			Severity:        1,
+			Type:            "TODO",
+			DestIP:          testutils.StringPtr("192.168.1.1"),
+			DestName:        "anywhere-1234",
+			DestNameAggr:    "anywhere",
+			DestPort:        testutils.Int64Ptr(53),
+			Dismissed:       false,
+			Host:            "midnight-train",
+			SourceIP:        testutils.StringPtr("192.168.2.2"),
+			SourceName:      "somewhere-1234",
+			SourceNameAggr:  "somewhere",
+			SourceNamespace: "michigan",
+			SourcePort:      testutils.Int64Ptr(48127),
+		}
+		_, err := b.Create(ctx, clusterInfo, []v1.Event{event2})
+		require.NoError(t, err)
+
+		// Refresh.
+		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+		require.NoError(t, err)
+
+		// List events.
+		results, err = b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 2, len(results.Items))
+
+		// Dismiss both Events
+		resp, err := b.UpdateDismissFlag(ctx, clusterInfo, []v1.Event{
+			{
+				ID:        results.Items[0].ID,
+				Dismissed: true,
+			},
+			{
+				ID:        results.Items[1].ID,
+				Dismissed: true,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, len(resp.Errors))
+		require.Equal(t, 2, resp.Total)
+		require.Equal(t, 0, resp.Failed)
+		require.Equal(t, 2, resp.Succeeded)
+
+		results, err = b.List(ctx, clusterInfo, &v1.EventParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-1 * time.Minute),
+					To:   time.Now().Add(1 * time.Minute),
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, results)
+		require.Equal(t, 2, len(results.Items))
+
+		// Check event for the dismiss flag true.
+		require.Equal(t, true, results.Items[0].Dismissed)
+		require.Equal(t, true, results.Items[1].Dismissed)
 	})
 
 	RunAllModes(t, "Restore an Event", func(t *testing.T) {
@@ -1414,6 +1491,48 @@ func TestMultiTenantDismissal(t *testing.T) {
 			require.NotNil(t, 1, results)
 			require.Equal(t, 1, len(results.Items))
 			require.False(t, results.Items[0].Dismissed, "event should not be dismissed")
+		}
+
+		// Attempt to dismiss both events in the same request, using tenant B's info.
+		resp, err = b.UpdateDismissFlag(ctx, clusterInfoB, []v1.Event{
+			{
+				ID:        resultsA.Items[0].ID,
+				Dismissed: true,
+			},
+			{
+				ID:        resultsB.Items[0].ID,
+				Dismissed: true,
+			},
+		})
+		require.NoError(t, err)
+
+		if indexGetter.IsSingleIndex() {
+			// Multi-index mode handles this case differently - since the events are in different indices, the request to dismiss
+			// the event in the other tenant's index will be ignored, but the request to dismiss tenantB's event will succeed.
+			require.Len(t, resp.Errors, 1)
+			require.Equal(t, resp.Failed, 2)
+
+			// Check that neither event is dismissed.
+			for _, c := range []bapi.ClusterInfo{clusterInfoA, clusterInfoB} {
+				results, err := b.List(ctx, c, &v1.EventParams{
+					QueryParams: v1.QueryParams{TimeRange: &lmav1.TimeRange{From: time.Now().Add(-1 * time.Minute), To: time.Now().Add(1 * time.Minute)}},
+				})
+				require.NoError(t, err)
+				require.NotNil(t, 1, results)
+				require.Equal(t, 1, len(results.Items))
+				require.False(t, results.Items[0].Dismissed, "event should not be dismissed")
+			}
+		} else {
+			// TenantB should be dismissed, tenantA should not.
+			for c, dismissed := range map[bapi.ClusterInfo]bool{clusterInfoA: false, clusterInfoB: true} {
+				results, err := b.List(ctx, c, &v1.EventParams{
+					QueryParams: v1.QueryParams{TimeRange: &lmav1.TimeRange{From: time.Now().Add(-1 * time.Minute), To: time.Now().Add(1 * time.Minute)}},
+				})
+				require.NoError(t, err)
+				require.NotNil(t, 1, results)
+				require.Equal(t, 1, len(results.Items))
+				require.Equal(t, dismissed, results.Items[0].Dismissed, "event has wrong dismissed state")
+			}
 		}
 
 		// Dismiss tenant A's event using tenant A's info.
