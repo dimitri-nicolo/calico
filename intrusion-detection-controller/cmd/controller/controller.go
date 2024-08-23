@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -83,6 +84,19 @@ func main() {
 	if ver {
 		version.Version()
 		return
+	}
+
+	switch logLevel := strings.ToLower(os.Getenv("LOG_LEVEL")); logLevel {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "info", "":
+		log.SetLevel(log.InfoLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
