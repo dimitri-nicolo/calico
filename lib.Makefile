@@ -339,9 +339,9 @@ define host_native_rpm_build
 	$(eval version := $(subst v,,$(3)))
 	$(eval release := '1')
 	$(eval hash := $(subst $(3)-$(DEV_TAG_SUFFIX)-,,$(call git-dev-tag)))
-	$(ifeq ($(findstring -,$(version)),-) \
+	$(ifeq ($(findstring -,$(call git-release-tag-from-dev-tag)),-) \
 		$(eval version := $(subst -,~pre,$(version))) \
-		$(eval release:= $(subst -g,.$(shell date -u +'%Y%m%d')git,$(hash))) \
+		$(eval release := $(subst -g,.$(shell date -u +'%Y%m%d')git,$(hash))) \
 	endif)
 
 	sed 's/@VERSION@/$(version)/g' rhel/$(2).spec.in > rhel/$(2).spec
