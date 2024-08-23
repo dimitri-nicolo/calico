@@ -321,7 +321,7 @@ $(FELIX_GPL_SOURCE):
 ###############################################################################
 # FV Tests
 ###############################################################################
-K8ST_IMAGE_TARS=calico-node.tar calico-apiserver.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar egress-gateway.tar
+K8ST_IMAGE_TARS=calico-apiserver.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar egress-gateway.tar
 
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 # Determine the tests to run using the test spider tool, which emits a list of impacted packages.
@@ -374,9 +374,6 @@ cnx-node.tar: $(NODE_CONTAINER_CREATED)
 	docker save --output $@ $(NODE_IMAGE):latest-$(ARCH)
 	docker tag $(NODE_IMAGE):latest-$(ARCH) gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
 	docker save --output cnx-node-retagged.tar gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
-
-calico-node.tar: cnx-node.tar
-	cp cnx-node.tar calico-node.tar
 
 calico-apiserver.tar: ../go.mod $(shell find ../apiserver -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../apiserver image
@@ -548,7 +545,7 @@ external-network-cleanup:
 
 .PHONY: st
 ## Run the system tests
-st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar calico-node.tar cnx-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
+st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd .calico_test.created dist/calico dist/calico-ipam
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
