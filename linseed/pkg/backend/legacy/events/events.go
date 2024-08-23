@@ -351,8 +351,7 @@ func (b *eventsBackend) checkTenancy(ctx context.Context, i api.ClusterInfo, eve
 	// This is a shared index.
 	// We need to protect against tenancy here. In single index mode without this check, any tenant could send a request which
 	// dismisses or deletes events for any other tenant if they guess the right ID.
-	// Query each event to compare the tenant and cluster to the request. If any do not match, we will fail the entire request.
-	// By Listing with the given cluster info and ID, we can ensure that the event is visible to that tenant.
+	// Query the given event IDs using the tenant and cluster from the request to ensure that each requested ID is visible to that tenant.
 	ids := []string{}
 	for _, event := range events {
 		ids = append(ids, event.ID)
