@@ -18,7 +18,7 @@ function load_image() {
     docker exec -t ${node} ctr -n=k8s.io images import /pod2daemon.tar
     docker exec -t ${node} ctr -n=k8s.io images import /kube-controllers.tar
     docker exec -t ${node} ctr -n=k8s.io images import /egress-gateway.tar
-    docker exec -t ${node} rm /cnx-node-retagged.tar /calicoctl.tar /calico-cni.tar /pod2daemon.tar /kube-controllers.tar /calico-apiserver.tar /egress-gateway.tar
+    docker exec -t ${node} rm /cnx-node.tar /cnx-node-retagged.tar /calicoctl.tar /calico-cni.tar /pod2daemon.tar /kube-controllers.tar /calico-apiserver.tar /egress-gateway.tar
 }
 
 load_image kind-control-plane
