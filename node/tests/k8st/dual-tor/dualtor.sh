@@ -145,6 +145,22 @@ EOF
     fi
 }
 
+function add_bgp_layout() {
+    DUAL_TOR_DIR=tests/k8st/dual-tor
+    cat >${DUAL_TOR_DIR}/bgp-layout.yaml <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bgp-layout
+  namespace: tigera-operator
+data:
+  earlyNetworkConfiguration: |
+    apiVersion: projectcalico.org/v3
+EOF
+    sed -e 's/^/    /' ${DUAL_TOR_DIR}/cfg.yaml >>${DUAL_TOR_DIR}/bgp-layout.yaml
+    ${kubectl} create -f ${DUAL_TOR_DIR}/bgp-layout.yaml
+}
+
 function install_tsee() {
 
     # Load the locally built images into the KIND cluster nodes.
@@ -161,15 +177,14 @@ function install_tsee() {
     # Create BGPConfiguration, BGPPeers and IPPools.
     add_calico_resources
 
+    # Create bgp-layout ConfigMap.
+    add_bgp_layout
+
     # Label and annotate nodes.
     ${kubectl} label node kind-control-plane rack=ra
     ${kubectl} label node kind-worker rack=ra
     ${kubectl} label node kind-worker2 rack=rb
     ${kubectl} label node kind-worker3 rack=rb
-    ${kubectl} annotate node kind-control-plane projectcalico.org/ASNumber=65001
-    ${kubectl} annotate node kind-worker projectcalico.org/ASNumber=65001
-    ${kubectl} annotate node kind-worker2 projectcalico.org/ASNumber=65002
-    ${kubectl} annotate node kind-worker3 projectcalico.org/ASNumber=65002
 
     # Create Installation resource to kick off the install.
     ${kubectl} apply -f - <<EOF
@@ -527,15 +542,50 @@ EOF
     # Fix /etc/resolv.conf in each node.
     ${KIND} get nodes | xargs -n1 -I {} docker exec {} sh -c "echo nameserver 8.8.8.8 > /etc/resolv.conf"
 
+    for node in kind-control-plane kind-worker kind-worker2 kind-worker3; do
+	echo ===== docker exec $node ip r
+	docker exec $node ip r
+    done
+    echo ===== ${kubectl} get nodes -o yaml
+    ${kubectl} get nodes -o yaml
+
     install_tsee
 
     # Wait for installation to succeed and everything to be ready.
     for k8sapp in calico-node calico-kube-controllers calico-typha; do
+	num_failed_waits=0
 	while ! time ${kubectl} wait pod --for=condition=Ready -l k8s-app=${k8sapp} -n calico-system --timeout=300s; do
 	    # This happens when no matching resources exist yet,
 	    # i.e. immediately after application of the Calico YAML.
 	    sleep 5
 	    ${kubectl} get po -A -o wide || true
+	    let 'num_failed_waits++' || true
+	    if [ $num_failed_waits -gt 10 ]; then
+		echo ERROR: Timed out waiting for ${k8sapp}
+		for node in kind-control-plane kind-worker kind-worker2 kind-worker3; do
+		    echo ===== docker exec $node ip r
+	            docker exec $node ip r
+		done
+		echo ===== ${kubectl} get ds -A -o yaml
+	        ${kubectl} get ds -A -o yaml
+		echo ===== ${kubectl} get nodes -o yaml
+	        ${kubectl} get nodes -o yaml
+		echo ===== ${kubectl} get svc -A -o yaml
+		${kubectl} get svc -A -o yaml
+		echo ===== ${kubectl} get ep -A -o yaml
+		${kubectl} get ep -A -o yaml
+		for p in `${kubectl} get po -n calico-system | awk '{print $1;}' | grep calico-node-`; do
+		    echo ===== ${kubectl} logs $p -n calico-system -c calico-node
+		    ${kubectl} logs $p -n calico-system -c calico-node || true
+		    echo ===== ${kubectl} logs $p -n calico-system -c calico-node --previous
+		    ${kubectl} logs $p -n calico-system -c calico-node --previous || true
+		done
+		for k8sapp in calico-typha; do
+		    echo ===== ${kubectl} logs -l k8s-app=${k8sapp} -n calico-system --all-containers --ignore-errors --prefix --max-log-requests 42 --tail 30000
+		    ${kubectl} logs -l k8s-app=${k8sapp} -n calico-system --all-containers --ignore-errors --prefix --max-log-requests 42 --tail 30000
+		done
+	        exit 1
+	    fi
 	done
     done
     ${kubectl} get po -A -o wide
