@@ -50,10 +50,12 @@ assert_group_exists calico
 # check folders
 assert_folder_exists /etc/calico/
 assert_folder_exists /etc/calico/calico-fluent-bit/
+assert_folder_exists /run/calico/
 
 # check folder user and groups
 assert_folder_user_group /etc/calico/ "root root"
 assert_folder_user_group /etc/calico/calico-fluent-bit/ "root root"
+assert_folder_user_group /run/calico/ "root calico"
 assert_folder_user_group /var/log/calico/calico-fluent-bit/ "calico calico"
 
 # check files

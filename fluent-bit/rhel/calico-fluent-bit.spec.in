@@ -74,6 +74,8 @@ install -m 644 %{SOURCE6} %{buildroot}%{_unitdir}/%{name}.service
 # filesystem buffer
 install -d %{buildroot}%{_localstatedir}/log/calico/%{name}
 
+install -m 770 -d %{buildroot}%{_rundir}/calico
+
 rm -rvf %{buildroot}%{_includedir}
 
 %check
@@ -93,6 +95,7 @@ rm -rvf %{buildroot}%{_includedir}
 %config %{_sysconfdir}/calico/%{name}/*.conf
 %config(noreplace) %{_sysconfdir}/calico/%{name}/*.env
 %attr(0755,calico,calico) %dir %{_localstatedir}/log/calico/%{name}
+%attr(0770,root,calico) %dir %{_rundir}/calico
 %dir %{_sysconfdir}/calico/%{name}
 %{_bindir}/%{name}
 %{_sysconfdir}/calico/%{name}/out_linseed.so
