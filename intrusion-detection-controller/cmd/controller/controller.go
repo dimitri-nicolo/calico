@@ -87,13 +87,13 @@ func main() {
 	}
 
 	switch logLevel := strings.ToLower(os.Getenv("LOG_LEVEL")); logLevel {
-	case "Debug":
+	case "debug":
 		log.SetLevel(log.DebugLevel)
-	case "Warn":
+	case "warn":
 		log.SetLevel(log.WarnLevel)
-	case "Info", "":
+	case "info", "":
 		log.SetLevel(log.InfoLevel)
-	case "Error":
+	case "error":
 		log.SetLevel(log.ErrorLevel)
 	default:
 		log.SetLevel(log.InfoLevel)
