@@ -186,16 +186,18 @@ func Run() {
 		}
 	}
 
+	needsNodeUpdate := configureAndCheckIPAddressSubnets(ctx, cli, node, k8sNode)
+
 	// Allow setting this node's AS number and rack label(s) from an EarlyNetworkConfiguration
 	// mapped in at $CALICO_EARLY_NETWORKING.  Note that the "AS" environment variable can still
 	// override the AS number.
-	needsNodeUpdate, err := configureBGPLayout(node)
+	nodeChanged, err := configureBGPLayout(node)
 	if err != nil {
 		log.WithError(err).Error("BGP layout configuration failed")
 		utils.Terminate()
 	}
+	needsNodeUpdate = needsNodeUpdate || nodeChanged
 
-	needsNodeUpdate = configureAndCheckIPAddressSubnets(ctx, cli, node, k8sNode) || needsNodeUpdate
 	// Configure the node AS number.
 	needsNodeUpdate = configureASNumber(node, os.Getenv("AS"), "environment") || needsNodeUpdate
 	// Populate a reference to the node based on orchestrator node identifiers.
