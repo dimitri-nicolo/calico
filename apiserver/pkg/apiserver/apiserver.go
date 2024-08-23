@@ -3,6 +3,7 @@
 package apiserver
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -347,10 +348,11 @@ func (t *calicoResourceLister) OnUpdates(updates []api.Update) {
 				t.uisettingsgroups[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.UISettingsGroup)
 			}
 		case v3.KindManagedCluster:
+			key := fmt.Sprintf("%s/%s", u.Key.(model.ResourceKey).Namespace, u.Key.(model.ResourceKey).Name)
 			if isDelete(u) {
-				delete(t.managedclusters, u.Key.(model.ResourceKey).Name)
+				delete(t.managedclusters, key)
 			} else {
-				t.managedclusters[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.ManagedCluster)
+				t.managedclusters[key] = u.Value.(*v3.ManagedCluster)
 			}
 		}
 	}
