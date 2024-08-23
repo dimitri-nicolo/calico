@@ -2,6 +2,7 @@
 
 function load_image() {
     local node=$1
+    docker cp ./cnx-node.tar ${node}:/cnx-node.tar
     docker cp ./cnx-node-retagged.tar ${node}:/cnx-node-retagged.tar
     docker cp ./calico-apiserver.tar ${node}:/calico-apiserver.tar
     docker cp ./calicoctl.tar ${node}:/calicoctl.tar
@@ -9,6 +10,7 @@ function load_image() {
     docker cp ./pod2daemon.tar ${node}:/pod2daemon.tar
     docker cp ./kube-controllers.tar ${node}:/kube-controllers.tar
     docker cp ./egress-gateway.tar ${node}:/egress-gateway.tar
+    docker exec -t ${node} ctr -n=k8s.io images import /cnx-node.tar
     docker exec -t ${node} ctr -n=k8s.io images import /cnx-node-retagged.tar
     docker exec -t ${node} ctr -n=k8s.io images import /calico-apiserver.tar
     docker exec -t ${node} ctr -n=k8s.io images import /calicoctl.tar
