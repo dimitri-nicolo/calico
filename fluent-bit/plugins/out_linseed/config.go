@@ -47,12 +47,9 @@ func NewConfig(plugin unsafe.Pointer, fn PluginConfigKeyFunc) (*Config, error) {
 	cfg.endpoint = endpoint
 	logrus.Debugf("log ingestion endpoint %q", cfg.endpoint)
 
-	skipVerify := false
-	tlsVerify := cfg.pluginConfigKeyFn(plugin, "tls.verify")
-	if b, err := strconv.ParseBool(tlsVerify); err == nil {
-		skipVerify = !b
+	if tlsVerity, err := strconv.ParseBool(cfg.pluginConfigKeyFn(plugin, "tls.verify")); err == nil {
+		cfg.insecureSkipVerify = !tlsVerity
 	}
-	cfg.insecureSkipVerify = skipVerify
 	logrus.Debugf("skip_verify=%v", cfg.insecureSkipVerify)
 
 	serviceAccountName, err := cfg.extractServiceAccountName(kubeconfig)

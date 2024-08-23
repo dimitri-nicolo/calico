@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMiddlewares(t *testing.T) {
+func TestLinseedOutPlugin(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Linseed output plugin test suite")
 }
