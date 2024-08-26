@@ -1231,7 +1231,10 @@ var _ = Describe("Static", func() {
 					chain := &generictables.Chain{
 						Name: "cali-PREROUTING",
 						Rules: []generictables.Rule{
-							{Action: ClearMarkAction{Mark: allCalicoMarkBits}},
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: allCalicoMarkBits},
+							},
 							{
 								Match:  Match().Protocol("udp").DestPort(uint16(rr.VXLANPort)),
 								Action: NoTrackAction{},
@@ -1350,7 +1353,10 @@ var _ = Describe("Static", func() {
 					chain := &generictables.Chain{
 						Name: "cali-PREROUTING",
 						Rules: []generictables.Rule{
-							{Action: ClearMarkAction{Mark: allCalicoMarkBits}},
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: allCalicoMarkBits},
+							},
 							{
 								Match:  Match().Protocol("udp").DestPort(uint16(rr.VXLANPort)),
 								Action: NoTrackAction{},
