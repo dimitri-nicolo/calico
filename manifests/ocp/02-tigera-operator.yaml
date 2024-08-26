@@ -72,7 +72,7 @@ spec:
             path: /var/lib/calico
         - name: calico-resources
           configMap:
-            defaultMode: 0400
+            defaultMode: 0444
             name: calico-resources
         - name: install-resources-script
           configMap:
