@@ -96,7 +96,7 @@ spec:
 {{- if eq .Values.installation.kubernetesProvider "openshift" }}
         - name: calico-resources
           configMap:
-            defaultMode: 0400
+            defaultMode: 0444
             name: calico-resources
         - name: install-resources-script
           configMap:
