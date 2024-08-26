@@ -153,12 +153,12 @@ var _ = Describe("QuerysServerClient tests", func() {
 			Expect(resp).To(BeNil())
 		})
 
-		It("query server token path is not correct", func() {
+		It("query server token is empty", func() {
 			config := &QueryServerConfig{
 				QueryServerTunnelURL: "",
 				QueryServerURL:       server.URL,
 				QueryServerCA:        "/etc/pki/tls/certs/tigera-ca-bundle.crt",
-				QueryServerToken:     "token",
+				QueryServerToken:     "",
 			}
 
 			client := queryServerClient{
@@ -168,7 +168,6 @@ var _ = Describe("QuerysServerClient tests", func() {
 			body := &querycacheclient.QueryEndpointsReqBody{}
 			resp, err := client.SearchEndpoints(config, body, "cluster")
 			Expect(err).Should(HaveOccurred())
-			Expect(os.IsNotExist(err)).To(BeTrue())
 			Expect(resp).To(BeNil())
 		})
 	})

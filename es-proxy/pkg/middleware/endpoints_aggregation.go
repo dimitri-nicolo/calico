@@ -131,6 +131,7 @@ func EndpointsAggregationHandler(authz lmaauth.RBACAuthorizer, authreview Author
 		if flowAccess {
 			deniedEndpoints, err = getDeniedEndpointsFromLinseed(ctx, endpointsAggregationRequest, lsclient, authreview)
 			if err != nil {
+				logrus.WithError(err).Error("call to getDeniedEndpointsFromLinseed failed.")
 				httputils.EncodeError(w, &httputils.HttpStatusError{
 					Status: http.StatusInternalServerError,
 					Msg:    "request to get deniedEndpoints from flowlogs has failed",
@@ -141,19 +142,30 @@ func EndpointsAggregationHandler(authz lmaauth.RBACAuthorizer, authreview Author
 		}
 
 		// Filter deniedEndpoints by other parameters (via queryserver)
-		qsEndpointsResp, err := getEndpointsFromQueryServer(qsConfig, endpointsAggregationRequest, deniedEndpoints)
+		qsEndpointsResp, err := getEndpointsFromQueryServer(r, qsConfig, endpointsAggregationRequest, deniedEndpoints)
 		if err != nil {
-			httputils.EncodeError(w, &httputils.HttpStatusError{
-				Status: http.StatusInternalServerError,
-				Msg:    "failed to get deniedEndpoints from queryserver",
-				Err:    errors.New("failed to get deniedEndpoints from queryserver"),
-			})
-			return
+			logrus.WithError(err).Error("call to getEndpointsFromQueryServer failed.")
+			if strings.ContainsAny(strings.ToLower(err.Error()), "not authorized") {
+				httputils.EncodeError(w, &httputils.HttpStatusError{
+					Status: http.StatusUnauthorized,
+					Msg:    "failed authorization to queryserver/endpoints",
+					Err:    err,
+				})
+				return
+			} else {
+				httputils.EncodeError(w, &httputils.HttpStatusError{
+					Status: http.StatusInternalServerError,
+					Msg:    "failed to get deniedEndpoints from queryserver",
+					Err:    errors.New("failed to get deniedEndpoints from queryserver"),
+				})
+				return
+			}
 		}
 
 		// Enrich deniedEndpoints results with denied traffic info
 		respBodyUpdated, err := updateResults(qsEndpointsResp, deniedEndpoints, flowAccess)
 		if err != nil {
+			logrus.WithError(err).Error("call to updateResults failed.")
 			httputils.EncodeError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
 				Msg:    "failed to update deniedEndpoints with denied traffic info",
@@ -168,11 +180,14 @@ func EndpointsAggregationHandler(authz lmaauth.RBACAuthorizer, authreview Author
 // getEndpointsFromQueryServer is a handler for queryserver endpoint search
 //
 // returns QueryEndpointsResp: list of endpoints from queryserver based on the search parameters provided.
-func getEndpointsFromQueryServer(qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
+func getEndpointsFromQueryServer(r *http.Request, qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
 	deniedEndpoints []string) (*querycacheclient.QueryEndpointsResp, error) {
 
 	// build queryserver getEndpoints api params
 	qsReqParams := getQueryServerRequestParams(params, deniedEndpoints)
+
+	// Update queryserver config with logged-in user's token
+	qsConfig.QueryServerToken = r.Header.Get("Authorization")[7:]
 
 	// Create queryserverClient client.
 	queryserverClient, err := queryserverclient.NewQueryServerClient(qsConfig)

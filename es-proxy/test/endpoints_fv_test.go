@@ -57,9 +57,7 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 		qsconfig     *client.QueryServerConfig
 		req          *http.Request
 		mocklsclient lsclient.MockClient
-
-		tokenFilePath = "token"
-		CAFilePath    = "ca"
+		CAFilePath   = "ca"
 
 		authz mockAuthorizationReview
 	)
@@ -70,24 +68,17 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			QueryServerTunnelURL: "",
 			QueryServerURL:       "",
 			QueryServerCA:        CAFilePath,
-			QueryServerToken:     tokenFilePath,
 		}
 
-		// Create mock client certificate and auth token
+		// Create mock client certificate
 		CA_file, err := os.Create(CAFilePath)
 		Expect(err).ShouldNot(HaveOccurred())
 		defer CA_file.Close()
-
-		token_file, err := os.Create(tokenFilePath)
-		Expect(err).ShouldNot(HaveOccurred())
-		defer token_file.Close()
 	})
 
 	AfterEach(func() {
 		// Delete mock client certificate and auth token files
 		Expect(os.Remove(CAFilePath)).Error().ShouldNot(HaveOccurred())
-
-		Expect(os.Remove(tokenFilePath)).Error().ShouldNot(HaveOccurred())
 	})
 
 	Context("when there are denied flowlogs", func() {
@@ -170,6 +161,7 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			req, err = http.NewRequest("POST", server.URL, bytes.NewBuffer(reqBodyBytes))
+			req.Header.Set("Authorization", "Bearer tokentoken")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// prepare response recorder
@@ -237,6 +229,7 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			req, err = http.NewRequest("POST", server.URL, bytes.NewBuffer(reqBodyBytes))
+			req.Header.Set("Authorization", "Bearer tokentoken")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// prepare response recorder
@@ -358,13 +351,14 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 
 			// prepare request
 			req, err = http.NewRequest("POST", server.URL, bytes.NewBufferString("{}"))
+			req.Header.Set("Authorization", "Bearer tokentoken")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// prepare response recorder
 			rr := httptest.NewRecorder()
 
 			By("calling EndpointsNamesHandler")
-			handler := middleware.EndpointsNamesHandler(authReview, qsconfig, mocklsclient)
+			handler := middleware.EndpointsNamesHandler(authReview, qsconfig)
 			handler.ServeHTTP(rr, req)
 
 			By("validating server response")
