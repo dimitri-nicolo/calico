@@ -23,6 +23,8 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/felix/iptables"
+
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -1229,10 +1231,7 @@ var _ = Describe("Static", func() {
 					chain := &generictables.Chain{
 						Name: "cali-PREROUTING",
 						Rules: []generictables.Rule{
-							{
-								Match:  Match(),
-								Action: ClearMarkAction{Mark: allCalicoMarkBits},
-							},
+							{Action: ClearMarkAction{Mark: allCalicoMarkBits}},
 							{
 								Match:  Match().Protocol("udp").DestPort(uint16(rr.VXLANPort)),
 								Action: NoTrackAction{},
@@ -1242,7 +1241,7 @@ var _ = Describe("Static", func() {
 
 					for _, ifacePrefix := range rr.WorkloadIfacePrefixes {
 						chain.Rules = append(chain.Rules, generictables.Rule{
-							Match:  Match().InInterface(ifacePrefix + "+"),
+							Match:  Match().InInterface(ifacePrefix + iptables.Wildcard),
 							Action: SetMarkAction{Mark: markFromWorkload},
 						})
 					}
@@ -1351,10 +1350,7 @@ var _ = Describe("Static", func() {
 					chain := &generictables.Chain{
 						Name: "cali-PREROUTING",
 						Rules: []generictables.Rule{
-							{
-								Match:  Match(),
-								Action: ClearMarkAction{Mark: allCalicoMarkBits},
-							},
+							{Action: ClearMarkAction{Mark: allCalicoMarkBits}},
 							{
 								Match:  Match().Protocol("udp").DestPort(uint16(rr.VXLANPort)),
 								Action: NoTrackAction{},
@@ -1364,7 +1360,7 @@ var _ = Describe("Static", func() {
 
 					for _, ifacePrefix := range rr.WorkloadIfacePrefixes {
 						chain.Rules = append(chain.Rules, generictables.Rule{
-							Match:  Match().InInterface(ifacePrefix + "+"),
+							Match:  Match().InInterface(ifacePrefix + iptables.Wildcard),
 							Action: SetMarkAction{Mark: markFromWorkload},
 						})
 					}
