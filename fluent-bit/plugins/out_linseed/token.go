@@ -15,8 +15,10 @@ import (
 )
 
 const (
+	// tokenExpiration controls how often we renew serviceaccount token for log forwarding.
 	tokenExpiration = 24 * time.Hour
-	tokenRenewal    = 15 * time.Minute
+	// tokenRenewal controls how early do we want to renew the token when it is close to expiry.
+	tokenRenewal = 15 * time.Minute
 )
 
 func GetToken(cfg *Config) (string, error) {
