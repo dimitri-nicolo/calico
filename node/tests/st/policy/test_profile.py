@@ -54,8 +54,10 @@ class MultiHostMainline(TestBase):
         host1 = self.host1
         host2 = self.host2
 
-        (self.n1_workloads, self.n2_workloads, self.networks) = \
-            self._setup_workloads(host1, host2)
+        host1.wait_for_mtu_file()
+        host2.wait_for_mtu_file()
+
+        (self.n1_workloads, self.n2_workloads, self.networks) = self._setup_workloads(host1, host2)
 
         # Get the original profiles:
         output = host1.calicoctl("get profile -o yaml")
@@ -66,8 +68,8 @@ class MultiHostMainline(TestBase):
         for profile in self.original_profiles:
             if profile['metadata']['name'] != "projectcalico-default-allow":
                 temp.append(profile)
-                    
-        self.original_profiles = temp   
+
+        self.original_profiles = temp
 
         # Make a copy of the profiles to mess about with.
         self.new_profiles = copy.deepcopy(self.original_profiles)
