@@ -65,10 +65,8 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
-			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
-			_, err = fakeCoreV1.ServiceAccounts("default").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-			mockClientSet.On("CoreV1").Return(fakeCoreV1)
+			// returns a fake CoreV1Interface that implements ServiceAccounts(namespace).CreateToken
+			mockClientSet.On("CoreV1").Return(&fakeCoreV1{})
 			cfg.clientset = mockClientSet
 
 			cfg.serviceAccountName = serviceAccount.GetName()
@@ -110,6 +108,36 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			// should not call createToken
 			Expect(mockClientSet.AssertNotCalled(GinkgoT(), "CoreV1")).To(BeTrue())
 			Expect(token).To(Equal("some-token"))
+		})
+
+		It("should return error when the token is invalid", func() {
+			_, err := f.WriteString(validKubeconfig)
+			f.Close()
+			Expect(err).NotTo(HaveOccurred())
+
+			err = os.Setenv("KUBECONFIG", f.Name())
+			Expect(err).NotTo(HaveOccurred())
+			err = os.Setenv("ENDPOINT", "https://1.2.3.4:5678")
+			Expect(err).NotTo(HaveOccurred())
+
+			cfg, err := NewConfig(nil, pluginConfigKeyFn)
+			Expect(err).NotTo(HaveOccurred())
+
+			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
+			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
+			_, err = fakeCoreV1.ServiceAccounts("default").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			// k8s fake corev1 will return an empty jwt token which is invalid
+			mockClientSet.On("CoreV1").Return(fakeCoreV1)
+			cfg.clientset = mockClientSet
+
+			cfg.serviceAccountName = serviceAccount.GetName()
+			cfg.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
+			cfg.token = "some-token"
+
+			_, err = GetToken(cfg)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("not a compact JWS"))
 		})
 
 		It("should return error when missing serviceaccount", func() {

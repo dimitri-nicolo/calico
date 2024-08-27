@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/SermoDigital/jose/jws"
 	"github.com/sirupsen/logrus"
 
 	authv1 "k8s.io/api/authentication/v1"
@@ -21,6 +22,7 @@ const (
 func GetToken(cfg *Config) (string, error) {
 	if time.Until(cfg.expiration) < tokenRenewal {
 		logrus.Infof("token expired for serviceaccount %q", cfg.serviceAccountName)
+
 		token, expiration, err := getServiceAccountToken(cfg.clientset.CoreV1(), corev1.NamespaceDefault, cfg.serviceAccountName)
 		if err != nil {
 			return "", err
@@ -50,9 +52,16 @@ func getServiceAccountToken(coreV1Client v1.CoreV1Interface, namespace, serviceA
 	if err != nil {
 		return "", time.Time{}, err
 	}
-
 	token := tokenResponse.Status.Token
 	expiration := tokenResponse.Status.ExpirationTimestamp.Time
+
+	jwtToken, err := jws.ParseJWT([]byte(token))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	if exp, ok := jwtToken.Claims().Expiration(); ok {
+		expiration = exp
+	}
 
 	return token, expiration, nil
 }
