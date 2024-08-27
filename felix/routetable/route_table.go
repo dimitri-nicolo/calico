@@ -760,7 +760,7 @@ func (r *RouteTable) QueueResync() {
 }
 
 func (r *RouteTable) ReadRoutesFromKernel(ifaceName string) ([]Target, error) {
-	r.logCxt.Debug("Reading routing table from kernel.")
+	r.logCxt.WithField("ifaceName", ifaceName).Debug("Reading routing table from kernel.")
 	r.ifacesToRescan.Add(ifaceName)
 	err := r.maybeResyncWithDataplane()
 	if err != nil {
@@ -1278,6 +1278,9 @@ func routeIsSpecialNoIfRoute(route netlink.Route) bool {
 		// Special routes either have 0 for the link index or 1 ('lo'),
 		// depending on IP version.
 		return false
+	}
+	if len(route.MultiPath) > 0 {
+		return true
 	}
 	switch route.Type {
 	case unix.RTN_LOCAL, unix.RTN_THROW, unix.RTN_BLACKHOLE, unix.RTN_PROHIBIT, unix.RTN_UNREACHABLE:
