@@ -81,13 +81,7 @@ func TestDNSParser(t *testing.T) {
 
 	})
 
-	err = tracker.Map().Iter(func(k, v []byte) maps.IteratorAction {
-		fmt.Println(ipsets.IPSetEntryFromBytes(k))
-		return maps.IterNone
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	for _, setID := range []uint64{1, 2, 3} {
+	for _, setID := range []uint64{1, 2, 3, 1234} {
 		_, err := ipsMap.Get(
 			ipsets.MakeBPFIPSetEntry(setID, ip.CIDRFromStringNoErr("91.189.91.81/32").(ip.V4CIDR), 0, 0).AsBytes())
 		Expect(err).NotTo(HaveOccurred())

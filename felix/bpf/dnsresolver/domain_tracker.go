@@ -21,31 +21,59 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/tchap/go-patricia.v2/patricia"
 
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/cachingmap"
+	"github.com/projectcalico/calico/felix/idalloc"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 type DomainTracker struct {
-	m          maps.Map
-	pfxMap     *cachingmap.CachingMap[DNSPfxKey, DNSPfxValue]
-	strToUin64 func(string) uint64
+	mPfx          maps.Map
+	mSets         maps.Map
+	domainIDAlloc *idalloc.IDAllocator
+	pfxMap        *cachingmap.CachingMap[DNSPfxKey, DNSPfxValue]
+	setsMap       *cachingmap.CachingMap[DNSSetKey, DNSSetValue]
+	setsAcc       *patricia.Trie
+	strToUin64    func(string) uint64
+}
+
+type saItem struct {
+	id       uint64
+	wildcard bool
+	acc      set.Set[uint64] /* accumulated */
+	sets     set.Set[uint64] /* those sets which directly belong to this domain/wildcard */
 }
 
 func NewDomainTracker(strToUin64 func(string) uint64) (*DomainTracker, error) {
-	m := DNSPrefixMap()
-	err := m.EnsureExists()
+	mPfx := DNSPrefixMap()
+	err := mPfx.EnsureExists()
+
+	if err != nil {
+		return nil, fmt.Errorf("could not create BPF map: %w", err)
+	}
+
+	mSets := DNSSetMap()
+	err = mSets.EnsureExists()
 
 	if err != nil {
 		return nil, fmt.Errorf("could not create BPF map: %w", err)
 	}
 
 	d := &DomainTracker{
-		m: m,
-		pfxMap: cachingmap.New[DNSPfxKey, DNSPfxValue](m.GetName(),
+		mPfx:          mPfx,
+		mSets:         mSets,
+		domainIDAlloc: idalloc.New(),
+		pfxMap: cachingmap.New[DNSPfxKey, DNSPfxValue](mPfx.GetName(),
 			maps.NewTypedMap[DNSPfxKey, DNSPfxValue](
-				m.(maps.MapWithExistsCheck), DNSPfxKeyFromBytes, DNSPfxValueFromBytes,
+				mPfx.(maps.MapWithExistsCheck), DNSPfxKeyFromBytes, DNSPfxValueFromBytes,
 			)),
+		setsMap: cachingmap.New[DNSSetKey, DNSSetValue](mSets.GetName(),
+			maps.NewTypedMap[DNSSetKey, DNSSetValue](
+				mSets.(maps.MapWithExistsCheck), DNSSetKeyFromBytes, DNSSetValueFromBytes,
+			)),
+		setsAcc:    patricia.NewTrie(),
 		strToUin64: strToUin64,
 	}
 
@@ -67,36 +95,94 @@ func (d *DomainTracker) Add(domain string, setIDs ...string) {
 		return
 	}
 
+	wildcard := domain == "" || domain[0] == '*'
+
 	k := NewPfxKey(domain)
 
-	exists := make(map[uint64]struct{})
+	isKnown := false
 
-	v, ok := d.pfxMap.Desired().Get(k)
-	if !ok {
-		v, _ = d.pfxMap.Dataplane().Get(k)
+	domainID := d.domainIDAlloc.GetNoAlloc(domain)
+	if domainID != 0 {
+		isKnown = true
+	} else {
+		domainID = d.domainIDAlloc.GetOrAlloc(domain)
 	}
 
-	ids64 := v.IDs()
-	for _, id := range ids64 {
-		exists[id] = struct{}{}
+	v := NewPfxValue(domainID)
+	d.pfxMap.Desired().Set(k, v)
+
+	kb := k.LPMDomain()
+
+	var current *saItem
+
+	c := d.setsAcc.Get(kb)
+	if c == nil {
+		current = &saItem{
+			id:       domainID,
+			wildcard: wildcard,
+			acc:      set.New[uint64](),
+			sets:     set.New[uint64](),
+		}
+		d.setsAcc.Set(kb, current)
+	} else {
+		current = c.(*saItem)
 	}
 
-	for _, id := range setIDs {
-		id64 := d.strToUin64(id)
-		if id64 != 0 {
-			exists[id64] = struct{}{}
-		} else {
-			log.Debugf("No uint64 id for string id '%s'", id)
+	for _, si := range setIDs {
+		id64 := d.strToUin64(si)
+		if id64 == 0 {
+			log.Debugf("No uint64 id for domain %s string set id '%s'", domain, si)
+			continue
+		}
+
+		if current.sets.Contains(id64) {
+			log.Debugf("Set %s (0x%x) alredy belongs to domain %s", si, id64, string(kb))
+			continue
+		}
+		log.Debugf("current %p", current)
+		log.Debugf("current.sets %v", current.sets)
+
+		current.acc.Add(id64)
+		current.sets.Add(id64)
+
+		log.Debugf("Adding set %s (0x%x) to domain %s", si, id64, string(kb))
+		d.setsMap.Desired().Set(NewDNSSetKey(domainID, id64), DNSSetValueVoid)
+
+		if wildcard {
+			_ = d.setsAcc.VisitPrefixes(kb, func(pfx patricia.Prefix, item patricia.Item) error {
+				if item.(*saItem).wildcard {
+					log.Debugf("Adding set %s (0x%x) to wildcard prefix %s", si, id64, string(pfx))
+					i := item.(*saItem)
+					i.acc.Add(id64)
+					d.setsMap.Desired().Set(NewDNSSetKey(i.id, id64), DNSSetValueVoid)
+				}
+				return nil
+			})
+			_ = d.setsAcc.VisitSubtree(kb, func(dom patricia.Prefix, item patricia.Item) error {
+				log.Debugf("Adding set %s (0x%x) to domain %s", si, id64, string(dom))
+				i := item.(*saItem)
+				i.acc.Add(id64)
+				d.setsMap.Desired().Set(NewDNSSetKey(i.id, id64), DNSSetValueVoid)
+				return nil
+			})
 		}
 	}
 
-	ids64 = make([]uint64, 0, len(exists))
-	for id := range exists {
-		ids64 = append(ids64, id)
-	}
+	if !isKnown && !wildcard {
+		_ = d.setsAcc.VisitPrefixes(kb, func(pfx patricia.Prefix, item patricia.Item) error {
+			i := item.(*saItem)
+			if i.wildcard {
+				log.Debugf("Adding wildcard %s set %s to domain %s", pfx, i.sets, domain)
+				i.acc.AddSet(current.sets)
 
-	v = NewPfxValue(ids64...)
-	d.pfxMap.Desired().Set(k, v)
+				i.sets.Iter(func(setid uint64) error {
+					d.setsMap.Desired().Set(NewDNSSetKey(domainID, setid), DNSSetValueVoid)
+					return nil
+				})
+			}
+			return nil
+		})
+	}
 }
 
 func (d *DomainTracker) Del(domain string, setIDs ...string) {
@@ -105,48 +191,70 @@ func (d *DomainTracker) Del(domain string, setIDs ...string) {
 		"setIDs": setIDs,
 	}).Debug("Del")
 
-	if len(setIDs) == 0 {
-		return
-	}
+	wildcard := domain == "" || domain[0] == '*'
 
 	k := NewPfxKey(domain)
-	v, ok := d.pfxMap.Desired().Get(k)
-	if !ok {
+
+	kb := k.LPMDomain()
+
+	c := d.setsAcc.Get(kb)
+	if c == nil {
+		return
+	}
+	current := c.(*saItem)
+
+	domainID := d.domainIDAlloc.GetNoAlloc(domain)
+	if domainID == 0 {
 		return
 	}
 
-	exists := make(map[uint64]struct{})
-	ids64 := v.IDs()
-	for _, id := range ids64 {
-		exists[id] = struct{}{}
+	for _, si := range setIDs {
+		id64 := d.strToUin64(si)
+		if id64 == 0 {
+			log.Debugf("No uint64 id for domain %s string set id '%s'", domain, si)
+			continue
+		}
+
+		if wildcard {
+			_ = d.setsAcc.VisitSubtree(kb, func(dom patricia.Prefix, item patricia.Item) error {
+				log.Debugf("Removing set %s (0x%x) from domain %s", si, id64, string(dom))
+				i := item.(*saItem)
+				i.acc.Discard(id64)
+				d.setsMap.Desired().Delete(NewDNSSetKey(i.id, id64))
+				return nil
+			})
+		}
+
+		current.sets.Discard(id64)
+		current.acc.Discard(id64)
+
+		log.Debugf("Removing set %s (0x%x) from domain %s", si, id64, domain)
+		d.setsMap.Desired().Delete(NewDNSSetKey(domainID, id64))
 	}
 
-	for _, id := range setIDs {
-		id64 := d.strToUin64(id)
-		delete(exists, id64)
-	}
-
-	ids64 = make([]uint64, 0, len(exists))
-	for id := range exists {
-		ids64 = append(ids64, id)
-	}
-
-	if len(ids64) > 0 {
-		v := NewPfxValue(ids64...)
-		d.pfxMap.Desired().Set(k, v)
-	} else {
+	if current.sets.Len() == 0 {
+		log.Debugf("Removing domain %s without sets", domain)
+		d.setsAcc.Delete(kb)
 		d.pfxMap.Desired().Delete(k)
 	}
 }
 
 func (d *DomainTracker) ApplyAllChanges() error {
-	return d.pfxMap.ApplyAllChanges()
+	if err := d.setsMap.ApplyAllChanges(); err != nil {
+		return fmt.Errorf("ApplyAllChanges to DNS sets map: %w", err)
+	}
+
+	if err := d.pfxMap.ApplyAllChanges(); err != nil {
+		return fmt.Errorf("ApplyAllChanges to DNS prefix map: %w", err)
+	}
+
+	return nil
 }
 
 func (d *DomainTracker) Close() {
-	d.m.Close()
+	d.mPfx.Close()
 }
 
-func (d *DomainTracker) Map() maps.Map {
-	return d.m
+func (d *DomainTracker) Maps() []maps.Map {
+	return []maps.Map{d.mPfx, d.mSets}
 }

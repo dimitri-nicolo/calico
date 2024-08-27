@@ -38,6 +38,7 @@ func TestDomainTracker(t *testing.T) {
 		"3":    3,
 		"4":    4,
 		"5":    5,
+		"111":  111,
 		"123":  123,
 		"1234": 1234,
 		"666":  666,
@@ -49,9 +50,12 @@ func TestDomainTracker(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	defer tracker.Close()
 
-	dnsPfxMap := tracker.Map()
+	m := tracker.Maps()
+	dnsPfxMap, dnsSetsMap := m[0], m[1]
 	defer dnsPfxMap.(*maps.PinnedMap).Unpin()
+	defer dnsSetsMap.(*maps.PinnedMap).Unpin()
 
+	tracker.Add("www.ubuntu.com", "111")
 	tracker.Add("ubuntu.com", "123")
 	tracker.Add("*.ubuntu.com", "1234")
 	tracker.Add("archive.ubuntu.com", "1", "2", "3")
@@ -60,97 +64,116 @@ func TestDomainTracker(t *testing.T) {
 
 	v, err := dnsPfxMap.Get(dnsresolver.NewPfxKey("ubuntu.com").AsBytes())
 	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(123)))
+	pid := uint64(dnsresolver.DNSPfxValueFromBytes(v))
+	/* includes */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 123).AsBytes()) /* ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	/* does not include */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).To(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 111).AsBytes()) /* archive.ubuntu.com */
+	Expect(err).To(HaveOccurred())
 
 	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("*.ubuntu.com").AsBytes())
 	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1234)))
+	pid = uint64(dnsresolver.DNSPfxValueFromBytes(v))
+	pidStarUbuntu := pid
+	/* includes */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	/* does not include */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 123).AsBytes()) /* ubuntu.com */
+	Expect(err).To(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 111).AsBytes()) /* www.ubuntu.com */
+	Expect(err).To(HaveOccurred())
+
+	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("www.ubuntu.com").AsBytes())
+	Expect(err).NotTo(HaveOccurred())
+	pid = uint64(dnsresolver.DNSPfxValueFromBytes(v))
+	pidWWW := pid
+	/* includes */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 111).AsBytes()) /* www.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	/* does not include */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 123).AsBytes()) /* ubuntu.com */
+	Expect(err).To(HaveOccurred())
 
 	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes())
 	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1), uint64(2), uint64(3)))
+	pid = uint64(dnsresolver.DNSPfxValueFromBytes(v))
+	pidArchive := pid
+	/* includes */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 2).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 3).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
 
+	/* add again */
 	tracker.Add("archive.ubuntu.com", "1")
 	err = tracker.ApplyAllChanges()
 	Expect(err).NotTo(HaveOccurred())
 
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes())
+	/* includes the same stuff */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1).AsBytes()) /* *archive.ubuntu.com */
 	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1), uint64(2), uint64(3)))
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 2).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 3).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+
+	tracker.Add("archive.ubuntu.com", "4")
+	err = tracker.ApplyAllChanges()
+	Expect(err).NotTo(HaveOccurred())
+
+	/* includes the same stuff */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 2).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 3).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 4).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
 
 	tracker.Del("archive.ubuntu.com", "1", "3")
 	err = tracker.ApplyAllChanges()
 	Expect(err).NotTo(HaveOccurred())
 
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes())
+	/* includes the same stuff */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 2).AsBytes()) /* *archive.ubuntu.com */
 	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(2)))
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 4).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).NotTo(HaveOccurred())
+	/* does not include */
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).To(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 3).AsBytes()) /* *archive.ubuntu.com */
+	Expect(err).To(HaveOccurred())
 
-	tracker.Add("archive.ubuntu.com", "1", "2", "3")
+	tracker.Del("*.ubuntu.com", "1234")
 	err = tracker.ApplyAllChanges()
 	Expect(err).NotTo(HaveOccurred())
 
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1), uint64(2), uint64(3)))
-
-	tracker.Del("archive.ubuntu.com", "5")
-	err = tracker.ApplyAllChanges()
-	Expect(err).NotTo(HaveOccurred())
-
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1), uint64(2), uint64(3)))
-
-	tracker.Del("archive.ubuntu.com", "1", "2", "3")
-	err = tracker.ApplyAllChanges()
-	Expect(err).NotTo(HaveOccurred())
-
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	// matches *.ubuntu.com as archive.ubuntu.com is gone
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1234)))
-
-	tracker.Del("ubuntu.com")
-	err = tracker.ApplyAllChanges()
-	Expect(err).NotTo(HaveOccurred())
-
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(123)))
-
-	tracker.Del("ubuntu.com", "unknown")
-	err = tracker.ApplyAllChanges()
-	Expect(err).NotTo(HaveOccurred())
-
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(123)))
-
-	tracker.Close()
-
-	// Create a new tracker and fill it from DP
-	tracker, err = dnsresolver.NewDomainTracker(func(s string) uint64 {
-		return ids[s]
-	})
-	Expect(err).NotTo(HaveOccurred())
-	defer tracker.Close()
-
-	tracker.Add("ubuntu.com", "4")
-	tracker.Add("*.ubuntu.com", "4")
-	tracker.Add("archive.ubuntu.com", "4")
-	err = tracker.ApplyAllChanges()
-	Expect(err).NotTo(HaveOccurred())
-
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(123), uint64(4)))
-
+	/* no more includes */
 	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("*.ubuntu.com").AsBytes())
 	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1234), uint64(4)))
-
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("archive.ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	Expect(dnsresolver.DNSPfxValueFromBytes(v).IDs()).To(ContainElements(uint64(1), uint64(2), uint64(3), uint64(4)))
+	Expect((dnsresolver.DNSPfxValueFromBytes(v))).NotTo(Equal(pidStarUbuntu))
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidStarUbuntu, 1234).AsBytes()) /* *.ubuntu.com */
+	Expect(err).To(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1234).AsBytes()) /* archive.ubuntu.com */
+	Expect(err).To(HaveOccurred())
+	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidWWW, 1234).AsBytes()) /* www.ubuntu.com */
+	Expect(err).To(HaveOccurred())
 }

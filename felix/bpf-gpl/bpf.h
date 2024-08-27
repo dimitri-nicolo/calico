@@ -21,6 +21,8 @@
 
 #include "globals.h"
 
+#define __unused __attribute__ ((unused))
+
 #define BPF_REDIR_EGRESS 0
 #define BPF_REDIR_INGRESS 1
 
