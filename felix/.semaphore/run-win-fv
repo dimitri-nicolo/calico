@@ -16,9 +16,6 @@
 
 set -ex
 
-#TODO re-enable windows FV with new infra
-
-
 FV_DIR="/home/semaphore/calico-private/process/testing/winfv-felix"
 
 pushd ${FV_DIR}
@@ -27,6 +24,7 @@ cp ~/.docker/config.json docker_auth.json
 cp ~/secrets/docker_cfg.json docker_cfg.json
 cp -r ~/$SEMAPHORE_GIT_DIR/libcalico-go/config/crd ./infra/ee/crd
 cp ~/secrets/license.yaml ./infra/ee/license.yaml
+
 EXIT_CODE=0
 
 if [[ $FV_PROVISIONER == "aws" ]]; then
@@ -66,8 +64,8 @@ elif [[ $FV_PROVISIONER == "capz" ]]; then
   mv ./setup-fv.log /home/semaphore/report/setup-fv.log
   popd
 fi
-ls -ltr ./report
-mkdir /home/semaphore/fv.log
+ls -ltr /home/semaphore/report
+mkdir -p /home/semaphore/fv.log
 # check if *.log glob contains any files so that mv doesn't fail
 compgen -G /home/semaphore/report/*.log > /dev/null && mv /home/semaphore/report/*.log /home/semaphore/fv.log
 
@@ -88,7 +86,7 @@ for log_file in /home/semaphore/fv.log/*.log; do
 done;
 
 # Search for error code file
-if [[ -f /home/semaphore/calico-private/process/testing/winfv-felix/report/error-codes || $EXIT_CODE != 0 ]];
+if [[ -f /home/semaphore/report/error-codes || $EXIT_CODE != 0 ]];
 then
     echo "Windows FV returned error(s)."
     exit 1

@@ -41,6 +41,7 @@ blocks:
       - name: Clean up windows felix resources
         commands:
           - ./delete-az-rg.sh ${USER}-capz-win-felix-${SEMAPHORE_WORKFLOW_ID:0:8}-rg
+          - ./delete-az-rg.sh ${USER}-capz-win-felix-${SEMAPHORE_WORKFLOW_ID:0:8}-rg-ci
       - name: Clean up windows cni resources
         commands:
           - ./delete-az-rg.sh ${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-rg
