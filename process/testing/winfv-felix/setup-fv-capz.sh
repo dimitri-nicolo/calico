@@ -180,7 +180,9 @@ function run_windows_fv(){
 
 function get_test_results(){
   $CAPZ_LOCATION/scp-from-node.sh $WIN_NODE_IP c:\\k\\report\\* $REPORT_DIR
-  cat $REPORT_DIR/fv-test.log
+  if [[ $SEMAPHORE == "false" ]]; then
+    cat $REPORT_DIR/fv-test.log
+  fi
 }
 
 prepare_env
