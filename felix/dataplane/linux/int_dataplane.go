@@ -480,8 +480,9 @@ type InternalDataplane struct {
 	awsStateUpdC <-chan *aws.LocalAWSNetworkState
 	awsSubnetMgr *awsIPManager
 
-	egwHealthReportC chan EGWHealthReport
-	egressIPManager  *egressIPManager
+	egwHealthReportC    chan EGWHealthReport
+	egressIPManager     *egressIPManager
+	egressVXLANUpdatedC chan struct{}
 
 	externalNetworkManager *externalNetworkManager
 }
@@ -1331,6 +1332,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.egwHealthReportC = make(chan EGWHealthReport, 100)
 		egressFDB := vxlanfdb.New(netlink.FAMILY_V4, "egress.calico", featureDetector, config.NetlinkTimeout)
 		dp.vxlanFDBs = append(dp.vxlanFDBs, egressFDB)
+		dp.egressVXLANUpdatedC = make(chan struct{}, 1)
 		dp.egressIPManager = newEgressIPManager(
 			"egress.calico",
 			egressFDB,
@@ -2045,7 +2047,7 @@ func (d *InternalDataplane) Start() {
 		} else if d.config.RulesConfig.IPIPEnabled {
 			mtu = d.config.IPIPMTU - VXLANHeaderSize
 		}
-		go d.egressIPManager.KeepVXLANDeviceInSync(mtu, 10*time.Second)
+		go d.egressIPManager.KeepVXLANDeviceInSync(mtu, 10*time.Second, d.egressVXLANUpdatedC)
 	}
 	go d.loopUpdatingDataplane()
 	go d.loopReportingStatus()
@@ -2656,6 +2658,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.vxlanManager.OnParentNameUpdate(name)
 		case name := <-d.vxlanParentCV6:
 			d.vxlanManagerV6.OnParentNameUpdate(name)
+		case <-d.egressVXLANUpdatedC:
+			d.egressIPManager.OnVXLANDeviceUpdate()
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true

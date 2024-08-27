@@ -124,7 +124,7 @@ var _ = Describe("EgressIPManager", func() {
 		nodeIP := manager.nodeIP
 		manager.lock.Unlock()
 		Expect(nodeIP).To(Equal(net.ParseIP("172.0.0.2")))
-		err = manager.configureVXLANDevice(50)
+		err = manager.configureVXLANDevice(nodeIP, 50)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(manager.vxlanDeviceLinkIndex).To(Equal(6))
 	})

@@ -300,8 +300,10 @@ type egressIPManager struct {
 
 	// lock protects the fields shared between the main goroutine and the VXLAN device sync goroutine.
 	lock                 sync.Mutex
-	vxlanDeviceLinkIndex int
 	nodeIP               net.IP
+	vxlanDeviceLinkIndex int
+	myNodeIPChangedC     chan struct{}
+
 	// to rate-limit retries, track if the last kernel sync failed, and if our state has changed since then
 	lastUpdateFailed, unblockingUpdateOccurred, firstSyncDone bool
 
@@ -430,6 +432,7 @@ func newEgressIPManagerWithShims(
 		statusCallback:         statusCallback,
 		healthAgg:              healthAgg,
 		hopRand:                rand.New(hopRandSource),
+		myNodeIPChangedC:       make(chan struct{}, 1),
 		ipsets:                 ipsets,
 		bpfIPSets:              bpfIPSets,
 		featureDetector:        featureDetector,
@@ -463,7 +466,15 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 			log.WithField("msg", msg).Debug("Local host update")
 			// The node IP is used by the background VXLAN device update thread, need to synchronise.
 			m.lock.Lock()
-			m.nodeIP = net.ParseIP(msg.Ipv4Addr)
+			newNodeIP := net.ParseIP(msg.Ipv4Addr)
+			if !newNodeIP.Equal(m.nodeIP) {
+				log.WithField("newNodeIP", newNodeIP).Info("Node IP changed, updating")
+				m.nodeIP = newNodeIP
+				select {
+				case m.myNodeIPChangedC <- struct{}{}:
+				default:
+				}
+			}
 			m.lock.Unlock()
 		}
 	default:
@@ -471,8 +482,6 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 	}
 
 	// when an update we care about is seen (when the default switch case isn't hit), we track its occurrence
-	m.lock.Lock()
-	defer m.lock.Unlock()
 	m.unblockingUpdateOccurred = true
 }
 
@@ -1396,17 +1405,33 @@ func ipToMac(ipAddr ip.Addr) net.HardwareAddr {
 	return hw
 }
 
-func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
+func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration, vxlanDeviceUpdatedC chan<- struct{}) {
 	log.Info("egress ip VXLAN tunnel device thread started.")
 
+	sleepMonitoringChans := func(maxDuration time.Duration) {
+		timer := time.NewTimer(wait)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-m.myNodeIPChangedC:
+			log.Debug("Sleep returning early: Node IP changed.")
+		}
+	}
+
 	logNextTime := true
+	var lastNodeIP net.IP
+	var lastLinkIndex int
 	for {
-		err := m.configureVXLANDevice(mtu)
+		m.lock.Lock()
+		nodeIP := m.nodeIP
+		m.lock.Unlock()
+
+		err := m.configureVXLANDevice(nodeIP, mtu)
 		if err != nil {
 			log.WithError(err).Warn("Failed to configure egress ip VXLAN tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
 			logNextTime = true
-			continue
+			goto next
 		}
 
 		// src_valid_mark must be enabled for RPF to accurately check returning egress packets coming through egress.calico
@@ -1417,12 +1442,24 @@ func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 			goto next
 		}
 
+		m.lock.Lock()
+		if !nodeIP.Equal(lastNodeIP) || lastLinkIndex != m.vxlanDeviceLinkIndex {
+			log.Debug("Sending kick to main goroutine.")
+			select {
+			case vxlanDeviceUpdatedC <- struct{}{}:
+			default:
+			}
+			lastNodeIP = nodeIP
+			lastLinkIndex = m.vxlanDeviceLinkIndex
+		}
+		m.lock.Unlock()
+
 		if logNextTime {
 			log.Info("Egress ip VXLAN tunnel device configured.")
 			logNextTime = false
 		}
 	next:
-		time.Sleep(wait)
+		sleepMonitoringChans(wait)
 	}
 }
 
@@ -1449,13 +1486,13 @@ func (m *egressIPManager) getParentInterface(nodeIP net.IP) (netlink.Link, error
 }
 
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
-func (m *egressIPManager) configureVXLANDevice(mtu int) error {
+func (m *egressIPManager) configureVXLANDevice(nodeIP net.IP, mtu int) error {
 	logCxt := log.WithFields(log.Fields{"device": m.vxlanDevice})
 	logCxt.Debug("Configuring egress ip VXLAN tunnel device")
 
-	m.lock.Lock()
-	nodeIP := m.nodeIP
-	m.lock.Unlock()
+	if nodeIP == nil {
+		return fmt.Errorf("still waiting to learn this node's IP address")
+	}
 
 	parent, err := m.getParentInterface(nodeIP)
 	if err != nil {
@@ -1548,7 +1585,6 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.vxlanDeviceLinkIndex = attrs.Index
-	m.unblockingUpdateOccurred = true
 
 	return nil
 }
@@ -1722,6 +1758,11 @@ func (m *egressIPManager) getActiveGateways(gateways gatewaysByIP, preferNodeLoc
 		}
 	}
 	return activeGateways
+}
+
+func (m *egressIPManager) OnVXLANDeviceUpdate() {
+	log.Debug("VXLAN device has been updated.")
+	m.unblockingUpdateOccurred = true
 }
 
 // hardwareAddrForNode deterministically creates a unique hardware address from a hostname.
