@@ -1366,6 +1366,13 @@ func (r *RouteTable) applyUpdates(attempt int) error {
 			Protocol:  kRoute.Protocol,
 			Flags:     flags,
 		}
+		for _, nh := range kRoute.NextHops {
+			nlRoute.MultiPath = append(nlRoute.MultiPath, &netlink.NexthopInfo{
+				LinkIndex: nh.Ifindex,
+				Gw:        nh.GWAsNetIP(),
+				Flags:     flags,
+			})
+		}
 		r.logCxt.WithFields(log.Fields{
 			"nlRoute":  nlRoute,
 			"ourKey":   kernKey,
@@ -1725,11 +1732,6 @@ func (r kernelRoute) IsZero() bool {
 	return true
 }
 
-type kernelNextHop struct {
-	GW      ip.Addr
-	Ifindex int
-}
-
 func (r kernelRoute) GWAsNetIP() net.IP {
 	if r.GW == nil {
 		return nil
@@ -1766,4 +1768,16 @@ func (r kernelRoute) String() string {
 
 	return fmt.Sprintf("kernelRoute{Type=%d, Scope=%d, Src=%s, Protocol=%v, OnLink=%v, %s}",
 		r.Type, r.Scope, srcStr, r.Protocol, r.OnLink, nextHopPart)
+}
+
+type kernelNextHop struct {
+	GW      ip.Addr
+	Ifindex int
+}
+
+func (h kernelNextHop) GWAsNetIP() net.IP {
+	if h.GW == nil {
+		return nil
+	}
+	return h.GW.AsNetIP()
 }

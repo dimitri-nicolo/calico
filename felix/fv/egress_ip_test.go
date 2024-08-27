@@ -321,6 +321,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 	JustBeforeEach(func() {
 		infra = getInfra()
 		topologyOptions := infrastructure.DefaultTopologyOptions()
+		topologyOptions.FelixDebugFilenameRegex = `route_table\.go|egress_ip_mgr\.go`
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = supportLevel
 		topologyOptions.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPVXLANPORT"] = "4790"
