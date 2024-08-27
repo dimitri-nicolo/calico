@@ -1239,6 +1239,9 @@ func (r *RouteTable) netlinkRouteToKernelRoute(route netlink.Route) (kernKey ker
 	if len(route.MultiPath) > 0 {
 		// Multi-path route.
 		for _, nh := range route.MultiPath {
+			if nh.Flags&unix.RTNH_F_ONLINK != 0 {
+				kernRoute.OnLink = true
+			}
 			kernRoute.NextHops = append(kernRoute.NextHops, kernelNextHop{
 				GW:      ip.FromNetIP(nh.Gw),
 				Ifindex: nh.LinkIndex,
