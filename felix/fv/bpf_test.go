@@ -4551,7 +4551,6 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 		Describe("with BPF disabled to begin with", func() {
 			var pc *PersistentConnection
-			var err error
 
 			BeforeEach(func() {
 				options.TestManagesBPF = true
@@ -4567,19 +4566,18 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				pol = createPolicy(pol)
 				out := ""
 				rulesProgrammed := func() bool {
-					if testOpts.ipv6 {
-						out, err = tc.Felixes[0].ExecOutput("ip6tables-save", "-t", "filter")
+					if !NFTMode() {
+						if testOpts.ipv6 {
+							out, _ = tc.Felixes[0].ExecOutput("ip6tables-save", "-t", "filter")
+						} else {
+							out, _ = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+						}
 					} else {
-						out, err = tc.Felixes[0].ExecOutput("iptables-save", "-t", "filter")
+						out, _ = tc.Felixes[0].ExecOutput("nft", "list", "table", "ip", "calico")
 					}
-					Expect(err).NotTo(HaveOccurred())
-					if strings.Count(out, "default.policy-1") == 0 {
-						return false
-					}
-					return true
+					return strings.Count(out, "default.policy-1") > 0
 				}
-				Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
-					"Expected iptables rules to appear on the correct felix instances")
+				Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue())
 
 				pc = nil
 			})
