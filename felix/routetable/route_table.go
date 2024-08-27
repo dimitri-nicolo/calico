@@ -1701,9 +1701,7 @@ type kernelRoute struct {
 	OnLink   bool
 
 	// Either GW and Ifindex should be specified (for a gateway route) or
-	// NextHops should be specified (for a multi-path route).  The kernel
-	// maintains the distinction between a gateway route and a multi-path route
-	// with only one hop.
+	// NextHops should be specified (for a multi-path route).
 	GW      ip.Addr
 	Ifindex int
 
