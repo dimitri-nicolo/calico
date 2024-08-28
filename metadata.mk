@@ -7,7 +7,8 @@ GO_BUILD_VER=v0.92
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
 
-# Version of Kubernetes to use for tests, bitnami/kubectl, and kubectl binary release.
+# Version of Kubernetes to use for tests, bitnami/kubectl, and kubectl binary release in
+# compliance benchmarker, confd, and kube-controllers.
 K8S_VERSION=v1.29.8
 
 # Version of various tools used in the build and tests.
