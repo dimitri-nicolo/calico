@@ -36,20 +36,19 @@ const (
 
 // httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
-	configMapClient     core.ConfigMapInterface
-	secretsClient       core.SecretInterface
-	client              *http.Client
-	feed                *calico.GlobalThreatFeed
-	needsUpdate         bool
-	url                 *url.URL
-	header              http.Header
-	period              time.Duration
-	setHandler          setHandlerinterface
-	enqueueSyncFunction func()
-	syncFailFunction    SyncFailFunction
-	cancel              context.CancelFunc
-	once                sync.Once
-	lock                sync.RWMutex
+	configMapClient  core.ConfigMapInterface
+	secretsClient    core.SecretInterface
+	client           *http.Client
+	feed             *calico.GlobalThreatFeed
+	needsUpdate      bool
+	url              *url.URL
+	header           http.Header
+	period           time.Duration
+	setHandler       setHandlerinterface
+	syncFailFunction SyncFailFunction
+	cancel           context.CancelFunc
+	once             sync.Once
+	lock             sync.RWMutex
 }
 
 type setHandlerinterface interface {
