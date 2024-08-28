@@ -445,7 +445,18 @@ require (
 )
 
 replace (
-	github.com/projectcalico/api => ./api
+	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
+	github.com/prometheus/common => github.com/prometheus/common v0.47.0
+
+	// Newer versions set the file mode on logs to 0600, which breaks a lot of our tests.
+	gopkg.in/natefinch/lumberjack.v2 => gopkg.in/natefinch/lumberjack.v2 v2.0.0
+
+	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
+	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for
+	// transient imports.
+
+	github.com/tigera/api => ./api
 	k8s.io/api => k8s.io/api v0.29.4
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.29.4
