@@ -458,7 +458,6 @@ func (r *RouteTable) SetRoutes(routeClass RouteClass, ifaceName string, targets 
 	for _, t := range targets {
 		delete(oldTargetsToCleanUp, t.CIDR)
 		newTargets[t.CIDR] = t
-		r.addOwningIface(routeClass, ifaceName, t.CIDR)
 	}
 
 	// Record the new desired state.
@@ -472,14 +471,15 @@ func (r *RouteTable) SetRoutes(routeClass RouteClass, ifaceName string, targets 
 	// Clean up the old CIDRs.
 	for cidr := range oldTargetsToCleanUp {
 		r.logCxt.WithField("cidr", cidr).Debug("Cleaning up old route.")
+		// removeOwningIface() calls recalculateDesiredKernelRoute.
 		r.removeOwningIface(routeClass, ifaceName, cidr)
-		r.recalculateDesiredKernelRoute(cidr)
 	}
 
 	// Clean out the pending ARP list, then recalculate it below.
 	delete(r.pendingARPs, ifaceName)
 	for cidr, target := range newTargets {
-		r.recalculateDesiredKernelRoute(cidr)
+		// addOwningIface() calls recalculateDesiredKernelRoute.
+		r.addOwningIface(routeClass, ifaceName, cidr)
 		r.updatePendingARP(ifaceName, cidr.Addr(), target.DestMAC)
 	}
 }
@@ -644,7 +644,14 @@ func (r *RouteTable) recalculateDesiredKernelRoute(cidr ip.CIDR) {
 			}
 
 			someUp := false
-			target := r.ifaceToRoutes[routeClass][ifaceName][cidr]
+			target, ok := r.ifaceToRoutes[routeClass][ifaceName][cidr]
+			if !ok {
+				log.WithFields(log.Fields{
+					"ifaceName": ifaceName,
+					"cidr":      cidr,
+				}).Warn("Bug? No route for iface/CIDR (recalculateDesiredKernelRoute called too early?).")
+				return nil
+			}
 			for _, nh := range target.MultiPath {
 				if ifIndex, ok := r.ifaceIndexForName(nh.IfaceName); !ok {
 					r.logCxt.WithField("ifaceName", nh.IfaceName).Debug("Skipping multi-path route for missing interface.")
