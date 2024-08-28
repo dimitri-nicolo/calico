@@ -91,13 +91,6 @@ func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeed
 		runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
 		h.syncFailFunction = func(error) { _ = rescheduleFunc() }
 
-		syncRunFunc, enqueueSyncFunction := runloop.OnDemand()
-		go syncRunFunc(ctx, func(ctx context.Context, i interface{}) {
-			h.setHandler.syncFromDB(ctx, feedCacher)
-		})
-		h.enqueueSyncFunction = func() {
-			enqueueSyncFunction(0)
-		}
 		go func() {
 			defer h.cancel()
 			if h.period == 0 {

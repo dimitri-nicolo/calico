@@ -99,14 +99,14 @@ func (i ipSetHandler) updateDataStore(ctx context.Context, name string, snapshot
 	i.ipSetController.Add(ctx, name, snapshot.(storage.IPSetSpec), f, feedCacher)
 }
 
-func (h ipSetHandler) get(ctx context.Context) (interface{}, error) {
+func (h ipSetHandler) getIPSet(ctx context.Context) (interface{}, error) {
 	return h.database.GetIPSet(ctx, h.name)
 }
 
 func (h ipSetHandler) syncFromDB(ctx context.Context, feedCacher cacher.GlobalThreatFeedCacher) {
 	if h.gnsEnabled {
 		log.WithField("feed", h.name).Infof("[Global Threat Feeds] synchronizing GlobalNetworkSet from cached feed %v contents", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
-		ipSet, err := h.get(ctx)
+		ipSet, err := h.getIPSet(ctx)
 		if err != nil {
 			log.WithError(err).WithField("feed", h.name).Errorf("[Global Threat Feeds] failed to load cached feed %v contents", feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Name)
 			utils.AddErrorToFeedStatus(feedCacher, cacher.GlobalNetworkSetSyncFailed, err)
