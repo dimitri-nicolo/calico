@@ -380,6 +380,10 @@ func (d *MockNetlinkDataplane) AddIface(idx int, name string, up bool, running b
 	return link.copy()
 }
 
+func (d *MockNetlinkDataplane) DelIface(name string) {
+	delete(d.NameToLink, name)
+}
+
 func (d *MockNetlinkDataplane) SetIface(name string, up bool, running bool) {
 	link, ok := d.NameToLink[name]
 	ExpectWithOffset(1, ok).To(BeTrue(), "SetIface called with unknown interface "+name)
