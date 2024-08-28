@@ -519,6 +519,9 @@ class TestIPIP(TestBase):
         host1.start_calico_node("--backend={0}".format(backend))
         host2.start_calico_node("--backend={0}".format(backend))
 
+        # Wait for IP pools to be created.
+        host1.wait_for_ippools()
+
         # Before creating any workloads, set the initial IP-in-IP state.
         host1.set_ipip_enabled(with_ipip)
 
