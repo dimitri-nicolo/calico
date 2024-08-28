@@ -59,12 +59,12 @@
       image: tigera/es-proxy
       version: v3.19.1
     eck-kibana:
-      version: 7.17.21
+      version: 7.17.22
     kibana:
       image: tigera/kibana
       version: v3.19.1
     eck-elasticsearch:
-      version: 7.17.21
+      version: 7.17.22
     elasticsearch:
       image: tigera/elasticsearch
       version: v3.19.1
