@@ -137,7 +137,6 @@ func Start(cfg *Config) error {
 		QueryServerTunnelURL:    fmt.Sprintf("%s%s", cfg.VoltronURL, cfg.QueryServerURL),
 		QueryServerURL:          cfg.QueryServerEndpoint,
 		QueryServerCA:           cfg.QueryServerCA,
-		QueryServerToken:        cfg.QueryServerToken,
 		AddImpersonationHeaders: cfg.TenantNamespace != "",
 	}
 
@@ -210,26 +209,23 @@ func Start(cfg *Config) error {
 						k8sClientSetFactory,
 						linseed,
 					)))))
-	// checke authorizarion to queryserver endpoints API here and defer checking authorization to flowLogsResourceName
-	// within the EndpointsAggregationHandler only for the call to linseed
+	// endpoints/aggregation requires both queryserver and flowlogs rbacs.
+	// defer authorizarion to:
+	// 1. queryserver endpoints API to queryserver
+	// 2. and to flowLogsResourceName within the EndpointsAggregationHandler only for the call to linseed
 	sm.Handle("/endpoints/aggregation",
-		middleware.RequestToQueryserverEndpointsResource(
-			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					middleware.EndpointsAggregationHandler(authz,
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						qsConfig,
-						linseed,
-					)))))
+		middleware.AuthenticateRequest(authn,
+			middleware.EndpointsAggregationHandler(authz,
+				middleware.NewAuthorizationReview(k8sClientSetFactory),
+				qsConfig,
+				linseed,
+			)))
 	sm.Handle("/endpoints/names",
-		middleware.ClusterRequestToResource(flowLogsResourceName,
-			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					middleware.EndpointsNamesHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						qsConfig,
-						linseed,
-					)))))
+		middleware.AuthenticateRequest(authn,
+			middleware.EndpointsNamesHandler(
+				middleware.NewAuthorizationReview(k8sClientSetFactory),
+				qsConfig,
+			)))
 	sm.Handle("/dnsLogs/aggregation",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,

@@ -91,17 +91,11 @@ func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *que
 		return nil, err
 	}
 	if cfg.QueryServerToken == "" {
-		log.WithError(errInvalidToken).Info("queryserver token path is empty: ", errInvalidToken)
+		log.WithError(errInvalidToken).Info("token is empty: ", errInvalidToken)
 		return nil, errInvalidToken
 	}
 
-	token, err := os.ReadFile(cfg.QueryServerToken)
-	if err != nil {
-		log.WithError(err).Info("failed to read token from file: ", err)
-		return nil, err
-	}
-
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", cfg.QueryServerToken))
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("x-cluster-id", clusterId)
 

@@ -40,7 +40,7 @@ export WIN_NODE_COUNT=1
 
 function shutdown_cluster(){
   EXIT_CODE=$?
-  make -C $CAPZ_LOCATION delete-cluster
+  make -C $CAPZ_LOCATION delete-cluster CLUSTER_NAME_CAPZ=${CLUSTER_NAME_CAPZ} CI_RG=${CI_RG}
   # Clear trap
   trap - EXIT
   exit "$EXIT_CODE"
@@ -68,6 +68,7 @@ function start_cluster(){
   # Use EXIT_CODE to bypass errexit and capture more information about a possible failure here
   EXIT_CODE=0
   make -C $CAPZ_LOCATION create-cluster || EXIT_CODE=$?
+  cp ${CAPZ_LOCATION}/az-output.log $REPORT_DIR
   if [[ $EXIT_CODE -ne 0 ]]; then
       echo "failed to create CAPZ cluster"
       exit $EXIT_CODE
@@ -137,8 +138,8 @@ function prepare_fv(){
 function wait_for_nodes(){
   #Wait for calico-node-windows daemon set to update
   sleep 30
-  for i in `seq 1 30`; do
-    if [[ `${KCAPZ} get ds calico-node-windows -n calico-system --no-headers | awk -v OFS='\t\t' '{print $6}'` = "$WIN_NODE_COUNT" ]] ; then
+  for i in $(seq 1 30); do
+    if [[ $(${KCAPZ} get ds calico-node-windows -n calico-system --no-headers | awk -v OFS='\t\t' '{print $6}') = "$WIN_NODE_COUNT" ]] ; then
       echo "Calico Node Windows is ready"
       return
     fi
