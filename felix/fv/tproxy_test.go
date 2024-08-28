@@ -54,11 +54,7 @@ func tablesWaitForPolicy(policy string, felixes ...*infrastructure.Felix) error 
 	for _, f := range felixes {
 		var out string
 		var err error
-		if NFTMode() {
-			out, err = f.ExecOutput("nft", "list", "ruleset")
-		} else {
-			out, err = f.ExecOutput("iptables-save", "-t", "filter")
-		}
+		out, err = f.ExecOutput("iptables-save", "-t", "filter")
 		if err != nil {
 			return err
 		}
