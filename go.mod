@@ -168,7 +168,7 @@ require (
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kube-aggregator v0.29.8
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00
-	k8s.io/kubectl v0.28.9
+	k8s.io/kubectl v0.29.8
 	k8s.io/kubernetes v1.29.8
 	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
 	modernc.org/memory v1.8.0
@@ -423,14 +423,14 @@ require (
 	k8s.io/component-helpers v0.29.8 // indirect
 	k8s.io/controller-manager v0.29.8 // indirect
 	k8s.io/cri-api v0.29.8 // indirect
-	k8s.io/csi-translation-lib v0.28.9 // indirect
-	k8s.io/dynamic-resource-allocation v0.28.9 // indirect
+	k8s.io/csi-translation-lib v0.29.8 // indirect
+	k8s.io/dynamic-resource-allocation v0.29.8 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/kms v0.29.8 // indirect
 	k8s.io/kube-scheduler v0.29.8 // indirect
-	k8s.io/kubelet v0.28.9 // indirect
+	k8s.io/kubelet v0.29.8 // indirect
 	k8s.io/legacy-cloud-providers v0.29.8 // indirect
-	k8s.io/mount-utils v0.28.9 // indirect
+	k8s.io/mount-utils v0.29.8 // indirect
 	k8s.io/pod-security-admission v0.29.8 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
