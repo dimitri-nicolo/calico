@@ -251,20 +251,34 @@ var _ = Describe("", func() {
 				},
 			}
 		})
-		It("should add hasDeniedTraffic: true for endpoints in the deniedEndponts map", func() {
-			endpointsResponse, err := updateResults(&endpointsRespBody, deniedEndpoints)
+		It("should add hasDeniedTraffic: true for endpoints in the deniedEndponts map if flowAccess is true", func() {
+			endpointsResponse, err := updateResults(&endpointsRespBody, deniedEndpoints, true)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			Expect(endpointsResponse.Count).To(Equal(5))
 
 			for _, item := range endpointsResponse.Item {
+				Expect(item.HasFlowAccess).To(BeTrue())
 				if item.Namespace == "ns1" && item.Pod == "ep1" {
-					Expect(item.HasDeniedTraffic).To(BeTrue())
+					Expect(*item.HasDeniedTraffic).To(BeTrue())
 				} else if item.Namespace == "ns2" && item.Pod == "ep10" {
-					Expect(item.HasDeniedTraffic).To(BeTrue())
+					Expect(*item.HasDeniedTraffic).To(BeTrue())
 				} else {
-					Expect(item.HasDeniedTraffic).To(BeFalse())
+					Expect(*item.HasDeniedTraffic).To(BeFalse())
 				}
+			}
+		})
+		It("should set hasDeniedTraffic to error if flowAccess is false", func() {
+			endpointsResponse, err := updateResults(&endpointsRespBody, deniedEndpoints, false)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(endpointsResponse.Count).To(Equal(5))
+
+			for _, item := range endpointsResponse.Item {
+				Expect(item.HasDeniedTraffic).To(BeNil())
+				Expect(item.HasFlowAccess).To(BeFalse())
+				Expect(item.Warnings).To(HaveLen(1))
+				Expect(item.Warnings[0]).To(Equal(flowAccessWarning))
 			}
 		})
 	})
@@ -276,8 +290,18 @@ var _ = Describe("", func() {
 		}
 
 		authReview := userAuthorizationReviewMock{
-			verbs: []v3.AuthorizedResourceVerbs{},
-			err:   nil,
+			verbs: []v3.AuthorizedResourceVerbs{
+				{
+					APIGroup: "",
+					Resource: "flows",
+					Verbs: []v3.AuthorizedResourceVerb{
+						{
+							Verb: "get",
+						},
+					},
+				},
+			},
+			err: nil,
 		}
 		It("get deniedendpoints when there are denied flowlogs", func() {
 			results := []rest.MockResult{
@@ -321,6 +345,35 @@ var _ = Describe("", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(deniedEndpoints).To(HaveLen(2))
 
+		})
+
+		It("should return nil as deniedEndpoints if user does not have \"get\" or \"list\" to \"flows\"", func() {
+			authReviewNoGetToFlows := userAuthorizationReviewMock{
+				verbs: []v3.AuthorizedResourceVerbs{
+					{
+						APIGroup: "",
+						Resource: "flows",
+						// no "list" or "get" in the rbac verbs
+						Verbs: []v3.AuthorizedResourceVerb{},
+					},
+				},
+				err: nil,
+			}
+
+			results := []rest.MockResult{
+				{
+					Body: lapi.List[lapi.FlowLog]{
+						Items:     []lapi.FlowLog{},
+						AfterKey:  nil,
+						TotalHits: 0,
+					},
+				},
+			}
+			lsc := client.NewMockClient("", results...)
+
+			deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregatedReq, lsc, authReviewNoGetToFlows)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(deniedEndpoints).To(BeNil())
 		})
 	})
 

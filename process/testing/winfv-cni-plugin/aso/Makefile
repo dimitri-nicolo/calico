@@ -1,6 +1,6 @@
 BINDIR?=bin
 ARCH?=amd64
-KIND_VERSION?=v0.22.0
+KIND_VERSION?=v0.24.0
 
 ###############################################################################
 # ASO management

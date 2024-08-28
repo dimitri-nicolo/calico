@@ -6,7 +6,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	queryserverclient "github.com/projectcalico/calico/ts-queryserver/queryserver/client"
@@ -26,8 +25,7 @@ type EndPointName struct {
 // It's intended to get the full list in one query, in order to provide data to autocomplete endpoints search input.
 // This was scale tested (up to 15k pods) and and works as expected.
 // If the response is too big, we will get an error from the Query server and the UI can handle it.
-func EndpointsNamesHandler(authreview AuthorizationReview, qsConfig *queryserverclient.QueryServerConfig,
-	lsclient client.Client) http.Handler {
+func EndpointsNamesHandler(authreview AuthorizationReview, qsConfig *queryserverclient.QueryServerConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Validate http method.
@@ -58,6 +56,9 @@ func EndpointsNamesHandler(authreview AuthorizationReview, qsConfig *queryserver
 
 		// Parse cluster name
 		clusterName := MaybeParseClusterNameFromRequest(r)
+
+		// set appropriate token
+		qsConfig.QueryServerToken = r.Header.Get("Authorization")[7:]
 
 		// Create queryserverClient client.
 		queryserverClient, err := queryserverclient.NewQueryServerClient(qsConfig)

@@ -37,9 +37,7 @@ const (
 	mitre_ids        = "mitre_ids"
 )
 
-var (
-	normalizedFields []string
-)
+var normalizedFields []string
 
 func init() {
 	var mappings struct {
@@ -245,6 +243,17 @@ func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo
 	numToDismiss := 0
 	bulkErrs := []v1.BulkError{}
 
+	// Assert that all of the given events belong to the tenant.
+	if err := b.checkTenancy(ctx, i, events); err != nil {
+		return &v1.BulkResponse{
+			Total:     len(events),
+			Succeeded: 0,
+			Failed:    len(events),
+			Errors:    []v1.BulkError{{Resource: "", Type: "document_missing_exception", Reason: err.Error()}},
+			Deleted:   nil,
+		}, nil
+	}
+
 	// We need to get the index of each event, as some older events may not belong to the current write index
 	// (after an upgrade or index rollover for example).
 	indexValues, err := b.getEventIndexValues(ctx, i, events)
@@ -253,11 +262,6 @@ func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo
 	}
 
 	for _, event := range events {
-		if err := b.checkTenancy(ctx, i, &event); err != nil {
-			logrus.WithError(err).WithField("id", event.ID).Warn("Error checking tenancy for event")
-			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: err.Error()})
-			continue
-		}
 		index, found := indexValues[event.ID]
 		if !found {
 			logrus.WithField("id", event.ID).Warn("Event not found with IDs query")
@@ -337,21 +341,43 @@ func (b *eventsBackend) getEventIndexValues(ctx context.Context, i api.ClusterIn
 	return indexValues, nil
 }
 
-func (b *eventsBackend) checkTenancy(ctx context.Context, i api.ClusterInfo, event *v1.Event) error {
+func (b *eventsBackend) checkTenancy(ctx context.Context, i api.ClusterInfo, events []v1.Event) error {
 	// If we're in single index mode, we need to check tenancy. Otherwise, we can skip this because
 	// the index name already contains the cluster and tenant ID.
-	if b.singleIndex {
-		// We need to protect against tenancy here. In single index mode without this check, any tenant could send a request which
-		// dismisses or deletes events for any other tenant if they guess the right ID.
-		// Query the event to compare the tenant and cluster to the request. If they don't match, skip.
-		// This is not a perfect solution, but it's better than nothing.
-		// By Listing with the given cluster info and ID, we can ensure that the event is visible to that tenant.
-		items, err := b.List(ctx, i, &v1.EventParams{ID: event.ID, QueryParams: v1.QueryParams{MaxPageSize: 1}})
-		if err != nil {
-			return err
-		}
-		if len(items.Items) == 0 {
-			return fmt.Errorf("event not found during tenancy check")
+	if !b.singleIndex {
+		return nil
+	}
+
+	// This is a shared index.
+	// We need to protect against tenancy here. In single index mode without this check, any tenant could send a request which
+	// dismisses or deletes events for any other tenant if they guess the right ID.
+	// Query the given event IDs using the tenant and cluster from the request to ensure that each requested ID is visible to that tenant.
+	ids := []string{}
+	for _, event := range events {
+		ids = append(ids, event.ID)
+	}
+
+	// Build a query which matches on:
+	// - The given cluster and tenant (from BaseQuery)
+	// - An OR combintation of the given IDs
+	q := b.queryHelper.BaseQuery(i)
+	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
+	idsQuery := b.client.Search().Index(b.index.Index(i)).Query(q)
+	idsResult, err := idsQuery.Do(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Build a lookup map of the found events.
+	foundIDs := map[string]struct{}{}
+	for _, hit := range idsResult.Hits.Hits {
+		foundIDs[hit.Id] = struct{}{}
+	}
+
+	// Now make sure that all of the given events were found.
+	for _, event := range events {
+		if _, found := foundIDs[event.ID]; !found {
+			return fmt.Errorf("event %s not found", event.ID)
 		}
 	}
 	return nil
@@ -370,16 +396,22 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 		return nil, err
 	}
 
+	// Assert that all of the given events belong to the tenant.
+	if err := b.checkTenancy(ctx, i, events); err != nil {
+		return &v1.BulkResponse{
+			Total:     len(events),
+			Succeeded: 0,
+			Failed:    len(events),
+			Errors:    []v1.BulkError{{Resource: "", Type: "document_missing_exception", Reason: err.Error()}},
+			Deleted:   nil,
+		}, nil
+	}
+
 	// Build a bulk request using the provided events.
 	bulk := b.client.Bulk()
 	numToDelete := 0
 	bulkErrs := []v1.BulkError{}
 	for _, event := range events {
-		if err := b.checkTenancy(ctx, i, &event); err != nil {
-			logrus.WithError(err).WithField("id", event.ID).Warn("Error checking tenancy for event")
-			bulkErrs = append(bulkErrs, v1.BulkError{Resource: event.ID, Type: "document_missing_exception", Reason: err.Error()})
-			continue
-		}
 		index, found := indexValues[event.ID]
 		if !found {
 			logrus.WithField("id", event.ID).Warn("Event not found with IDs query")
@@ -707,7 +739,10 @@ func (b *eventsBackend) computeDateHistograms(ctx context.Context, i api.Cluster
 		// Update stats with results for dateHistogram.
 		items, found := results.Aggregations.DateHistogram(histogram.Name)
 		if !found {
-			return fmt.Errorf("Could not find terms results for %s", histogram.Name)
+			// If there is no event found, empty aggregation result will be provided.
+			// This is expected to happen when the events index does not exists.
+			logrus.Debugf("Could not find terms results for %s (expected when index does not exists)", histogram.Name)
+			items = new(elastic.AggregationBucketHistogramItems)
 		}
 
 		values := []v1.HistogramBucket{}

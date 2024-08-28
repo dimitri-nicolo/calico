@@ -59,6 +59,15 @@ func (mp *mockPolicyStoreManager) OnInSync() {
 	mp.callstack = append(mp.callstack, "oninsync")
 }
 
+func (mp *mockPolicyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
+	mp.mu.Lock()
+	defer mp.mu.Unlock()
+
+	mp.callstack = append(mp.callstack, "getcurrentendpoints")
+
+	return nil
+}
+
 func (mp *mockPolicyStoreManager) Read(func(*policystore.PolicyStore)) {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()

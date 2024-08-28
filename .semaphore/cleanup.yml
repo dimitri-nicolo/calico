@@ -4,7 +4,7 @@ name: Calico
 agent:
   machine:
     type: f1-standard-2
-    os_image: ubuntu2004
+    os_image: ubuntu2204
 
 execution_time_limit:
   minutes: 10
@@ -41,6 +41,7 @@ blocks:
       - name: Clean up windows felix resources
         commands:
           - ./delete-az-rg.sh ${USER}-capz-win-felix-${SEMAPHORE_WORKFLOW_ID:0:8}-rg
+          - ./delete-az-rg.sh ${USER}-capz-win-felix-${SEMAPHORE_WORKFLOW_ID:0:8}-rg-ci
       - name: Clean up windows cni resources
         commands:
           - ./delete-az-rg.sh ${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-rg

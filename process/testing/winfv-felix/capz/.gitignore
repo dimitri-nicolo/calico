@@ -1,4 +1,5 @@
 bin/*
+*.log
 .cluster_created
 .calico_installed
 .sshkey

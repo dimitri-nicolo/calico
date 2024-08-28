@@ -13,6 +13,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	authzv1 "k8s.io/api/authorization/v1"
+
+	"k8s.io/apiserver/pkg/authentication/user"
+
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
@@ -38,15 +42,24 @@ func (a userAuthorizationReviewMock) PerformReview(
 	return a.verbs, a.err
 }
 
+type mockAuthorizationReview struct {
+	isAuthorized bool
+	err          error
+}
+
+func (az mockAuthorizationReview) Authorize(user.Info, *authzv1.ResourceAttributes, *authzv1.NonResourceAttributes) (bool, error) {
+	return az.isAuthorized, az.err
+}
+
 var _ = Describe("Test EndpointsAggregation handler", func() {
 	var (
 		server       *httptest.Server
 		qsconfig     *client.QueryServerConfig
 		req          *http.Request
 		mocklsclient lsclient.MockClient
+		CAFilePath   = "ca"
 
-		tokenFilePath = "token"
-		CAFilePath    = "ca"
+		authz mockAuthorizationReview
 	)
 
 	BeforeEach(func() {
@@ -55,24 +68,17 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			QueryServerTunnelURL: "",
 			QueryServerURL:       "",
 			QueryServerCA:        CAFilePath,
-			QueryServerToken:     tokenFilePath,
 		}
 
-		// Create mock client certificate and auth token
+		// Create mock client certificate
 		CA_file, err := os.Create(CAFilePath)
 		Expect(err).ShouldNot(HaveOccurred())
 		defer CA_file.Close()
-
-		token_file, err := os.Create(tokenFilePath)
-		Expect(err).ShouldNot(HaveOccurred())
-		defer token_file.Close()
 	})
 
 	AfterEach(func() {
 		// Delete mock client certificate and auth token files
 		Expect(os.Remove(CAFilePath)).Error().ShouldNot(HaveOccurred())
-
-		Expect(os.Remove(tokenFilePath)).Error().ShouldNot(HaveOccurred())
 	})
 
 	Context("when there are denied flowlogs", func() {
@@ -80,8 +86,19 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 		BeforeEach(func() {
 			// prepare mock authreview
 			authReview = userAuthorizationReviewMock{
-				verbs: []v3.AuthorizedResourceVerbs{},
-				err:   nil,
+				verbs: []v3.AuthorizedResourceVerbs{
+					{
+						APIGroup: "lma.tigera.io",
+						Resource: "flows",
+						Verbs: []v3.AuthorizedResourceVerb{
+							{
+								Verb:           "get",
+								ResourceGroups: nil,
+							},
+						},
+					},
+				},
+				err: nil,
 			}
 
 			// prepare mock linseed client
@@ -144,13 +161,19 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			req, err = http.NewRequest("POST", server.URL, bytes.NewBuffer(reqBodyBytes))
+			req.Header.Set("Authorization", "Bearer tokentoken")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// prepare response recorder
 			rr := httptest.NewRecorder()
 
 			By("calling EndpointsAggregationHandler")
-			handler := middleware.EndpointsAggregationHandler(authReview, qsconfig, mocklsclient)
+
+			// set mock authorizer
+			authz.isAuthorized = true
+			authz.err = nil
+
+			handler := middleware.EndpointsAggregationHandler(authz, authReview, qsconfig, mocklsclient)
 			handler.ServeHTTP(rr, req)
 
 			By("validating server response")
@@ -163,7 +186,8 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(response.Count).To(Equal(2))
 			Expect(response.Item).To(HaveLen(2))
 			for _, item := range response.Item {
-				Expect(item.HasDeniedTraffic).To(BeTrue())
+				Expect(item.HasFlowAccess).To(BeTrue())
+				Expect(*item.HasDeniedTraffic).To(BeTrue())
 			}
 		})
 
@@ -205,13 +229,17 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			req, err = http.NewRequest("POST", server.URL, bytes.NewBuffer(reqBodyBytes))
+			req.Header.Set("Authorization", "Bearer tokentoken")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// prepare response recorder
 			rr := httptest.NewRecorder()
 
 			By("calling EndpointsAggregationHandler")
-			handler := middleware.EndpointsAggregationHandler(authReview, qsconfig, mocklsclient)
+			// set mock authz
+			authz.isAuthorized = true
+			authz.err = nil
+			handler := middleware.EndpointsAggregationHandler(authz, authReview, qsconfig, mocklsclient)
 			handler.ServeHTTP(rr, req)
 
 			By("validating server response")
@@ -224,10 +252,11 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			Expect(response.Count).To(Equal(3))
 			Expect(response.Item).To(HaveLen(3))
 			for _, item := range response.Item {
+				Expect(item.HasFlowAccess).To(BeTrue())
 				if item.Namespace == "ns-allow" {
-					Expect(item.HasDeniedTraffic).To(BeFalse())
+					Expect(*item.HasDeniedTraffic).To(BeFalse())
 				} else {
-					Expect(item.HasDeniedTraffic).To(BeTrue())
+					Expect(*item.HasDeniedTraffic).To(BeTrue())
 				}
 			}
 		})
@@ -322,13 +351,14 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 
 			// prepare request
 			req, err = http.NewRequest("POST", server.URL, bytes.NewBufferString("{}"))
+			req.Header.Set("Authorization", "Bearer tokentoken")
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// prepare response recorder
 			rr := httptest.NewRecorder()
 
 			By("calling EndpointsNamesHandler")
-			handler := middleware.EndpointsNamesHandler(authReview, qsconfig, mocklsclient)
+			handler := middleware.EndpointsNamesHandler(authReview, qsconfig)
 			handler.ServeHTTP(rr, req)
 
 			By("validating server response")

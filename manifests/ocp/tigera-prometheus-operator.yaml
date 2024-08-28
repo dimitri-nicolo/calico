@@ -63,6 +63,7 @@ spec:
           - --config-reloader-memory-request=50Mi
           - --namespaces=tigera-prometheus
           - --cluster-domain=cluster.local
+          - --config-reloader-cpu-limit=150m
         resources:
           requests:
             cpu: 100m

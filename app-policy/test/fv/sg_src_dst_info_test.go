@@ -99,11 +99,20 @@ func (s *dikastesSrcDstInfoTestSuite) TestSameNode() {
 	go s.dstDikastes.Serve(ctx)
 	<-s.dstDikastes.Ready
 
+	srcIp := "10.0.0.24"
+	dstIp := "10.0.0.48"
+
 	s.policySyncNode1.SendUpdates([]*proto.ToDataplane{
-		wepUpdate("default/src-pod", []string{"10.0.0.24"}, []string{"default"}),
-		wepUpdate("default/dst-pod", []string{"10.0.0.48"}, []string{"default"}),
+		wepUpdate("default/src-pod", []string{srcIp}, []string{"default"}),
+		wepUpdate("default/dst-pod", []string{dstIp}, []string{"default"}),
 		inSync(),
 	}...)
+
+	expectedIPs := map[string]bool{
+		srcIp: false,
+		dstIp: false,
+	}
+	s.waitForEndpoints(s.dstDikastes, expectedIPs)
 
 	ec, err := s.createExtAuthzClientFromDikastes(s.dstDikastes)
 	s.NoError(err)
@@ -157,11 +166,14 @@ func (s *dikastesSrcDstInfoTestSuite) TestDiffNode() {
 	go srcDikastes.Serve(ctx)
 	<-srcDikastes.Ready
 
+	srcIp := "10.0.0.24"
 	node1ps.SendUpdates([]*proto.ToDataplane{
-		wepUpdate("default/src-pod", []string{"10.0.0.24"}, []string{"default"}),
+		wepUpdate("default/src-pod", []string{srcIp}, []string{"default"}),
 		inSync(),
 	}...)
-	<-time.After(time.Millisecond * 1500)
+
+	expectedSrc := map[string]bool{srcIp: false}
+	s.waitForEndpoints(srcDikastes, expectedSrc)
 
 	sec, err := s.createExtAuthzClientFromDikastes(srcDikastes)
 	s.NoError(err)
@@ -194,10 +206,14 @@ func (s *dikastesSrcDstInfoTestSuite) TestDiffNode() {
 	go s.dstDikastes.Serve(ctx)
 	<-s.dstDikastes.Ready
 
+	destIp := "10.0.0.48"
 	s.policySyncNode1.SendUpdates([]*proto.ToDataplane{
-		wepUpdate("default/dst-pod", []string{"10.0.0.48"}, []string{"default"}),
+		wepUpdate("default/dst-pod", []string{destIp}, []string{"default"}),
 		inSync(),
 	}...)
+
+	expectedDest := map[string]bool{destIp: false}
+	s.waitForEndpoints(s.dstDikastes, expectedDest)
 
 	ec, err := s.createExtAuthzClientFromDikastes(s.dstDikastes)
 	s.NoError(err)
@@ -256,6 +272,25 @@ func readLogs(logfile string) ([]*v1.WAFLog, error) {
 		res = append(res, &entry)
 	}
 	return res, nil
+}
+
+func (s *dikastesSrcDstInfoTestSuite) waitForEndpoints(dikastes *server.Dikastes, expectedIPs map[string]bool) {
+	s.Eventually(func() bool {
+		endpoints := dikastes.GetWorkloadEndpoints()
+		for _, ep := range endpoints {
+			if len(ep.Ipv4Nets) > 0 {
+				if _, ok := expectedIPs[ep.Ipv4Nets[0]]; ok {
+					expectedIPs[ep.Ipv4Nets[0]] = true
+				}
+			}
+		}
+		for _, found := range expectedIPs {
+			if !found {
+				return false
+			}
+		}
+		return true
+	}, time.Duration(time.Second*5), time.Millisecond*1000)
 }
 
 func TestSrcDstInfo(t *testing.T) {

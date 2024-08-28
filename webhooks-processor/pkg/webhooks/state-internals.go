@@ -337,7 +337,6 @@ func (s *ControllerState) debugProcessFunc(webhook *api.SecurityEventWebhook) Pr
 			Timestamp:             time.Now(),
 			HttpStatusCode:        http.StatusOK,
 			HttpStatusDescription: http.StatusText(http.StatusOK),
-			HttpPayload:           "",
 		}, nil
 	}
 }
@@ -348,6 +347,9 @@ func (s *ControllerState) testFire(ctx context.Context, webhook *api.SecurityEve
 	testEvent.Time = lsApi.NewEventDate(time.Now())
 	webhook.Spec.State = api.SecurityEventWebhookStateEnabled
 	testResult, err := provider.Process(ctx, config, s.extractLabels(*webhook), testEvent)
+	if webhook.Annotations == nil {
+		webhook.Annotations = make(map[string]string)
+	}
 	webhook.Annotations[WebhookTestResultAnnotation] = testResult.String()
 	s.updateWebhookHealth(webhook, "TestFireProcedure", time.Now(), err)
 	logEntry(webhook).Info("Webhook has been re-enabled")

@@ -2,15 +2,19 @@
 # From https://github.com/faisyl/alpine-runit
 env > /etc/envvars
 
+echo CALICO_EARLY_NETWORKING=$CALICO_EARLY_NETWORKING
+echo KUBERNETES_SERVICE_HOST=$KUBERNETES_SERVICE_HOST
+
 if [ "$CALICO_EARLY_NETWORKING" -a -z "$KUBERNETES_SERVICE_HOST" ]; then
     # Pre-Kubernetes early networking setup (e.g. for dual ToR):
     # enable BIRD IPv4 and early networking services; then those will
     # do what's needed.
+    echo Early Networking setup.
     mkdir /etc/service/enabled
     cp -a /etc/service/available/bird /etc/service/enabled/
     cp -a /etc/service/available/early-networking /etc/service/enabled/
 else
-    # Regular Calico Node startup.
+    echo Regular Calico Node startup.
     /etc/rc.local
     retval=$?
     if [ $retval -ne 0 ];

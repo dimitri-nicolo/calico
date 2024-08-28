@@ -32,6 +32,7 @@ spec:
           - --config-reloader-memory-request=50Mi
           - --namespaces=tigera-prometheus
           - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
+          - --config-reloader-cpu-limit=150m
         resources:
           requests:
             cpu: 100m

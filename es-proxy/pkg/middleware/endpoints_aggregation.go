@@ -11,11 +11,15 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"k8s.io/apiserver/pkg/endpoints/request"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	esauth "github.com/projectcalico/calico/es-proxy/pkg/auth"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	qsutils "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
@@ -44,10 +48,22 @@ type EndpointsAggregationResponse struct {
 	Item  []AggregatedEndpoint `json:"endpoints"`
 }
 
+// AggregatedEndpoint contains endpoints object returned from queryserver with some additional properties listed below:
+// HasDeniedTraffic: boolean pointer which can be nul (when user does not have access to flowlogs), true, or false.
+// HasFlowAccess: boolean value which shows whether user has access to flowlogs or not
+// Warnings: a string array which contains any warnings we want to share with consumer via the API.
 type AggregatedEndpoint struct {
 	querycacheclient.Endpoint
-	HasDeniedTraffic bool `json:"hasDeniedTraffic"`
+	HasDeniedTraffic *bool    `json:"hasDeniedTraffic"`
+	HasFlowAccess    bool     `json:"hasFlowAccess"`
+	Warnings         []string `json:"warnings"`
 }
+
+var (
+	hasDeniedTrafficTrue  = true
+	hasDeniedTrafficFalse = false
+	flowAccessWarning     = `user is missing required rbac verbs ("get") to resource "flows"`
+)
 
 // EndpointsAggregationHandler is a handler for /endpoints/aggregation api
 //
@@ -61,7 +77,7 @@ type AggregatedEndpoint struct {
 // to the client. So in very rare cases, results might be missing denied flowlog information if it happens in the very
 // small timeframe between the call to linseed and response getting back to client. In this case, the api has to be called
 // again (maybe just refreshing a page from user's point of view).
-func EndpointsAggregationHandler(authreview AuthorizationReview, qsConfig *queryserverclient.QueryServerConfig,
+func EndpointsAggregationHandler(authz lmaauth.RBACAuthorizer, authreview AuthorizationReview, qsConfig *queryserverclient.QueryServerConfig,
 	lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -98,32 +114,58 @@ func EndpointsAggregationHandler(authreview AuthorizationReview, qsConfig *query
 		ctx, cancel := context.WithTimeout(r.Context(), endpointsAggregationRequest.Timeout.Duration)
 		defer cancel()
 
-		// filter deniedEndpoints based on flowlogs (via linseed)
-		deniedEndpoints, err := getDeniedEndpointsFromLinseed(ctx, endpointsAggregationRequest, lsclient, authreview)
+		// Check access to flowlogs
+		flowAccess, err := hasFlowLogsPermission(authz, r)
 		if err != nil {
-			logrus.WithError(err).Error("call to getDeniedEndpointsFromLinseed failed.")
+			logrus.WithError(err).Error("call to hasFlowLogsPermission failed.")
 			httputils.EncodeError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
-				Msg:    "request to get deniedEndpoints from flowlogs has failed",
-				Err:    errors.New("fetching deniedEndpoints from flowlogs has failed"),
+				Msg:    "request to authorize user for access to flowlogs has failed",
+				Err:    errors.New("user authorization has failed"),
 			})
 			return
+		}
+
+		// Filter deniedEndpoints based on flowlogs (via linseed)
+		var deniedEndpoints []string
+		if flowAccess {
+			deniedEndpoints, err = getDeniedEndpointsFromLinseed(ctx, endpointsAggregationRequest, lsclient, authreview)
+			if err != nil {
+				logrus.WithError(err).Error("call to getDeniedEndpointsFromLinseed failed.")
+				httputils.EncodeError(w, &httputils.HttpStatusError{
+					Status: http.StatusInternalServerError,
+					Msg:    "request to get deniedEndpoints from flowlogs has failed",
+					Err:    errors.New("fetching deniedEndpoints from flowlogs has failed"),
+				})
+				return
+			}
 		}
 
 		// Filter deniedEndpoints by other parameters (via queryserver)
-		qsEndpointsResp, err := getEndpointsFromQueryServer(qsConfig, endpointsAggregationRequest, deniedEndpoints)
+		qsEndpointsResp, err := getEndpointsFromQueryServer(r, qsConfig, endpointsAggregationRequest, deniedEndpoints)
 		if err != nil {
-			httputils.EncodeError(w, &httputils.HttpStatusError{
-				Status: http.StatusInternalServerError,
-				Msg:    "failed to get deniedEndpoints from queryserver",
-				Err:    errors.New("failed to get deniedEndpoints from queryserver"),
-			})
-			return
+			logrus.WithError(err).Error("call to getEndpointsFromQueryServer failed.")
+			if strings.ContainsAny(strings.ToLower(err.Error()), "not authorized") {
+				httputils.EncodeError(w, &httputils.HttpStatusError{
+					Status: http.StatusUnauthorized,
+					Msg:    "failed authorization to queryserver/endpoints",
+					Err:    err,
+				})
+				return
+			} else {
+				httputils.EncodeError(w, &httputils.HttpStatusError{
+					Status: http.StatusInternalServerError,
+					Msg:    "failed to get deniedEndpoints from queryserver",
+					Err:    errors.New("failed to get deniedEndpoints from queryserver"),
+				})
+				return
+			}
 		}
 
 		// Enrich deniedEndpoints results with denied traffic info
-		respBodyUpdated, err := updateResults(qsEndpointsResp, deniedEndpoints)
+		respBodyUpdated, err := updateResults(qsEndpointsResp, deniedEndpoints, flowAccess)
 		if err != nil {
+			logrus.WithError(err).Error("call to updateResults failed.")
 			httputils.EncodeError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
 				Msg:    "failed to update deniedEndpoints with denied traffic info",
@@ -138,11 +180,14 @@ func EndpointsAggregationHandler(authreview AuthorizationReview, qsConfig *query
 // getEndpointsFromQueryServer is a handler for queryserver endpoint search
 //
 // returns QueryEndpointsResp: list of endpoints from queryserver based on the search parameters provided.
-func getEndpointsFromQueryServer(qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
+func getEndpointsFromQueryServer(r *http.Request, qsConfig *queryserverclient.QueryServerConfig, params *EndpointsAggregationRequest,
 	deniedEndpoints []string) (*querycacheclient.QueryEndpointsResp, error) {
 
 	// build queryserver getEndpoints api params
 	qsReqParams := getQueryServerRequestParams(params, deniedEndpoints)
+
+	// Update queryserver config with logged-in user's token
+	qsConfig.QueryServerToken = r.Header.Get("Authorization")[7:]
 
 	// Create queryserverClient client.
 	queryserverClient, err := queryserverclient.NewQueryServerClient(qsConfig)
@@ -166,7 +211,8 @@ func getEndpointsFromQueryServer(qsConfig *queryserverclient.QueryServerConfig, 
 //
 // return EndpointsAggregationResponse
 func updateResults(endpointsResp *querycacheclient.QueryEndpointsResp,
-	deniedEndpoints []string) (*EndpointsAggregationResponse, error) {
+	deniedEndpoints []string, flowAccess bool) (*EndpointsAggregationResponse, error) {
+
 	epAggrList := []AggregatedEndpoint{}
 
 	var epPatterns *regexp.Regexp
@@ -185,12 +231,18 @@ func updateResults(endpointsResp *querycacheclient.QueryEndpointsResp,
 			Endpoint: item,
 		}
 
-		if epPatterns != nil {
-			epKey := buildQueryServerEndpointKeyString(item.Namespace, item.Pod, "")
+		epKey := buildQueryServerEndpointKeyString(item.Namespace, item.Pod, "")
 
-			if epPatterns.MatchString(epKey) {
-				epAggregate.HasDeniedTraffic = true
-			}
+		if !flowAccess {
+			epAggregate.HasDeniedTraffic = nil
+			epAggregate.HasFlowAccess = false
+			epAggregate.Warnings = append(epAggregate.Warnings, flowAccessWarning)
+		} else if epPatterns != nil && epPatterns.MatchString(epKey) {
+			epAggregate.HasDeniedTraffic = &hasDeniedTrafficTrue
+			epAggregate.HasFlowAccess = true
+		} else {
+			epAggregate.HasDeniedTraffic = &hasDeniedTrafficFalse
+			epAggregate.HasFlowAccess = true
 		}
 
 		epAggrList = append(epAggrList, epAggregate)
@@ -299,6 +351,8 @@ func buildFlowLogParamsForDeniedTrafficSearch(ctx context.Context, authReview Au
 //	          }
 //
 // 2. error
+//
+// if both returned values are nil, it means user do not have "get / "list" rbac to "flows".
 func getDeniedEndpointsFromLinseed(ctx context.Context, endpointsAggregationRequest *EndpointsAggregationRequest,
 	lsclient client.Client, authreview AuthorizationReview) ([]string, error) {
 
@@ -402,4 +456,23 @@ func getQueryServerRequestParams(params *EndpointsAggregationRequest, deniedEndp
 	}
 
 	return &qsReqParams
+}
+
+// hasFlowLogsPermission checks to see if user is authorized to call linseed flowlog API.
+func hasFlowLogsPermission(authz lmaauth.RBACAuthorizer, r *http.Request) (bool, error) {
+	// Extract the cluster name from the request body.
+	// Note: DecodeIgnoreUnknownFields maintains the request body's data to pass on to the next handler.
+	var params = struct {
+		ClusterName string `json:"cluster,omitempty"`
+	}{}
+
+	clusterName := params.ClusterName
+	if clusterName == "" {
+		clusterName = MaybeParseClusterNameFromRequest(r)
+	}
+
+	res := esauth.CreateLMAResourceAttributes(clusterName, "flows")
+	usr, _ := request.UserFrom(r.Context())
+
+	return authz.Authorize(usr, res, nil)
 }
