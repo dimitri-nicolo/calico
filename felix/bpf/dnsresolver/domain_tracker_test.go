@@ -24,7 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
-	"github.com/projectcalico/calico/felix/bpf/maps"
+	"github.com/projectcalico/calico/felix/bpf/mock"
 )
 
 func TestDomainTracker(t *testing.T) {
@@ -44,16 +44,17 @@ func TestDomainTracker(t *testing.T) {
 		"666":  666,
 	}
 
-	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
+	tracker, err := dnsresolver.NewDomainTrackerWithMaps(func(s string) uint64 {
 		return ids[s]
-	})
+	},
+		mock.NewMockMap(dnsresolver.DNSPfxMapParams),
+		mock.NewMockMap(dnsresolver.DNSSetMapParams),
+	)
 	Expect(err).NotTo(HaveOccurred())
 	defer tracker.Close()
 
 	m := tracker.Maps()
 	dnsPfxMap, dnsSetsMap := m[0], m[1]
-	defer dnsPfxMap.(*maps.PinnedMap).Unpin()
-	defer dnsSetsMap.(*maps.PinnedMap).Unpin()
 
 	tracker.Add("www.ubuntu.com", "111")
 	tracker.Add("ubuntu.com", "123")
@@ -167,9 +168,8 @@ func TestDomainTracker(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 
 	/* no more includes */
-	v, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("*.ubuntu.com").AsBytes())
-	Expect(err).NotTo(HaveOccurred())
-	Expect((dnsresolver.DNSPfxValueFromBytes(v))).NotTo(Equal(pidStarUbuntu))
+	_, err = dnsPfxMap.Get(dnsresolver.NewPfxKey("*.ubuntu.com").AsBytes())
+	Expect(err).To(HaveOccurred())
 	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidStarUbuntu, 1234).AsBytes()) /* *.ubuntu.com */
 	Expect(err).To(HaveOccurred())
 	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pidArchive, 1234).AsBytes()) /* archive.ubuntu.com */

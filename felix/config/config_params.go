@@ -454,7 +454,7 @@ type Config struct {
 
 	// Config for DNS debugging - there are not exported and are set directly on
 	// by tests
-	DNSDoNotWriteIPSets bool // Do all the processing, just don't write the IPs in IPsets
+	DNSDoNotWriteIPSets bool `config:"bool;false"` // Do all the processing, just don't write the IPs in IPsets
 
 	L7LogsFlushInterval                  time.Duration `config:"seconds;300"`
 	L7LogsFileEnabled                    bool          `config:"bool;true"`

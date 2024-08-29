@@ -61,6 +61,10 @@ func NewDomainTracker(strToUin64 func(string) uint64) (*DomainTracker, error) {
 		return nil, fmt.Errorf("could not create BPF map: %w", err)
 	}
 
+	return NewDomainTrackerWithMaps(strToUin64, mPfx, mSets)
+}
+
+func NewDomainTrackerWithMaps(strToUin64 func(string) uint64, mPfx, mSets maps.Map) (*DomainTracker, error) {
 	d := &DomainTracker{
 		mPfx:          mPfx,
 		mSets:         mSets,
@@ -77,7 +81,7 @@ func NewDomainTracker(strToUin64 func(string) uint64) (*DomainTracker, error) {
 		strToUin64: strToUin64,
 	}
 
-	err = d.pfxMap.LoadCacheFromDataplane()
+	err := d.pfxMap.LoadCacheFromDataplane()
 	if err != nil {
 		return nil, fmt.Errorf("could not load data from dataplane: %w", err)
 	}
