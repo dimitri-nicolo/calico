@@ -162,15 +162,17 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		time.Sleep(time.Second)
 
 		// Allow scapy to route back to the workload.
-		io.WriteString(scapy.Stdin,
+		_, err := io.WriteString(scapy.Stdin,
 			fmt.Sprintf("conf.route.add(host='%v',gw='%v')\n", w[0].IP, tc.Felixes[0].IP))
+		Expect(err).NotTo(HaveOccurred())
 	}
 
 	sendDNSResponses := func(scapy *containers.Container, dnsSpecs []string) {
 		// Drive scapy.
 		for _, dnsSpec := range dnsSpecs {
-			io.WriteString(scapy.Stdin,
+			_, err := io.WriteString(scapy.Stdin,
 				fmt.Sprintf("send(IP(dst='%v')/UDP(sport=53)/%v)\n", w[0].IP, dnsSpec))
+			Expect(err).NotTo(HaveOccurred())
 		}
 	}
 
