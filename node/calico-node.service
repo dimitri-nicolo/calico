@@ -8,7 +8,9 @@ After=network.target
 Type=notify
 EnvironmentFile=-/etc/calico/calico-node/calico-node.env
 ExecStart=/usr/bin/calico-node -felix
+NotifyAccess=main
 Restart=always
+WatchdogSec=60 
 
 [Install]
 WantedBy=multi-user.target
