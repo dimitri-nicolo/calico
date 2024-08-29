@@ -30,7 +30,7 @@ func NewPrometheusClient(address, token string) (*PrometheusClient, error) {
 	client, err := api.NewClient(api.Config{
 		Address: address,
 		RoundTripper: config.NewAuthorizationCredentialsRoundTripper(
-			"Bearer", config.Secret(token),
+			"Bearer", config.NewInlineSecret(token),
 			&http.Transport{TLSClientConfig: tlsConfig},
 		),
 	})

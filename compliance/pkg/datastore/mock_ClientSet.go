@@ -32,7 +32,6 @@ import (
 	eventsv1 "k8s.io/client-go/kubernetes/typed/events/v1"
 	eventsv1beta1 "k8s.io/client-go/kubernetes/typed/events/v1beta1"
 	extensionsv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
-	v1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
 	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
 	networkingv1beta1 "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
@@ -552,22 +551,6 @@ func (_m *MockClientSet) FelixConfigurations() v3.FelixConfigurationInterface {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(v3.FelixConfigurationInterface)
-		}
-	}
-
-	return r0
-}
-
-// FlowcontrolV1alpha1 provides a mock function with given fields:
-func (_m *MockClientSet) FlowcontrolV1alpha1() v1alpha1.FlowcontrolV1alpha1Interface {
-	ret := _m.Called()
-
-	var r0 v1alpha1.FlowcontrolV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() v1alpha1.FlowcontrolV1alpha1Interface); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(v1alpha1.FlowcontrolV1alpha1Interface)
 		}
 	}
 
