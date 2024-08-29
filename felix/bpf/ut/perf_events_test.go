@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	eventSize uint32 = 8 + 4 + 4 + 2 + 2 + 1 + 3
+	eventSize uint32 = 8 + 4 + 4 + 2 + 2 + 1 + 1027
 	ringSize  int    = 4 << 10
 )
 
