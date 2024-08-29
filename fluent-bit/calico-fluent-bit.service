@@ -1,0 +1,16 @@
+[Unit]
+Description=Calico Fluent Bit
+Documentation=https://docs.tigera.io/calico-enterprise/latest/about/
+Requires=network.target
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/calico/calico-fluent-bit/calico-fluent-bit.env
+ExecStart=/usr/bin/calico-fluent-bit -c /etc/calico/calico-fluent-bit/calico-fluent-bit.conf
+User=calico
+Group=calico
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

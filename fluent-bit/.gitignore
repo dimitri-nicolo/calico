@@ -1,3 +1,5 @@
+*.h
+*.so
 *.tar.gz
 .fluent-bit.downloaded
 package/
