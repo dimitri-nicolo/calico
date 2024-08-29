@@ -16,7 +16,7 @@
         - export ZONE=us-east4-c
         - echo VM_PREFIX=${VM_PREFIX}
     jobs:
-      - name: fluent-bit FV tests
+      - name: fluent-bit tests
         commands:
           - make ci
     epilogue:
