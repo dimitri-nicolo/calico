@@ -64,6 +64,7 @@ fi
 # Check release url and installation scripts
 echo "Set release base url ${RELEASE_BASE_URL}"
 sed -i "s,export RELEASE_BASE_URL.*,export RELEASE_BASE_URL=\"${RELEASE_BASE_URL}\"," ./export-env.sh
+
 # Create a storage class and persistent volume for Calico Enterprise.
 if [ ${PRODUCT} == 'calient' ]; then
     ${KCAPZ} create -f ./EE/storage-class-azure-file.yaml

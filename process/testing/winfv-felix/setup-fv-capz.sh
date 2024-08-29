@@ -40,10 +40,18 @@ export WIN_NODE_COUNT=1
 
 function shutdown_cluster(){
   EXIT_CODE=$?
+
+  echo "Check for pause file..."
+  while [ -f /home/semaphore/pause-for-debug ];
+  do
+    echo "#"
+    sleep 30
+  done
+
   make -C $CAPZ_LOCATION delete-cluster CLUSTER_NAME_CAPZ=${CLUSTER_NAME_CAPZ} CI_RG=${CI_RG}
   # Clear trap
   trap - EXIT
-  exit "$EXIT_CODE"
+  exit $EXIT_CODE
 }
 
 trap shutdown_cluster EXIT
@@ -160,11 +168,11 @@ function start_test_infra(){
   $CALICO_HOME/process/testing/winfv-felix/infra/setup.sh $KUBECONFIG
 
   #Wait for porter pod to be running on windows node
-  for i in `seq 1 30`; do
-   if [[ `${KCAPZ} -n demo get pods porter --no-headers -o custom-columns=NAMESPACE:metadata.namespace,POD:metadata.name,PodIP:status.podIP,READY-true:status.containerStatuses[*].ready | awk -v OFS='\t\t' '{print $4}'` = "true" ]] ; then
-     echo "Porter is ready"
-     return
-   fi
+  for i in $(seq 1 30); do
+    if [[ $(${KCAPZ} -n demo get pods porter --no-headers -o custom-columns=NAMESPACE:metadata.namespace,POD:metadata.name,PodIP:status.podIP,READY-true:status.containerStatuses[*].ready | awk -v OFS='\t\t' '{print $4}') = "true" ]] ; then
+      echo "Porter is ready"
+      return
+    fi
    echo "Waiting for porter to be ready"
    sleep 30
   done
