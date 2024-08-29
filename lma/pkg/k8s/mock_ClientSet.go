@@ -48,7 +48,7 @@ import (
 
 	extensionsv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 
-	flowcontrolv1alpha1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1alpha1"
+	flowcontrolv1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1"
 
 	flowcontrolv1beta1 "k8s.io/client-go/kubernetes/typed/flowcontrol/v1beta1"
 
@@ -696,20 +696,20 @@ func (_m *MockClientSet) ExtensionsV1beta1() extensionsv1beta1.ExtensionsV1beta1
 	return r0
 }
 
-// FlowcontrolV1alpha1 provides a mock function with given fields:
-func (_m *MockClientSet) FlowcontrolV1alpha1() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface {
+// FlowcontrolV1 provides a mock function with given fields:
+func (_m *MockClientSet) FlowcontrolV1() flowcontrolv1.FlowcontrolV1Interface {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for FlowcontrolV1alpha1")
+		panic("no return value specified for FlowcontrolV1")
 	}
 
-	var r0 flowcontrolv1alpha1.FlowcontrolV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() flowcontrolv1alpha1.FlowcontrolV1alpha1Interface); ok {
+	var r0 flowcontrolv1.FlowcontrolV1Interface
+	if rf, ok := ret.Get(0).(func() flowcontrolv1.FlowcontrolV1Interface); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(flowcontrolv1alpha1.FlowcontrolV1alpha1Interface)
+			r0 = ret.Get(0).(flowcontrolv1.FlowcontrolV1Interface)
 		}
 	}
 
