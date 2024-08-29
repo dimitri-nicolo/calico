@@ -11,6 +11,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
+
 	"github.com/projectcalico/calico/felix/environment"
 
 	"github.com/projectcalico/calico/felix/config"
@@ -73,7 +75,9 @@ func newTProxyManager(
 	}
 
 	rt := routetable.New(
-		nil,
+		&ownershippol.ExclusiveOwnershipPolicy{
+			InterfaceNames: []string{"lo"},
+		},
 		4,
 		dpConfig.NetlinkTimeout,
 		nil, // deviceRouteSourceAddress
@@ -102,7 +106,7 @@ func newTProxyManager(
 
 	if enabled {
 		anyV4, _ := ip.CIDRFromString("0.0.0.0/0")
-		rt.RouteUpdate("lo", routetable.Target{
+		rt.RouteUpdate(routetable.RouteClassTPROXY, "lo", routetable.Target{
 			Type: routetable.TargetTypeLocal,
 			CIDR: anyV4,
 		})
@@ -122,7 +126,9 @@ func newTProxyManager(
 		}
 
 		rt := routetable.New(
-			nil,
+			&ownershippol.ExclusiveOwnershipPolicy{
+				InterfaceNames: []string{"lo"},
+			},
 			6,
 			dpConfig.NetlinkTimeout,
 			nil, // deviceRouteSourceAddress
@@ -151,10 +157,13 @@ func newTProxyManager(
 
 		if enabled {
 			anyV6, _ := ip.CIDRFromString("::/0")
-			rt.RouteUpdate("lo", routetable.Target{
-				Type: routetable.TargetTypeLocal,
-				CIDR: anyV6,
-			})
+			rt.RouteUpdate(routetable.RouteClassTPROXY,
+				"lo",
+				routetable.Target{
+					Type: routetable.TargetTypeLocal,
+					CIDR: anyV6,
+				},
+			)
 
 			rr.SetRule(routerule.NewRule(6, 1).
 				GoToTable(idx6).
@@ -234,8 +243,8 @@ func (m *tproxyManager) CompleteDeferredWork() error {
 	return nil
 }
 
-func (m *tproxyManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
-	var rts []routetable.RouteTableSyncer
+func (m *tproxyManager) GetRouteTableSyncers() []routetable.SyncerInterface {
+	var rts []routetable.SyncerInterface
 
 	if m.rt4 != nil {
 		rts = append(rts, m.rt4)
@@ -285,9 +294,11 @@ func newIptablesEqualIPsChecker(dpConfig Config, ipSetsV4, ipSetsV6 tproxyIPSets
 
 	if enabled && ipSetsV4 == nil {
 		log.Fatal("no IPv4 ipsets")
+		panic("no IPv4 ipsets")
 	}
 	if enabled && enabled6 && ipSetsV6 == nil {
 		log.Fatal("no IPv6 ipsets when IPv6 enabled")
+		panic("no IPv6 ipsets")
 	}
 
 	if enabled {

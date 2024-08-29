@@ -21,6 +21,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
+
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/ethtool"
@@ -82,7 +84,7 @@ type healthAggregator interface {
 
 type routeTableGenerator interface {
 	NewRouteTable(
-		interfacePrefixes []string,
+		interfaceNames []string,
 		ipVersion uint8,
 		tableIndex int,
 		netlinkTimeout time.Duration,
@@ -91,7 +93,7 @@ type routeTableGenerator interface {
 		removeExternalRoutes bool,
 		opRecorder logutils.OpRecorder,
 		featureDetector environment.FeatureDetectorIface,
-	) routetable.RouteTableInterface
+	) routetable.Interface
 }
 
 type routeTableFactory struct {
@@ -99,7 +101,7 @@ type routeTableFactory struct {
 }
 
 func (f *routeTableFactory) NewRouteTable(
-	interfacePrefixes []string,
+	interfaceNames []string,
 	ipVersion uint8,
 	tableIndex int,
 	netlinkTimeout time.Duration,
@@ -108,10 +110,13 @@ func (f *routeTableFactory) NewRouteTable(
 	removeExternalRoutes bool,
 	opRecorder logutils.OpRecorder,
 	featureDetector environment.FeatureDetectorIface,
-) routetable.RouteTableInterface {
+) routetable.Interface {
 
 	f.count += 1
-	return routetable.New(interfacePrefixes,
+	return routetable.New(
+		&ownershippol.ExclusiveOwnershipPolicy{
+			InterfaceNames: interfaceNames,
+		},
 		ipVersion,
 		netlinkTimeout,
 		deviceRouteSourceAddress,
@@ -119,7 +124,8 @@ func (f *routeTableFactory) NewRouteTable(
 		removeExternalRoutes,
 		tableIndex,
 		opRecorder,
-		featureDetector)
+		featureDetector,
+	)
 }
 
 type routeRulesGenerator interface {
@@ -234,11 +240,11 @@ func newInitialKernelState() *initialKernelState {
 }
 
 func (s *initialKernelState) String() string {
-	var rules []string
+	var ruleStrs []string
 	for _, r := range s.rules {
-		rules = append(rules, fmt.Sprintf("%s: [%#v]", r.srcIP, *r))
+		ruleStrs = append(ruleStrs, fmt.Sprintf("%s: [%#v]", r.srcIP, *r))
 	}
-	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(rules, ","))
+	rulesOutput := fmt.Sprintf("rules: {%s}", strings.Join(ruleStrs, ","))
 
 	var tables []string
 	for index, t := range s.tables {
@@ -273,7 +279,7 @@ type egressIPManager struct {
 	// We could have code to free the unused routetable if it is inSync. However, since
 	// the total number of routetables is limited, we may just avoid the complexity.
 	// Just keep it; it could be reused by another EgressIPSet.
-	tableIndexToRouteTable map[int]routetable.RouteTableInterface
+	tableIndexToRouteTable map[int]routetable.Interface
 	// Tracks next hops for all route tables in use.
 	tableIndexToEgressTable map[int]*egressTable
 	egwTracker              *EgressGWTracker
@@ -294,8 +300,10 @@ type egressIPManager struct {
 
 	// lock protects the fields shared between the main goroutine and the VXLAN device sync goroutine.
 	lock                 sync.Mutex
-	vxlanDeviceLinkIndex int
 	nodeIP               net.IP
+	vxlanDeviceLinkIndex int
+	myNodeIPChangedC     chan struct{}
+
 	// to rate-limit retries, track if the last kernel sync failed, and if our state has changed since then
 	lastUpdateFailed, unblockingUpdateOccurred, firstSyncDone bool
 
@@ -402,7 +410,7 @@ func newEgressIPManagerWithShims(
 		initialKernelState:         newInitialKernelState(),
 		tableIndexSet:              tableIndexSet,
 		tableIndexStack:            tableIndexStack,
-		tableIndexToRouteTable:     make(map[int]routetable.RouteTableInterface),
+		tableIndexToRouteTable:     make(map[int]routetable.Interface),
 		tableIndexToEgressTable:    make(map[int]*egressTable),
 		pendingWorkloadUpdates:     make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		activeWorkloads:            make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
@@ -424,6 +432,7 @@ func newEgressIPManagerWithShims(
 		statusCallback:         statusCallback,
 		healthAgg:              healthAgg,
 		hopRand:                rand.New(hopRandSource),
+		myNodeIPChangedC:       make(chan struct{}, 1),
 		ipsets:                 ipsets,
 		bpfIPSets:              bpfIPSets,
 		featureDetector:        featureDetector,
@@ -457,7 +466,15 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 			log.WithField("msg", msg).Debug("Local host update")
 			// The node IP is used by the background VXLAN device update thread, need to synchronise.
 			m.lock.Lock()
-			m.nodeIP = net.ParseIP(msg.Ipv4Addr)
+			newNodeIP := net.ParseIP(msg.Ipv4Addr)
+			if !newNodeIP.Equal(m.nodeIP) {
+				log.WithField("newNodeIP", newNodeIP).Info("Node IP changed, updating")
+				m.nodeIP = newNodeIP
+				select {
+				case m.myNodeIPChangedC <- struct{}{}:
+				default:
+				}
+			}
 			m.lock.Unlock()
 		}
 	default:
@@ -465,8 +482,6 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 	}
 
 	// when an update we care about is seen (when the default switch case isn't hit), we track its occurrence
-	m.lock.Lock()
-	defer m.lock.Unlock()
 	m.unblockingUpdateOccurred = true
 }
 
@@ -613,9 +628,9 @@ func (m *egressIPManager) readInitialKernelState() error {
 
 	// Read routing rules within the egress manager table range from the kernel.
 	m.routeRules.InitFromKernel()
-	rules := m.routeRules.GetAllActiveRules()
+	activeRules := m.routeRules.GetAllActiveRules()
 	ruleTableIndices := set.New[int]()
-	for _, rule := range rules {
+	for _, rule := range activeRules {
 		nlRule := rule.NetLinkRule()
 		r, err := newEgressRule(nlRule)
 		if err != nil {
@@ -1082,13 +1097,13 @@ func sortAddrSlice(s []ip.Addr) {
 }
 
 // Set L3 routes for an EgressIPSet.
-func (m *egressIPManager) setL3Routes(rTable routetable.RouteTableInterface, t *egressTable) {
+func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTable) {
 	var (
 		vxlanRoutes                []routetable.Target
 		noIfaceRoutes              []routetable.Target
 		vxlanSinglePathRouteIsUsed bool
 	)
-
+	rTable := routetable.NewClassView(routetable.RouteClassEgress, rawTable)
 	for dst, r := range t.routes {
 		if r.throwToMain {
 			route := routetable.Target{
@@ -1103,7 +1118,7 @@ func (m *egressIPManager) setL3Routes(rTable routetable.RouteTableInterface, t *
 			for _, addr := range nextHopsSlice {
 				multipath = append(multipath, routetable.NextHop{
 					Gw:        addr,
-					LinkIndex: m.vxlanDeviceLinkIndex, // we have already acquired a lock for this data further up the call stack
+					IfaceName: m.vxlanDevice,
 				})
 			}
 
@@ -1235,9 +1250,9 @@ func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID
 	delete(m.workloadToTableIndex, id)
 }
 
-func (m *egressIPManager) newRouteTable(tableNum int) routetable.RouteTableInterface {
+func (m *egressIPManager) newRouteTable(tableNum int) routetable.Interface {
 	return m.rtGenerator.NewRouteTable(
-		[]string{"^" + m.vxlanDevice + "$", routetable.InterfaceNone},
+		[]string{m.vxlanDevice, routetable.InterfaceNone},
 		4,
 		tableNum,
 		m.dpConfig.NetlinkTimeout,
@@ -1283,8 +1298,8 @@ func (m *egressIPManager) deleteRouteTable(index int) {
 			"index":       index,
 			"destination": dst,
 		}).Debug("Removing L3 routes.")
-		table.RouteRemove(routetable.InterfaceNone, dst)
-		table.RouteRemove(m.vxlanDevice, dst)
+		table.RouteRemove(routetable.RouteClassEgress, routetable.InterfaceNone, dst)
+		table.RouteRemove(routetable.RouteClassEgress, m.vxlanDevice, dst)
 	}
 	delete(m.tableIndexToEgressTable, index)
 	// Don't remove the entry from m.tableIndexToRouteTable, it is needed in GetRouteTableSyncers()
@@ -1365,10 +1380,10 @@ func updateEgressTableRoutes(eTable *egressTable, targets []routetable.Target) {
 	}
 }
 
-func (m *egressIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
-	rts := make([]routetable.RouteTableSyncer, 0, len(m.tableIndexToRouteTable))
+func (m *egressIPManager) GetRouteTableSyncers() []routetable.SyncerInterface {
+	rts := make([]routetable.SyncerInterface, 0, len(m.tableIndexToRouteTable))
 	for _, t := range m.tableIndexToRouteTable {
-		rts = append(rts, t.(routetable.RouteTableSyncer))
+		rts = append(rts, t.(routetable.SyncerInterface))
 	}
 
 	return rts
@@ -1390,17 +1405,33 @@ func ipToMac(ipAddr ip.Addr) net.HardwareAddr {
 	return hw
 }
 
-func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
+func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration, vxlanDeviceUpdatedC chan<- struct{}) {
 	log.Info("egress ip VXLAN tunnel device thread started.")
 
+	sleepMonitoringChans := func(maxDuration time.Duration) {
+		timer := time.NewTimer(wait)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-m.myNodeIPChangedC:
+			log.Debug("Sleep returning early: Node IP changed.")
+		}
+	}
+
 	logNextTime := true
+	var lastNodeIP net.IP
+	var lastLinkIndex int
 	for {
-		err := m.configureVXLANDevice(mtu)
+		m.lock.Lock()
+		nodeIP := m.nodeIP
+		m.lock.Unlock()
+
+		err := m.configureVXLANDevice(nodeIP, mtu)
 		if err != nil {
 			log.WithError(err).Warn("Failed to configure egress ip VXLAN tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
 			logNextTime = true
-			continue
+			goto next
 		}
 
 		// src_valid_mark must be enabled for RPF to accurately check returning egress packets coming through egress.calico
@@ -1411,12 +1442,24 @@ func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 			goto next
 		}
 
+		m.lock.Lock()
+		if !nodeIP.Equal(lastNodeIP) || lastLinkIndex != m.vxlanDeviceLinkIndex {
+			log.Debug("Sending kick to main goroutine.")
+			select {
+			case vxlanDeviceUpdatedC <- struct{}{}:
+			default:
+			}
+			lastNodeIP = nodeIP
+			lastLinkIndex = m.vxlanDeviceLinkIndex
+		}
+		m.lock.Unlock()
+
 		if logNextTime {
 			log.Info("Egress ip VXLAN tunnel device configured.")
 			logNextTime = false
 		}
 	next:
-		time.Sleep(wait)
+		sleepMonitoringChans(wait)
 	}
 }
 
@@ -1443,13 +1486,13 @@ func (m *egressIPManager) getParentInterface(nodeIP net.IP) (netlink.Link, error
 }
 
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
-func (m *egressIPManager) configureVXLANDevice(mtu int) error {
+func (m *egressIPManager) configureVXLANDevice(nodeIP net.IP, mtu int) error {
 	logCxt := log.WithFields(log.Fields{"device": m.vxlanDevice})
 	logCxt.Debug("Configuring egress ip VXLAN tunnel device")
 
-	m.lock.Lock()
-	nodeIP := m.nodeIP
-	m.lock.Unlock()
+	if nodeIP == nil {
+		return fmt.Errorf("still waiting to learn this node's IP address")
+	}
 
 	parent, err := m.getParentInterface(nodeIP)
 	if err != nil {
@@ -1542,7 +1585,6 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.vxlanDeviceLinkIndex = attrs.Index
-	m.unblockingUpdateOccurred = true
 
 	return nil
 }
@@ -1716,6 +1758,11 @@ func (m *egressIPManager) getActiveGateways(gateways gatewaysByIP, preferNodeLoc
 		}
 	}
 	return activeGateways
+}
+
+func (m *egressIPManager) OnVXLANDeviceUpdate() {
+	log.Debug("VXLAN device has been updated.")
+	m.unblockingUpdateOccurred = true
 }
 
 // hardwareAddrForNode deterministically creates a unique hardware address from a hostname.

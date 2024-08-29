@@ -58,6 +58,7 @@ import (
 	"github.com/projectcalico/calico/felix/netlinkshim"
 	mocknetlink "github.com/projectcalico/calico/felix/netlinkshim/mocknetlink"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
@@ -117,6 +118,8 @@ func (m *mockDataplane) loadDefaultPolicies() error {
 func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (qDiscInfo, error) {
 	var qdisc qDiscInfo
 	key := ap.IfaceName() + ":" + ap.HookName().String()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.numAttaches[key] = m.numAttaches[key] + 1
 	return qdisc, nil
 }
@@ -472,7 +475,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			filterTableV6,
 			nil,
 			logutils.NewSummarizer("test"),
-			&environment.FakeFeatureDetector{},
+			&routetable.DummyTable{}, // FIXME test the routes.
+			&routetable.DummyTable{}, // FIXME test the routes.
 			lookupsCache,
 			actionOnDrop,
 			enableTcpStats,

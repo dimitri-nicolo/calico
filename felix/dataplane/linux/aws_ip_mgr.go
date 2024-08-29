@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"syscall"
@@ -16,6 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 
 	"github.com/projectcalico/calico/felix/environment"
 
@@ -60,8 +61,8 @@ type awsIPManager struct {
 
 	// Dataplane state.
 
-	routeTablesByTableIdx  map[int]routetable.RouteTableInterface
-	routeTablesByIfaceName map[string]routetable.RouteTableInterface
+	routeTablesByTableIdx  map[int]routetable.Interface
+	routeTablesByIfaceName map[string]routetable.Interface
 	freeRouteTableIndexes  []int
 	routeRules             routeRules
 	routeRulesInDataplane  map[awsRuleKey]*routerule.Rule
@@ -136,8 +137,8 @@ func NewAWSIPManager(
 		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set[proto.WorkloadEndpointID]{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
-		routeTablesByIfaceName: map[string]routetable.RouteTableInterface{},
-		routeTablesByTableIdx:  map[int]routetable.RouteTableInterface{},
+		routeTablesByIfaceName: map[string]routetable.Interface{},
+		routeTablesByTableIdx:  map[int]routetable.Interface{},
 		ifaceNameToPrimaryIP:   map[string]string{},
 		ifaceNameToIfaceIdx:    map[string]int{},
 
@@ -810,7 +811,7 @@ func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set[awsRuleKey], awsE
 }
 
 // programIfaceRoutes updates the routing table for the given interface with the correct routes.
-func (a *awsIPManager) programIfaceRoutes(rt routetable.RouteTableInterface, ifaceName string) {
+func (a *awsIPManager) programIfaceRoutes(rt routetable.Interface, ifaceName string) {
 	// Add a default route via the AWS subnet's gateway.  This is how traffic to the outside world gets
 	// routed properly.
 	routes := []routetable.Target{
@@ -827,7 +828,7 @@ func (a *awsIPManager) programIfaceRoutes(rt routetable.RouteTableInterface, ifa
 			GW:   a.awsState.GatewayAddr,
 		},
 	}
-	rt.SetRoutes(ifaceName, routes)
+	rt.SetRoutes(routetable.RouteClassAWSDefault, ifaceName, routes)
 
 	// Add narrower routes for Calico IP pools that throw the packet back to the main routing tables.
 	// this is required to make RPF checks pass when traffic arrives from a Calico tunnel going to an
@@ -845,7 +846,7 @@ func (a *awsIPManager) programIfaceRoutes(rt routetable.RouteTableInterface, ifa
 			CIDR: ip.MustParseCIDROrIP(pool.Cidr),
 		})
 	}
-	rt.SetRoutes(routetable.InterfaceNone, noIFRoutes)
+	rt.SetRoutes(routetable.RouteClassAWSThrow, routetable.InterfaceNone, noIFRoutes)
 }
 
 // cleanUpRoutingTables scans routeTableIndexByIfaceName for routing tables that are no longer needed (i.e. no
@@ -857,8 +858,8 @@ func (a *awsIPManager) cleanUpRoutingTables(activeIfaceNames set.Set[string]) {
 		}
 
 		// NIC must have existed before but it no longer does.  Flush any routes from its routing table.
-		rt.SetRoutes(ifaceName, nil)
-		rt.SetRoutes(routetable.InterfaceNone, nil)
+		rt.SetRoutes(routetable.RouteClassAWSDefault, ifaceName, nil)
+		rt.SetRoutes(routetable.RouteClassAWSThrow, routetable.InterfaceNone, nil)
 
 		// Only delete from the a.routeTablesByIfaceName map.  This means that the routing table will live
 		// on in a.routeTablesByTableIdx until we reuse its index.  We want the table to live on so that
@@ -895,12 +896,12 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set[awsRuleKey]) {
 	})
 }
 
-func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.RouteTableInterface {
+func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.Interface {
 	if _, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
 		logrus.WithField("ifaceName", ifaceName).Info("Making routing table for AWS interface.")
 		tableIndex := a.claimTableID()
 		rt := a.newRouteTable(
-			[]string{"^" + regexp.QuoteMeta(ifaceName) + "$", routetable.InterfaceNone},
+			[]string{ifaceName, routetable.InterfaceNone},
 			4,
 			a.dpConfig.NetlinkTimeout,
 			nil,
@@ -929,8 +930,8 @@ func (a *awsIPManager) releaseRoutingTableID(id int) {
 	a.freeRouteTableIndexes = append(a.freeRouteTableIndexes, id)
 }
 
-func (a *awsIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
-	var rts []routetable.RouteTableSyncer
+func (a *awsIPManager) GetRouteTableSyncers() []routetable.SyncerInterface {
+	var rts []routetable.SyncerInterface
 	for _, t := range a.routeTablesByTableIdx {
 		rts = append(rts, t)
 	}
@@ -960,7 +961,7 @@ type routeRulesNewFn func(
 ) (routeRules, error)
 
 type routeTableNewFn func(
-	interfaceRegexes []string,
+	interfaceNames []string,
 	ipVersion uint8,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
@@ -969,7 +970,7 @@ type routeTableNewFn func(
 	tableIndex int,
 	opReporter logutils.OpRecorder,
 	featureDetector environment.FeatureDetectorIface,
-) routetable.RouteTableInterface
+) routetable.Interface
 
 type awsNetlinkIface interface {
 	LinkList() ([]netlink.Link, error)
@@ -999,7 +1000,7 @@ func realRouteRuleNew(
 }
 
 func realRouteTableNew(
-	interfaceRegexes []string,
+	interfaceNames []string,
 	ipVersion uint8,
 	netlinkTimeout time.Duration,
 	deviceRouteSourceAddress net.IP,
@@ -1008,9 +1009,20 @@ func realRouteTableNew(
 	tableIndex int,
 	opReporter logutils.OpRecorder,
 	featureDetector environment.FeatureDetectorIface,
-) routetable.RouteTableInterface {
-	return routetable.New(interfaceRegexes, ipVersion, netlinkTimeout, deviceRouteSourceAddress,
-		deviceRouteProtocol, removeExternalRoutes, tableIndex, opReporter, featureDetector)
+) routetable.Interface {
+	return routetable.New(
+		&ownershippol.ExclusiveOwnershipPolicy{
+			InterfaceNames: interfaceNames,
+		},
+		ipVersion,
+		netlinkTimeout,
+		deviceRouteSourceAddress,
+		deviceRouteProtocol,
+		removeExternalRoutes,
+		tableIndex,
+		opReporter,
+		featureDetector,
+	)
 }
 
 type awsRealNetlink struct{}
