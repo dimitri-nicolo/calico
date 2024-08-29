@@ -9,8 +9,6 @@ URL: https://tigera.io/
 Source0: calico-node.tar.gz
 
 Requires: conntrack-tools
-Requires: cryptsetup-libs
-Requires: gzip
 Requires: iproute
 Requires: iproute-tc
 Requires: ipset
@@ -18,16 +16,11 @@ Requires: iptables
 Requires: iptables-utils
 Requires: iputils
 Requires: kmod
-Requires: libmnl
 Requires: libnetfilter_conntrack
 Requires: libnetfilter_cthelper
 Requires: libnetfilter_cttimeout
 Requires: libnetfilter_queue
-Requires: libnfnetlink
 Requires: libpcap
-Requires: net-tools
-Requires: nftables
-Requires: procps
 
 %description
 Calico node handles networking and policy for Calico.
