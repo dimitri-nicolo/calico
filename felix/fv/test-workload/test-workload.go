@@ -16,7 +16,6 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,13 +23,9 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/projectcalico/calico/felix/fv/cgroup"
-	"github.com/projectcalico/calico/felix/fv/connectivity"
-	"github.com/projectcalico/calico/felix/fv/utils"
-
-	"github.com/containernetworking/cni/pkg/skel"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/plugins/pkg/ns"
 	nsutils "github.com/containernetworking/plugins/pkg/testutils"
@@ -41,6 +36,9 @@ import (
 
 	"github.com/projectcalico/calico/cni-plugin/pkg/dataplane/linux"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
+	"github.com/projectcalico/calico/felix/fv/cgroup"
+	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/utils"
 )
 
 const usage = `test-workload, test workload for Felix FV testing.
@@ -124,10 +122,6 @@ func main() {
 		}
 		dp := linux.NewLinuxDataplane(conf, log.WithField("ns", namespace.Path()))
 		hostVethName := interfaceName
-		args := skel.CmdArgs{
-			IfName: "eth0",
-			Netns:  namespace.Path(),
-		}
 		var addrs []*cniv1.IPConfig
 		if ipv4Addr != "" {
 			addrs = append(addrs, &cniv1.IPConfig{
@@ -145,9 +139,6 @@ func main() {
 				},
 			})
 		}
-		result := cniv1.Result{
-			IPs: addrs,
-		}
 		_, v4Default, err := net.ParseCIDR("0.0.0.0/0")
 		panicIfError(err)
 		_, v6Default, err := net.ParseCIDR("::/0")
@@ -156,14 +147,17 @@ func main() {
 			v4Default,
 			v6Default, // Only used if we end up adding a v6 address.
 		}
-		_, _, err = dp.DoNetworking(
-			context.TODO(),
-			nil,
-			&args,
-			&result,
+		hostNlHandle, err := netlink.NewHandle(syscall.NETLINK_ROUTE)
+		panicIfError(err)
+
+		defer hostNlHandle.Close()
+		_, err = dp.DoWorkloadNetnsSetUp(
+			hostNlHandle,
+			namespace.Path(),
+			addrs,
+			"eth0",
 			hostVethName,
 			routes,
-			nil,
 			nil,
 			nil,
 		)
