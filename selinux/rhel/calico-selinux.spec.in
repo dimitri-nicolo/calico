@@ -17,8 +17,8 @@ restorecon -FR /mnt/tigera
 %define container_policy_epoch 2
 
 Name:       calico-selinux
-Version:    @CALICO_SELINUX_VERSION@
-Release:    1%{?dist}
+Version:    @VERSION@
+Release:    @RELEASE@%{?dist}
 Summary:    SELinux policy module for Calico
 
 Group:      System Environment/Base

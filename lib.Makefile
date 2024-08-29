@@ -336,10 +336,11 @@ DOCKER_HOST_NATIVE_RUN := docker run --rm \
 # * Official release: v3.1.6 -> v3.1.6-1
 # * Early preview release: v3.1.6 -> v3.1.6~pre1.1-4.20240823gitc210c47321cf
 define host_native_rpm_build
+	$(eval git_describe_0 := $(shell git describe --abbrev=0))
 	$(eval version := $(subst v,,$(3)))
 	$(eval release := '1')
-	$(eval hash := $(subst $(3)-$(DEV_TAG_SUFFIX)-,,$(call git-dev-tag)))
-	$(ifeq ($(findstring -,$(call git-release-tag-from-dev-tag)),-) \
+	$(ifeq ($(findstring -,$(git_describe_0)),-) \
+		$(eval hash := $(subst $(git_describe_0)-,,$(shell git describe)))
 		$(eval version := $(subst -,~pre,$(version))) \
 		$(eval release := $(subst -g,.$(shell date -u +'%Y%m%d')git,$(hash))) \
 	endif)
