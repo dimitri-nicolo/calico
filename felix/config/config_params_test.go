@@ -108,6 +108,8 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		for _, name := range cpFieldsToIgnore {
 			delete(cpFields, name)
 		}
+
+		delete(cpFields, "DNSDoNotWriteIPSets") // just for testing
 	})
 
 	It("FelixConfigurationSpec should contain all Config fields", func() {

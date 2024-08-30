@@ -22,7 +22,7 @@ type Option func(c *Config)
 
 func WithDNSDoNotWriteIPSets() Option {
 	return func(c *Config) {
-		c.DNSDoNotWriteIPSets = true
+		_, _ = c.OverrideParam("DNSDoNotWriteIPSets", "true")
 		log.Infof("Set config DNSDoNotWriteIPSets=true")
 	}
 }

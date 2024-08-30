@@ -264,16 +264,17 @@ configRetry:
 			}
 			break
 		}
+
+		// As the last thing, use the options to set any overrides
+		for _, option := range opts {
+			option(configParams)
+		}
+
 		err = configParams.Validate()
 		if err != nil {
 			log.WithError(err).Error("Failed to parse/validate configuration from datastore.")
 			time.Sleep(1 * time.Second)
 			continue configRetry
-		}
-
-		// As the last thing, use the options to set any overrides
-		for _, option := range opts {
-			option(configParams)
 		}
 
 		// List all IP pools and feed them into an EncapsulationCalculator to determine if

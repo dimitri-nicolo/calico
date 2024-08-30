@@ -577,7 +577,6 @@ func newBPFEndpointManager(
 	)
 
 	m.dnsInlineProcessing = config.DNSPolicyMode == apiv3.DNSPolicyModeInline
-	log.Infof("XXX %+v", config.DNSPolicyMode)
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
 	// _only_ implemented by XDP, so we _should_ fall back to XDPGeneric if necessary in order
