@@ -671,7 +671,6 @@ configRetry:
 	// etc.
 	asyncCalcGraph := calc.NewAsyncCalcGraph(
 		configParams.Copy(), // Copy to avoid concurrent access.
-		licenseMonitor,
 		calcGraphClientChannels,
 		healthAggregator,
 		lookupsCache,

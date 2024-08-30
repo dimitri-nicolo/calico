@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -18,7 +18,7 @@ func TestInvalidFieldError(t *testing.T) {
 	key := "projectcalico.org/globalnetworkpolicies/default/default.foo"
 	out := &v3.GlobalNetworkPolicy{}
 	obj := &v3.GlobalNetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{Name: "default.foo"},
+		ObjectMeta: metav1.ObjectMeta{Name: "default.foo$"},
 		Spec: v3.GlobalNetworkPolicySpec{
 			Egress: []v3.Rule{{
 				Action: "Allow",

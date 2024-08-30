@@ -188,8 +188,8 @@ var _ = Describe("Test the StagedNetworkPolicy update processor", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		namespacedSelector := "(" + selector + ") && projectcalico.org/namespace == '" + ns2 + "'"
-		v1irule := updateprocessors.RuleAPIV2ToBackend(irule, ns2, false)
-		v1erule := updateprocessors.RuleAPIV2ToBackend(erule, ns2, false)
+		v1irule := updateprocessors.RuleAPIV3ToBackend(irule, ns2, false)
+		v1erule := updateprocessors.RuleAPIV3ToBackend(erule, ns2, false)
 		Expect(kvps).To(Equal([]*model.KVPair{
 			{
 				Key: v1StagedNetworkPolicyKey2,

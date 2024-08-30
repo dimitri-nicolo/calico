@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -240,8 +240,12 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 
 	// For testing out Tiered Policy
 	tierClient := client.ProjectcalicoV3().Tiers()
+	order := float64(100.0)
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+		Spec: v3.TierSpec{
+			Order: &order,
+		},
 	}
 
 	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
@@ -291,7 +295,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	// Should be listing the policy under "net-sec" tier
 	policies, err = policyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (net-sec)"})
 	if err != nil {
-		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+		return fmt.Errorf("error listing NetworkPolicies (%s)", err)
 	}
 	if len(policies.Items) != 1 {
 		return fmt.Errorf("should have exactly one policy, had %v policies", len(policies.Items))
@@ -303,7 +307,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	// Should be listing the policy under "net-sec" and "default tier
 	policies, err = policyClient.List(ctx, metav1.ListOptions{LabelSelector: "projectcalico.org/tier in (default, net-sec)"})
 	if err != nil {
-		return fmt.Errorf("error listing stagedGlobalNetworkPolicies (%s)", err)
+		return fmt.Errorf("error listing NetworkPolicies (%s)", err)
 	}
 	if len(policies.Items) != 2 {
 		return fmt.Errorf("should have exactly two policies, had %v policies", len(policies.Items))
@@ -420,8 +424,12 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 
 	// For testing out Tiered Policy
 	tierClient := client.ProjectcalicoV3().Tiers()
+	order := float64(100.0)
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+		Spec: v3.TierSpec{
+			Order: &order,
+		},
 	}
 
 	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
@@ -751,8 +759,12 @@ func TestTierClient(t *testing.T) {
 
 func testTierClient(client calicoclient.Interface, name string) error {
 	tierClient := client.ProjectcalicoV3().Tiers()
+	order := float64(100.0)
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v3.TierSpec{
+			Order: &order,
+		},
 	}
 	ctx := context.Background()
 
@@ -869,8 +881,12 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 
 	// For testing out Tiered Policy
 	tierClient := client.ProjectcalicoV3().Tiers()
+	order := float64(100.0)
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+		Spec: v3.TierSpec{
+			Order: &order,
+		},
 	}
 
 	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
@@ -1008,8 +1024,12 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 
 	// For testing out Tiered Policy
 	tierClient := client.ProjectcalicoV3().Tiers()
+	order := float64(100.0)
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+		Spec: v3.TierSpec{
+			Order: &order,
+		},
 	}
 
 	if _, err := tierClient.Create(ctx, tier, metav1.CreateOptions{}); err != nil {
@@ -3705,8 +3725,12 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 
 	// For testing tier permissions.
 	tierClient := client.ProjectcalicoV3().Tiers()
+	order := float64(100.0)
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+		Spec: v3.TierSpec{
+			Order: &order,
+		},
 	}
 
 	_, err = tierClient.Create(ctx, tier, metav1.CreateOptions{})

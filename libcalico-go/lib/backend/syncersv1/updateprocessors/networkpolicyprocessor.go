@@ -89,10 +89,10 @@ func ConvertNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
 	v1value := &model.Policy{
 		Namespace:        v3res.Namespace,
 		Order:            spec.Order,
-		InboundRules:     RulesAPIV2ToBackend(spec.Ingress, v3res.Namespace, matchSGs),
-		OutboundRules:    RulesAPIV2ToBackend(spec.Egress, v3res.Namespace, matchSGs),
+		InboundRules:     RulesAPIV3ToBackend(spec.Ingress, v3res.Namespace, matchSGs),
+		OutboundRules:    RulesAPIV3ToBackend(spec.Egress, v3res.Namespace, matchSGs),
 		Selector:         selector,
-		Types:            policyTypesAPIV2ToBackend(spec.Types),
+		Types:            policyTypesAPIV3ToBackend(spec.Types),
 		ApplyOnForward:   false,
 		PerformanceHints: v3res.Spec.PerformanceHints,
 	}
@@ -100,16 +100,16 @@ func ConvertNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
 	return v1value, nil
 }
 
-// policyTypesAPIV2ToBackend converts the policy type field value from the API
+// policyTypesAPIV3ToBackend converts the policy type field value from the API
 // value to the equivalent backend value.
-func policyTypesAPIV2ToBackend(ptypes []apiv3.PolicyType) []string {
+func policyTypesAPIV3ToBackend(ptypes []apiv3.PolicyType) []string {
 	var v1ptypes []string
 	for _, ptype := range ptypes {
-		v1ptypes = append(v1ptypes, policyTypeAPIV2ToBackend(ptype))
+		v1ptypes = append(v1ptypes, policyTypeAPIV3ToBackend(ptype))
 	}
 	return v1ptypes
 }
 
-func policyTypeAPIV2ToBackend(ptype apiv3.PolicyType) string {
+func policyTypeAPIV3ToBackend(ptype apiv3.PolicyType) string {
 	return strings.ToLower(string(ptype))
 }

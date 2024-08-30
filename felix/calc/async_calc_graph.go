@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,9 +20,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-
-	lclient "github.com/projectcalico/calico/licensing/client"
-	"github.com/projectcalico/calico/licensing/client/features"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
@@ -97,23 +94,12 @@ const (
 	healthTimeout  = 30 * time.Second
 )
 
-type featureChecker interface {
-	GetFeatureStatus(feature string) bool
-	GetLicenseStatus() lclient.LicenseStatus
-}
-
 func NewAsyncCalcGraph(
 	conf *config.Config,
-	licenseMonitor featureChecker,
 	outputChannels []chan<- interface{},
 	healthAggregator *health.HealthAggregator,
 	lookupCache *LookupsCache,
 ) *AsyncCalcGraph {
-	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
-	if !tierSupportEnabled {
-		log.Warning("Not licensed for Tiers feature. " +
-			"If this is unexpected, contact Tigera support or email licensing@tigera.io")
-	}
 	eventSequencer := NewEventSequencer(conf)
 	g := &AsyncCalcGraph{
 		inputEvents:      make(chan interface{}, 10),
@@ -121,7 +107,7 @@ func NewAsyncCalcGraph(
 		eventSequencer:   eventSequencer,
 		healthAggregator: healthAggregator,
 	}
-	g.CalcGraph = NewCalculationGraph(eventSequencer, lookupCache, conf, tierSupportEnabled, g.reportHealth)
+	g.CalcGraph = NewCalculationGraph(eventSequencer, lookupCache, conf, g.reportHealth)
 	if conf.DebugSimulateCalcGraphHangAfter != 0 {
 		log.WithField("delay", conf.DebugSimulateCalcGraphHangAfter).Warn(
 			"Simulating a calculation graph hang.")

@@ -161,8 +161,8 @@ var _ = Describe("Test the Profile update processor", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		v1irule := updateprocessors.RuleAPIV2ToBackend(irule, "", false)
-		v1erule := updateprocessors.RuleAPIV2ToBackend(erule, "", false)
+		v1irule := updateprocessors.RuleAPIV3ToBackend(irule, "", false)
+		v1erule := updateprocessors.RuleAPIV3ToBackend(erule, "", false)
 		Expect(kvps).To(HaveLen(3))
 		Expect(kvps[0]).To(Equal(&model.KVPair{
 			Key:      model.ProfileLabelsKey{v1ProfileKey2},

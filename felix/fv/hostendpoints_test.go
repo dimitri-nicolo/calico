@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -312,6 +312,10 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			// cover that bug scenario.
 			securityTier := api.NewTier()
 			securityTier.Name = "security"
+			order := float64(10.0)
+			securityTier.Spec = api.TierSpec{
+				Order: &order,
+			}
 			_, err := client.Tiers().Create(utils.Ctx, securityTier, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 

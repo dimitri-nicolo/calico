@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019,2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -345,17 +345,6 @@ func (c *customK8sResourceClient) List(ctx context.Context, list model.ListInter
 		"Type":          "CustomResource",
 	})
 	logContext.Debug("Received List request")
-
-	// TODO: Fix CRD List handling when revision is specified.
-	if revision != "" {
-		// Since k8s garbage collector seems to be the only client wanting to List with
-		// a specific revision, this a workaround to stop it from continuously logging unnecessary errors,
-		// as it keeps on trying a List until a successful response is received.
-		// A revision of "" instead would make it List from the etcd quorom agreed revision.
-		// NOTE: Also, we do not anticipate GC to be useful with our resources. We do not explicitly make use
-		// of OwnerReference/Dependents. This change as it stands today is a nop.
-		revision = ""
-	}
 
 	// Attempt to convert the ListInterface to a Key.  If possible, the parameters
 	// indicate a fully qualified resource, and we'll need to use Get instead of

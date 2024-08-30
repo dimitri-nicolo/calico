@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 package windataplane
 
@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/willf/bitset"
+	"github.com/bits-and-blooms/bitset"
 
 	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"

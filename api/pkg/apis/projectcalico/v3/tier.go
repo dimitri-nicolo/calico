@@ -1,4 +1,4 @@
-// Copyright (c) 2017, 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,10 @@ type Tier struct {
 	// Specification of the Tier.
 	Spec TierSpec `json:"spec,omitempty"`
 }
+
+const (
+	DefaultTierOrder = float64(1_000_000) // 1 Million
+)
 
 // TierSpec contains the specification for a security policy tier resource.
 type TierSpec struct {

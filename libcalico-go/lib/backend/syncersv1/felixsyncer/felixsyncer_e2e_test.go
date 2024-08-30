@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -498,9 +498,10 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					MatchRegexp("[a-f0-9]{32}"),
 				)
 				// Creating the node also creates default tier.
+				order := apiv3.DefaultTierOrder
 				syncTester.ExpectData(model.KVPair{
 					Key:   model.TierKey{Name: "default"},
-					Value: &model.Tier{},
+					Value: &model.Tier{Order: &order},
 				})
 				syncTester.ExpectData(model.KVPair{
 					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},

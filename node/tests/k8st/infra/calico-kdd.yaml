@@ -274,6 +274,7 @@ rules:
       - caliconodestatuses
       - externalnetworks
       - egressgatewaypolicies
+      - tiers
     verbs:
       - get
       - list

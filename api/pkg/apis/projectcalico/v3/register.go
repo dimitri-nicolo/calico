@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 package v3
 
@@ -54,6 +54,8 @@ var (
 		&IPAMConfigurationList{},
 		&BlockAffinity{},
 		&BlockAffinityList{},
+		&Tier{},
+		&TierList{},
 
 		// Enterprise-only types.
 		&AlertException{},
@@ -92,8 +94,6 @@ var (
 		&StagedKubernetesNetworkPolicyList{},
 		&StagedNetworkPolicy{},
 		&StagedNetworkPolicyList{},
-		&Tier{},
-		&TierList{},
 		&UISettingsGroup{},
 		&UISettingsGroupList{},
 		&UISettings{},

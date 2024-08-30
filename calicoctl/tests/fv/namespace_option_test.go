@@ -57,9 +57,13 @@ func TestMultiOption(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 	}()
 
-	// Create the default tier. ENTERPRISE ONLY
+	// Create the default tier.
+	order := v3.DefaultTierOrder
 	dt := v3.NewTier()
 	dt.Name = "default"
+	dt.Spec = v3.TierSpec{
+		Order: &order,
+	}
 	_, err = client.Tiers().Create(ctx, dt, options.SetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	// Default tier cannot be deleted so skip the cleanup step.

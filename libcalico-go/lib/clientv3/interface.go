@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,8 @@ type Interface interface {
 	CalicoNodeStatusClient
 	IPAMConfigClient
 	BlockAffinitiesClient
+	// Tiers returns an interface for managing tier resources.
+	Tiers() TierInterface
 	// StagedGlobalNetworkPolicies returns an interface for managing staged global network policy resources.
 	StagedGlobalNetworkPolicies() StagedGlobalNetworkPolicyInterface
 	// StagedNetworkPolicies returns an interface for managing staged namespaced network policy resources.
@@ -65,8 +67,6 @@ type Interface interface {
 	WorkloadEndpoints() WorkloadEndpointInterface
 	// BGPPeers returns an interface for managing BGP peer resources.
 	BGPPeers() BGPPeerInterface
-	// Tiers returns an interface for managing tier resources.
-	Tiers() TierInterface
 	// UISettingsGroups returns an interface for managing uisettingsgroup resources.
 	UISettingsGroups() UISettingsGroupInterface
 	// UISettings returns an interface for managing uisettings resources.
@@ -93,8 +93,6 @@ type Interface interface {
 	PacketCaptures() PacketCaptureInterface
 	// DeepPacketInspections returns an interface for managing the DPI resources.
 	DeepPacketInspections() DeepPacketInspectionInterface
-	// BGPFilter returns an interface for managing BGPFilter resources.
-	BGPFilter() BGPFilterInterface
 	// ExternalNetworks returns an interface for managing ExternalNetwork resources.
 	ExternalNetworks() ExternalNetworkInterface
 	// EgressGatewayPolicy returns an interface for managing EgressGatewayPolicy resources.

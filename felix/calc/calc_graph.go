@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -177,7 +177,7 @@ func (g *CalcGraph) Flush() {
 	g.policyResolver.Flush()
 }
 
-func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf *config.Config, tiersEnabled bool, liveCallback func()) *CalcGraph {
+func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf *config.Config, liveCallback func()) *CalcGraph {
 	hostname := conf.FelixHostname
 	log.Infof("Creating calculation graph, filtered to hostname %v", hostname)
 	cg := &CalcGraph{}
@@ -219,43 +219,36 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	localEndpointFilter.RegisterWith(localEndpointDispatcher)
 	cg.localEndpointDispatcher = localEndpointDispatcher
 
-	// The tier filter examines tier and policy updates, potentially filtering out tiers and policies
-	// associated with unlicensed tiers. When tiersEnabled is true, all policies and tiers are allowed.
-	// When tiersEnabled is false, only licensed tiers are allowed, i.e. "allow-tigera", "default",
-	// "sg-remote", "sg-local", and "metadata".
-	tierDispatcher := dispatcher.NewDispatcher()
-	(*tierDispatcherReg)(tierDispatcher).RegisterWith(allUpdDispatcher)
-	tierFilter := &tierFilter{tiersEnabled}
-	tierFilter.RegisterWith(tierDispatcher)
-
 	// The active rules calculator matches local endpoints against policies and profiles to figure
 	// out which policies/profiles are active on this host.  Limiting to policies that apply to
 	// local endpoints significantly cuts down the number of policies that Felix has to
 	// render into the dataplane.
+	//
+	//           ...
 	//           Dispatcher (all updates)
-	//                /         \
-	//               /           \  All Host/Workload Endpoints
-	//              /             \
-	//             /            Dispatcher (local updates)
-	//            /                      |
-	//            |                       \  Local Host/Workload
-	//            |                        \ Endpoints only
-	//           / \                        \
-	// Profiles /   \ All Policies           \
-	//         /     \                        \
-	//         \      \                        \
-	//          \   Dispatcher (tier updates)  |
-	//           \       |                     /
-	//            \      | Policies for       /
-	//             \     | licensed tiers    /
-	//              \    |                  /
+	//                /\        \
+	//               /  \        \  All Host/Workload Endpoints
+	//              /    \        \
+	//             /      \     Dispatcher (local updates)
+	//            /        \             |
+	//            |         \             \  Local Host/Workload
+	//            |          \             \ Endpoints only
+	//           / \          \             \
+	// Profiles /   \ Policies \             \
+	//         /     \          \             \
+	//         \      \          |             \
+	//          \      \         |Tiers        |
+	//           \      \        |             /
+	//            \      |       |            /
+	//             \     |       |           /
+	//              \    |       |          /
 	//              Active Rules Calculator
 	//                   |
 	//                   | Locally active policies/profiles
-	//                  ...
+	//             ...
 	//
 	activeRulesCalc := NewActiveRulesCalculator()
-	activeRulesCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher, tierDispatcher)
+	activeRulesCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
 	cg.activeRulesCalculator = activeRulesCalc
 
 	// The active rules calculator only figures out which rules are active, it doesn't extract
@@ -394,7 +387,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//      |
 	//     Tier Dispatcher
 	//      |
-	//      | All policies (with licensed tiers)
+	//      | All policies
 	//      |
 	//      |       ...
 	//       \   Active rules calculator
@@ -412,7 +405,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	polResolver := NewPolicyResolver()
 	// Hook up the inputs to the policy resolver.
 	activeRulesCalc.PolicyMatchListeners = append(activeRulesCalc.PolicyMatchListeners, polResolver)
-	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher, tierDispatcher)
+	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
 	// And hook its output to the callbacks.
 	polResolver.RegisterCallback(callbacks)
 	cg.policyResolver = polResolver
@@ -706,59 +699,5 @@ func (f *remoteEndpointFilter) OnUpdate(update api.Update) (filterOut bool) {
 	}
 	// Do not log for remote endpoints, since there can be many and logging each
 	// will impact performance.
-	return
-}
-
-// tierFilter provides an UpdateHandler that optionally filters out unlicensed tiers.
-type tierDispatcherReg dispatcher.Dispatcher
-
-func (l *tierDispatcherReg) RegisterWith(disp *dispatcher.Dispatcher) {
-	td := (*dispatcher.Dispatcher)(l)
-	disp.Register(model.TierKey{}, td.OnUpdate)
-	disp.Register(model.PolicyKey{}, td.OnUpdate)
-	disp.RegisterStatusHandler(td.OnDatamodelStatus)
-}
-
-// tierFilter provides an UpdateHandler that filters out unlicensed tiers. When tiersEnabled is true
-// all tiers are considered licensed. When tiersEnabled is false, only the following tiers are considered
-// licensed: "metadata", "sg-remote", "sg-local", and "default".
-type tierFilter struct {
-	tiersEnabled bool
-}
-
-// Filter out tiers as well as policies that are associated with unlicensed tiers
-func (f *tierFilter) RegisterWith(tierDisp *dispatcher.Dispatcher) {
-	tierDisp.Register(model.TierKey{}, f.OnUpdate)
-	tierDisp.Register(model.PolicyKey{}, f.OnUpdate)
-}
-
-func (f *tierFilter) OnUpdate(update api.Update) (filterOut bool) {
-	if f.tiersEnabled {
-		return
-	}
-
-	// Tier names which are always considered "licensed", even when the license feature is disabled
-	const (
-		allowTigeraTier = "allow-tigera"
-		metaBlockerTier = "metadata"
-		remoteTier      = "sg-remote"
-		localTier       = "sg-local"
-		defaultTier     = "default"
-	)
-	var tierName string
-	switch key := update.Key.(type) {
-	case model.PolicyKey:
-		tierName = key.Tier
-	case model.TierKey:
-		tierName = key.Name
-	default: // ignore any (unintentional) non-policy/tier updates
-		return
-	}
-	if tierName == allowTigeraTier || tierName == metaBlockerTier || tierName == remoteTier || tierName == localTier || tierName == defaultTier {
-		return
-	} else {
-		filterOut = true
-		log.Warn("Tier/policy deleted: ", tierName)
-	}
 	return
 }

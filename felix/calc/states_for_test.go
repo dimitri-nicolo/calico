@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,12 @@ import (
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
+// Canned tiers/policies.
+
+var tier1_order20 = Tier{
+	Order: &order20,
+}
+
 // Pre-defined datastore states.  Each State object wraps up the complete state
 // of the datastore as well as the expected state of the dataplane.  The state
 // of the dataplane *should* depend only on the current datastore state, not on
@@ -60,6 +66,7 @@ var pol1KVPairAlways = KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Va
 var pol1KVPairOnDemand = KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Value: &policy1_order20_ondemand}
 
 var withPolicy = initialisedStore.withKVUpdates(
+	KVPair{Key: TierKey{Name: "default"}, Value: &tier1_order20},
 	pol1KVPair,
 ).withName("with policy")
 
@@ -342,6 +349,290 @@ var localEp1WithPolicy = withPolicy.withKVUpdates(
 	routelocalWlV6ColonOne,
 	routelocalWlV6ColonTwo,
 ).withName("ep1 local, policy")
+
+// withPolicyAndTier adds a tier and policy containing selectors for all and b=="b"
+var withPolicyAndTier = initialisedStore.withKVUpdates(
+	KVPair{Key: TierKey{Name: "tier-1"}, Value: &tier1_order20},
+	KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-1"}, Value: &policy1_order20},
+).withName("with policy")
+
+// localEp1WithPolicyAndTier adds a local endpoint to the mix.  It matches all and b=="b".
+var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+}).withIPSet(bEqBSelectorId, []string{
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+}).withActivePolicies(
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+).withActiveProfiles(
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-missing"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
+	},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+).withName("ep1 local, policy with non-default tier")
+
+// localEp2WithPolicyAndTier adds a different endpoint that doesn't match b=="b".
+// This tests an empty IP set.
+var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
+	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
+}).withIPSet(
+	bEqBSelectorId, []string{},
+).withActivePolicies(
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+).withActiveProfiles(
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-3"},
+).withEndpoint(
+	localWlEp2Id,
+	[]mock.TierInfo{
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
+	},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotTwo,
+	routelocalWlTenDotThree,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
+).withName("ep2 local, policy")
+
+// Policy ordering tests.  We keep the names of the policies the same but we
+// change their orders to check that order trumps name.
+var commLocalEp1WithOneTierPolicy123 = commercialPolicyOrderState(
+	[3]float64{order10, order20, order30},
+	[3]string{"pol-1", "pol-2", "pol-3"},
+)
+
+var commLocalEp1WithOneTierPolicy321 = commercialPolicyOrderState(
+	[3]float64{order30, order20, order10},
+	[3]string{"pol-3", "pol-2", "pol-1"},
+)
+
+var commLocalEp1WithOneTierPolicyAlpha = commercialPolicyOrderState(
+	[3]float64{order10, order10, order10},
+	[3]string{"pol-1", "pol-2", "pol-3"},
+)
+
+func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string) State {
+	policies := [3]Policy{}
+	for i := range policies {
+		policies[i] = Policy{
+			Order:         &policyOrders[i],
+			Selector:      "a == 'a'",
+			InboundRules:  []Rule{{SrcSelector: allSelector}},
+			OutboundRules: []Rule{{SrcSelector: bEpBSelector}},
+		}
+	}
+	state := initialisedStore.withKVUpdates(
+		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+		KVPair{Key: TierKey{Name: "tier-1"}, Value: &tier1_order20},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-1"}, Value: &policies[0]},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-2"}, Value: &policies[1]},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-3"}, Value: &policies[2]},
+	).withIPSet(allSelectorId, []string{
+		"10.0.0.1/32", // ep1
+		"fc00:fe11::1/128",
+		"10.0.0.2/32", // ep1 and ep2
+		"fc00:fe11::2/128",
+	}).withIPSet(bEqBSelectorId, []string{
+		"10.0.0.1/32",
+		"fc00:fe11::1/128",
+		"10.0.0.2/32",
+		"fc00:fe11::2/128",
+	}).withActivePolicies(
+		proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+		proto.PolicyID{Tier: "tier-1", Name: "pol-2"},
+		proto.PolicyID{Tier: "tier-1", Name: "pol-3"},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "prof-1"},
+		proto.ProfileID{Name: "prof-2"},
+		proto.ProfileID{Name: "prof-missing"},
+	).withEndpoint(
+		localWlEp1Id,
+		[]mock.TierInfo{
+			{
+				Name:               "tier-1",
+				IngressPolicyNames: expectedOrder[:],
+				EgressPolicyNames:  expectedOrder[:],
+			},
+		},
+	).withRoutes(
+		// Routes for the local WEPs.
+		routelocalWlTenDotOne,
+		routelocalWlTenDotTwo,
+		routelocalWlV6ColonOne,
+		routelocalWlV6ColonTwo,
+	).withName(fmt.Sprintf("ep1 local, 1 tier, policies %v", expectedOrder[:]))
+	return state
+}
+
+// Tier ordering tests.  We keep the names of the tiers constant but adjust
+// their orders.
+var localEp1WithTiers123 = tierOrderState(
+	[3]float64{order10, order20, order30},
+	[3]string{"tier-1", "tier-2", "tier-3"},
+)
+
+var localEp1WithTiers321 = tierOrderState(
+	[3]float64{order30, order20, order10},
+	[3]string{"tier-3", "tier-2", "tier-1"},
+)
+
+// These tests use the same order for each tier, checking that the name is
+// used as a tie breaker.
+var localEp1WithTiersAlpha = tierOrderState(
+	[3]float64{order10, order10, order10},
+	[3]string{"tier-1", "tier-2", "tier-3"},
+)
+
+var localEp1WithTiersAlpha2 = tierOrderState(
+	[3]float64{order20, order20, order20},
+	[3]string{"tier-1", "tier-2", "tier-3"},
+)
+
+var localEp1WithTiersAlpha3 = tierOrderState(
+	[3]float64{order20, order20, order10},
+	[3]string{"tier-3", "tier-1", "tier-2"},
+)
+
+func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
+	tiers := [3]Tier{}
+	for i := range tiers {
+		tiers[i] = Tier{
+			Order: &tierOrders[i],
+		}
+	}
+	state := initialisedStore.withKVUpdates(
+		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+		KVPair{Key: TierKey{Name: "tier-1"}, Value: &tiers[0]},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "tier-1-pol"}, Value: &policy1_order20},
+		KVPair{Key: TierKey{Name: "tier-2"}, Value: &tiers[1]},
+		KVPair{Key: PolicyKey{Tier: "tier-2", Name: "tier-2-pol"}, Value: &policy1_order20},
+		KVPair{Key: TierKey{Name: "tier-3"}, Value: &tiers[2]},
+		KVPair{Key: PolicyKey{Tier: "tier-3", Name: "tier-3-pol"}, Value: &policy1_order20},
+	).withIPSet(
+		allSelectorId, ep1IPs,
+	).withIPSet(
+		bEqBSelectorId, ep1IPs,
+	).withActivePolicies(
+		proto.PolicyID{Tier: "tier-1", Name: "tier-1-pol"},
+		proto.PolicyID{Tier: "tier-2", Name: "tier-2-pol"},
+		proto.PolicyID{Tier: "tier-3", Name: "tier-3-pol"},
+	).withActiveProfiles(
+		proto.ProfileID{Name: "prof-1"},
+		proto.ProfileID{Name: "prof-2"},
+		proto.ProfileID{Name: "prof-missing"},
+	).withEndpoint(
+		localWlEp1Id,
+		[]mock.TierInfo{
+			{
+				Name:               expectedOrder[0],
+				IngressPolicyNames: []string{expectedOrder[0] + "-pol"},
+				EgressPolicyNames:  []string{expectedOrder[0] + "-pol"},
+			},
+			{
+				Name:               expectedOrder[1],
+				IngressPolicyNames: []string{expectedOrder[1] + "-pol"},
+				EgressPolicyNames:  []string{expectedOrder[1] + "-pol"},
+			},
+			{
+				Name:               expectedOrder[2],
+				IngressPolicyNames: []string{expectedOrder[2] + "-pol"},
+				EgressPolicyNames:  []string{expectedOrder[2] + "-pol"},
+			},
+		},
+	).withRoutes(
+		// Routes for the local WEPs.
+		routelocalWlTenDotOne,
+		routelocalWlTenDotTwo,
+		routelocalWlV6ColonOne,
+		routelocalWlV6ColonTwo,
+	).withName(fmt.Sprintf("tier-order-state%v", expectedOrder[:]))
+	return state
+}
+
+// localEpsWithPolicyAndTier contains both of the above endpoints, which have some
+// overlapping IPs.  When we sequence this with the states above, we test
+// overlapping IP addition and removal.
+var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
+	// Two local endpoints with overlapping IPs.
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
+}).withIPSet(bEqBSelectorId, []string{
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+}).withActivePolicies(
+	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+).withActiveProfiles(
+	proto.ProfileID{Name: "prof-1"},
+	proto.ProfileID{Name: "prof-2"},
+	proto.ProfileID{Name: "prof-3"},
+	proto.ProfileID{Name: "prof-missing"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
+	},
+).withEndpoint(
+	localWlEp2Id,
+	[]mock.TierInfo{
+		{
+			Name:               "tier-1",
+			IngressPolicyNames: []string{"pol-1"},
+			EgressPolicyNames:  []string{"pol-1"},
+		},
+	},
+).withRoutes(
+	// Routes for the local WEPs.
+	routelocalWlTenDotOne,
+	routelocalWlTenDotTwo,
+	routelocalWlTenDotThree,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
+).withName("2 local, overlapping IPs & a policy")
 
 var localEp1WithPolicyAlways = localEp1WithPolicy.withKVUpdates(
 	pol1KVPairAlways,

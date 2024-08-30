@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,9 +81,9 @@ func NewPolicyResolver() *PolicyResolver {
 	}
 }
 
-func (pr *PolicyResolver) RegisterWith(allUpdDispatcher, localEndpointDispatcher, tierDispatcher *dispatcher.Dispatcher) {
-	tierDispatcher.Register(model.PolicyKey{}, pr.OnUpdate)
-	tierDispatcher.Register(model.TierKey{}, pr.OnUpdate)
+func (pr *PolicyResolver) RegisterWith(allUpdDispatcher, localEndpointDispatcher *dispatcher.Dispatcher) {
+	allUpdDispatcher.Register(model.PolicyKey{}, pr.OnUpdate)
+	allUpdDispatcher.Register(model.TierKey{}, pr.OnUpdate)
 	localEndpointDispatcher.Register(model.WorkloadEndpointKey{}, pr.OnUpdate)
 	localEndpointDispatcher.Register(model.HostEndpointKey{}, pr.OnUpdate)
 	localEndpointDispatcher.RegisterStatusHandler(pr.OnDatamodelStatus)

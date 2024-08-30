@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2024 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -264,15 +264,15 @@ func EvalPolicySelectorsPrint(output OutputList) {
 // the conversion methods in libcalico-go. Copying it here so that we
 // do not have more work later to keep libcalico-go-private in sync
 // with libcalico-go.
-// TODO: Delete this when the Felix syncer uses the v2 model and the
+// TODO: Delete this when the Felix syncer uses the v3 model and the
 // referencing logic is changed.
 func convertGlobalPolicyV2ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) *model.Policy {
 	v1value := &model.Policy{
 		Order:          spec.Order,
-		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, "", false),
-		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, "", false),
+		InboundRules:   updateprocessors.RulesAPIV3ToBackend(spec.Ingress, "", false),
+		OutboundRules:  updateprocessors.RulesAPIV3ToBackend(spec.Egress, "", false),
 		Selector:       spec.Selector,
-		Types:          policyTypesAPIV2ToBackend(spec.Types),
+		Types:          policyTypesAPIV3ToBackend(spec.Types),
 		DoNotTrack:     spec.DoNotTrack,
 		PreDNAT:        spec.PreDNAT,
 		ApplyOnForward: spec.ApplyOnForward,
@@ -295,10 +295,10 @@ func convertNetworkPolicyV2ToV1Value(spec apiv3.NetworkPolicySpec, ns string) *m
 
 	v1value := &model.Policy{
 		Order:          spec.Order,
-		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, ns, false),
-		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, ns, false),
+		InboundRules:   updateprocessors.RulesAPIV3ToBackend(spec.Ingress, ns, false),
+		OutboundRules:  updateprocessors.RulesAPIV3ToBackend(spec.Egress, ns, false),
 		Selector:       selector,
-		Types:          policyTypesAPIV2ToBackend(spec.Types),
+		Types:          policyTypesAPIV3ToBackend(spec.Types),
 		ApplyOnForward: true,
 	}
 
@@ -306,9 +306,9 @@ func convertNetworkPolicyV2ToV1Value(spec apiv3.NetworkPolicySpec, ns string) *m
 }
 
 // Copy of the function in libcalico-go.
-// TODO: Remove this when the Felix syncer uses the v2 model and the
+// TODO: Remove this when the Felix syncer uses the v3 model and the
 // referencing logic is changed
-func policyTypesAPIV2ToBackend(ptypes []apiv3.PolicyType) []string {
+func policyTypesAPIV3ToBackend(ptypes []apiv3.PolicyType) []string {
 	var v1ptypes []string
 	for _, ptype := range ptypes {
 		v1ptypes = append(v1ptypes, strings.ToLower(string(ptype)))

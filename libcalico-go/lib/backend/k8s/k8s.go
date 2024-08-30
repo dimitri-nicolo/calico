@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -626,13 +626,14 @@ func (c *KubeClient) Clean() error {
 	kinds := []string{
 		apiv3.KindBGPConfiguration,
 		apiv3.KindBGPPeer,
+		apiv3.KindBGPFilter,
 		apiv3.KindClusterInformation,
 		apiv3.KindCalicoNodeStatus,
+		apiv3.KindTier,
 		apiv3.KindGlobalNetworkPolicy,
 		apiv3.KindNetworkPolicy,
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
-		apiv3.KindTier,
 		apiv3.KindUISettings,
 		apiv3.KindUISettingsGroup,
 		apiv3.KindGlobalNetworkSet,
@@ -643,15 +644,14 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindKubeControllersConfiguration,
 		libapiv3.KindIPAMConfig,
 		libapiv3.KindBlockAffinity,
+		apiv3.KindFelixConfiguration,
 
 		// Enterprise
 		apiv3.KindLicenseKey,
-		apiv3.KindFelixConfiguration,
 		apiv3.KindStagedGlobalNetworkPolicy,
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
 		apiv3.KindPolicyRecommendationScope,
-		apiv3.KindTier,
 		apiv3.KindUISettings,
 		apiv3.KindUISettingsGroup,
 		apiv3.KindRemoteClusterConfiguration,
@@ -664,7 +664,6 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindManagedCluster,
 		apiv3.KindPacketCapture,
 		apiv3.KindDeepPacketInspection,
-		apiv3.KindBGPFilter,
 		apiv3.KindExternalNetwork,
 		apiv3.KindEgressGatewayPolicy,
 		apiv3.KindSecurityEventWebhook,

@@ -28,12 +28,11 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
-/*
 var (
 	float1_0 = float64(1.0)
 	float2_0 = float64(2.0)
 	float3_0 = float64(3.0)
-)*/
+)
 
 // Felix1             Felix2
 //  EP1-1 <-+-------> EP2-1

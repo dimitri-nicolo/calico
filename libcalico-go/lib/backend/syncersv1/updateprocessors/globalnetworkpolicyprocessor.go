@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,10 +72,10 @@ func ConvertGlobalPolicyV3ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) (*model.P
 	v1value := &model.Policy{
 		Namespace:        "", // Empty string used to signal a GlobalNetworkPolicy.
 		Order:            spec.Order,
-		InboundRules:     RulesAPIV2ToBackend(spec.Ingress, "", false),
-		OutboundRules:    RulesAPIV2ToBackend(spec.Egress, "", false),
+		InboundRules:     RulesAPIV3ToBackend(spec.Ingress, "", false),
+		OutboundRules:    RulesAPIV3ToBackend(spec.Egress, "", false),
 		Selector:         selector,
-		Types:            policyTypesAPIV2ToBackend(spec.Types),
+		Types:            policyTypesAPIV3ToBackend(spec.Types),
 		DoNotTrack:       spec.DoNotTrack,
 		PreDNAT:          spec.PreDNAT,
 		ApplyOnForward:   spec.ApplyOnForward,

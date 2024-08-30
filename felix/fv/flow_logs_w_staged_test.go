@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -36,12 +36,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-)
-
-var (
-	float1_0 = float64(1.0)
-	float2_0 = float64(2.0)
-	float3_0 = float64(3.0)
 )
 
 // This is an extension of the flow_logs_tests.go file to test flow logs from staged policies.
