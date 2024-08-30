@@ -15,11 +15,14 @@ package infrastructure
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
-	log "github.com/sirupsen/logrus"
+	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 type InfraFactory func(...CreateOption) DatastoreInfra
@@ -32,27 +35,52 @@ type InfraFactory func(...CreateOption) DatastoreInfra
 //
 // The *datastores* parameter is a slice of the DatastoreTypes to test.
 func DatastoreDescribe(description string, datastores []apiconfig.DatastoreType, body func(InfraFactory)) bool {
-	for _, ds := range datastores {
-		switch ds {
-		case apiconfig.EtcdV3:
-			if len(datastores) > 1 {
-				// Enterprise only supports KDD so skip running etcd tests if this test also runs
-				// on KDD.
-				log.Infof("Skipping etcd mode tests for %q", description)
+	if len(datastores) > 1 {
+		// Enterprise only supports KDD so skip running etcd tests if this test also runs
+		// on KDD.
+		var filtered []apiconfig.DatastoreType
+		for _, d := range datastores {
+			if d == apiconfig.EtcdV3 {
 				continue
 			}
-			Describe(fmt.Sprintf("%s (etcdv3 backend)", description),
-				func() {
-					body(createEtcdDatastoreInfra)
-				})
-		case apiconfig.Kubernetes:
-			Describe(fmt.Sprintf("%s (kubernetes backend)", description),
-				func() {
-					body(createK8sDatastoreInfra)
-				})
-		default:
-			panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
+			filtered = append(filtered, d)
 		}
+		datastores = filtered
+	}
+
+	for _, ds := range datastores {
+		Describe(fmt.Sprintf("%s (%s backend)", description, ds), func() {
+			var coreFilesAtStart set.Set[string]
+			BeforeEach(func() {
+				coreFilesAtStart = readCoreFiles()
+			})
+
+			switch ds {
+			case apiconfig.EtcdV3:
+				body(createEtcdDatastoreInfra)
+			case apiconfig.Kubernetes:
+				body(createK8sDatastoreInfra)
+			default:
+				panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
+			}
+
+			AfterEach(func() {
+				afterCoreFiles := readCoreFiles()
+				coreFilesAtStart.Iter(func(item string) error {
+					afterCoreFiles.Discard(item)
+					return nil
+				})
+				if afterCoreFiles.Len() != 0 {
+					if CurrentGinkgoTestDescription().Failed {
+						Fail(fmt.Sprintf("Test FAILED and new core files were detected during tear-down: %v.  "+
+							"Felix must have panicked during the test.", afterCoreFiles.Slice()))
+						return
+					}
+					Fail(fmt.Sprintf("Test PASSED but new core files were detected during tear-down: %v.  "+
+						"Felix must have panicked during the test.", afterCoreFiles.Slice()))
+				}
+			})
+		})
 	}
 
 	return true
@@ -78,27 +106,53 @@ func (r *LocalRemoteInfraFactories) AllFactories() []InfraFactory {
 // just a local datastore driver. However, it also invokes Describe for supported remote scenarios, providing both a local
 // and remote datastore drivers. Currently, the only remote scenario is local kubernetes and remote kubernetes.
 func DatastoreDescribeWithRemote(description string, localDatastores []apiconfig.DatastoreType, body func(factories LocalRemoteInfraFactories)) bool {
-	for _, ds := range localDatastores {
-		switch ds {
-		case apiconfig.EtcdV3:
-			if len(localDatastores) > 1 {
-				// Enterprise only supports KDD so skip running etcd tests if this test also runs
-				// on KDD.
-				log.Infof("Skipping etcd mode tests for %q", description)
+	if len(localDatastores) > 1 {
+		// Enterprise only supports KDD so skip running etcd tests if this test also runs
+		// on KDD.
+		var filtered []apiconfig.DatastoreType
+		for _, d := range localDatastores {
+			if d == apiconfig.EtcdV3 {
 				continue
 			}
-			Describe(fmt.Sprintf("%s (etcdv3 backend)", description),
-				func() {
-					body(LocalRemoteInfraFactories{Local: createEtcdDatastoreInfra})
-				})
-		case apiconfig.Kubernetes:
-			Describe(fmt.Sprintf("%s (kubernetes backend)", description),
-				func() {
-					body(LocalRemoteInfraFactories{Local: createK8sDatastoreInfra})
-				})
-		default:
-			panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
+			filtered = append(filtered, d)
 		}
+		localDatastores = filtered
+	}
+
+	for _, ds := range localDatastores {
+
+		Describe(fmt.Sprintf("%s (%s backend)", description, ds), func() {
+			var coreFilesAtStart set.Set[string]
+			BeforeEach(func() {
+				coreFilesAtStart = readCoreFiles()
+			})
+
+			switch ds {
+			case apiconfig.EtcdV3:
+				body(LocalRemoteInfraFactories{Local: createEtcdDatastoreInfra})
+			case apiconfig.Kubernetes:
+				body(LocalRemoteInfraFactories{Local: createK8sDatastoreInfra})
+			default:
+				panic(fmt.Errorf("Unknown DatastoreType, %s", ds))
+			}
+
+			AfterEach(func() {
+				afterCoreFiles := readCoreFiles()
+				coreFilesAtStart.Iter(func(item string) error {
+					afterCoreFiles.Discard(item)
+					return nil
+				})
+				if afterCoreFiles.Len() != 0 {
+					if CurrentGinkgoTestDescription().Failed {
+						Fail(fmt.Sprintf("Test FAILED and new core files were detected during tear-down: %v.  "+
+							"Felix must have panicked during the test.", afterCoreFiles.Slice()))
+						return
+					}
+					Fail(fmt.Sprintf("Test PASSED but new core files were detected during tear-down: %v.  "+
+						"Felix must have panicked during the test.", afterCoreFiles.Slice()))
+				}
+			})
+		})
 	}
 
 	Describe(fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description),
@@ -107,4 +161,16 @@ func DatastoreDescribeWithRemote(description string, localDatastores []apiconfig
 		})
 
 	return true
+}
+
+func readCoreFiles() set.Set[string] {
+	tmpFiles, err := os.ReadDir("/tmp")
+	Expect(err).NotTo(HaveOccurred())
+	var coreFiles []string
+	for _, f := range tmpFiles {
+		if strings.HasPrefix(f.Name(), "core_felix-") {
+			coreFiles = append(coreFiles, f.Name())
+		}
+	}
+	return set.From(coreFiles...)
 }
