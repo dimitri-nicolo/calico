@@ -116,9 +116,6 @@ func (m *mockDataplane) loadDefaultPolicies() error {
 }
 
 func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (qDiscInfo, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	var qdisc qDiscInfo
 	key := ap.IfaceName() + ":" + ap.HookName().String()
 	m.mutex.Lock()
