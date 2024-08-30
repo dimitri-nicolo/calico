@@ -17,7 +17,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -28,7 +27,6 @@ import (
 	"time"
 
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
-	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/felix/fv/cgroup"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
@@ -43,9 +41,6 @@ import (
 
 	"github.com/projectcalico/calico/cni-plugin/pkg/dataplane/linux"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
-	"github.com/projectcalico/calico/felix/fv/cgroup"
-	"github.com/projectcalico/calico/felix/fv/connectivity"
-	"github.com/projectcalico/calico/felix/fv/utils"
 )
 
 const usage = `test-workload, test workload for Felix FV testing.
