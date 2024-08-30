@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -27,7 +28,11 @@ func EventHandler(lsclient client.Client) http.Handler {
 		}
 
 		// Perform bulk actions - only delete, dismiss and restore actions are supported for events.
+		start := time.Now()
 		resp, err := processEventRequest(r, lsclient, params)
+		if resp != nil {
+			resp.Took = int(time.Since(start).Milliseconds())
+		}
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -116,6 +121,7 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 		}
 		delResp, err = lsclient.Events(params.ClusterName).Delete(ctx, eventsToDelete)
 		if err != nil {
+			logrus.WithError(err).Errorf("Error deleting events")
 			return nil, err
 		}
 	}
@@ -129,6 +135,7 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 		}
 		dismissResp, err = lsclient.Events(params.ClusterName).UpdateDismissFlag(ctx, eventsToDismiss)
 		if err != nil {
+			logrus.WithError(err).Errorf("Error dismissing events")
 			return nil, err
 		}
 	}
@@ -142,8 +149,19 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 		}
 		restoreResp, err = lsclient.Events(params.ClusterName).UpdateDismissFlag(ctx, eventsToRestore)
 		if err != nil {
+			logrus.WithError(err).Errorf("Error restoring events")
 			return nil, err
 		}
+	}
+
+	if dismissResp != nil && len(dismissResp.Errors) > 0 {
+		logrus.Errorf("Error dismissing %d of %d events", len(dismissResp.Errors), len(params.Dismiss.Items))
+	}
+	if restoreResp != nil && len(restoreResp.Errors) > 0 {
+		logrus.Errorf("Error restoring %d of %d events", len(restoreResp.Errors), len(params.Restore.Items))
+	}
+	if delResp != nil && len(delResp.Errors) > 0 {
+		logrus.Errorf("Error deleting %d of %d events", len(delResp.Errors), len(params.Delete.Items))
 	}
 
 	// Populate bulk response errors.
@@ -207,6 +225,5 @@ func processEventRequest(r *http.Request, lsclient client.Client, params *v1.Bul
 			resp.Items = append(resp.Items, item)
 		}
 	}
-
 	return &resp, nil
 }
