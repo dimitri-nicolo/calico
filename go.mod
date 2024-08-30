@@ -70,12 +70,7 @@ require (
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/google/safetext v0.0.0-20230106111101-7156a760e523
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/mux v1.8.1
-	github.com/goyek/goyek/v2 v2.1.0
-	github.com/goyek/x v0.1.7
-	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/gruntwork-io/terratest v0.47.0
-	github.com/hashicorp/yamux v0.1.1
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/jcchavezs/mergefs v0.0.0-20230503083351-07f27d256761
@@ -128,6 +123,7 @@ require (
 	github.com/tidwall/gjson v1.17.3
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
+	github.com/urfave/cli/v2 v2.27.3
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240703200800-b54f85093f4a
 	github.com/willf/bitset v1.1.11
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
@@ -390,6 +386,7 @@ require (
 	github.com/virtuald/go-ordered-json v0.0.0-20170621173500-b18e6e673d74 // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/vmware/govmomi v0.30.6 // indirect
+	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.elastic.co/apm/module/apmzap/v2 v2.6.0 // indirect
 	go.elastic.co/apm/v2 v2.6.0 // indirect
 	go.elastic.co/fastjson v1.3.0 // indirect
@@ -441,6 +438,14 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
+
+require (
+	github.com/gorilla/mux v1.8.1
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+	github.com/hashicorp/yamux v0.1.1
+)
+
+require gotest.tools/v3 v3.5.0 // indirect
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
