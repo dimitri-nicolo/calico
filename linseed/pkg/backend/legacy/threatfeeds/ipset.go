@@ -207,6 +207,7 @@ func (b *ipSetThreatFeedBackend) Delete(ctx context.Context, i bapi.ClusterInfo,
 	}
 
 	if err := b.checkTenancy(ctx, i, feeds); err != nil {
+		logrus.WithError(err).Warn("Error checking tenancy")
 		return &v1.BulkResponse{
 			Total:     len(feeds),
 			Succeeded: 0,
@@ -282,7 +283,10 @@ func (b *ipSetThreatFeedBackend) checkTenancy(ctx context.Context, i bapi.Cluste
 	// - An OR combintation of the given IDs
 	q := b.queryHelper.BaseQuery(i)
 	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
-	idsQuery := b.client.Search().Index(b.index.Index(i)).Query(q)
+	idsQuery := b.client.Search().
+		Size(len(ids)).
+		Index(b.index.Index(i)).
+		Query(q)
 	idsResult, err := idsQuery.Do(ctx)
 	if err != nil {
 		return err
