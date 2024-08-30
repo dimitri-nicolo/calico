@@ -2668,8 +2668,10 @@ func (d *bpfEndpointManagerDataplane) applyPolicyToWeps(
 	egressAP, egressErr := d.wepApplyPolicyToDirection(readiness,
 		state, endpoint, PolDirnEgress, &egressAttachPoint)
 	parallelWG.Wait()
-	d.mgr.setEgressProgramming(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient)
 
+	if ingressAP != nil && egressAP != nil {
+		d.mgr.setEgressProgramming(ingressAP.Iface, ingressAP.IsEgressGateway, ingressAP.IsEgressClient)
+	}
 	return ingressAP, egressAP, errors.Join(ingressErr, egressErr)
 }
 
