@@ -17,6 +17,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -27,6 +28,12 @@ import (
 	"time"
 
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
+	"golang.org/x/sys/unix"
+
+	"github.com/projectcalico/calico/felix/fv/cgroup"
+	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/utils"
+
 	"github.com/containernetworking/plugins/pkg/ns"
 	nsutils "github.com/containernetworking/plugins/pkg/testutils"
 	"github.com/docopt/docopt-go"
