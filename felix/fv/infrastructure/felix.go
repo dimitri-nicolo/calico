@@ -141,9 +141,7 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	// are called concurrently with other instances of RunFelix so it's important to only
 	// read from options.*.
 	envVars := map[string]string{
-		// Enable core dumps.
-		"GOTRACEBACK": "crash",
-		"GORACE":      "history_size=2",
+		"GORACE": "history_size=2",
 		// Tell the wrapper to set the core file name pattern so we can find the dump.
 		"SET_CORE_PATTERN": "true",
 
@@ -157,6 +155,9 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 		"FELIX_BPFIPV6SUPPORT":            bpfEnableIPv6,
 		// Disable log dropping, because it can cause flakes in tests that look for particular logs.
 		"FELIX_DEBUGDISABLELOGDROPPING": "true",
+	}
+	if options.FelixCoreDumpsEnabled {
+		envVars["FELIX_GOTRACEBACK"] = "crash"
 	}
 	// Collect the volumes for this container.
 	wd, err := os.Getwd()
@@ -341,6 +342,12 @@ func (f *Felix) Stop() {
 		Expect(cwLogDir + "/" + f.cwlFile).To(BeAnExistingFile())
 	} else {
 		Expect(cwLogDir + "/" + f.cwlFile).NotTo(BeAnExistingFile())
+	}
+
+	if CurrentGinkgoTestDescription().Failed {
+		Expect(f.DataRaces()).To(BeEmpty(), "Test FAILED and data races were detected in the logs at teardown.")
+	} else {
+		Expect(f.DataRaces()).To(BeEmpty(), "Test PASSED but data races were detected in the logs at teardown.")
 	}
 }
 
