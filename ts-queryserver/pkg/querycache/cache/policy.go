@@ -582,6 +582,22 @@ func (d *policyData) GetOrder() *float64 {
 	return nil
 }
 
+func (d *policyData) GetSelector() *string {
+	switch r := d.resource.(type) {
+	case *apiv3.NetworkPolicy:
+		return &r.Spec.Selector
+	case *apiv3.GlobalNetworkPolicy:
+		return &r.Spec.Selector
+	case *apiv3.StagedNetworkPolicy:
+		return &r.Spec.Selector
+	case *apiv3.StagedGlobalNetworkPolicy:
+		return &r.Spec.Selector
+	default:
+		log.Debugf("selector is not defined for policy of type: %v", r.GetObjectKind())
+	}
+	return nil
+}
+
 func (d *policyData) GetStagedAction() *apiv3.StagedAction {
 	if d.v1Policy != nil {
 		return d.v1Policy.StagedAction

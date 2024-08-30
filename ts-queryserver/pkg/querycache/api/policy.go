@@ -12,6 +12,7 @@ type Policy interface {
 	IsUnmatched() bool
 	GetOrder() *float64
 	GetStagedAction() *v3.StagedAction
+	GetSelector() *string
 }
 
 type PolicyCounts struct {

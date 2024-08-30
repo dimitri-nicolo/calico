@@ -563,6 +563,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 		Order:                p.GetOrder(),
 		CreationTime:         &creationTime,
 		StagedAction:         p.GetStagedAction(),
+		Selector:             p.GetSelector(),
 	}
 
 	if fieldSelector != nil {

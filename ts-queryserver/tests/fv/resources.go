@@ -1780,10 +1780,12 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
+		p.Selector = &er.Spec.Selector
 	case *apiv3.GlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
+		p.Selector = &er.Spec.Selector
 	case *apiv3.StagedNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
@@ -1791,12 +1793,14 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		if er.Spec.StagedAction != "" {
 			p.StagedAction = &er.Spec.StagedAction
 		}
+		p.Selector = &er.Spec.Selector
 	case *apiv3.StagedKubernetesNetworkPolicy:
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 		if er.Spec.StagedAction != "" {
 			p.StagedAction = &er.Spec.StagedAction
 		}
+		p.Selector = getStringPointer(conversion.K8sSelectorToCalico(&er.Spec.PodSelector, conversion.SelectorPod))
 	case *apiv3.StagedGlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
@@ -1804,6 +1808,7 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		if er.Spec.StagedAction != "" {
 			p.StagedAction = &er.Spec.StagedAction
 		}
+		p.Selector = &er.Spec.Selector
 	}
 
 	return p

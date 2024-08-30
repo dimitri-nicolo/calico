@@ -420,7 +420,7 @@ func (c converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*mo
 	}
 	policy.Spec = apiv3.NetworkPolicySpec{
 		Order:    &order,
-		Selector: c.k8sSelectorToCalico(&np.Spec.PodSelector, SelectorPod),
+		Selector: K8sSelectorToCalico(&np.Spec.PodSelector, SelectorPod),
 		Ingress:  ingressRules,
 		Egress:   egressRules,
 		Types:    policyTypes,
@@ -441,9 +441,9 @@ func (c converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*mo
 	return kvp, errorTracker.GetError()
 }
 
-// k8sSelectorToCalico takes a namespaced k8s label selector and returns the Calico
+// K8sSelectorToCalico takes a namespaced k8s label selector and returns the Calico
 // equivalent.
-func (c converter) k8sSelectorToCalico(s *metav1.LabelSelector, selectorType selectorType) string {
+func K8sSelectorToCalico(s *metav1.LabelSelector, selectorType selectorType) string {
 	// Only prefix pod selectors - this won't work for namespace selectors.
 	selectors := []string{}
 	if selectorType == SelectorPod {
@@ -744,9 +744,9 @@ func (c converter) k8sPeerToCalicoFields(peer *networkingv1.NetworkPolicyPeer, n
 	}
 
 	// IPBlock is not set to get here.
-	// Note that k8sSelectorToCalico() accepts nil values of the selector.
-	selector = c.k8sSelectorToCalico(peer.PodSelector, SelectorPod)
-	nsSelector = c.k8sSelectorToCalico(peer.NamespaceSelector, SelectorNamespace)
+	// Note that K8sSelectorToCalico() accepts nil values of the selector.
+	selector = K8sSelectorToCalico(peer.PodSelector, SelectorPod)
+	nsSelector = K8sSelectorToCalico(peer.NamespaceSelector, SelectorNamespace)
 	return
 }
 

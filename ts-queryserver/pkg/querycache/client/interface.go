@@ -124,6 +124,7 @@ type Policy struct {
 	Order                *float64          `json:"order,omitempty"`
 	CreationTime         *v1.Time          `json:"creationTime,omitempty"`
 	StagedAction         *v3.StagedAction  `json:"stagedAction,omitempty" validate:"omitempty"`
+	Selector             *string           `json:"selector,omitempty" validate:"omitempty"`
 }
 
 type RuleDirection struct {
