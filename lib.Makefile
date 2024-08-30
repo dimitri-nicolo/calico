@@ -335,12 +335,12 @@ DOCKER_HOST_NATIVE_RUN := docker run --rm \
 # For third-party components built by us:
 # * Official release: v3.1.6 -> v3.1.6-1
 # * Early preview release: v3.1.6 -> v3.1.6~pre1.1-4.20240823gitc210c47321cf
+GIT_DESCRIBE_0 = $(shell git describe --tags --abbrev=0)
 define host_native_rpm_build
-	$(eval git_describe_0 := $(shell git describe --abbrev=0))
-	$(eval version := $(subst v,,$(3)))
+	$(eval version := $(firstword $(subst -calient, ,$(subst v,,$(3)))))
 	$(eval release := '1')
-	$(ifeq ($(findstring -,$(git_describe_0)),-) \
-		$(eval hash := $(subst $(git_describe_0)-,,$(shell git describe)))
+	$(ifeq ($(findstring -,$(GIT_DESCRIBE_0)),-) \
+		$(eval hash := $(subst $(GIT_DESCRIBE_0)-,,$(shell git describe --tags)))
 		$(eval version := $(subst -,~pre,$(version))) \
 		$(eval release := $(subst -g,.$(shell date -u +'%Y%m%d')git,$(hash))) \
 	endif)

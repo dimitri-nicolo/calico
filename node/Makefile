@@ -302,11 +302,11 @@ package: calico-node.rhel8 calico-node.rhel9
 
 .PHONY: calico-node.rhel8
 calico-node.rhel8: host-native-build init-package rhel/calico-node.spec.in
-	$(call host_native_rpm_build,rhel8,calico-node,$(NODE_RELEASE_VERSION))
+	$(call host_native_rpm_build,rhel8,calico-node,$(GIT_DESCRIBE_0))
 
 .PHONY: calico-node.rhel9
 calico-node.rhel9: host-native-build init-package rhel/calico-node.spec.in
-	$(call host_native_rpm_build,rhel9,calico-node,$(NODE_RELEASE_VERSION))
+	$(call host_native_rpm_build,rhel9,calico-node,$(GIT_DESCRIBE_0))
 
 ##########################################################################################
 # TESTING
