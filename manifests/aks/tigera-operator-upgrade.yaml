@@ -39629,6 +39629,8 @@ rules:
       - monitors
       - monitors/finalizers
       - monitors/status
+      - nonclusterhosts
+      - nonclusterhosts/finalizers
       - packetcaptureapis
       - packetcaptureapis/finalizers
       - packetcaptureapis/status
