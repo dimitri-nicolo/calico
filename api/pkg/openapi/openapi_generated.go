@@ -44,6 +44,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPDaemonStatus":                          schema_pkg_apis_projectcalico_v3_BGPDaemonStatus(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilter":                                schema_pkg_apis_projectcalico_v3_BGPFilter(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterList":                            schema_pkg_apis_projectcalico_v3_BGPFilterList(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterPrefixLengthV4":                  schema_pkg_apis_projectcalico_v3_BGPFilterPrefixLengthV4(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterPrefixLengthV6":                  schema_pkg_apis_projectcalico_v3_BGPFilterPrefixLengthV6(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterRuleV4":                          schema_pkg_apis_projectcalico_v3_BGPFilterRuleV4(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterRuleV6":                          schema_pkg_apis_projectcalico_v3_BGPFilterRuleV6(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterSpec":                            schema_pkg_apis_projectcalico_v3_BGPFilterSpec(ref),
@@ -1761,6 +1763,54 @@ func schema_pkg_apis_projectcalico_v3_BGPFilterList(ref common.ReferenceCallback
 	}
 }
 
+func schema_pkg_apis_projectcalico_v3_BGPFilterPrefixLengthV4(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"min": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"max": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_BGPFilterPrefixLengthV6(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"min": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"max": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_projectcalico_v3_BGPFilterRuleV4(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1772,6 +1822,11 @@ func schema_pkg_apis_projectcalico_v3_BGPFilterRuleV4(ref common.ReferenceCallba
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
+						},
+					},
+					"prefixLength": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterPrefixLengthV4"),
 						},
 					},
 					"source": {
@@ -1803,6 +1858,8 @@ func schema_pkg_apis_projectcalico_v3_BGPFilterRuleV4(ref common.ReferenceCallba
 				Required: []string{"action"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterPrefixLengthV4"},
 	}
 }
 
@@ -1819,6 +1876,11 @@ func schema_pkg_apis_projectcalico_v3_BGPFilterRuleV6(ref common.ReferenceCallba
 							Format: "",
 						},
 					},
+					"prefixLength": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterPrefixLengthV6"),
+						},
+					},
 					"source": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -1848,6 +1910,8 @@ func schema_pkg_apis_projectcalico_v3_BGPFilterRuleV6(ref common.ReferenceCallba
 				Required: []string{"action"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPFilterPrefixLengthV6"},
 	}
 }
 

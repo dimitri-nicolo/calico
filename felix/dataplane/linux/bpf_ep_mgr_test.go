@@ -1425,6 +1425,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 
 		It("should reclaim indexes for active interfaces", func() {
+
+			bpfEpMgr.bpfLogLevel = "debug"
+			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
+
 			for i := 0; i < 8; i++ {
 				_ = jumpMap.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMap.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
@@ -1466,17 +1470,17 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				123: value123.String(),
 			}))
 
-			// Expect clean-up deletions but no value changes due to mocking.
-			Expect(dumpJumpMap(jumpMap)).To(Equal(map[int]int{
-				0:     1000,
-				2:     1002,
-				3:     1003,
-				4:     1004,
-				10000: 1000,
-				10002: 1002,
-				10003: 1003,
-				10004: 1004,
-			}))
+			// Expect clean-up deletions.
+			jmps := dumpJumpMap(jumpMap)
+			Expect(jmps).To(HaveLen(8))
+			Expect(jmps).To(HaveKey(0)) /* filters reloaded to reflect current expressions */
+			Expect(jmps).To(HaveKey(2))
+			Expect(jmps).To(HaveKey(3))
+			Expect(jmps).To(HaveKey(4))
+			Expect(jmps).To(HaveKeyWithValue(10000, 1000))
+			Expect(jmps).To(HaveKeyWithValue(10002, 1002))
+			Expect(jmps).To(HaveKeyWithValue(10003, 1003))
+			Expect(jmps).To(HaveKeyWithValue(10004, 1004))
 			Expect(dumpJumpMap(xdpJumpMap)).To(Equal(map[int]int{
 				1: 2001,
 			}))
@@ -1795,6 +1799,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			newBpfEpMgr(true)
 		})
 		It("should clean up jump map entries for missing interfaces", func() {
+			bpfEpMgr.bpfLogLevel = "debug"
+			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
+
 			for i := 0; i < 17; i++ {
 				_ = jumpMap.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMap.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
@@ -1859,6 +1866,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 
 		It("should reclaim indexes for active interfaces", func() {
+			bpfEpMgr.bpfLogLevel = "debug"
+			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
+
 			for i := 0; i < 8; i++ {
 				_ = jumpMap.Update(jump.Key(i), jump.Value(uint32(1000+i)))
 				_ = jumpMap.Update(jump.Key(i+jump.TCMaxEntryPoints), jump.Value(uint32(1000+i)))
@@ -1901,13 +1911,14 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				123: value123.String(),
 			}))
 
-			// Expect clean-up deletions but no value changes due to mocking.
-			Expect(dumpJumpMap(jumpMap)).To(Equal(map[int]int{
-				2:     1002,
-				3:     1003,
-				10002: 1002,
-				10003: 1003,
-			}))
+			// Expect clean-up deletions.
+			jmps := dumpJumpMap(jumpMap)
+			Expect(jmps).To(HaveLen(5))
+			Expect(jmps).To(HaveKey(2)) /* filters reloaded to reflect current expressions */
+			Expect(jmps).To(HaveKey(3))
+			Expect(jmps).To(HaveKey(4))
+			Expect(jmps).To(HaveKeyWithValue(10002, 1002))
+			Expect(jmps).To(HaveKeyWithValue(10003, 1003))
 			Expect(dumpJumpMap(xdpJumpMap)).To(Equal(map[int]int{
 				1: 2001,
 			}))
