@@ -245,6 +245,7 @@ func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo
 
 	// Assert that all of the given events belong to the tenant.
 	if err := b.checkTenancy(ctx, i, events); err != nil {
+		logrus.WithError(err).Warn("Error checking tenancy")
 		return &v1.BulkResponse{
 			Total:     len(events),
 			Succeeded: 0,
@@ -323,6 +324,7 @@ func (b *eventsBackend) getEventIndexValues(ctx context.Context, i api.ClusterIn
 
 	// Build the query.
 	idsQuery := b.client.Search().
+		Size(len(ids)).
 		Index(b.index.Index(i)).
 		Query(q)
 
@@ -362,7 +364,10 @@ func (b *eventsBackend) checkTenancy(ctx context.Context, i api.ClusterInfo, eve
 	// - An OR combintation of the given IDs
 	q := b.queryHelper.BaseQuery(i)
 	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
-	idsQuery := b.client.Search().Index(b.index.Index(i)).Query(q)
+	idsQuery := b.client.Search().
+		Size(len(ids)).
+		Index(b.index.Index(i)).
+		Query(q)
 	idsResult, err := idsQuery.Do(ctx)
 	if err != nil {
 		return err
@@ -398,6 +403,7 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 
 	// Assert that all of the given events belong to the tenant.
 	if err := b.checkTenancy(ctx, i, events); err != nil {
+		logrus.WithError(err).Warn("Error checking tenancy")
 		return &v1.BulkResponse{
 			Total:     len(events),
 			Succeeded: 0,
