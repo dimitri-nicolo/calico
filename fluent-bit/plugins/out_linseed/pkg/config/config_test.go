@@ -1,5 +1,5 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
-package main
+package config
 
 import (
 	_ "embed"
@@ -56,11 +56,11 @@ var _ = Describe("Linseed out plugin config tests", func() {
 			cfg, err := NewConfig(nil, pluginConfigKeyFn)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(cfg.clientset).NotTo(BeNil())
-			Expect(cfg.endpoint).To(Equal("https://1.2.3.4:5678"))
-			Expect(cfg.insecureSkipVerify).To(BeFalse())
-			Expect(cfg.serviceAccountName).To(Equal("tigera-noncluster-hosts-sa"))
-			Expect(cfg.token).To(BeEmpty())
+			Expect(cfg.Endpoint).To(Equal("https://1.2.3.4:5678"))
+			Expect(cfg.InsecureSkipVerify).To(BeFalse())
+			Expect(cfg.Kubeconfig).To(Equal(f.Name()))
+
+			Expect(cfg.RestConfig).NotTo(BeNil())
 		})
 
 		It("should return error when kubeconfig path is invalid", func() {
@@ -82,7 +82,7 @@ var _ = Describe("Linseed out plugin config tests", func() {
 
 			cfg, err := NewConfig(nil, pluginConfigKeyFn)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("no current-context"))
+			Expect(err.Error()).To(ContainSubstring("invalid configuration: no configuration has been provided"))
 			Expect(cfg).To(BeNil())
 		})
 
@@ -96,7 +96,7 @@ var _ = Describe("Linseed out plugin config tests", func() {
 
 			cfg, err := NewConfig(nil, pluginConfigKeyFn)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(`context "noncluster-hosts" not found`))
+			Expect(err.Error()).To(ContainSubstring(`invalid configuration: [context was not found for specified context: noncluster-hosts,`))
 			Expect(cfg).To(BeNil())
 		})
 	})

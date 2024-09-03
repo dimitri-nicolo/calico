@@ -1,8 +1,9 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
-package main
+package token
 
 import (
 	"context"
+	_ "embed"
 	"os"
 	"time"
 	"unsafe"
@@ -14,15 +15,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/config"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
-var _ = Describe("Linseed out plugin token tests", func() {
+var (
+	//go:embed testdata/kubeconfig
+	validKubeconfig string
+)
+
+var _ = Describe("Linseed out plugin token controller tests", func() {
 	var (
 		f                 *os.File
-		pluginConfigKeyFn PluginConfigKeyFunc
+		pluginConfigKeyFn config.PluginConfigKeyFunc
 		serviceAccount    *corev1.ServiceAccount
+		stopCh            chan struct{}
 	)
 
 	BeforeEach(func() {
@@ -44,9 +52,12 @@ var _ = Describe("Linseed out plugin token tests", func() {
 				Namespace: "default",
 			},
 		}
+
+		stopCh = make(chan struct{})
 	})
 
 	AfterEach(func() {
+		close(stopCh)
 		os.Remove(f.Name())
 	})
 
@@ -61,19 +72,25 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			err = os.Setenv("ENDPOINT", "https://1.2.3.4:5678")
 			Expect(err).NotTo(HaveOccurred())
 
-			cfg, err := NewConfig(nil, pluginConfigKeyFn)
+			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
+			Expect(err).NotTo(HaveOccurred())
+
+			tc, err := NewController(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
 			// returns a fake CoreV1Interface that implements ServiceAccounts(namespace).CreateToken
 			mockClientSet.On("CoreV1").Return(&fakeCoreV1{})
-			cfg.clientset = mockClientSet
+			tc.clientset = mockClientSet
 
-			cfg.serviceAccountName = serviceAccount.GetName()
-			cfg.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
-			cfg.token = "some-token"
+			tc.serviceAccountName = serviceAccount.GetName()
+			tc.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
+			tc.token = "some-token"
 
-			_, err = GetToken(cfg)
+			err = tc.Run(stopCh)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = tc.Token()
 			Expect(err).NotTo(HaveOccurred())
 			// createToken from corev1 must be called
 			Expect(mockClientSet.AssertCalled(GinkgoT(), "CoreV1")).To(BeTrue())
@@ -89,7 +106,10 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			err = os.Setenv("ENDPOINT", "https://1.2.3.4:5678")
 			Expect(err).NotTo(HaveOccurred())
 
-			cfg, err := NewConfig(nil, pluginConfigKeyFn)
+			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
+			Expect(err).NotTo(HaveOccurred())
+
+			tc, err := NewController(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
@@ -97,13 +117,16 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			_, err = fakeCoreV1.ServiceAccounts("default").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
-			cfg.clientset = mockClientSet
+			tc.clientset = mockClientSet
 
-			cfg.serviceAccountName = serviceAccount.GetName()
-			cfg.expiration = time.Now().Add(1 * time.Hour) // must not be expired
-			cfg.token = "some-token"
+			tc.serviceAccountName = serviceAccount.GetName()
+			tc.expiration = time.Now().Add(1 * time.Hour) // must not be expired
+			tc.token = "some-token"
 
-			token, err := GetToken(cfg)
+			err = tc.Run(stopCh)
+			Expect(err).NotTo(HaveOccurred())
+
+			token, err := tc.Token()
 			Expect(err).NotTo(HaveOccurred())
 			// should not call createToken
 			Expect(mockClientSet.AssertNotCalled(GinkgoT(), "CoreV1")).To(BeTrue())
@@ -120,7 +143,10 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			err = os.Setenv("ENDPOINT", "https://1.2.3.4:5678")
 			Expect(err).NotTo(HaveOccurred())
 
-			cfg, err := NewConfig(nil, pluginConfigKeyFn)
+			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
+			Expect(err).NotTo(HaveOccurred())
+
+			tc, err := NewController(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
@@ -129,13 +155,16 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			// k8s fake corev1 will return an empty jwt token which is invalid
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
-			cfg.clientset = mockClientSet
+			tc.clientset = mockClientSet
 
-			cfg.serviceAccountName = serviceAccount.GetName()
-			cfg.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
-			cfg.token = "some-token"
+			tc.serviceAccountName = serviceAccount.GetName()
+			tc.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
+			tc.token = "some-token"
 
-			_, err = GetToken(cfg)
+			err = tc.Run(stopCh)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = tc.Token()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("not a compact JWS"))
 		})
@@ -150,7 +179,10 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			err = os.Setenv("ENDPOINT", "https://1.2.3.4:5678")
 			Expect(err).NotTo(HaveOccurred())
 
-			cfg, err := NewConfig(nil, pluginConfigKeyFn)
+			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
+			Expect(err).NotTo(HaveOccurred())
+
+			tc, err := NewController(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
@@ -158,13 +190,16 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			_, err = fakeCoreV1.ServiceAccounts("default").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
-			cfg.clientset = mockClientSet
+			tc.clientset = mockClientSet
 
-			cfg.serviceAccountName = "invalid-service-account"
-			cfg.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
-			cfg.token = "some-token"
+			tc.serviceAccountName = "invalid-service-account"
+			tc.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
+			tc.token = "some-token"
 
-			_, err = GetToken(cfg)
+			err = tc.Run(stopCh)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = tc.Token()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`"invalid-service-account" not found`))
 		})
