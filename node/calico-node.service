@@ -1,0 +1,16 @@
+[Unit]
+Description=Calico Node agent
+Documentation=https://docs.tigera.io/calico-enterprise/latest/about/
+Requires=network.target
+After=network.target
+
+[Service]
+Type=notify
+EnvironmentFile=-/etc/calico/calico-node/calico-node.env
+ExecStart=/usr/bin/calico-node -felix
+NotifyAccess=main
+Restart=always
+WatchdogSec=60 
+
+[Install]
+WantedBy=multi-user.target

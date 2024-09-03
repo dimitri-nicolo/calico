@@ -16,7 +16,7 @@ create_vm() {
     if gcloud --quiet compute instances create "$vm_name" \
         --zone="$zone" \
         --machine-type=e2-medium \
-        --image=rocky-linux-8-optimized-gcp-v20230411 \
+        --image=rocky-linux-8-optimized-gcp-v20240815 \
         --image-project=rocky-linux-cloud \
         --boot-disk-size=20GB \
         --boot-disk-type=pd-balanced; then
@@ -40,11 +40,11 @@ delete_vm() {
 }
 
 copy_and_install() {
-    local package=calico-selinux-$version-1.el8.noarch.rpm
+    package=$(find package -name "calico-selinux-$version-*.el8.noarch.rpm")
     echo "scp $package to $vm_name ..."
-    if gcloud --quiet compute scp --zone="$zone" "package/rhel8/RPMS/noarch/$package" "user@$vm_name:/tmp/$package"; then
+    if gcloud --quiet compute scp --zone="$zone" "$package" "user@$vm_name:/tmp/"; then
         echo "install $package to $vm_name ..."
-        if gcloud --quiet compute ssh --zone="$zone" "user@$vm_name" -- sudo dnf install -y /tmp/$package; then
+        if gcloud --quiet compute ssh --zone="$zone" "user@$vm_name" -- sudo dnf install -y /tmp/*.rpm; then
             echo "$package is installed on $vm_name successfully."
             return 0
         fi

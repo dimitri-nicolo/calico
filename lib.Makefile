@@ -325,7 +325,29 @@ DOCKER_HOST_NATIVE_RUN := docker run --rm \
 	-v $(REPO_ROOT):/go/src/github.com/projectcalico/calico:rw \
 	-w /go/src/$(PACKAGE_NAME)
 
+# This function normalizes versions to be compatible with rpm build system
+# and builds the rpm package.
+#
+# For Calico components:
+# * Official release: v3.20.1 -> v3.20.1-1
+# * Early preview release: v3.20.0-1.1-calient-0.dev-4-gc210c47321cf -> v3.20.0~pre1.1-4.20240823gitc210c47321cf
+#
+# For third-party components built by us:
+# * Official release: v3.1.6 -> v3.1.6-1
+# * Early preview release: v3.1.6 -> v3.1.6~pre1.1-4.20240823gitc210c47321cf
+GIT_DESCRIBE_0 = $(shell git describe --tags --abbrev=0)
 define host_native_rpm_build
+	$(eval version := $(firstword $(subst -calient, ,$(subst v,,$(3)))))
+	$(eval release := '1')
+	$(ifeq ($(findstring -,$(GIT_DESCRIBE_0)),-) \
+		$(eval hash := $(subst $(GIT_DESCRIBE_0)-,,$(shell git describe --tags)))
+		$(eval version := $(subst -,~pre,$(version))) \
+		$(eval release := $(subst -g,.$(shell date -u +'%Y%m%d')git,$(hash))) \
+	endif)
+
+	sed 's/@VERSION@/$(version)/g' rhel/$(2).spec.in > rhel/$(2).spec
+	sed -i 's/@RELEASE@/$(release)/g' rhel/$(2).spec
+
 	mkdir -p package/$(1) && $(DOCKER_HOST_NATIVE_RUN) \
 		$(HOST_NATIVE_BUILD_IMAGE):$(1) \
 			sh -c 'rpmbuild \
