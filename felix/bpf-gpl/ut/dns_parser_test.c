@@ -4,7 +4,7 @@
 
 #include "ut.h"
 #include "parsing.h"
-#include "dns_reply.h"
+#include "dns_response.h"
 
 const volatile struct cali_tc_preamble_globals __globals;
 

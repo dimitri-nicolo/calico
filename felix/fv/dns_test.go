@@ -74,7 +74,11 @@ func getDNSLogs(logFile string) ([]string, error) {
 }
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
-	testDnsPolicy(false)
+	if BPFMode() {
+		return
+	}
+
+	testDnsPolicy(false, false)
 })
 
 // These tests rely solely on BPF making the updates to the policy iptables.
@@ -82,15 +86,24 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 // ipsets manager can query which domains belong to which ipsets (which is
 // necessary to build the bpf structures, but it does not receive ip updates and
 // thus does not write the IPs in the sets.
+var _ = Describe("_BPF-SAFE_ Zero latency bpf-only DNS Policy", func() {
+	if !BPFMode() {
+		return
+	}
+
+	testDnsPolicy(true, false)
+})
+
+// This is the new default for BPF, precessing in BPF, with fixups from Felix
 var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy", func() {
 	if !BPFMode() {
 		return
 	}
 
-	testDnsPolicy(true)
+	testDnsPolicy(true, true)
 })
 
-func testDnsPolicy(zeroLatency bool) {
+func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	var (
 		etcd        *containers.Container
 		tc          infrastructure.TopologyContainers
@@ -181,7 +194,6 @@ func testDnsPolicy(zeroLatency bool) {
 		dnsServerIP = nameservers[0]
 
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-		opts.FelixLogSeverity = "Debug"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
 		// For this test file, configure DNSCacheSaveInterval to be much longer than any
 		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
@@ -208,7 +220,7 @@ func testDnsPolicy(zeroLatency bool) {
 		// Tests in this file require a node IP, so that Felix can attach a BPF program to
 		// host interfaces.
 		opts.NeedNodeIP = true
-		if zeroLatency {
+		if zeroLatency && !setsUpdateFromFelix {
 			opts.ExtraEnvVars["FELIX_FV_DNS_DO_NOT_WRITE_IPSETS"] = "true"
 		}
 		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)

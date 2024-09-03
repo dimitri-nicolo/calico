@@ -45,7 +45,7 @@
 #include "bpf_helpers.h"
 #include "egw.h"
 #include "rule_counters.h"
-#include "dns_reply.h"
+#include "dns_response.h"
 
 #define HAS_HOST_CONFLICT_PROG CALI_F_TO_HEP
 
