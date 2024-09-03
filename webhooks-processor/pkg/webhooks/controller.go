@@ -89,6 +89,8 @@ func (c *WebhookController) Run(ctx context.Context, wg *sync.WaitGroup) {
 				if webhook, ok := event.Previous.(*api.SecurityEventWebhook); ok {
 					c.state.Stop(ctx, webhook)
 				}
+			default:
+				logrus.Debug("webhook controller k8s events unhandled event type: ", event.Type)
 			}
 		case webhook := <-c.state.OutgoingWebhookUpdates():
 			c.updater.UpdatesChan() <- webhook
@@ -96,6 +98,8 @@ func (c *WebhookController) Run(ctx context.Context, wg *sync.WaitGroup) {
 			switch event.Type {
 			case watch.Modified, watch.Deleted:
 				c.state.CheckDependencies(event.Object)
+			default:
+				logrus.Debug("webhook controller k8s events unhandled event type: ", event.Type)
 			}
 		case <-ctx.Done():
 			c.state.StopAll()
