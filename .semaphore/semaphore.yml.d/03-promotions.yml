@@ -1,4 +1,10 @@
 promotions:
+  # Manual promotion for publishing a hashrelease.
+  - name: Publish hashrelease
+    pipeline_file: release/hashrelease.yml
+  # Manual promotion for publishing a release.
+  - name: Publish official release
+    pipeline_file: release/release.yml
   # Cleanup after ourselves if we are stopped-short.
   - name: Cleanup
     pipeline_file: cleanup.yml
