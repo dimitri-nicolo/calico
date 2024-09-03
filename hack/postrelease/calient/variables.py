@@ -9,9 +9,9 @@ import argparse
 from lib.utils import EnvironmentDefaults
 
 __defaults = {
-    "OPERATOR_VERSION": "v1.34.1",
+    "OPERATOR_VERSION": "v1.34.4",
     "OPERATOR_IMAGE": "tigera/operator",
-    "CALICO_VERSION": "v3.19.1",
+    "CALICO_VERSION": "v3.19.2",
     "CHART_RELEASE": "0",
     "VERSIONS_YAML_FILE": "../../../calico/_data/versions.yml",
     "AWS_PROFILE": "helm",
