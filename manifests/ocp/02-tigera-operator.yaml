@@ -32,7 +32,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: tigera-operator
-          image: quay.io/tigera/operator:v1.34.2
+          image: quay.io/tigera/operator:v1.34.4
           imagePullPolicy: IfNotPresent
           command:
             - operator
@@ -80,7 +80,7 @@ spec:
             name: install-resources-script
       initContainers:
         - name: create-initial-resources
-          image: quay.io/tigera/calicoctl:v3.19.1
+          image: quay.io/tigera/calicoctl:v3.19.2
           env:
             - name: DATASTORE_TYPE
               value: kubernetes

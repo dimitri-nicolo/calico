@@ -82,7 +82,7 @@ spec:
         kubernetes.io/os: linux
       containers:
         - name: license-agent
-          image: quay.io/tigera/license-agent:v3.19.1
+          image: quay.io/tigera/license-agent:v3.19.2
           imagePullPolicy: IfNotPresent
           env:
             - name: DATASTORE_TYPE
