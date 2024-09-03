@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -766,6 +766,10 @@ func (r *RouteTable) QueueResync() {
 	r.fullResyncNeeded = true
 }
 
+// ReadRoutesFromKernel offers partial support for reading back routes from the
+// kernel.  In particular, it assumes that "onlink" routes are VXLAN routes,
+// which is lossy.  Currently, this is only used in Enterprise, where the
+// routes it needs to read are VXLAN routes.
 func (r *RouteTable) ReadRoutesFromKernel(ifaceName string) ([]Target, error) {
 	r.logCxt.WithField("ifaceName", ifaceName).Debug("Reading routing table from kernel.")
 	r.ifacesToRescan.Add(ifaceName)
