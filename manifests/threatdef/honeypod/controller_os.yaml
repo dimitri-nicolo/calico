@@ -60,7 +60,7 @@ spec:
       containers:
         - name: controller
           imagePullPolicy: "IfNotPresent"
-          image: quay.io/tigera/honeypod-controller:v3.19.1
+          image: quay.io/tigera/honeypod-controller:v3.19.2
           env:
             - name: ELASTIC_SCHEME
               value: https

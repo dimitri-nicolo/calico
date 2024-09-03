@@ -7,7 +7,7 @@ spec:
         - name: ingress-logs
           mountPath: /var/log/calico/ingress
       - name: ingress-collector
-        image: quay.io/tigera/ingress-collector:v3.19.1
+        image: quay.io/tigera/ingress-collector:v3.19.2
         imagePullPolicy: Always
         env:
         - name: FELIX_DIAL_TARGET

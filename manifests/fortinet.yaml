@@ -86,7 +86,7 @@ spec:
         - name: tigera-pull-secret
       containers:
         - name: tigera-firewall-controlller
-          image: quay.io/tigera/firewall-integration:v3.19.1
+          image: quay.io/tigera/firewall-integration:v3.19.2
           imagePullPolicy: IfNotPresent
           env:
             - name: ENABLED_CONTROLLERS
