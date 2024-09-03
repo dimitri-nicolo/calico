@@ -70,6 +70,7 @@ if [ ${PRODUCT} == 'calient' ]; then
     ${KCAPZ} create -f ./EE/storage-class-azure-file.yaml
     ${KCAPZ} create -f ./EE/persistent-volume.yaml
 fi
+
 # Install Calico on Linux nodes
 if [[ ${RELEASE_STREAM} == 'local' ]]; then
     # Use local manifests
