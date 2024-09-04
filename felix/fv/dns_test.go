@@ -193,6 +193,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		nameservers := GetLocalNameservers()
 		dnsServerIP = nameservers[0]
 
+		opts.FelixLogSeverity = "Debug"
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
 		// For this test file, configure DNSCacheSaveInterval to be much longer than any

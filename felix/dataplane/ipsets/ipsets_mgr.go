@@ -337,7 +337,11 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 	for _, mixedCaseDomain := range domainsRemoved {
 		// Update the reverse map that tells us all of the domain sets that include a given
 		// domain name.
-		m.domainRemovedFromSet(strings.ToLower(mixedCaseDomain), ipSetId)
+		domain := strings.ToLower(mixedCaseDomain)
+		m.domainRemovedFromSet(domain, ipSetId)
+		if m.domainTracker != nil {
+			m.domainTracker.Del(domain, ipSetId)
+		}
 	}
 
 	// For each programmed IP...
@@ -359,6 +363,9 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 		// Update the reverse map that tells us all of the domain sets that include a given
 		// domain name.
 		m.domainIncludedInSet(domain, ipSetId)
+		if m.domainTracker != nil {
+			m.domainTracker.Add(domain, ipSetId)
+		}
 
 		// Get the IPs and expiry times for this domain, then merge those into the current
 		// programming, noting any updates that we need to send to the dataplane.
