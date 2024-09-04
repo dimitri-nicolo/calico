@@ -82,6 +82,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	// store asynchronously with this call, so we use a local variable to reference the PolicyStore for the duration of
 	// this call for consistency.
 	store := as.Store
+	logCtx.Debugf("attempting store read at %p", store)
 	store.Read(func(ps *policystore.PolicyStore) {
 		if ps == nil {
 			panic("bug: policyStore is nil and shouldn't happen.. ever")
@@ -91,12 +92,12 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	T:
 		for _, checkProvider := range as.checkProviders {
 			checkName := checkProvider.Name()
-			log.Debugf("checking request with provider %s", checkName)
+			logCtx.Debugf("checking request with provider %s", checkName)
 
 			resp, err = checkProvider.Check(ps, req)
 			if err != nil {
 				msg := fmt.Sprintf("check provider %s failed with error %v", checkName, err)
-				log.Error(msg)
+				logCtx.Error(msg)
 				resp = &authz.CheckResponse{Status: &status.Status{
 					Code:    INTERNAL,
 					Message: msg,
@@ -107,16 +108,16 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 			switch v := resp.Status.Code; v {
 			case OK:
 				// current check passes but we may need to go through all the other checks
-				log.Debugf("request passes %s check", checkName)
+				logCtx.Debugf("request passes %s check", checkName)
 				continue T
 			case UNKNOWN:
 				// check provider tried to process result, but there's no clear decision; or
 				// check provider is requesting to continue to next check
-				log.Debugf("request returned unknown for %s check", checkName)
+				logCtx.Debugf("request returned unknown for %s check", checkName)
 				unknownChecks++
 				continue T
 			default:
-				log.Errorf("request denied by %s with status %s", checkName, code.Code(v).String())
+				logCtx.Errorf("request denied by %s with status %s", checkName, code.Code(v).String())
 				break T
 			}
 		}

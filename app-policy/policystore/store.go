@@ -115,12 +115,18 @@ func NewPolicyStoreManagerWithOpts(opts ...PolicyStoreManagerOption) *policyStor
 }
 
 func (m *policyStoreManager) Read(cb func(*PolicyStore)) {
+	log.Tracef("storeManager Read(cb) acquiring read lock")
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	log.Debugf("storeManager reading from current store at %p", m.current)
 
 	cb(m.current)
+	log.Tracef("storeManager Read(cb) done, going to release read lock")
 }
 
 func (m *policyStoreManager) Write(cb func(*PolicyStore)) {
+	log.Tracef("storeManager Write(cb) acquiring write lock")
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.toActive {
@@ -131,6 +137,7 @@ func (m *policyStoreManager) Write(cb func(*PolicyStore)) {
 
 	log.Debugf("storeManager writing to pending store at %p", m.pending)
 	cb(m.pending)
+	log.Tracef("storeManager Write(cb) done, going to release write lock")
 }
 
 func (m *policyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
@@ -147,14 +154,20 @@ func (m *policyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]
 
 // OnReconnecting - PSM creates a pending store and starts writing to it
 func (m *policyStoreManager) OnReconnecting() {
+	log.Trace("storeManager OnReconnecting(). acquiring write lock")
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	// create store
 	m.pending = NewPolicyStore()
+	log.Tracef("storeManager OnReconnecting() created new pending store %p", m.pending)
 
 	// route next writes to pending
 	m.toActive = false
 }
 
 func (m *policyStoreManager) OnInSync() {
+	log.Tracef("storeManager OnInSync() acquiring write lock")
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
