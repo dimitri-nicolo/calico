@@ -5,6 +5,7 @@ package threatfeeds
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/projectcalico/go-json/json"
@@ -71,6 +72,24 @@ func (b *domainNameSetThreatFeedBackend) prepareForWrite(i bapi.ClusterInfo, l *
 	return l
 }
 
+// linseedIDToElastic updates the ID to include the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *domainNameSetThreatFeedBackend) linseedIDToElastic(i bapi.ClusterInfo, id string) string {
+	if b.singleIndex {
+		return fmt.Sprintf("%s.%s.%s", i.Tenant, i.Cluster, id)
+	}
+	return id
+}
+
+// elasticIDToLinseed updates the ID to remove the cluster and tenant if
+// the backend is configured to write to a single index.
+func (b *domainNameSetThreatFeedBackend) elasticIDToLinseed(i bapi.ClusterInfo, id string) string {
+	if b.singleIndex {
+		return strings.TrimPrefix(id, fmt.Sprintf("%s.%s.", i.Tenant, i.Cluster))
+	}
+	return id
+}
+
 func (b *domainNameSetThreatFeedBackend) Create(ctx context.Context, i bapi.ClusterInfo, feeds []v1.DomainNameSetThreatFeed) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
@@ -91,7 +110,7 @@ func (b *domainNameSetThreatFeedBackend) Create(ctx context.Context, i bapi.Clus
 	bulk := b.client.Bulk()
 
 	for _, f := range feeds {
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f.Data)).Id(f.ID)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f.Data)).Id(b.linseedIDToElastic(i, f.ID))
 		bulk.Add(req)
 	}
 
@@ -137,7 +156,7 @@ func (b *domainNameSetThreatFeedBackend) List(ctx context.Context, i bapi.Cluste
 			continue
 		}
 		domainNameSetFeed := v1.DomainNameSetThreatFeed{
-			ID:          h.Id,
+			ID:          b.elasticIDToLinseed(i, h.Id),
 			Data:        &feed,
 			SeqNumber:   h.SeqNo,
 			PrimaryTerm: h.PrimaryTerm,
@@ -195,7 +214,7 @@ func (b *domainNameSetThreatFeedBackend) buildQuery(i bapi.ClusterInfo, p *v1.Do
 	}
 
 	if p.ID != "" {
-		query.Must(elastic.NewTermQuery("_id", p.ID))
+		query.Must(elastic.NewTermQuery("_id", b.linseedIDToElastic(i, p.ID)))
 	}
 
 	return query, nil
@@ -224,7 +243,7 @@ func (b *domainNameSetThreatFeedBackend) Delete(ctx context.Context, i bapi.Clus
 	numToDelete := 0
 	bulkErrs := []v1.BulkError{}
 	for _, feed := range feeds {
-		req := elastic.NewBulkDeleteRequest().Index(alias).Id(feed.ID)
+		req := elastic.NewBulkDeleteRequest().Index(alias).Id(b.linseedIDToElastic(i, feed.ID))
 		bulk.Add(req)
 		numToDelete++
 	}
@@ -275,7 +294,7 @@ func (b *domainNameSetThreatFeedBackend) checkTenancy(ctx context.Context, i bap
 	// Query the given feed IDs using the tenant and cluster from the request to ensure that each feed is visible to that tenant.
 	ids := []string{}
 	for _, feed := range feeds {
-		ids = append(ids, feed.ID)
+		ids = append(ids, b.linseedIDToElastic(i, feed.ID))
 	}
 
 	// Build a query which matches on:
@@ -295,7 +314,7 @@ func (b *domainNameSetThreatFeedBackend) checkTenancy(ctx context.Context, i bap
 	// Build a lookup map of the found feeds.
 	foundIDs := map[string]struct{}{}
 	for _, hit := range idsResult.Hits.Hits {
-		foundIDs[hit.Id] = struct{}{}
+		foundIDs[b.elasticIDToLinseed(i, hit.Id)] = struct{}{}
 	}
 
 	// Now make sure that all of the given feeds were found.

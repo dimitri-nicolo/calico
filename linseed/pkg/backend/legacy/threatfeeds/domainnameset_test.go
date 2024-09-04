@@ -152,6 +152,7 @@ func TestDomainSetFiltering(t *testing.T) {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
 				clusterInfo.Tenant = tenant
+				require.NotEmpty(t, clusterInfo.Cluster)
 
 				f1 := v1.DomainNameSetThreatFeed{
 					ID: "feed-id-1",
