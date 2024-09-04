@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	features "github.com/projectcalico/calico/licensing/client/features"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	k8sStorage "k8s.io/apiserver/pkg/storage"

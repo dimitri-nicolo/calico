@@ -106,7 +106,10 @@ function upload_calico_images(){
 }
 
 function upload_fv(){
-  if [[ $FV_TYPE == "calico-felix" ]]; then
+  if [[ $FV_TYPE == "cni-plugin" ]]; then
+    $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/process/testing/winfv-cni-plugin/run-cni-fv.ps1 c:\\run-cni-fv.ps1
+    $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/cni-plugin/bin/windows/win-fv.exe c:\\k\\win-cni-fv.exe
+  elif [[ $FV_TYPE == "calico-felix" ]]; then
     $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/process/testing/winfv-felix/run-felix-fv.ps1 c:\\run-felix-fv.ps1
     $CAPZ_LOCATION/scp-to-node.sh $WIN_NODE_IP $CALICO_HOME/felix/fv/win-fv.exe c:\\k\\win-felix-fv.exe
   fi
@@ -126,7 +129,17 @@ function prepare_windows_images(){
 }
 
 function prepare_fv(){
-  if [[ $FV_TYPE == "calico-felix" ]]; then
+  if [[ $FV_TYPE == "cni-plugin" ]]; then
+    make -C $CALICO_HOME/cni-plugin bin/windows/win-fv.exe
+    FV_RUN_CNI=$CALICO_HOME/process/testing/winfv-cni-plugin/run-cni-fv.ps1
+    cp $CALICO_HOME/process/testing/winfv-cni-plugin/run-fv-cni-plugin.ps1 $FV_RUN_CNI
+    sed -i "s?<your kube version>?${KUBE_VERSION}?g" $FV_RUN_CNI
+    sed -i "s?<your linux pip>?${LINUX_NODE}?g" $FV_RUN_CNI
+    sed -i "s?<your os version>?${WINDOWS_SERVER_VERSION}?g" $FV_RUN_CNI
+    sed -i "s?<your container runtime>?containerd?g" $FV_RUN_CNI
+    sed -i "s?<your containerd version>?${CONTAINERD_VERSION}?g" $FV_RUN_CNI
+    sed -i "s?win-fv.exe?win-cni-fv.exe?g" $FV_RUN_CNI
+  elif [[ $FV_TYPE == "calico-felix" ]]; then
     make -C $CALICO_HOME/felix fv/win-fv.exe
     FV_RUN_FELIX=$CALICO_HOME/process/testing/winfv-felix/run-felix-fv.ps1
     cp $CALICO_HOME/process/testing/winfv-felix/run-fv-full.ps1 $FV_RUN_FELIX
@@ -181,7 +194,9 @@ function start_test_infra(){
 }
 
 function run_windows_fv(){
-  if [[ $FV_TYPE == "calico-felix" ]]; then
+  if [[ $FV_TYPE == "cni-plugin" ]]; then
+    $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-cni-fv.ps1' >> $SSH_OUTPUT_FILE
+  elif [[ $FV_TYPE == "calico-felix" ]]; then
     $CAPZ_LOCATION/ssh-node.sh $WIN_NODE_IP 'c:\\run-felix-fv.ps1' >> $SSH_OUTPUT_FILE
   fi
 }
