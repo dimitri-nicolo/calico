@@ -131,7 +131,7 @@ chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
 
 publish-chart-release: chart-release
-	@aws --profile helm s3 cp ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz s3://tigera-public/ee/archives/ --acl public-read
+	@aws --profile helm s3 cp ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz s3://tigera-public/ee/charts/ --acl public-read
 
 publish-release-archive: release-archive
 	$(MAKE) -f release-archive.mk publish-release-archive
