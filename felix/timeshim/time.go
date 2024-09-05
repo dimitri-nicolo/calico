@@ -28,7 +28,7 @@ type Timer interface {
 }
 
 type Ticker interface {
-	Stop() bool
+	Stop()
 	Reset(clean Duration)
 	Chan() <-chan Time
 }
@@ -49,7 +49,7 @@ func (t realTime) NewTimer(d Duration) Timer {
 
 func (t realTime) NewTicker(d Duration) Ticker {
 	timer := time.NewTicker(d)
-	return (*timerWrapper)(timer)
+	return (*tickerWrapper)(timer)
 }
 
 type timerWrapper time.Timer
@@ -64,6 +64,20 @@ func (t *timerWrapper) Reset(duration Duration) {
 
 func (t *timerWrapper) Chan() <-chan Time {
 	return (*time.Timer)(t).C
+}
+
+type tickerWrapper time.Ticker
+
+func (t *tickerWrapper) Stop() {
+	(*time.Ticker)(t).Stop()
+}
+
+func (t *tickerWrapper) Reset(duration Duration) {
+	(*time.Ticker)(t).Reset(duration)
+}
+
+func (t *tickerWrapper) Chan() <-chan Time {
+	return (*time.Ticker)(t).C
 }
 
 func (realTime) Until(t time.Time) time.Duration {
