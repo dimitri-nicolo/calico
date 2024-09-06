@@ -148,8 +148,8 @@ const (
 		},
 		"volumeMounts":[
 			{"name":"envoy-config","mountPath":"/etc/tigera"},
-			{"name":"dikastes-sock","mountPath":"/var/run/dikastes"}
-			{"name":"dikastes-sock","mountPath":"/var/run/l7-collector"}
+			{"name":"dikastes-sock","mountPath":"/var/run/dikastes"},
+			{"name":"l7-collector-sock","mountPath":"/var/run/l7-collector"}
 		]
 	}`
 )
