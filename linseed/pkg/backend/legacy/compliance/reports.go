@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
@@ -93,7 +94,7 @@ func (b *reportsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 			log.WithError(err).Error("Error unmarshalling log")
 			continue
 		}
-		l.ID = h.Id
+		l.ID = backend.ToApplicationID(b.singleIndex, h.Id, i)
 		logs = append(logs, l)
 	}
 
@@ -133,7 +134,7 @@ func (b *reportsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.
 	for _, f := range l {
 		// Add this log to the bulk request. Set the ID, and remove it from the
 		// body of the document.
-		id := f.ID
+		id := backend.ToElasticID(b.singleIndex, f.ID, i)
 		f.ID = ""
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f)).Id(id)
 		bulk.Add(req)
@@ -196,7 +197,7 @@ func (b *reportsBackend) buildQuery(i bapi.ClusterInfo, p *v1.ReportDataParams) 
 		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange))
 	}
 	if p.ID != "" {
-		query.Must(elastic.NewTermQuery("_id", p.ID))
+		query.Must(elastic.NewTermQuery("_id", backend.ToElasticID(b.singleIndex, p.ID, i)))
 	}
 
 	if len(p.ReportMatches) > 0 {
