@@ -61,6 +61,7 @@ func TestBenchmarksBasic(t *testing.T) {
 					},
 				},
 			}
+			f.ID = f.UID()
 
 			response, err := bb.Create(ctx, clusterInfo, []v1.Benchmarks{f})
 			require.NoError(t, err)
@@ -75,9 +76,82 @@ func TestBenchmarksBasic(t *testing.T) {
 			resp, err := bb.List(ctx, clusterInfo, &p)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
-			require.NotEqual(t, "", resp.Items[0].ID)
-			resp.Items[0].ID = ""
+			require.NotEmpty(t, resp.Items[0].ID)
 			require.Equal(t, f, resp.Items[0])
+		})
+
+		RunAllModes(t, "should ensure data does not overlap", func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			anotherClusterInfo := bapi.ClusterInfo{Cluster: backendutils.RandomClusterName(), Tenant: tenant}
+
+			b1 := v1.Benchmarks{
+				Version:           "v1",
+				KubernetesVersion: "v1.0",
+				Type:              v1.TypeKubernetes,
+				NodeName:          "lodestone",
+				Timestamp:         metav1.Time{Time: time.Unix(1, 0)},
+				Error:             "",
+				Tests: []v1.BenchmarkTest{
+					{
+						Section:     "a.1",
+						SectionDesc: "testing the test",
+						TestNumber:  "1",
+						TestDesc:    "making sure that we're right",
+						TestInfo:    "information is fluid",
+						Status:      "Just swell",
+						Scored:      true,
+					},
+				},
+			}
+			b1.ID = b1.UID()
+			b2 := v1.Benchmarks{
+				Version:           "v1",
+				KubernetesVersion: "v1.0",
+				Type:              v1.TypeKubernetes,
+				NodeName:          "lodestone",
+				Timestamp:         metav1.Time{Time: time.Unix(1, 0)},
+				Error:             "",
+				Tests: []v1.BenchmarkTest{
+					{
+						Section:     "a.1",
+						SectionDesc: "testing the test",
+						TestNumber:  "1",
+						TestDesc:    "making sure that we're right",
+						TestInfo:    "information is fluid",
+						Status:      "Just swell",
+						Scored:      true,
+					},
+				},
+			}
+			b2.ID = b1.UID()
+
+			_, err := bb.Create(ctx, clusterInfo, []v1.Benchmarks{b1})
+			require.NoError(t, err)
+
+			_, err = bb.Create(ctx, anotherClusterInfo, []v1.Benchmarks{b2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(anotherClusterInfo))
+			require.NoError(t, err)
+
+			// Read back data a managed cluster and check it matches.
+			p1 := v1.BenchmarksParams{}
+			resp, err := bb.List(ctx, clusterInfo, &p1)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 1)
+			require.NotEmpty(t, resp.Items[0].ID)
+			require.Equal(t, b1, resp.Items[0])
+
+			// Read back data a managed cluster and check it matches.
+			p2 := v1.BenchmarksParams{}
+			resp, err = bb.List(ctx, anotherClusterInfo, &p2)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 1)
+			require.NotEmpty(t, resp.Items[0].ID)
+			require.Equal(t, b2, resp.Items[0])
 		})
 	}
 }

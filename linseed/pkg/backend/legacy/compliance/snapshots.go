@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
@@ -94,7 +95,7 @@ func (b *snapshotsBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v
 			continue
 		}
 		snapshot := v1.Snapshot{}
-		snapshot.ID = h.Id
+		snapshot.ID = backend.ToApplicationID(b.singleIndex, h.Id, i)
 		snapshot.ResourceList = rl
 		snapshots = append(snapshots, snapshot)
 	}
@@ -139,7 +140,7 @@ func (b *snapshotsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v
 			log.WithError(err).Error("Error preparing snapshot for write")
 			continue
 		}
-		req := elastic.NewBulkIndexRequest().Index(alias).Doc(doc).Id(f.ResourceList.String())
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(doc).Id(backend.ToElasticID(b.singleIndex, f.ResourceList.String(), i))
 		bulk.Add(req)
 	}
 

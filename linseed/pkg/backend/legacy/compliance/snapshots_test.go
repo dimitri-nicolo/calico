@@ -126,6 +126,56 @@ func TestCreateSnapshots(t *testing.T) {
 				require.Len(t, resp.Items, 1)
 				require.Equal(t, trl, resp.Items[0].ResourceList)
 			})
+
+			RunAllModes(t, "should ensure data does not overlap", func(t *testing.T) {
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+				anotherClusterInfo := bapi.ClusterInfo{Cluster: backendutils.RandomClusterName(), Tenant: tenant}
+
+				trl := list.TimestampedResourceList{
+					ResourceList:              tc.ResourceList,
+					RequestStartedTimestamp:   metav1.Time{Time: time.Unix(1, 0)},
+					RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2, 0)},
+				}
+				s1 := v1.Snapshot{
+					ResourceList: trl,
+				}
+				s2 := v1.Snapshot{
+					ResourceList: trl,
+				}
+
+				_, err := sb.Create(ctx, clusterInfo, []v1.Snapshot{s1})
+				require.NoError(t, err)
+
+				_, err = sb.Create(ctx, anotherClusterInfo, []v1.Snapshot{s2})
+				require.NoError(t, err)
+
+				err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+
+				err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(anotherClusterInfo))
+				require.NoError(t, err)
+
+				// Read back data a managed cluster and check it matches.
+				p1 := v1.SnapshotParams{}
+				resp, err := sb.List(ctx, clusterInfo, &p1)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 1)
+				require.NotEmpty(t, resp.Items[0].ID)
+				// Overwrite the ID to match the generated one
+				s1.ID = s1.ResourceList.String()
+				require.Equal(t, s1, resp.Items[0])
+
+				// Read back data a managed cluster and check it matches.
+				p2 := v1.SnapshotParams{}
+				resp, err = sb.List(ctx, anotherClusterInfo, &p2)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 1)
+				require.NotEmpty(t, resp.Items[0].ID)
+				// Overwrite the ID to match the generated one
+				s2.ID = s2.ResourceList.String()
+				require.Equal(t, s2, resp.Items[0])
+			})
+
 		}
 	}
 

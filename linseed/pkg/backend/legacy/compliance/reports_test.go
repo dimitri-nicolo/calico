@@ -151,6 +151,7 @@ func TestReportDataBasic(t *testing.T) {
 				GenerationTime: metav1.Time{Time: time.Unix(3, 0)},
 			}
 			f := v1.ReportData{ReportData: &report}
+			f.ID = f.UID()
 
 			response, err := rb.Create(ctx, clusterInfo, []v1.ReportData{f})
 			require.NoError(t, err)
@@ -165,9 +166,64 @@ func TestReportDataBasic(t *testing.T) {
 			resp, err := rb.List(ctx, clusterInfo, &p)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
-			require.NotEqual(t, "", resp.Items[0].ID)
-			resp.Items[0].ID = ""
+			require.NotEmpty(t, resp.Items[0].ID)
 			require.Equal(t, f, resp.Items[0])
+		})
+
+		RunAllModes(t, "should ensure data does not overlap", func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			anotherClusterInfo := bapi.ClusterInfo{Cluster: backendutils.RandomClusterName(), Tenant: tenant}
+
+			t1 := time.Unix(100, 0)
+
+			r1 := v1.ReportData{
+				ID: "report-id",
+				ReportData: &apiv3.ReportData{
+					ReportName:     "report-name",
+					ReportTypeName: "report-type",
+					StartTime:      metav1.Time{Time: t1},
+					EndTime:        metav1.Time{Time: t1},
+					GenerationTime: metav1.Time{Time: t1},
+				},
+			}
+			r2 := v1.ReportData{
+				ID: "report-id",
+				ReportData: &apiv3.ReportData{
+					ReportName:     "report-name",
+					ReportTypeName: "report-type",
+					StartTime:      metav1.Time{Time: t1},
+					EndTime:        metav1.Time{Time: t1},
+					GenerationTime: metav1.Time{Time: t1},
+				},
+			}
+
+			_, err := rb.Create(ctx, clusterInfo, []v1.ReportData{r1})
+			require.NoError(t, err)
+
+			_, err = rb.Create(ctx, anotherClusterInfo, []v1.ReportData{r2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(anotherClusterInfo))
+			require.NoError(t, err)
+
+			// Read back data a managed cluster and check it matches.
+			p1 := v1.ReportDataParams{}
+			resp, err := rb.List(ctx, clusterInfo, &p1)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 1)
+			require.NotEmpty(t, resp.Items[0].ID)
+			require.Equal(t, r1, resp.Items[0])
+
+			// Read back data a managed cluster and check it matches.
+			p2 := v1.ReportDataParams{}
+			resp, err = rb.List(ctx, anotherClusterInfo, &p2)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 1)
+			require.NotEmpty(t, resp.Items[0].ID)
+			require.Equal(t, r2, resp.Items[0])
 		})
 	}
 }
