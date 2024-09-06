@@ -112,6 +112,7 @@ var (
 	defaultVolumes = []string{
 		`{"name":"envoy-config","emptyDir":{}}`,
 		`{"name":"dikastes-sock","hostPath":{"path":"/var/run/dikastes","type":"Directory"}}`,
+		`{"name":"l7-collector-sock","hostPath":{"path":"/var/run/l7-collector","type":"Directory"}}`,
 	}
 )
 
@@ -148,6 +149,7 @@ const (
 		"volumeMounts":[
 			{"name":"envoy-config","mountPath":"/etc/tigera"},
 			{"name":"dikastes-sock","mountPath":"/var/run/dikastes"}
+			{"name":"dikastes-sock","mountPath":"/var/run/l7-collector"}
 		]
 	}`
 )
