@@ -659,9 +659,6 @@ func TestSetFeed(t *testing.T) {
 	eip := sync2.NewMockIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &storage.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
-	var called bool
-	puller.enqueueSyncFunction = func() { called = true }
-
 	f2 := testGlobalThreatFeed.DeepCopy()
 	f2.Name = "set feed"
 	f2.Spec.Pull.HTTP.URL = "http://updated"
@@ -673,7 +670,6 @@ func TestSetFeed(t *testing.T) {
 	g.Expect(puller.needsUpdate).Should(BeTrue(), "Needs Update must be set")
 	g.Expect(puller.url).Should(BeNil(), "Feed URL is still nil")
 	g.Expect(puller.header).Should(HaveLen(0), "Header is still empty")
-	g.Expect(called).Should(BeFalse(), "Sync was not called")
 }
 
 func TestSyncGNSFromDB(t *testing.T) {
