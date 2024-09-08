@@ -137,8 +137,8 @@ const (
 	}`
 	tmplEnvoy = `{
 		"name":"tigera-envoy",
-		"image":"%s",
-		"command":["envoy","-c","/etc/tigera/envoy.yaml","-l","trace"],
+		"image":"%s",%s
+		"command":["envoy","-c","/etc/tigera/envoy.yaml"],
 		"restartPolicy":"Always",
 		"ports":[{"containerPort":16001}],
 		"startupProbe":{
@@ -155,12 +155,12 @@ const (
 )
 
 type sidecarCfg struct {
-	dikastesImg  string
-	envoyImg     string
-	logging      bool
-	policy       bool
-	waf          bool
-	wafConfigMap string
+	dikastesImg    string
+	envoyImg       string
+	logging        bool
+	policy         bool
+	waf            bool
+	envoyResources string
 }
 
 func (cfg *sidecarCfg) volumes() []string {
@@ -171,9 +171,6 @@ func (cfg *sidecarCfg) volumes() []string {
 	}
 	if cfg.waf {
 		volumes = append(volumes, `{"name":"tigera-waf-logfiles","hostPath":{"path":"/var/log/calico/waf","type":"DirectoryOrCreate"}}`)
-		if cfg.wafConfigMap != "" {
-			volumes = append(volumes, `{"name":"tigera-waf-ruleset","configMap":{"defaultMode":420,"name":"`+cfg.wafConfigMap+`"}}`)
-		}
 	}
 
 	return volumes
@@ -195,6 +192,19 @@ func (cfg *sidecarCfg) dikastesInitArgs() string {
 	return strings.Join(args, ",")
 }
 
+func (cfg *sidecarCfg) envoyOptionalAttributes() string {
+	attrs := []string{}
+
+	if cfg.envoyResources != "" {
+		attrs = append(attrs, fmt.Sprintf(`"resources":%s`, cfg.envoyResources))
+	}
+
+	if len(attrs) == 0 {
+		return ""
+	}
+	return strings.Join(attrs, ",") + ","
+}
+
 func (s *sidecarWebhook) patch(res *v1.AdmissionResponse, req *v1.AdmissionRequest) error {
 	var pod corev1.Pod
 	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
@@ -202,14 +212,12 @@ func (s *sidecarWebhook) patch(res *v1.AdmissionResponse, req *v1.AdmissionReque
 	}
 
 	cfg := sidecarCfg{
-		dikastesImg: config.DikastesImg,
-		envoyImg:    config.EnvoyImg,
-		logging:     (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/logging"] == "Enabled"),
-		policy:      (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/policy"] == "Enabled"),
-		waf:         (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/waf"] == "Enabled"),
-	}
-	if cfg.waf {
-		cfg.wafConfigMap = pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/wafConfigMap"]
+		dikastesImg:    config.DikastesImg,
+		envoyImg:       config.EnvoyImg,
+		logging:        (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/logging"] == "Enabled"),
+		policy:         (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/policy"] == "Enabled"),
+		waf:            (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/waf"] == "Enabled"),
+		envoyResources: pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/sidecarResources"],
 	}
 
 	if !(cfg.logging || cfg.policy || cfg.waf) {
@@ -228,7 +236,7 @@ func (s *sidecarWebhook) patch(res *v1.AdmissionResponse, req *v1.AdmissionReque
 		`{"op":"add","path":"/spec/initContainers","value":%s}`,
 		"["+strings.Join([]string{
 			fmt.Sprintf(tmplDikastesInit, config.DikastesImg, cfg.dikastesInitArgs()),
-			fmt.Sprintf(tmplEnvoy, config.EnvoyImg),
+			fmt.Sprintf(tmplEnvoy, config.EnvoyImg, cfg.envoyOptionalAttributes()),
 		}, ",")+"]",
 	)
 
