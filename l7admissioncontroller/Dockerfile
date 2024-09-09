@@ -14,16 +14,16 @@
 
 FROM alpine:3 AS builder
 
-RUN mkdir -p /var/run/l7admctrl
+RUN mkdir -p /usr/bin/l7admctrl
 
 FROM scratch AS source
 
 ARG BIN_DIR
 ARG TARGETARCH
 
-# Precreate the /var/run/l7admctrl directory so that we don't need any elevated
+# Precreate the /usr/bin/l7admctrl directory so that we don't need any elevated
 # permission to create the directory at runtime.
-COPY --from=builder /var/run/l7admctrl /var/run/l7admctrl/
+COPY --from=builder /usr/bin/l7admctrl /usr/bin/l7admctrl/
 
 COPY ${BIN_DIR}/l7admctrl-${TARGETARCH} /l7admctrl
 
@@ -31,14 +31,14 @@ FROM calico/base
 
 ARG GIT_VERSION=unknown
 
-LABEL description="Calico L7AdmissionController enables Application Layer Policy"
+LABEL description="Calico L7AdmissionController enables mutating webhooks for Application Layer Policy sidecar injection"
 LABEL maintainer="maintainers@tigera.io"
 LABEL name="Calico L7AdmissionController"
 LABEL release="1"
-LABEL summary="Calico L7AdmissionController enables Application Layer Policy"
+LABEL summary="Calico L7AdmissionController enables mutating webhooks for Application Layer Policy sidecar injection"
 LABEL vendor="Project Calico"
 LABEL version=${GIT_VERSION}
 
 COPY --from=source / /
 
-ENTRYPOINT ["/l7admctrl"]
+ENTRYPOINT ["/usr/bin/l7admctrl"]

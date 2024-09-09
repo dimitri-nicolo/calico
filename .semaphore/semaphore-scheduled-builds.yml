@@ -731,6 +731,44 @@ blocks:
       always:
         commands:
           - test-results publish report
+- name: l7admissioncontroller
+  run:
+    when: "true or change_in(['/*', '/l7admissioncontroller/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd l7admissioncontroller
+    epilogue:
+      always:
+        commands:
+          - test-results publish report
+    jobs:
+      - name: l7admissioncontroller tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: l7admissioncontroller - native arm64 runner
+  run:
+    when: "true or change_in(['/*', '/l7admissioncontroller/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - l7admissioncontroller
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    prologue:
+      commands:
+        - cd l7admissioncontroller
+    epilogue:
+      always:
+        commands:
+          - test-results publish report
+    jobs:
+      - name: build binary
+        commands:
+          - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
 - name: libcalico-go
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

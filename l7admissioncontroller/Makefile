@@ -20,19 +20,8 @@ LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 ##############################################################################
 include ../lib.Makefile
 
-CONTAINER_CREATED=.image.created-$(ARCH)
-CONTAINER_FIPS_CREATED=.image.created-$(ARCH)-fips
-
-FIPS ?= false
-
-ifeq ($(FIPS),true)
-CONTAINER_MARKER=$(CONTAINER_FIPS_CREATED)
-VALIDARCHES=amd64
-BINDIR=bin/$(ARCH)-fips
-else
-CONTAINER_MARKER=$(CONTAINER_CREATED)
+IMAGE_CREATED=.image.created-$(ARCH)
 BINDIR=bin
-endif
 
 # Shortcut targets
 default: build
@@ -57,19 +46,12 @@ clean:
 ###############################################################################
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
-$(VALIDARCHES):
-	$(MAKE) build ARCH=$@
-
-build-all: $(VALIDARCHES)
-
 .PHONY: build
-build:
+build: $(BINDIR)/l7admctrl-$(ARCH)
 	$(MAKE) $(BINDIR)/l7admctrl-$(ARCH) ARCH=$(ARCH)
 
-$(BINDIR)/l7admctrl-amd64: ARCH=amd64
-$(BINDIR)/l7admctrl-arm64: ARCH=arm64
 $(BINDIR)/l7admctrl-%: $(SRC_FILES)
-	$(call build_cgo_binary, ./cmd/l7admctrl, $@)
+	$(call build_binary, cmd/l7admctrl/*.go, $@)
 
 ###############################################################################
 # Building the image
@@ -78,18 +60,14 @@ $(BINDIR)/l7admctrl-%: $(SRC_FILES)
 image: $(L7ADMCTRL_IMAGE)
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
-	$(MAKE) image FIPS=$(FIPS) ARCH=$*
+	$(MAKE) image ARCH=$*
 
-$(L7ADMCTRL_IMAGE): $(CONTAINER_MARKER)
-$(CONTAINER_CREATED): Dockerfile $(BINDIR)/l7admctrl-$(ARCH)
+$(L7ADMCTRL_IMAGE): $(IMAGE_CREATED)
+$(IMAGE_CREATED): Dockerfile $(BINDIR)/l7admctrl-$(ARCH)
 	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(L7ADMCTRL_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
-$(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/l7admctrl-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(L7ADMCTRL_IMAGE):latest-fips-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
-	touch $@
 ###############################################################################
 # UTs
 ###############################################################################
