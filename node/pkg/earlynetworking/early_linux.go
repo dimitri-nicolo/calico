@@ -19,7 +19,7 @@ import (
 const (
 	BIRD_CONFIG_FILE = "/etc/calico/confd/config/bird.cfg"
 	BIRD_CONFIG_MAIN = `
-router id %v;
+router id %s;
 listen bgp port 8179;
 
 protocol direct {
@@ -65,7 +65,7 @@ protocol bgp tor%v from tors {
 `
 )
 
-// Do setup for a dual ToR node, then run as the "early BGP" daemon
+// Run does setup for a dual ToR node, then runs as the "early BGP" daemon
 // until calico-node's BIRD can take over.
 func Run() {
 	logrus.Info("Beginning dual ToR setup for this node")
@@ -77,60 +77,12 @@ func Run() {
 		logrus.WithError(err).Fatal("Failed to read EarlyNetworkConfiguration")
 	}
 
-	// Find the source address that the default route will use, which must be one of the
-	// per-interface addresses.  We will use this to identify this node in the overall YAML
-	// config, and as the router ID in BIRD config.
-	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-	if err != nil {
-		logrus.WithError(err).Fatal("Failed to list routes")
-	}
-	var routerID net.IP
-	for _, route := range routes {
-		if isDefaultCIDR(route.Dst) {
-			logrus.Infof("Got default route %+v", route)
-			if route.Src != nil {
-				logrus.Infof("Default route has source address %v", route.Src)
-				routerID = route.Src
-				goto gotRouterID
-			} else if route.Gw != nil {
-				logrus.Infof("Default route has gateway address %v", route.Gw)
-				// Look up routes to the gateway address.
-				routes, err = netlink.RouteGet(route.Gw)
-				if err != nil {
-					logrus.WithError(err).Fatal("Failed to get routes to gateway address")
-				}
-				for _, route = range routes {
-					logrus.Infof("Got gateway address route %+v", route)
-					if route.Src != nil {
-						routerID = route.Src
-						goto gotRouterID
-					}
-				}
-			}
-		}
-		logrus.Infof("Skip other route %+v", route)
-	}
-	if routerID == nil {
-		logrus.Fatal("Failed to find default route with source address")
-	}
-gotRouterID:
-	logrus.Infof("Router ID is %v", routerID)
-
-	// Find the entry from the YAML config for this node.
+	// Find a per-interface address we can use as our BIRD router ID.
+	// We will also use this to identify this node in the overall YAML config.
 	var thisNode *ConfigNode
-nodeLoop:
-	for _, nodeCfg := range cfg.Spec.Nodes {
-		for _, addr := range nodeCfg.InterfaceAddresses {
-			if addr == routerID.String() {
-				thisNode = &nodeCfg
-				break nodeLoop
-			}
-		}
-	}
-	if thisNode == nil {
-		logrus.WithField("routerID", routerID).Fatal("Failed to find config for this node")
-		return
-	}
+	var routerID string
+
+	thisNode, routerID = mustDetectNodeConfig(cfg)
 	logrus.WithField("cfg", *thisNode).Info("Found config for this node")
 
 	// Configure the stable address.
@@ -160,7 +112,7 @@ nodeLoop:
 
 	// Change interface-specific addresses to be scope link, and create specific routes where
 	// directly connected to a bootstrap IP.
-	ensureNodeAddressesAndRoutes(thisNode, bootstrapIPs)
+	ensureNodeAddressesAndRoutes(thisNode, bootstrapIPs, cfg.Spec.Legacy.UnconditionalDefaultRouteProgramming)
 
 	// Use multiple ECMP paths based on hashing 5-tuple.  These are not necessarily fatal, if
 	// setting fails.
@@ -197,7 +149,88 @@ nodeLoop:
 
 	// Loop deciding whether to run early BIRD or not.
 	logrus.Info("Early networking set up; now monitoring BIRD")
-	monitorOngoing(thisNode)
+	monitorOngoing(thisNode, cfg.Spec.Legacy.UnconditionalDefaultRouteProgramming)
+}
+
+func mustDetectNodeConfig(cfg *EarlyNetworkConfiguration) (nodeConfig *ConfigNode, routerID string) {
+	if cfg.Spec.Legacy.NodeIPFromDefaultRoute {
+		// Legacy behavior: searching routes for their source addrs to identify this node.
+		routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to list routes")
+		}
+	routeSearch:
+		for _, route := range routes {
+			if isDefaultCIDR(route.Dst) {
+				logrus.Infof("Got default route %+v", route)
+				if route.Src != nil {
+					logrus.Infof("Default route has source address %v", route.Src)
+					routerID = route.Src.String()
+					break routeSearch
+				} else if route.Gw != nil {
+					logrus.Infof("Default route has gateway address %v", route.Gw)
+					// Look up routes to the gateway address.
+					routes, err = netlink.RouteGet(route.Gw)
+					if err != nil {
+						logrus.WithError(err).Fatal("Failed to get routes to gateway address")
+					}
+					for _, route = range routes {
+						logrus.Infof("Got gateway address route %+v", route)
+						if route.Src != nil {
+							routerID = route.Src.String()
+							break routeSearch
+						}
+					}
+				}
+			}
+			logrus.Infof("Skip other route %+v", route)
+		}
+
+		if routerID == "" {
+			logrus.Fatal("Failed to find default route with source address")
+		}
+		logrus.Infof("Router ID is %s", routerID)
+
+		// Find the entry from the YAML config for this node.
+	nodeLoop:
+		for _, nodeCfg := range cfg.Spec.Nodes {
+			for _, addr := range nodeCfg.InterfaceAddresses {
+				if addr == routerID {
+					nodeConfig = &nodeCfg
+					break nodeLoop
+				}
+			}
+		}
+
+		if nodeConfig == nil {
+			logrus.WithField("routerID", routerID).Fatal("Could not find node config for routerID")
+		}
+
+	} else {
+		// First try to list all links' addresses, and correlate them to config addresses.
+		ips, err := enumerateAllIPs()
+		if err != nil {
+			logrus.WithError(err).Fatal("Couldn't auto-detect IP")
+		}
+
+		for _, ip := range ips {
+			for _, nodeCfg := range cfg.Spec.Nodes {
+				for _, cfgAddr := range nodeCfg.InterfaceAddresses {
+					if ip == cfgAddr {
+						logrus.Infof("This node's router ID is %s", ip)
+						logrus.WithField("nodeCfg", nodeCfg).Info("Config for this node")
+						nodeConfig = &nodeCfg
+						routerID = ip
+						return
+					}
+				}
+			}
+		}
+
+		logrus.Fatal("Could not find any IP address in common between network links and EarlyNetworkConfig interfaceAddresses")
+	}
+
+	return
 }
 
 func isDefaultCIDR(dst *net.IPNet) bool {
@@ -210,7 +243,7 @@ func isDefaultCIDR(dst *net.IPNet) bool {
 	return false
 }
 
-func monitorOngoing(thisNode *ConfigNode) {
+func monitorOngoing(thisNode *ConfigNode, forceDefaultRoutes bool) {
 	// Channel used to signal when early BIRD is wanted, based on the state of normal BIRD.
 	earlyBirdWantedC := make(chan bool)
 	go monitorNormalBird(earlyBirdWantedC)
@@ -276,7 +309,7 @@ func monitorOngoing(thisNode *ConfigNode) {
 			}
 		case <-periodicCheckC:
 			// Recheck interface addresses and routes.
-			ensureNodeAddressesAndRoutes(thisNode, nil)
+			ensureNodeAddressesAndRoutes(thisNode, nil, forceDefaultRoutes)
 		}
 	}
 }
@@ -323,7 +356,44 @@ func monitorNormalBird(earlyBirdWantedC chan<- bool) {
 	}
 }
 
-func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIPs []string) {
+func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIPs []string, forceDefaultRoutes bool) {
+	nl, err := netlink.NewHandle(netlink.FAMILY_V4)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to get a netlink handle. Aborting address and route config")
+	}
+	// Attempt to set strict check - this allows for route filtering at a lower level, saving some compute resources.
+	err = nl.SetStrictCheck(true)
+	if err != nil {
+		logrus.WithError(err).Warn("Failed to set strict check. Continuing without it...")
+	}
+
+	// Analyse existing default routing and make a note of default routes relating to a ToR
+	initialDefaultRoutes, err := nl.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Dst: nil}, netlink.RT_FILTER_DST)
+	if err != nil {
+		logrus.WithError(err).Fatal("Failed to read kernel's initial default routes. Aborting address and route config")
+	}
+
+	peerIPToDefaultRoute := make(map[string]netlink.Route)
+	for _, r := range initialDefaultRoutes {
+		if !isDefaultCIDR(r.Dst) {
+			logrus.WithField("route", r).Warn("Found a non-default route while attempting to scan default routes. Ignoring...")
+			continue
+		}
+		for _, p := range thisNode.Peerings {
+			if p.PeerIP == r.Gw.String() {
+				logrus.WithFields(logrus.Fields{"route": r, "peer": p.PeerIP}).Debug("Found default route for peer")
+				peerIPToDefaultRoute[p.PeerIP] = r
+			} else {
+				for _, nh := range r.MultiPath {
+					if nh.Gw.String() == p.PeerIP {
+						logrus.WithFields(logrus.Fields{"route": r, "peer": p.PeerIP}).Debug("Found ECMP default route with a nexthop for peer")
+						peerIPToDefaultRoute[p.PeerIP] = r
+					}
+				}
+			}
+		}
+	}
+
 	links, err := netlink.LinkList()
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to list all links")
@@ -335,13 +405,18 @@ func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIPs []string) {
 		}
 		for _, addr := range addrs {
 			for _, peering := range thisNode.Peerings {
-				if sameSubnet(addr, peering.PeerIP) {
-					ensureLinkAddressAndRoutes(link, addr, peering.PeerIP)
+				if SameSubnet(addr, peering.PeerIP) {
+					defaultRt, ok := peerIPToDefaultRoute[peering.PeerIP]
+					if !ok {
+						ensureLinkAddressAndRoutes(link, addr, peering.PeerIP, forceDefaultRoutes, nil)
+					} else {
+						ensureLinkAddressAndRoutes(link, addr, peering.PeerIP, forceDefaultRoutes, &defaultRt)
+					}
 					break
 				}
 			}
 			for _, bootstrapIP := range bootstrapIPs {
-				if sameSubnet(addr, bootstrapIP) {
+				if SameSubnet(addr, bootstrapIP) {
 					_, ipNet, err := net.ParseCIDR(bootstrapIP + "/32")
 					if err == nil {
 						ensureRoute(&netlink.Route{
@@ -350,18 +425,17 @@ func ensureNodeAddressesAndRoutes(thisNode *ConfigNode, bootstrapIPs []string) {
 							Type:      syscall.RTN_UNICAST,
 							Table:     syscall.RT_TABLE_MAIN,
 							Src:       net.ParseIP(thisNode.StableAddress.Address),
-						})
+						}, false)
 					} else {
 						logrus.WithError(err).Warningf("Failed to parse OpenShift bootstrap IP (%v)", bootstrapIP)
 					}
-
 				}
 			}
 		}
 	}
 }
 
-func sameSubnet(addr netlink.Addr, peerIP string) bool {
+func SameSubnet(addr netlink.Addr, peerIP string) bool {
 	maskedAddr := addr.IP.Mask(addr.Mask)
 	logrus.Debugf("Masked interface address %v -> %v", addr.IPNet, maskedAddr)
 	maskedPeer := net.ParseIP(peerIP).Mask(addr.Mask)
@@ -373,13 +447,23 @@ func sameSubnet(addr netlink.Addr, peerIP string) bool {
 // address/prefix, update the address in the ways that we need for
 // dual ToR operation, and ensure that we still have the routes that
 // we'd expect through that interface.
-func ensureLinkAddressAndRoutes(link netlink.Link, addr netlink.Addr, peerIP string) {
+//
+// `forceDefaultRoute`:
+// If set to true leads to us always programming a default route
+// via `peerIP`, on `link`, even if none existed in the first place.
+// If set to false, won't add that route unless a similar route
+// (a default route over the same link, or via the same peerIP) existed already.
+//
+// If `baseDefaultRoute` is not nil, we assume a default route did exist via this peer, so we will program
+// the same route back, after updating the link's address.
+func ensureLinkAddressAndRoutes(link netlink.Link, addr netlink.Addr, peerIP string, forceDefaultRoute bool, baseDefaultRoute *netlink.Route) {
 	if addr.Scope != int(netlink.SCOPE_LINK) {
 		// Delete the given address and re-add it with scope link.
 		err := netlink.AddrDel(link, &addr)
 		if err != nil {
 			logrus.WithError(err).Fatalf("Failed to delete address %+v", addr)
 		}
+
 		addr.Scope = int(netlink.SCOPE_LINK)
 		err = netlink.AddrAdd(link, &addr)
 		if err != nil {
@@ -396,19 +480,40 @@ func ensureLinkAddressAndRoutes(link netlink.Link, addr netlink.Addr, peerIP str
 		Type:      syscall.RTN_UNICAST,
 		Scope:     netlink.SCOPE_LINK,
 		Table:     syscall.RT_TABLE_MAIN,
-	})
+	}, false)
+
+	// No default route existed, and we are not forcing a default route, so our job is done.
+	if !forceDefaultRoute && baseDefaultRoute == nil {
+		return
+	}
 
 	// Try to add a default route via the ToR.
-	ensureRoute(&netlink.Route{
-		Gw:        net.ParseIP(peerIP),
-		LinkIndex: link.Attrs().Index,
-		Type:      syscall.RTN_UNICAST,
-		Table:     syscall.RT_TABLE_MAIN,
-	})
+	var defaultRt netlink.Route
+	if baseDefaultRoute != nil {
+		defaultRt = *baseDefaultRoute
+	} else {
+		defaultRt = netlink.Route{
+			Gw:        net.ParseIP(peerIP),
+			LinkIndex: link.Attrs().Index,
+			Type:      syscall.RTN_UNICAST,
+			Table:     syscall.RT_TABLE_MAIN,
+		}
+	}
+
+	ensureRoute(&defaultRt, true)
 }
 
-func ensureRoute(route *netlink.Route) {
-	err := netlink.RouteAdd(route)
+func ensureRoute(route *netlink.Route, append bool) {
+	var err error
+	if !append {
+		err = netlink.RouteAdd(route)
+	} else {
+		// We sometimes want a route with the same destination going over two different routing paths, i.e, a HA default route.
+		// Further, if a node was set up with two default routes prior to early-networking, then we should preserve that.
+		// RouteAppend allows for the creation of many routes with the same dest, provided certain other attributes still differ.
+		// This _will not_, however, lead to the exact same route being duplicated (we still get an 'already exists' error from netlink).
+		err = netlink.RouteAppend(route)
+	}
 	if err == nil {
 		logrus.Infof("Added route: %+v", *route)
 	} else if strings.Contains(strings.ToLower(err.Error()), "exists") {
@@ -416,6 +521,28 @@ func ensureRoute(route *netlink.Route) {
 	} else {
 		logrus.Fatalf("Failed to add route %+v", *route)
 	}
+}
+
+// enumerateAllIPs gets all addresses for all interfaces.
+func enumerateAllIPs() (ips []string, err error) {
+	links, err := netlink.LinkList()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to list links: %w", err)
+	}
+
+	for _, l := range links {
+		lAddrs, err := netlink.AddrList(l, netlink.FAMILY_V4)
+		if err != nil {
+			logrus.WithField("link", l.Attrs().Name).Warn("Couldn't list addrs for link")
+			continue
+		}
+
+		for _, a := range lAddrs {
+			ips = append(ips, a.IP.String())
+		}
+	}
+
+	return
 }
 
 func writeProcSys(path, value string) error {

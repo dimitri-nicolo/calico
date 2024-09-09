@@ -1,6 +1,9 @@
 apiVersion: projectcalico.org/v3
 kind: EarlyNetworkConfiguration
 spec:
+  legacy:
+    nodeIPFromDefaultRoute: true
+    unconditionalDefaultRouteProgramming: true
   nodes:
     # Rack A
     - interfaceAddresses:

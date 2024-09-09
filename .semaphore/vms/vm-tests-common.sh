@@ -1,4 +1,4 @@
 # Common definitions for the tests that are run on cloud
 # VMs rather than Semaphore VMs
 
-batches=(k8s-test dual-tor enet egw-none egw-ipip egw-vxlan)
+batches=(k8s-test dual-tor dual-tor-legacy enet egw-none egw-ipip egw-vxlan)

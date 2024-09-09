@@ -9,13 +9,20 @@ podman run -d --privileged --net=host -v /calico-early:/calico-early -e CALICO_E
 count=0
 while sleep 1; do
     if podman logs calico-early | grep "Early networking set up; now monitoring BIRD"; then
-	break
+        break
     fi
 
     let count++
-    if [ count -eq 3 ]; then
-	    >&2 echo "Error while waiting for BIRD. Tried 3 times."
-	    exit 1
+    if [ $count -eq 3 ]; then
+        >&2 echo "Error while waiting for BIRD. Tried 3 times. Dumping calico-early logs and routing state."
+        podman logs calico-early >&2
+        echo "End calico-early logs" >&2
+        echo "IP Links:" >&2
+        ip link >&2
+        echo "IP Routes:" >&2
+        ip route >&2
+
+        exit 1
     fi
 done >&2
 

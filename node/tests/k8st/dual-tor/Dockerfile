@@ -17,4 +17,6 @@ RUN chmod +x /get-ips.sh
 
 COPY tmp/cnx-node.tar /
 RUN mkdir /calico-early
-COPY cfg.yaml /calico-early/
+
+ARG EARLY_NETWORK_CONFIG_FILE
+COPY ${EARLY_NETWORK_CONFIG_FILE} /calico-early/cfg.yaml

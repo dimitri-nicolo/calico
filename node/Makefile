@@ -448,21 +448,41 @@ st-checks:
 GCR_IO_PULL_SECRET?=${HOME}/secrets/docker_cfg.json
 TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 
+#
+# Dual ToR Tests
+#
+.PHONY: dual-tor-test-legacy
+dual-tor-test-legacy: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup-legacy dual-tor-run-test dual-tor-cleanup
+
 .PHONY: dual-tor-test
 dual-tor-test: $(K8ST_IMAGE_TARS) .calico_test.created dual-tor-setup dual-tor-run-test dual-tor-cleanup
 
 # TODO: dual-tor uses a custom kind build, and so doesn't leverage the common
 # kind logic from lib.Makefile.
 .PHONY: dual-tor-setup
+# In the legacy testbed, dual-tor legacy flags are switched on, to test old dual-tor norms.
+# In legacy mode, a node's default routes *must* use a dual-tor network.
+LEGACY_ROUTING=false
+# Which early-network config file in the dual-tor-test directory to copy to the custom kind-node image
+NODE_ENC_FILE=cfg.yaml
 DUAL_TOR_DIR=tests/k8st/dual-tor
 dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	mkdir -p $(DUAL_TOR_DIR)/tmp
 	cp -a $(K8ST_IMAGE_TARS) $(DUAL_TOR_DIR)/tmp/
-	docker build --build-arg KINDEST_NODE_VERSION=$(KINDEST_NODE_VERSION_DUAL_TOR) -t calico/dual-tor-node $(DUAL_TOR_DIR)
+	docker build \
+		--build-arg KINDEST_NODE_VERSION=$(KINDEST_NODE_VERSION_DUAL_TOR) \
+		--build-arg EARLY_NETWORK_CONFIG_FILE=$(NODE_ENC_FILE) \
+		-t calico/dual-tor-node \
+		$(DUAL_TOR_DIR)
 	rm -rf $(DUAL_TOR_DIR)/tmp
-	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) LEGACY_ROUTING=$(LEGACY_ROUTING) STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl $(DUAL_TOR_DIR)/dualtor.sh
+
+.PHONY: dual-tor-setup-legacy
+dual-tor-setup-legacy: LEGACY_ROUTING=true
+dual-tor-setup-legacy: NODE_ENC_FILE=cfg-legacy.yaml
+dual-tor-setup-legacy: dual-tor-setup
 
 DUAL_TOR_ST_TO_RUN=dual-tor-tests/test_dual_tor.py -s --nocapture --nologcapture
 .PHONY: dual-tor-run-test

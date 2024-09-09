@@ -26,6 +26,7 @@ type EarlyNetworkConfiguration struct {
 type EarlyNetworkConfigurationSpec struct {
 	Nodes    []ConfigNode
 	Platform string
+	Legacy   LegacyConfig `yaml:"legacy,omitempty" json:"legacy,omitempty"`
 }
 
 const (
@@ -38,6 +39,11 @@ type ConfigNode struct {
 	StableAddress      ConfigStableAddress `yaml:"stableAddress"`
 	Peerings           []ConfigPeering     `yaml:"peerings"`
 	Labels             map[string]string   `yaml:"labels"`
+}
+
+type LegacyConfig struct {
+	NodeIPFromDefaultRoute               bool `yaml:"nodeIPFromDefaultRoute,omitempty" json:"nodeIPFromDefaultRoute,omitempty"`
+	UnconditionalDefaultRouteProgramming bool `yaml:"unconditionalDefaultRouteProgramming,omitempty" json:"unconditionalDefaultRouteProgramming,omitempty"`
 }
 
 type ConfigStableAddress struct {
@@ -62,5 +68,6 @@ func GetEarlyNetworkConfig(yamlFileName string) (*EarlyNetworkConfiguration, err
 		return nil, fmt.Errorf("Failed to decode YAML file at %v: %v", yamlFileName, err)
 	}
 	logrus.WithField("cfg", cfg).Infof("Read YAML file at %v", yamlFileName)
+
 	return &cfg, nil
 }

@@ -41,6 +41,9 @@ for batch in "${batches[@]}"; do
     dual-tor)
       cmd="make --directory=calico-private/${REPO_NAME} dual-tor-test"
       ;;
+    dual-tor-legacy)
+      cmd="make --directory=calico-private/${REPO_NAME} dual-tor-test-legacy"
+      ;;
     enet)
       cmd="make --directory=calico-private/${REPO_NAME} external-network-test"
       ;;
