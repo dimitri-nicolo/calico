@@ -16,6 +16,7 @@ package containers
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -264,8 +265,8 @@ func RunWithFixedName(name string, opts RunOpts, args ...string) (c *Container) 
 
 	// Merge container's output into our own logging.
 	c.logFinished.Add(2)
-	go c.copyOutputToLog("stdout", stdout, &c.logFinished, &c.stdoutWatches)
-	go c.copyOutputToLog("stderr", stderr, &c.logFinished, &c.stderrWatches)
+	go c.copyOutputToLog("stdout", stdout, &c.logFinished, &c.stdoutWatches, nil)
+	go c.copyOutputToLog("stderr", stderr, &c.logFinished, &c.stderrWatches, nil)
 
 	if opts.RunAndExit {
 		withTimeoutPanic(logCtx, 1*time.Minute, func() {
@@ -341,8 +342,8 @@ func (c *Container) Start() {
 
 	// Merge container's output into our own logging.
 	c.logFinished.Add(2)
-	go c.copyOutputToLog("stdout", stdout, &c.logFinished, &c.stdoutWatches)
-	go c.copyOutputToLog("stderr", stderr, &c.logFinished, nil)
+	go c.copyOutputToLog("stdout", stdout, &c.logFinished, &c.stdoutWatches, nil)
+	go c.copyOutputToLog("stderr", stderr, &c.logFinished, nil, nil)
 
 	c.WaitUntilRunning()
 
@@ -359,7 +360,7 @@ func (c *Container) Remove() {
 	log.WithField("container", c).Info("Removed container.")
 }
 
-func (c *Container) copyOutputToLog(streamName string, stream io.Reader, done *sync.WaitGroup, watches *[]*watch) {
+func (c *Container) copyOutputToLog(streamName string, stream io.Reader, done *sync.WaitGroup, watches *[]*watch, extraWriter io.Writer) {
 	defer done.Done()
 	scanner := bufio.NewScanner(stream)
 	scanner.Buffer(nil, 100*1024*1024) // Increase maximum buffer size (but don't pre-alloc).
@@ -389,6 +390,12 @@ func (c *Container) copyOutputToLog(streamName string, stream io.Reader, done *s
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		if extraWriter != nil {
+			_, err := extraWriter.Write([]byte(line + "\n"))
+			if err != nil {
+				log.WithError(err).Error("Failed to write to extra writer.")
+			}
+		}
 
 		if c.ignoreEmptyLines && strings.Trim(line, " \r\n\t") == "" {
 			continue
@@ -693,17 +700,16 @@ func (c *Container) ExecOutput(args ...string) (string, error) {
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go c.copyOutputToLog("exec-err", stderr, &wg, nil)
-	defer wg.Wait()
+	var errBuf bytes.Buffer
+	go c.copyOutputToLog("exec-err", stderr, &wg, nil, &errBuf)
 	out, err := cmd.Output()
+	stdoutStr := string(out)
+	wg.Wait() // Wait for the stderr copy to finish so errBuf is safe to read.
 	if err != nil {
-		if out == nil {
-			return "", fmt.Errorf("command failed with no output %q: %w", cmd, err)
-		}
-		outStr := string(out)
-		return outStr, fmt.Errorf("command failed %q: %w output=%q", cmd, err, outStr)
+		stderrStr := errBuf.String()
+		return stdoutStr, fmt.Errorf("command failed %q with stdout=%q stderr=%q: %w", cmd, stdoutStr, stderrStr, err)
 	}
-	return string(out), nil
+	return stdoutStr, nil
 }
 
 func (c *Container) ExecOutputFn(args ...string) func() (string, error) {
