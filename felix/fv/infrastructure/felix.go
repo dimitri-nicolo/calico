@@ -338,6 +338,7 @@ func (f *Felix) Stop() {
 		_ = f.ExecMayFail("rmdir", path.Join("/run/calico/cgroup/", f.Name))
 	}
 	f.Container.Stop()
+
 	if f.cwlCallsExpected {
 		Expect(cwLogDir + "/" + f.cwlFile).To(BeAnExistingFile())
 	} else {

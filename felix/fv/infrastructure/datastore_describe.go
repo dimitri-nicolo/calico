@@ -94,6 +94,7 @@ type LocalRemoteInfraFactories struct {
 func (r *LocalRemoteInfraFactories) IsRemoteSetup() bool {
 	return r.Remote != nil
 }
+
 func (r *LocalRemoteInfraFactories) AllFactories() []InfraFactory {
 	factories := []InfraFactory{r.Local}
 	if r.IsRemoteSetup() {
@@ -120,7 +121,6 @@ func DatastoreDescribeWithRemote(description string, localDatastores []apiconfig
 	}
 
 	for _, ds := range localDatastores {
-
 		Describe(fmt.Sprintf("%s (%s backend)", description, ds), func() {
 			var coreFilesAtStart set.Set[string]
 			BeforeEach(func() {
