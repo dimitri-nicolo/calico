@@ -113,7 +113,6 @@ require (
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.57.0
 	github.com/prometheus/procfs v0.15.1
-	github.com/rakelkar/gonetsh v0.3.2
 	github.com/robfig/cron v1.2.0
 	github.com/safchain/ethtool v0.4.1
 	github.com/shirou/gopsutil v0.0.0-20190323131628-2cbc9195c892
