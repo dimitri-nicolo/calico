@@ -205,7 +205,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
 		if dnsMode != "" {
-			opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+			if !BPFMode() {
+				opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+			} else {
+				opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = dnsMode
+			}
 		}
 		if enableLogs {
 			// Default for this is false.  Set "true" to enable.
@@ -482,6 +486,9 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 			localMode := m
 			Context("with DNSPolicyMode explicitly set to "+string(localMode), func() {
 				if zeroLatency {
+					return
+				}
+				if BPFMode() && localMode != api.DNSPolicyModeNoDelay {
 					return
 				}
 				BeforeEach(func() {

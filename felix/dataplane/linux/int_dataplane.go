@@ -313,6 +313,7 @@ type Config struct {
 	DNSLogsLatency       bool
 
 	DNSPolicyMode                    apiv3.DNSPolicyMode
+	BPFDNSPolicyMode                 apiv3.DNSPolicyMode
 	DNSPolicyNfqueueID               int
 	DNSPolicyNfqueueSize             int
 	DNSPacketsNfqueueID              int
@@ -516,19 +517,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	)
 	dataplaneFeatures := featureDetector.GetFeatures()
 
-	// Based on the feature set, fix the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes
-	// are only available on the iptables dataplane, and the DelayDNSResponse mode is only available on higher kernel
-	// versions.
-	if config.BPFEnabled {
-		if config.DNSPolicyMode != apiv3.DNSPolicyModeNoDelay && config.DNSPolicyMode != apiv3.DNSPolicyModeInline {
-			log.Warning("Dataplane is using eBPF which does not support NfQueue. Set DNSPolicyMode to NoDelay")
-			config.DNSPolicyMode = apiv3.DNSPolicyModeNoDelay
-		}
-	} else {
-		if config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
-			log.Warning("Dataplane is NOT using eBPF, it cannot use Inline mode. Set DNSPolicyMode to DelayDeniedPacket")
-			config.DNSPolicyMode = apiv3.DNSPolicyModeNoDelay
-		}
+	if !config.BPFEnabled {
 		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !dataplaneFeatures.NFQueueBypass {
 			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket

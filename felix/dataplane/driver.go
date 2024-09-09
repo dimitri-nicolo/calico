@@ -535,6 +535,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			LookupsCache: lc,
 
 			DNSPolicyMode:                    apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
+			BPFDNSPolicyMode:                 apiv3.DNSPolicyMode(configParams.BPFDNSPolicyMode),
 			DNSPolicyNfqueueID:               configParams.DNSPolicyNfqueueID,
 			DNSPolicyNfqueueSize:             configParams.DNSPolicyNfqueueSize,
 			DNSPacketsNfqueueID:              configParams.DNSPacketsNfqueueID,

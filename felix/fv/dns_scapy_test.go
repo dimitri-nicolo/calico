@@ -183,17 +183,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		return err
 	}
 
-	for _, m := range []api.DNSPolicyMode{
+	policyModes := []api.DNSPolicyMode{
 		api.DNSPolicyModeNoDelay,
 		api.DNSPolicyModeDelayDNSResponse,
 		api.DNSPolicyModeDelayDeniedPacket,
-		api.DNSPolicyModeInline,
-	} {
-		mode := m
-
-		if m == api.DNSPolicyModeInline && !BPFMode() {
-			continue
+	}
+	if BPFMode() {
+		policyModes = []api.DNSPolicyMode{
+			api.DNSPolicyModeNoDelay,
+			api.DNSPolicyModeInline,
 		}
+	}
+
+	for _, m := range policyModes {
+		mode := m
 
 		Describe("DNSPolicyMode is "+string(mode), func() {
 			BeforeEach(func() {
@@ -214,7 +217,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 				// Now start etcd and Felix, with Felix trusting scapy's IP.
 				opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-				opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = string(mode)
+				if BPFMode() {
+					opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = string(mode)
+				} else {
+					opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = string(mode)
+				}
 				opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 				opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 				opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = scapyTrusted.IP

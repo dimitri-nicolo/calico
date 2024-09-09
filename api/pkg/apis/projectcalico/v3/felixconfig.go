@@ -839,10 +839,20 @@ type FelixConfigurationSpec struct {
 	// the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
 	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 	//
-	// On Windows, or when using the eBPF dataplane, this setting is ignored and "NoDelay" is always used.
+	// This setting is ignored on Windows and "NoDelay" is always used.
+	//
+	// This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 	//
 	// [Default: DelayDeniedPacket]
 	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse"`
+	// BPFDNSPolicyMode specifies how DNS policy programming will be handled.
+	// Inline - BPF parses DNS response inline with DNS response packet
+	// processing. This guarantees the DNS rules reflect any change immediately.
+	// NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time
+	// the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
+	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
+	// [Default: Inline]
+	BPFDNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay Inline"`
 	// DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed
 	// to ipsets yet. Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
 	DNSPolicyNfqueueID *int `json:"dnsPolicyNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`

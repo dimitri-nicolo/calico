@@ -1722,23 +1722,15 @@ spec:
                   DNSPolicyMode is DelayDNSResponse. [Default: 100]'
                 type: integer
               dnsPolicyMode:
-                description: "DNSPolicyMode specifies how DNS policy programming will
-                  be handled. DelayDeniedPacket - Felix delays any denied packet that
-                  traversed a policy that included egress domain matches, but did
-                  not match. The packet is released after a fixed time, or after the
-                  destination IP address was programmed. DelayDNSResponse - Felix
-                  delays any DNS response until related IPSets are programmed. This
-                  introduces some latency to all DNS packets (even when no IPSet programming
-                  is required), but it ensures policy hit statistics are accurate.
-                  This is the recommended setting when you are making use of staged
-                  policies or policy rule hit statistics. NoDelay - Felix does not
-                  introduce any delay to the packets. DNS rules may not have been
-                  programmed by the time the first packet traverses the policy rules.
-                  Client applications need to handle reconnection attempts if initial
-                  connection attempts fail. This may be problematic for some applications
-                  or for very low DNS TTLs. \n On Windows, or when using the eBPF
-                  dataplane, this setting is ignored and \"NoDelay\" is always used.
-                  \n [Default: DelayDeniedPacket]"
+                description: 'BPFDNSPolicyMode specifies how DNS policy programming
+                  will be handled. Inline - BPF parses DNS response inline with DNS
+                  response packet processing. This guarantees the DNS rules reflect
+                  any change immediately. NoDelay - Felix does not introduce any delay
+                  to the packets. DNS rules may not have been programmed by the time
+                  the first packet traverses the policy rules. Client applications
+                  need to handle reconnection attempts if initial connection attempts
+                  fail. This may be problematic for some applications or for very
+                  low DNS TTLs. [Default: Inline]'
                 enum:
                 - NoDelay
                 - DelayDeniedPacket
