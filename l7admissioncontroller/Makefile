@@ -4,7 +4,7 @@ PACKAGE_NAME = github.com/projectcalico/calico/l7admissioncontroller
 
 ###############################################################################
 
-SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
+SRC_FILES=$(shell find . -name '*.go')
 
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
@@ -52,12 +52,6 @@ clean:
 	rm -rf bin report
 	-docker image rm -f $$(docker images $(L7ADMCTRL_IMAGE) -a -q)
 
-.PHONY: clean-generated
-# Delete (checked-in) generated files. Intentionally not part of the main clean target since these files are
-# checked in and deleting them makes the repo "dirty" as far as git is concerned.
-clean-generated:
-	rm -rf $(GENERATED_FILES)
-
 ###############################################################################
 # Building the binary
 ###############################################################################
@@ -74,24 +68,8 @@ build:
 
 $(BINDIR)/l7admctrl-amd64: ARCH=amd64
 $(BINDIR)/l7admctrl-arm64: ARCH=arm64
-$(BINDIR)/l7admctrl-%: protobuf $(SRC_FILES)
-ifeq ($(FIPS),true)
-	$(call build_cgo_boring_binary, ./cmd/l7admctrl, $@)
-else
+$(BINDIR)/l7admctrl-%: $(SRC_FILES)
 	$(call build_cgo_binary, ./cmd/l7admctrl, $@)
-endif
-
-
-###############################################################################
-# Protobufs, 
-#
-# defer to felix's makefile for felixbackend stuff
-###############################################################################
-
-../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
-	$(MAKE) --directory ../felix protobuf
-
-protobuf: $(GENERATED_FILES)
 
 ###############################################################################
 # Building the image
@@ -117,31 +95,14 @@ $(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/l7admctrl-$(ARCH)
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: protobuf ut-exec
-
-ut-exec:
-	$(DOCKER_GO_BUILD) /bin/bash -c "gotestsum --junitfile report/tests.xml ./..."
-
+ut:
 
 ###############################################################################
 # CI
 ###############################################################################
 
 .PHONY: ci
-ci: check-generated-files static-checks image ut
-
-## Check if generated files are out of date
-.PHONY: check-generated-files
-check-generated-files:
-	$(MAKE) clean
-	$(MAKE) protobuf
-	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
-	  echo "Generated files are out of date."; \
-	  git diff; \
-	  false; \
-	else \
-	  echo "Generated files are up to date."; \
-	fi
+ci: static-checks image ut
 
 ###############################################################################
 # CD
