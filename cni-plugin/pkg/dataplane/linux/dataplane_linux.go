@@ -57,9 +57,6 @@ func (d *linuxDataplane) DoNetworking(
 	annotations map[string]string,
 	ipv4GW net.IP,
 ) (hostVethName, contVethMAC string, err error) {
-	// Not used on Linux
-	_ = ctx
-
 	hostVethName = desiredVethName
 	d.logger.Infof("Setting the host side veth name to %s", hostVethName)
 
@@ -120,8 +117,6 @@ func (d *linuxDataplane) DoWorkloadNetnsSetUp(
 	}
 
 	err = ns.WithNetNSPath(netnsPath, func(hostNS ns.NetNS) error {
-		// Call NewLinkAttr to bring to the struct the default values
-		// instead of zero ones
 		la := netlink.NewLinkAttrs()
 		la.Name = contVethName
 		la.MTU = d.mtu
@@ -186,7 +181,6 @@ func (d *linuxDataplane) DoWorkloadNetnsSetUp(
 
 			return nil
 		})
-
 		if err != nil {
 			return err
 		}
@@ -357,7 +351,6 @@ func (d *linuxDataplane) DoWorkloadNetnsSetUp(
 
 		return nil
 	})
-
 	if err != nil {
 		d.logger.Errorf("Error creating veth: %s", err)
 		return "", err
@@ -409,7 +402,6 @@ func disableDAD(contVethName string) error {
 
 // SetupRoutes sets up the routes for the host side of the veth pair.
 func SetupRoutes(hostNlHandle *netlink.Handle, hostVeth netlink.Link, result *cniv1.Result) error {
-
 	// Go through all the IPs and add routes for each IP in the result.
 	for _, ipAddr := range result.IPs {
 		route := netlink.Route{
@@ -418,7 +410,6 @@ func SetupRoutes(hostNlHandle *netlink.Handle, hostVeth netlink.Link, result *cn
 			Dst:       &ipAddr.Address,
 		}
 		err := hostNlHandle.RouteAdd(&route)
-
 		if err != nil {
 			switch err {
 

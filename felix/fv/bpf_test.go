@@ -1254,15 +1254,12 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 			Expect(err).NotTo(HaveOccurred())
 			if !options.TestManagesBPF {
 				ensureAllNodesBPFProgramsAttached(tc.Felixes)
-				felixReady := func(f *infrastructure.Felix) int {
-					return healthStatus(containerIP(f.Container), "9099", "readiness")
-				}
-
-				Eventually(func(g Gomega) {
-					for _, f := range tc.Felixes {
-						g.Expect(felixReady(f)).To(BeGood())
+				for _, f := range tc.Felixes {
+					felixReady := func() int {
+						return healthStatus(containerIP(f.Container), "9099", "readiness")
 					}
-				}, "10s", "330ms").Should(Succeed())
+					Eventually(felixReady, "10s", "500ms").Should(BeGood())
+				}
 			}
 		}
 
