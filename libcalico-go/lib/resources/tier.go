@@ -1,5 +1,5 @@
 // Copyright (c) 2024 Tigera, Inc. All rights reserved.
-//
+
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -12,25 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package netlinkutils
+package resources
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
-
-	"github.com/projectcalico/calico/felix/netlinkshim"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-func LinkListRetryEINTR() ([]netlink.Link, error) {
-	nlHandle, err := netlinkshim.NewRealNetlink()
-	if err != nil {
-		log.WithError(err).Error("failed to created netlink handle. Unable to list interfaces")
-		return []netlink.Link{}, err
+func DefaultTierFields(res *apiv3.Tier) {
+	// nil order was allowed before, and it was used for the default tier.
+	// For the implementation of BaselineAdminNetworkPolicy, we need to add a tier
+	// after the default one. As such, the default tier order is changed to 1,000,000 from nil.
+	// To keep the behavior in sync with user defined tiers with nil order, nil order is
+	// treated similar to the value of 1,000,000.
+	if res.Spec.Order == nil {
+		order := apiv3.DefaultTierOrder
+		res.Spec.Order = &order
 	}
-
-	links, err := nlHandle.LinkList()
-	if err != nil {
-		log.WithError(err).Error("Failed to list interfaces")
-	}
-	return links, err
 }

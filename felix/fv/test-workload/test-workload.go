@@ -28,10 +28,6 @@ import (
 
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 
-	"github.com/projectcalico/calico/felix/fv/cgroup"
-	"github.com/projectcalico/calico/felix/fv/connectivity"
-	"github.com/projectcalico/calico/felix/fv/utils"
-
 	"github.com/containernetworking/plugins/pkg/ns"
 	nsutils "github.com/containernetworking/plugins/pkg/testutils"
 	"github.com/docopt/docopt-go"
@@ -41,6 +37,10 @@ import (
 
 	"github.com/projectcalico/calico/cni-plugin/pkg/dataplane/linux"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
+	"github.com/projectcalico/calico/felix/fv/cgroup"
+	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/utils"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 const usage = `test-workload, test workload for Felix FV testing.
@@ -53,6 +53,7 @@ Usage:
 
 func main() {
 	log.SetLevel(log.DebugLevel)
+	logutils.ConfigureFormatter("test-workload")
 
 	// If we've been told to, move into this felix's cgroup.
 	cgroup.MaybeMoveToFelixCgroupv2()
@@ -116,7 +117,7 @@ func main() {
 				log.WithError(err).Panic("Giving up after multiple retries")
 			}
 		}
-		log.WithField("namespace", namespace).Debug("Created namespace")
+		log.WithField("namespace", namespace.Path()).Debug("Created namespace")
 
 		conf := types.NetConf{
 			MTU:       mtu,
@@ -170,20 +171,17 @@ func main() {
 		panicIfError(err)
 	}
 
-	// Print out the namespace path, so that test code can pick it up and execute subsequent
-	// operations in the same namespace - which (in the context of this FV framework)
-	// effectively means _as_ this workload.
-	fmt.Println(namespace.Path())
-
 	// Now listen on the specified ports in the workload namespace.
 	err = namespace.Do(func(_ ns.NetNS) error {
-		lo, err := netlink.LinkByName("lo")
-		if err != nil {
-			return fmt.Errorf("failed to look up 'lo' inside netns: %w", err)
-		}
-		err = netlink.LinkSetUp(lo)
-		if err != nil {
-			return fmt.Errorf("failed bring 'lo' up inside netns: %w", err)
+		if interfaceName != "" {
+			lo, err := netlink.LinkByName("lo")
+			if err != nil {
+				return fmt.Errorf("failed to look up 'lo' inside netns: %w", err)
+			}
+			err = netlink.LinkSetUp(lo)
+			if err != nil {
+				return fmt.Errorf("failed bring 'lo' up inside netns: %w", err)
+			}
 		}
 
 		if sidecarIptables {
@@ -207,6 +205,11 @@ func main() {
 				break
 			}
 		}
+
+		// Print out the namespace path, so that test code can pick it up and execute subsequent
+		// operations in the same namespace - which (in the context of this FV framework)
+		// effectively means _as_ this workload.
+		fmt.Println(namespace.Path())
 
 		handleRequest := func(conn net.Conn) {
 			log.WithFields(log.Fields{
