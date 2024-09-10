@@ -244,3 +244,45 @@ func TestDomainTrackerWildcards(t *testing.T) {
 	_, err = dnsSetsMap.Get(dnsresolver.NewDNSSetKey(pid, 3).AsBytes()) /* *.archive.ubuntu.com */
 	Expect(err).To(HaveOccurred())
 }
+
+func TestDomainTrackerRestart(t *testing.T) {
+	RegisterTestingT(t)
+
+	log.SetLevel(log.DebugLevel)
+
+	pfxMockMap := mock.NewMockMap(dnsresolver.DNSPfxMapParams)
+	setsMockMap := mock.NewMockMap(dnsresolver.DNSSetMapParams)
+
+	tracker, err := dnsresolver.NewDomainTrackerWithMaps(func(s string) uint64 {
+		return ids[s]
+	}, pfxMockMap, setsMockMap)
+	Expect(err).NotTo(HaveOccurred())
+	defer tracker.Close()
+
+	tracker.Add("*.archive.ubuntu.com", "3")
+	tracker.Add("*.ubuntu.com", "2")
+	tracker.Add("archive.ubuntu.com", "111")
+	tracker.Add("*.com", "1")
+	err = tracker.ApplyAllChanges()
+	Expect(err).NotTo(HaveOccurred())
+
+	pfxCp := make(map[string]string)
+	for k, v := range pfxMockMap.Contents {
+		pfxCp[k] = v
+	}
+
+	tracker2, err := dnsresolver.NewDomainTrackerWithMaps(func(s string) uint64 {
+		return ids[s]
+	}, pfxMockMap, setsMockMap)
+	Expect(err).NotTo(HaveOccurred())
+	defer tracker2.Close()
+
+	tracker2.Add("*.com", "1")
+	tracker2.Add("archive.ubuntu.com", "111")
+	tracker2.Add("*.ubuntu.com", "2")
+	tracker2.Add("*.archive.ubuntu.com", "3")
+	err = tracker2.ApplyAllChanges()
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(pfxCp).To(Equal(pfxMockMap.Contents))
+}

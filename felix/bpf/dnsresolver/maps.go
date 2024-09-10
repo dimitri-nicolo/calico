@@ -88,6 +88,10 @@ func (k DNSPfxKey) Domain() string {
 		r[l-i-1] = b
 	}
 
+	if len(r) > 0 && r[0] == '.' {
+		r = append([]byte{'*'}, r...)
+	}
+
 	return string(r)
 }
 

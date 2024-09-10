@@ -86,6 +86,15 @@ func NewDomainTrackerWithMaps(strToUin64 func(string) uint64, mPfx, mSets maps.M
 		return nil, fmt.Errorf("could not load data from dataplane: %w", err)
 	}
 
+	d.pfxMap.Dataplane().Iter(func(k DNSPfxKey, v DNSPfxValue) {
+		domain := k.Domain()
+		d.domainIDAlloc.ReserveWellKnownID(domain, uint64(v))
+		log.WithFields(log.Fields{
+			"domain": domain,
+			"id":     uint64(v),
+		}).Debug("Reserved id found in dataplane for domain")
+	})
+
 	return d, nil
 }
 
@@ -257,6 +266,7 @@ func (d *DomainTracker) ApplyAllChanges() error {
 
 func (d *DomainTracker) Close() {
 	d.mPfx.Close()
+	d.mSets.Close()
 }
 
 func (d *DomainTracker) Maps() []maps.Map {
