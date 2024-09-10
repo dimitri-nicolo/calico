@@ -2172,7 +2172,9 @@ int calico_tc_dns_parser(struct __sk_buff *skb)
 
 	CALI_DEBUG("Entering calico_tc_dns_parser\n");
 
+#ifdef BPF_CORE_SUPPORTED
 	dns_process_datagram(ctx);
+#endif
 
 	CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
 	/* should not reach here */

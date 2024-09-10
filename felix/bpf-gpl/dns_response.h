@@ -7,6 +7,8 @@
 
 #include "policy.h"
 
+#ifdef BPF_CORE_SUPPORTED
+
 #define DNS_NAME_LEN		256
 #define DNS_SCRATCH_SIZE 	256
 
@@ -233,6 +235,12 @@ static long dns_process_answer(__u32 i, void *__ctx)
 	struct cali_tc_ctx *ctx = ictx->ctx;
 	int off = ictx->off;
 
+
+	if (!bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_for_each_map_elem)) {
+		return 1;
+	}
+
+
 	if (ictx->answers == i) {
 		return 1;
 	}
@@ -319,6 +327,14 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 	int off = skb_iphdr_offset(ctx) + ctx->ipheader_len + UDP_SIZE;
 	struct dns_scratch *scratch;
 	struct dnshdr dnshdr;
+
+	if (!bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_loop) ||
+			!bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_for_each_map_elem)) {
+		/* If there is no bpf_loop or bpf_for_each_map_elem support,
+		 * just return and do nothing.
+		 */
+		return;
+	}
 
 	if (!(scratch = dns_scratch_get())) {
 		CALI_DEBUG("DNS: could not get scratch.\n");
@@ -438,5 +454,7 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		return;
 	}
 }
+
+#endif /* BPF_CORE_SUPPORTED */
 
 #endif /* __CALI_DNS_REPLY_H__*/
