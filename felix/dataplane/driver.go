@@ -330,10 +330,11 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				IPSecEnabled: configParams.IPSecEnabled(),
 
-				EgressIPEnabled:   configParams.EgressIPCheckEnabled(),
-				EgressIPVXLANPort: configParams.EgressIPVXLANPort,
-				EgressIPVXLANVNI:  configParams.EgressIPVXLANVNI,
-				EgressIPInterface: "egress.calico",
+				EgressIPEnabled:        configParams.EgressIPCheckEnabled(),
+				EgressIPVXLANPort:      configParams.EgressIPVXLANPort,
+				EgressIPVXLANVNI:       configParams.EgressIPVXLANVNI,
+				EgressIPInterface:      "egress.calico",
+				ExternalNetworkEnabled: configParams.ExternalNetworkCheckEnabled(),
 
 				AllowVXLANPacketsFromWorkloads: configParams.AllowVXLANPacketsFromWorkloads,
 				AllowIPIPPacketsFromWorkloads:  configParams.AllowIPIPPacketsFromWorkloads,
