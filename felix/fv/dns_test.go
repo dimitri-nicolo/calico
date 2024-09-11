@@ -73,11 +73,7 @@ func getDNSLogs(logFile string) ([]string, error) {
 	return logs, nil
 }
 
-var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
-	if BPFMode() {
-		return
-	}
-
+var _ = Describe("DNS Policy", func() {
 	testDnsPolicy(false, false)
 })
 
@@ -125,7 +121,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	msWildcards := []string{"microsoft.*", "*.microsoft.com"}
 	if zeroLatency {
 		msWildcards = []string{"*.microsoft.com"}
-		dnsMode = string(api.DNSPolicyModeInline)
+		dnsMode = string(api.BPFDNSPolicyModeInline)
 	}
 
 	logAndReport := func(out string, err error) error {
@@ -226,7 +222,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		// host interfaces.
 		opts.NeedNodeIP = true
 		if zeroLatency && !setsUpdateFromFelix {
-			opts.ExtraEnvVars["FELIX_FV_DNS_DO_NOT_WRITE_IPSETS"] = "true"
+			opts.ExtraEnvVars["FELIX_DEBUG_DNS_DO_NOT_WRITE_IPSETS"] = "true"
 		}
 		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")

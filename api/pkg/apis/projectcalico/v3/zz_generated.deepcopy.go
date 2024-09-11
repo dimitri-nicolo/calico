@@ -3077,7 +3077,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.BPFDNSPolicyMode != nil {
 		in, out := &in.BPFDNSPolicyMode, &out.BPFDNSPolicyMode
-		*out = new(DNSPolicyMode)
+		*out = new(BPFDNSPolicyMode)
 		**out = **in
 	}
 	if in.DNSPolicyNfqueueID != nil {

@@ -313,7 +313,7 @@ type Config struct {
 	DNSLogsLatency       bool
 
 	DNSPolicyMode                    apiv3.DNSPolicyMode
-	BPFDNSPolicyMode                 apiv3.DNSPolicyMode
+	BPFDNSPolicyMode                 apiv3.BPFDNSPolicyMode
 	DNSPolicyNfqueueID               int
 	DNSPolicyNfqueueSize             int
 	DNSPacketsNfqueueID              int
@@ -321,7 +321,7 @@ type Config struct {
 	DNSPacketsNfqueueMaxHoldDuration time.Duration
 	DebugDNSResponseDelay            time.Duration
 	DisableDNSPolicyPacketProcessor  bool
-	DNSDoNotWriteIPSets              bool // Do all the processing, just don't write the IPs in IPsets
+	DebugDNSDoNotWriteIPSets         bool // Do all the processing, just don't write the IPs in IPsets
 
 	EnableDestDomainsByClient bool
 	ServiceLoopPrevention     string
@@ -896,7 +896,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	domainInfoStore = dp.domainInfoStore
 
-	if config.DNSDoNotWriteIPSets {
+	if config.DebugDNSDoNotWriteIPSets {
 		domainInfoStore = new(dpsets.IPSetsDomainStoreVoid)
 	}
 

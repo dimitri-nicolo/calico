@@ -124,7 +124,7 @@ const (
 // To avoid having to maintain rarely-used code paths, Felix handles updates to its
 // main config parameters by exiting and allowing itself to be restarted by the init
 // daemon.
-func Run(configFile string, gitVersion string, buildDate string, gitRevision string, opts ...config.Option) {
+func Run(configFile string, gitVersion string, buildDate string, gitRevision string) {
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.
 	logutils.ConfigureEarlyLogging()
@@ -263,11 +263,6 @@ configRetry:
 				continue configRetry
 			}
 			break
-		}
-
-		// As the last thing, use the options to set any overrides
-		for _, option := range opts {
-			option(configParams)
 		}
 
 		err = configParams.Validate()

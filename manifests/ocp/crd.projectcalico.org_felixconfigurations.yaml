@@ -480,10 +480,6 @@ spec:
                   need to handle reconnection attempts if initial connection attempts
                   fail. This may be problematic for some applications or for very
                   low DNS TTLs. [Default: Inline]'
-                enum:
-                - NoDelay
-                - DelayDeniedPacket
-                - DelayDNSResponse
                 type: string
               dnsPolicyNfqueueID:
                 description: 'DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS

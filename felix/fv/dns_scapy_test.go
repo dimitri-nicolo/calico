@@ -183,22 +183,22 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		return err
 	}
 
-	policyModes := []api.DNSPolicyMode{
-		api.DNSPolicyModeNoDelay,
-		api.DNSPolicyModeDelayDNSResponse,
-		api.DNSPolicyModeDelayDeniedPacket,
+	policyModes := []string{
+		string(api.DNSPolicyModeNoDelay),
+		string(api.DNSPolicyModeDelayDNSResponse),
+		string(api.DNSPolicyModeDelayDeniedPacket),
 	}
 	if BPFMode() {
-		policyModes = []api.DNSPolicyMode{
-			api.DNSPolicyModeNoDelay,
-			api.DNSPolicyModeInline,
+		policyModes = []string{
+			string(api.BPFDNSPolicyModeNoDelay),
+			string(api.BPFDNSPolicyModeInline),
 		}
 	}
 
 	for _, m := range policyModes {
 		mode := m
 
-		Describe("DNSPolicyMode is "+string(mode), func() {
+		Describe("DNSPolicyMode is "+mode, func() {
 			BeforeEach(func() {
 				opts := infrastructure.DefaultTopologyOptions()
 				var err error
@@ -218,9 +218,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				// Now start etcd and Felix, with Felix trusting scapy's IP.
 				opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 				if BPFMode() {
-					opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = string(mode)
+					opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = mode
 				} else {
-					opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = string(mode)
+					opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = mode
 				}
 				opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 				opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
@@ -695,7 +695,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			})
 
 			Context("with a chain of DNS info for xyz.com while felix is restaring", func() {
-				if m != api.DNSPolicyModeInline || !BPFMode() {
+				if m != string(api.BPFDNSPolicyModeInline) || !BPFMode() {
 					return
 				}
 

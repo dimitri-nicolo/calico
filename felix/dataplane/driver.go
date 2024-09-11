@@ -535,14 +535,14 @@ func StartDataplaneDriver(configParams *config.Config,
 			LookupsCache: lc,
 
 			DNSPolicyMode:                    apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
-			BPFDNSPolicyMode:                 apiv3.DNSPolicyMode(configParams.BPFDNSPolicyMode),
+			BPFDNSPolicyMode:                 apiv3.BPFDNSPolicyMode(configParams.BPFDNSPolicyMode),
 			DNSPolicyNfqueueID:               configParams.DNSPolicyNfqueueID,
 			DNSPolicyNfqueueSize:             configParams.DNSPolicyNfqueueSize,
 			DNSPacketsNfqueueID:              configParams.DNSPacketsNfqueueID,
 			DNSPacketsNfqueueSize:            configParams.DNSPacketsNfqueueSize,
 			DNSPacketsNfqueueMaxHoldDuration: configParams.DNSPacketsNfqueueMaxHoldDuration,
 			DebugDNSResponseDelay:            configParams.DebugDNSResponseDelay,
-			DNSDoNotWriteIPSets:              configParams.DNSDoNotWriteIPSets,
+			DebugDNSDoNotWriteIPSets:         configParams.DebugDNSDoNotWriteIPSets,
 		}
 		if k8sClientSet != nil {
 			dpConfig.KubeClientSet = k8sClientSet

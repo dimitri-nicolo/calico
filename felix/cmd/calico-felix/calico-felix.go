@@ -15,13 +15,10 @@
 package main
 
 import (
-	"os"
-
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/buildinfo"
-	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/daemon"
 )
 
@@ -49,12 +46,6 @@ func main() {
 	}
 	configFile := arguments["--config-file"].(string)
 
-	var opts []config.Option
-
-	if os.Getenv("FELIX_FV_DNS_DO_NOT_WRITE_IPSETS") == "true" {
-		opts = append(opts, config.WithDNSDoNotWriteIPSets())
-	}
-
 	// Execute felix.
-	daemon.Run(configFile, buildinfo.GitVersion, buildinfo.GitRevision, buildinfo.BuildDate, opts...)
+	daemon.Run(configFile, buildinfo.GitVersion, buildinfo.GitRevision, buildinfo.BuildDate)
 }
