@@ -19,7 +19,8 @@ import (
 func TestDNSParser(t *testing.T) {
 	RegisterTestingT(t)
 
-	// DNS response to archive.ubuntu.com with multiple A aswers
+	// DNS response to archive.ubuntu.com with multiple A answers. The packet
+	// was obtained using tcpdump.
 	pktBytes := []byte{
 		26, 97, 165, 211, 168, 175, 246, 111, 42, 69, 108, 168, 8, 0, 69, 0, 0,
 		234, 220, 104, 64, 0, 125, 17, 79, 45, 10, 100, 0, 10, 192, 168, 6, 87,
@@ -87,7 +88,8 @@ func TestDNSParser(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	// DNS response to zpravy.idnes.cz with CNAME and A answer
+	// DNS response to zpravy.idnes.cz with CNAME and A answer. The packet was
+	// obtained using tcpdump.
 	pktBytes = []byte{
 		26, 97, 165, 211, 168, 175, 246, 111, 42, 69, 108, 168, 8, 0, 69, 0, 0,
 		130, 84, 86, 64, 0, 125, 17, 215, 167, 10, 100, 0, 10, 192, 168, 6, 87,

@@ -177,7 +177,7 @@ static CALI_BPF_INLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scr
 			next_len += c + 1;
 			scratch->buf[i] = '.';
 		} else if (c >= 'A' && c <= 'Z') {
-			/* conert to lowercase */
+			/* convert to lowercase */
 			scratch->buf[i] = c + 'a' - 'A';
 		}
 
@@ -258,7 +258,7 @@ static long dns_process_answer(__u32 i, void *__ctx)
 	struct dns_rr *rr = (void *) scratch->buf;
 
 	if (!dns_load_bytes(ctx, scratch, off, sizeof(struct dns_rr))) {
-		CALI_DEBUG("DNS: failed to read rr in asnwer %d\n", i);
+		CALI_DEBUG("DNS: failed to read rr in answer %d\n", i);
 		goto failed;
 	}
 
@@ -307,7 +307,7 @@ static CALI_BPF_INLINE void dns_get_lpm_key(struct dns_scratch *scratch)
 	unsigned char *k = key, *n = name + len;
 	long d = len;
 
-	/* Needs to be written with calculating and checking d indendently so
+	/* Needs to be written with calculating and checking d independently so
 	 * that verifier is happy.
 	 */
 	for (; d >= 0;) {

@@ -57,7 +57,7 @@ const (
 	ProgIndexHostCtConflict
 	ProgIndexIcmpInnerNat
 	ProgIndexNewFlow
-	ProgIndexDnsParser
+	ProgIndexDNSParser
 	ProgIndexMainDebug
 	ProgIndexPolicyDebug
 	ProgIndexAllowedDebug
@@ -66,7 +66,7 @@ const (
 	ProgIndexHostCtConflictDebug
 	ProgIndexIcmpInnerNatDebug
 	ProgIndexNewFlowDebug
-	ProgIndexDnsParserDebug
+	ProgIndexDNSParserDebug
 	ProgIndexEndDebug
 	ProgIndexEnd
 

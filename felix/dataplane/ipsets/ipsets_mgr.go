@@ -209,7 +209,7 @@ func (m *IPSetsManager) CompleteDeferredWork() error {
 	if m.domainTracker != nil {
 		err := m.domainTracker.ApplyAllChanges()
 		if err != nil {
-			return fmt.Errorf("failed toapply changes to domain tracker: %w", err)
+			return fmt.Errorf("failed to apply changes to domain tracker: %w", err)
 		}
 	}
 
