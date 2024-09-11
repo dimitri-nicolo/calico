@@ -23,9 +23,7 @@ ARG TARGETARCH
 
 # Precreate the /usr/bin/l7admctrl directory so that we don't need any elevated
 # permission to create the directory at runtime.
-COPY --from=builder /usr/bin/l7admctrl /usr/bin/l7admctrl/
-
-COPY ${BIN_DIR}/l7admctrl-${TARGETARCH} /l7admctrl
+COPY ${BIN_DIR}/l7admctrl-${TARGETARCH} /usr/bin/l7admctrl
 
 FROM calico/base
 

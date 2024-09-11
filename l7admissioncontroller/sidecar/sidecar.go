@@ -130,6 +130,8 @@ const (
 			{"name":"envoy-config","mountPath":"/etc/tigera"}
 		],
 		"securityContext":{
+			"runAsGroup":0,
+			"runAsUser":0,
 			"capabilities":{
 				"add":["NET_ADMIN","NET_RAW"]
 			}
@@ -145,6 +147,10 @@ const (
 			"tcpSocket":{
 				"port":16001
 			}
+		},
+		"securityContext":{
+			"runAsGroup":0,
+			"runAsUser":0
 		},
 		"volumeMounts":[
 			{"name":"envoy-config","mountPath":"/etc/tigera"},
