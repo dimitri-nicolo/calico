@@ -13,12 +13,22 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/config"
+	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/controller/endpoint"
+	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/recordprocessor"
+	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/token"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 import "C"
 
-var cfg *Config
+var (
+	cfg                *config.Config
+	tk                 *token.Token
+	endpointController *endpoint.EndpointController
+
+	stopCh chan struct{}
+)
 
 //export FLBPluginRegister
 func FLBPluginRegister(def unsafe.Pointer) int {
@@ -31,34 +41,60 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 func FLBPluginInit(plugin unsafe.Pointer) int {
 	var err error
 
-	cfg, err = NewConfig(plugin, output.FLBPluginConfigKey)
+	cfg, err = config.NewConfig(plugin, output.FLBPluginConfigKey)
 	if err != nil {
 		logrus.WithError(err).Error("failed to create config")
 		return output.FLB_ERROR
 	}
 
-	fields := logrus.Fields{
-		"endpoint":       cfg.endpoint,
-		"serviceaccount": cfg.serviceAccountName,
+	tk, err = token.NewToken(cfg)
+	if err != nil {
+		logrus.WithError(err).Error("failed to initialize token")
+		return output.FLB_ERROR
 	}
-	logrus.WithFields(fields).Info("linseed output plugin initialized")
+
+	endpointController, err = endpoint.NewController(cfg)
+	if err != nil {
+		logrus.WithError(err).Error("failed to initialize endpoint controller")
+		return output.FLB_ERROR
+	}
+
+	stopCh = make(chan struct{})
+	if err := endpointController.Run(stopCh); err != nil {
+		logrus.WithError(err).Error("failed to start endpoint controller")
+		return output.FLB_ERROR
+	}
+
+	logrus.Info("linseed output plugin initialized")
 	return output.FLB_OK
 }
 
 //export FLBPluginFlushCtx
 func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int {
 	// process fluent-bit internal messagepack buffer
-	processor := NewRecordProcessor()
+	processor := recordprocessor.NewRecordProcessor()
 	ndjsonBuffer, count, err := processor.Process(data, int(length))
 	if err != nil {
 		logrus.WithError(err).Error("failed to process record data")
+		// drop the buffer when processor failed to process
 		return output.FLB_ERROR
 	}
 
-	// post to ingestion endpoint
-	if err := doRequest(cfg, ndjsonBuffer, C.GoString(tag)); err != nil {
+	// post to the cluster ingestion endpoint
+	// when FLB_RETRY is returned to the fluent-bit engine, it will ask the scheduler to retry
+	// to flush the data. The fluent-bit scheduler will decide how many seconds to wait.
+	// See more at https://docs.fluentbit.io/manual/administration/scheduling-and-retries
+	endpoint := endpointController.Endpoint()
+	tagString := C.GoString(tag)
+	token, err := tk.Token()
+	if err != nil {
+		logrus.WithError(err).Error("failed to get token")
+		return output.FLB_RETRY
+	}
+	if err := doRequest(endpoint, tagString, token, ndjsonBuffer); err != nil {
 		logrus.WithError(err).Errorf("failed to send %d logs", count)
-		return output.FLB_ERROR
+		// retry the buffer when we failed to send
+		return output.FLB_RETRY
 	}
 
 	logrus.Infof("successfully sent %d logs", count)
@@ -67,6 +103,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 
 //export FLBPluginExit
 func FLBPluginExit() int {
+	close(stopCh)
 	return output.FLB_OK
 }
 
@@ -89,11 +126,11 @@ func configureLogging() {
 	logrus.Infof("log level set to %q", logLevel)
 }
 
-func doRequest(c *Config, ndjsonBuffer *bytes.Buffer, tag string) error {
+func doRequest(endpoint, tag, token string, ndjsonBuffer *bytes.Buffer) error {
 	url := ""
 	switch tag {
 	case "flows":
-		url = fmt.Sprintf("%s/ingestion/api/v1/%s/logs/bulk", c.endpoint, tag)
+		url = fmt.Sprintf("%s/ingestion/api/v1/%s/logs/bulk", endpoint, tag)
 	default:
 		return fmt.Errorf("unknown log type %q", tag)
 	}
@@ -104,17 +141,16 @@ func doRequest(c *Config, ndjsonBuffer *bytes.Buffer, tag string) error {
 		return err
 	}
 
-	token, err := GetToken(c)
-	if err != nil {
-		return err
-	}
-
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	req.Header.Set("Content-Type", "application/x-ndjson")
 
+	insecureSkipVerify := false
+	if cfg != nil {
+		insecureSkipVerify = cfg.InsecureSkipVerify
+	}
 	client := &http.Client{Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: c.insecureSkipVerify,
+			InsecureSkipVerify: insecureSkipVerify,
 		},
 	}}
 	resp, err := client.Do(req)

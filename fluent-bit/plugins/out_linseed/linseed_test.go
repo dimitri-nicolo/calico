@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"time"
-	"unsafe"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,22 +15,14 @@ import (
 
 var _ = Describe("Linseed out plugin tests", func() {
 	var (
-		f                 *os.File
-		pluginConfigKeyFn PluginConfigKeyFunc
-		ndjsonBuffer      bytes.Buffer
+		f            *os.File
+		ndjsonBuffer bytes.Buffer
 	)
 
 	BeforeEach(func() {
 		var err error
 		f, err = os.CreateTemp("", "kubeconfig")
 		Expect(err).NotTo(HaveOccurred())
-
-		pluginConfigKeyFn = func(plugin unsafe.Pointer, key string) string {
-			if key == "tls.verify" {
-				return "true"
-			}
-			return ""
-		}
 
 		ndjsonBuffer.Write([]byte(`{"record":1}\n{"record":2}\n`))
 	})
@@ -56,44 +46,12 @@ var _ = Describe("Linseed out plugin tests", func() {
 			}))
 			defer server.Close()
 
-			_, err := f.WriteString(validKubeconfig)
-			f.Close()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = os.Setenv("KUBECONFIG", f.Name())
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Setenv("ENDPOINT", server.URL)
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg, err := NewConfig(nil, pluginConfigKeyFn)
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg.serviceAccountName = "some-sa"
-			cfg.expiration = time.Now().Add(1 * time.Hour) // must not be expired
-			cfg.token = "some-token"
-
-			err = doRequest(cfg, &ndjsonBuffer, "flows")
+			err := doRequest(server.URL, "flows", "some-token", &ndjsonBuffer)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return error when log type is unexpected", func() {
-			_, err := f.WriteString(validKubeconfig)
-			f.Close()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = os.Setenv("KUBECONFIG", f.Name())
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Setenv("ENDPOINT", "https://1.2.3.4:5678")
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg, err := NewConfig(nil, pluginConfigKeyFn)
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg.serviceAccountName = "some-sa"
-			cfg.expiration = time.Now().Add(1 * time.Hour) // must not be expired
-			cfg.token = "some-token"
-
-			err = doRequest(cfg, &ndjsonBuffer, "unknown-log-type")
+			err := doRequest("https://1.2.3.4:5678", "unknown-log-type", "some-token", &ndjsonBuffer)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(`unknown log type "unknown-log-type"`))
 		})
@@ -104,23 +62,7 @@ var _ = Describe("Linseed out plugin tests", func() {
 			}))
 			defer server.Close()
 
-			_, err := f.WriteString(validKubeconfig)
-			f.Close()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = os.Setenv("KUBECONFIG", f.Name())
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Setenv("ENDPOINT", server.URL)
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg, err := NewConfig(nil, pluginConfigKeyFn)
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg.serviceAccountName = "some-sa"
-			cfg.expiration = time.Now().Add(1 * time.Hour) // must not be expired
-			cfg.token = "some-token"
-
-			err = doRequest(cfg, &ndjsonBuffer, "flows")
+			err := doRequest(server.URL, "flows", "some-token", &ndjsonBuffer)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("error response from server"))
 		})
