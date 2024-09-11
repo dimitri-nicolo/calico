@@ -15,17 +15,16 @@ import (
 
 	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/config"
 	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/controller/endpoint"
-	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/controller/token"
 	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/recordprocessor"
+	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/token"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 import "C"
 
 var (
-	cfg *config.Config
-
-	tokenController    *token.TokenController
+	cfg                *config.Config
+	tk                 *token.Token
 	endpointController *endpoint.EndpointController
 
 	stopCh chan struct{}
@@ -48,9 +47,9 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		return output.FLB_ERROR
 	}
 
-	tokenController, err = token.NewController(cfg)
+	tk, err = token.NewToken(cfg)
 	if err != nil {
-		logrus.WithError(err).Error("failed to initialize token controller")
+		logrus.WithError(err).Error("failed to initialize token")
 		return output.FLB_ERROR
 	}
 
@@ -61,10 +60,6 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	}
 
 	stopCh = make(chan struct{})
-	if err := tokenController.Run(stopCh); err != nil {
-		logrus.WithError(err).Error("failed to start token controller")
-		return output.FLB_ERROR
-	}
 	if err := endpointController.Run(stopCh); err != nil {
 		logrus.WithError(err).Error("failed to start endpoint controller")
 		return output.FLB_ERROR
@@ -88,7 +83,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 	// post to ingestion endpoint
 	endpoint := endpointController.Endpoint()
 	tagString := C.GoString(tag)
-	token, err := tokenController.Token()
+	token, err := tk.Token()
 	if err != nil {
 		logrus.WithError(err).Error("failed to get token")
 		return output.FLB_RETRY

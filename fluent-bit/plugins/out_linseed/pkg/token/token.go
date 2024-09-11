@@ -26,7 +26,7 @@ const (
 	tokenRenewal = 15 * time.Minute
 )
 
-type TokenController struct {
+type Token struct {
 	clientset kubernetes.Interface
 
 	serviceAccountName string
@@ -34,7 +34,7 @@ type TokenController struct {
 	token              string
 }
 
-func NewController(cfg *config.Config) (*TokenController, error) {
+func NewToken(cfg *config.Config) (*Token, error) {
 	// get service account from the kubeconfig file
 	serviceAccountName, err := extractServiceAccountName(cfg.Kubeconfig)
 	if err != nil {
@@ -48,22 +48,13 @@ func NewController(cfg *config.Config) (*TokenController, error) {
 		return nil, err
 	}
 
-	return &TokenController{
+	return &Token{
 		clientset:          clientset,
 		serviceAccountName: serviceAccountName,
 	}, nil
 }
 
-func (c *TokenController) Run(stopCh <-chan struct{}) error {
-	logrus.Info("linseed plugin token controller is started")
-	return nil
-}
-
-func (c *TokenController) ServiceAccountName() string {
-	return c.serviceAccountName
-}
-
-func (c *TokenController) Token() (string, error) {
+func (c *Token) Token() (string, error) {
 	if time.Until(c.expiration) < tokenRenewal {
 		logrus.Infof("token expired for serviceaccount %q", c.serviceAccountName)
 

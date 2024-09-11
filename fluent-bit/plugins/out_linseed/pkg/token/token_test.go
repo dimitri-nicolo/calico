@@ -25,7 +25,7 @@ var (
 	validKubeconfig string
 )
 
-var _ = Describe("Linseed out plugin token controller tests", func() {
+var _ = Describe("Linseed out plugin token tests", func() {
 	var (
 		f                 *os.File
 		pluginConfigKeyFn config.PluginConfigKeyFunc
@@ -75,7 +75,7 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
 			Expect(err).NotTo(HaveOccurred())
 
-			tc, err := NewController(cfg)
+			tc, err := NewToken(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
@@ -86,9 +86,6 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			tc.serviceAccountName = serviceAccount.GetName()
 			tc.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
 			tc.token = "some-token"
-
-			err = tc.Run(stopCh)
-			Expect(err).NotTo(HaveOccurred())
 
 			_, err = tc.Token()
 			Expect(err).NotTo(HaveOccurred())
@@ -109,7 +106,7 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
 			Expect(err).NotTo(HaveOccurred())
 
-			tc, err := NewController(cfg)
+			tc, err := NewToken(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
@@ -122,9 +119,6 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			tc.serviceAccountName = serviceAccount.GetName()
 			tc.expiration = time.Now().Add(1 * time.Hour) // must not be expired
 			tc.token = "some-token"
-
-			err = tc.Run(stopCh)
-			Expect(err).NotTo(HaveOccurred())
 
 			token, err := tc.Token()
 			Expect(err).NotTo(HaveOccurred())
@@ -146,7 +140,7 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
 			Expect(err).NotTo(HaveOccurred())
 
-			tc, err := NewController(cfg)
+			tc, err := NewToken(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
@@ -160,9 +154,6 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			tc.serviceAccountName = serviceAccount.GetName()
 			tc.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
 			tc.token = "some-token"
-
-			err = tc.Run(stopCh)
-			Expect(err).NotTo(HaveOccurred())
 
 			_, err = tc.Token()
 			Expect(err).To(HaveOccurred())
@@ -182,7 +173,7 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
 			Expect(err).NotTo(HaveOccurred())
 
-			tc, err := NewController(cfg)
+			tc, err := NewToken(cfg)
 			Expect(err).NotTo(HaveOccurred())
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
@@ -195,9 +186,6 @@ var _ = Describe("Linseed out plugin token controller tests", func() {
 			tc.serviceAccountName = "invalid-service-account"
 			tc.expiration = time.Now().Add(-2 * tokenExpiration) // must be expired
 			tc.token = "some-token"
-
-			err = tc.Run(stopCh)
-			Expect(err).NotTo(HaveOccurred())
 
 			_, err = tc.Token()
 			Expect(err).To(HaveOccurred())
