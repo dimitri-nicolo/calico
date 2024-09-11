@@ -80,7 +80,10 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
 		return output.FLB_ERROR
 	}
 
-	// post to ingestion endpoint
+	// post to the cluster ingestion endpoint
+	// when FLB_RETRY is returned to the fluent-bit engine, it will ask the scheduler to retry
+	// to flush the data. The fluent-bit scheduler will decide how many seconds to wait.
+	// See more at https://docs.fluentbit.io/manual/administration/scheduling-and-retries
 	endpoint := endpointController.Endpoint()
 	tagString := C.GoString(tag)
 	token, err := tk.Token()

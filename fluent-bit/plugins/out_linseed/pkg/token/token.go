@@ -54,6 +54,8 @@ func NewToken(cfg *config.Config) (*Token, error) {
 	}, nil
 }
 
+// Token returns the non-cluster host ServiceAccount token for forwarding logs to a cluster.
+// Tokens will be renewed every tokenExpiration interval.
 func (c *Token) Token() (string, error) {
 	if time.Until(c.expiration) < tokenRenewal {
 		logrus.Infof("token expired for serviceaccount %q", c.serviceAccountName)

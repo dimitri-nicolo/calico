@@ -55,6 +55,8 @@ func (c *EndpointController) Run(stopCh <-chan struct{}) error {
 		c.endpoint = endpoint
 		logrus.Infof("log ingestion endpoint is set to %q", c.endpoint)
 
+		// Start initializes all requested informers. They are handled in goroutines
+		// which run until the stop channel gets closed.
 		c.dynamicFactory.Start(stopCh)
 		c.dynamicFactory.WaitForCacheSync(stopCh)
 		logrus.Debug("dynamic shared informer factory is started")
