@@ -320,6 +320,18 @@ func main() {
 		})
 	}
 
+	if cfg.EnableNonclusterHostLogIngestion {
+		targetList = append(targetList, bootstrap.Target{
+			Path:           "/ingestion/api/v1/",
+			Dest:           cfg.LinseedEndpoint,
+			CABundlePath:   cfg.LinseedCABundlePath,
+			ClientKeyPath:  cfg.InternalHTTPSKey,
+			ClientCertPath: cfg.InternalHTTPSCert,
+			PathRegexp:     []byte("^/ingestion/api/v1/?"),
+			PathReplace:    []byte("/api/v1/"),
+		})
+	}
+
 	if cfg.CalicoCloudCorsHost != "" {
 		// pass prometheus path as a path to ignore because prometheus already sets cors headers in responses.
 		opts = append(opts, server.WithCalicoCloudCORS(cfg.CalicoCloudCorsHost, cfg.PrometheusPath))
