@@ -399,7 +399,7 @@ func DialTLS(target string, tunnelTLSConfig *tls.Config, timeout time.Duration, 
 
 // GetHTTPProxyURL resolves the proxy URL that should be used for the tunnel target. It respects HTTPS_PROXY and NO_PROXY
 // environment variables (case-insensitive).
-func GetHTTPProxyURL(target string) *url.URL {
+func GetHTTPProxyURL(target string) (*url.URL, error) {
 	targetURL := &url.URL{
 		// The scheme should be HTTPS, as we are establishing an mTLS session with the target.
 		Scheme: "https",
@@ -410,10 +410,26 @@ func GetHTTPProxyURL(target string) *url.URL {
 
 	proxyURL, err := httpproxy.FromEnvironment().ProxyFunc()(targetURL)
 	if err != nil {
-		logrus.Warnf("Failed to resolve proxy URL (%v): %v", proxyURL, err)
-		return nil
+		return nil, err
 	}
-	return proxyURL
+
+	if proxyURL == nil {
+		return nil, nil
+	}
+
+	// Validate the URL scheme.
+	if proxyURL.Scheme != "http" && proxyURL.Scheme != "https" {
+		return nil, fmt.Errorf("proxy URL had invalid scheme (%s) - must be http or https", proxyURL.Scheme)
+	}
+
+	// Update the host if we can infer a port number.
+	if proxyURL.Port() == "" && proxyURL.Scheme == "http" {
+		proxyURL.Host = net.JoinHostPort(proxyURL.Host, "80")
+	} else if proxyURL.Port() == "" && proxyURL.Scheme == "https" {
+		proxyURL.Host = net.JoinHostPort(proxyURL.Host, "443")
+	}
+
+	return proxyURL, nil
 }
 
 func newDialer(timeout time.Duration) *net.Dialer {
@@ -424,47 +440,35 @@ func newDialer(timeout time.Duration) *net.Dialer {
 }
 
 func tlsDialViaHTTPProxy(d *net.Dialer, destination string, proxyTargetURL *url.URL, tunnelTLS *tls.Config, proxyTLS *tls.Config) (net.Conn, error) {
-	if proxyTargetURL.Scheme != "http" && proxyTargetURL.Scheme != "https" {
-		return nil, fmt.Errorf("unknown proxy scheme: %s", proxyTargetURL.Scheme)
-	}
-
-	// Resolve the proxy address.
-	proxyAddress := proxyTargetURL.Host
-	if proxyTargetURL.Port() == "" && proxyTargetURL.Scheme == "http" {
-		proxyAddress = net.JoinHostPort(proxyAddress, "80")
-	} else if proxyTargetURL.Port() == "" && proxyTargetURL.Scheme == "https" {
-		proxyAddress = net.JoinHostPort(proxyAddress, "443")
-	}
-
 	// Establish the TCP connection to the proxy.
 	var c net.Conn
 	var err error
 	if proxyTargetURL.Scheme == "https" {
-		c, err = tls.DialWithDialer(d, "tcp", proxyAddress, proxyTLS)
+		c, err = tls.DialWithDialer(d, "tcp", proxyTargetURL.Host, proxyTLS)
 	} else {
-		c, err = d.DialContext(context.Background(), "tcp", proxyAddress)
+		c, err = d.DialContext(context.Background(), "tcp", proxyTargetURL.Host)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("dialing proxy %q failed: %v", proxyAddress, err)
+		return nil, fmt.Errorf("dialing proxy %q failed: %v", proxyTargetURL.Host, err)
 	}
 
 	// Send an HTTP CONNECT to the proxy.
 	_, err = fmt.Fprintf(c, "CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", destination, destination)
 	if err != nil {
-		return nil, fmt.Errorf("writing HTTP CONNECT to proxy %s failed: %v", proxyAddress, err)
+		return nil, fmt.Errorf("writing HTTP CONNECT to proxy %s failed: %v", proxyTargetURL.Host, err)
 	}
 	br := bufio.NewReader(c)
 	res, err := http.ReadResponse(br, nil)
 	if err != nil {
-		return nil, fmt.Errorf("reading HTTP response from CONNECT to %s via proxy %s failed: %v", destination, proxyAddress, err)
+		return nil, fmt.Errorf("reading HTTP response from CONNECT to %s via proxy %s failed: %v", destination, proxyTargetURL.Host, err)
 	}
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("proxy error from %s while dialing %s: %v", proxyAddress, destination, res.Status)
+		return nil, fmt.Errorf("proxy error from %s while dialing %s: %v", proxyTargetURL.Host, destination, res.Status)
 	}
 	if br.Buffered() > 0 {
 		// After the CONNECT was handled by the server, the client should be the first to talk to initiate the TLS handshake.
 		// If we reach this point, the server spoke before the client, so something went wrong.
-		return nil, fmt.Errorf("unexpected %d bytes of buffered data from CONNECT proxy %q", br.Buffered(), proxyAddress)
+		return nil, fmt.Errorf("unexpected %d bytes of buffered data from CONNECT proxy %q", br.Buffered(), proxyTargetURL.Host)
 	}
 
 	// When we've reached this point, the proxy should now passthrough any TCP segments written to our connection to the destination.

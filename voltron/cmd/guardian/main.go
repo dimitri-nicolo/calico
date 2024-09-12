@@ -183,6 +183,11 @@ func main() {
 		log.Fatalf("Failed to parse default proxy targets: %s", err)
 	}
 
+	proxyURL, err := tunnel.GetHTTPProxyURL(cfg.VoltronURL)
+	if err != nil {
+		log.Fatalf("Failed to resolve proxy URL: %s", err)
+	}
+
 	cli, err := client.New(
 		cfg.VoltronURL,
 		serverName,
@@ -195,7 +200,7 @@ func main() {
 		client.WithTunnelDialTimeout(cfg.TunnelDialTimeout),
 		client.WithConnectionRetryAttempts(cfg.ConnectionRetryAttempts),
 		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
-		client.WithHTTPProxyURL(tunnel.GetHTTPProxyURL(cfg.VoltronURL)),
+		client.WithHTTPProxyURL(proxyURL),
 	)
 
 	if err != nil {

@@ -145,37 +145,6 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 		wg.Wait()
 	})
 
-	It("errors when the scheme of the proxy URL is not http or https", func() {
-		_, err := tlsDialViaHTTPProxy(
-			newDialer(time.Second),
-			"someplace:443",
-			&url.URL{
-				Scheme: "socks5",
-				Host:   "localhost:3128",
-			},
-			tunnelClientTLSConfig,
-			proxyClientTLSConfig,
-		)
-
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("socks5"))
-	})
-
-	It("errors when the proxy URL is invalid", func() {
-		_, err := tlsDialViaHTTPProxy(
-			newDialer(time.Second),
-			"someplace:443",
-			&url.URL{
-				Scheme: "http",
-				Host:   "http://url-not-host",
-			},
-			tunnelClientTLSConfig,
-			proxyClientTLSConfig,
-		)
-
-		Expect(err).To(HaveOccurred())
-	})
-
 	for _, tls := range []bool{false, true} {
 		It(fmt.Sprintf("errors when the CONNECT request is rejected (tls: %v)", tls), func() {
 			var proxyServer *goproxy.ProxyHttpServer
@@ -248,8 +217,8 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 
 var _ = Describe("GetHTTPProxyURL", func() {
 	var originalHTTPProxy, originalHTTPSProxy, originalNoProxy string
-	httpProxyHost := "http-proxy"
-	httpsProxyHost := "https-proxy"
+	httpProxyHost := "http-proxy:8080"
+	httpsProxyHost := "https-proxy:8443"
 
 	BeforeEach(func() {
 		originalHTTPProxy = os.Getenv("HTTP_PROXY")
@@ -265,27 +234,76 @@ var _ = Describe("GetHTTPProxyURL", func() {
 		_ = os.Setenv("NO_PROXY", originalNoProxy)
 	})
 
+	// The following tests validate that we successfully wrap the underlying httpproxy lib calls to resolve the proxy URL.
+	// We do not exhaustively test the scenarios of proxy resolution here, as that is tested by the lib itself - we just
+	// test the wrapping. Our wrapping needs to treat the voltron host:port as an HTTPS target.
 	It("returns the HTTPS proxy for a given target", func() {
-		url := GetHTTPProxyURL("voltron:9449")
+		url, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).To(BeNil())
 		Expect(url.Scheme).To(Equal("https"))
 		Expect(url.Host).To(Equal(httpsProxyHost))
 	})
 
-	It("returns the no proxy for a given target if not HTTPS proxy present", func() {
+	It("returns no proxy for a given target if no HTTPS proxy present", func() {
 		_ = os.Setenv("HTTPS_PROXY", "")
-		url := GetHTTPProxyURL("voltron:9449")
+		url, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).To(BeNil())
 		Expect(url).To(BeNil())
 	})
 
 	It("respects NO_PROXY for a given DNS target", func() {
 		_ = os.Setenv("NO_PROXY", "voltron,8.8.8.8")
-		url := GetHTTPProxyURL("voltron:9449")
+		url, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).To(BeNil())
 		Expect(url).To(BeNil())
 	})
 
 	It("respects NO_PROXY for a given IP target", func() {
 		_ = os.Setenv("NO_PROXY", "voltron,8.8.8.8")
-		url := GetHTTPProxyURL("8.8.8.8:9449")
+		url, err := GetHTTPProxyURL("8.8.8.8:9449")
+		Expect(err).To(BeNil())
 		Expect(url).To(BeNil())
+	})
+
+	// The following tests validate that our wrapping handles port coercion correctly relative to the scheme.
+	It("handles HTTP without port proxy URL", func() {
+		_ = os.Setenv("HTTPS_PROXY", "http://https-proxy")
+		url, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).To(BeNil())
+		Expect(url.Host).To(Equal("https-proxy:80"))
+		Expect(url.Port()).To(Equal("80"))
+	})
+	It("handles HTTP with port proxy URL", func() {
+		_ = os.Setenv("HTTPS_PROXY", "http://https-proxy:9000")
+		url, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).To(BeNil())
+		Expect(url.Host).To(Equal("https-proxy:9000"))
+		Expect(url.Port()).To(Equal("9000"))
+	})
+	It("handles HTTPS without port proxy URL", func() {
+		_ = os.Setenv("HTTPS_PROXY", "https://https-proxy")
+		url, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).To(BeNil())
+		Expect(url.Host).To(Equal("https-proxy:443"))
+		Expect(url.Port()).To(Equal("443"))
+	})
+	It("handles HTTPS with port proxy URL", func() {
+		_ = os.Setenv("HTTPS_PROXY", "https://https-proxy:9000")
+		url, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).To(BeNil())
+		Expect(url.Host).To(Equal("https-proxy:9000"))
+		Expect(url.Port()).To(Equal("9000"))
+	})
+
+	It("returns error when an invalid scheme is set on the proxy URL", func() {
+		_ = os.Setenv("HTTPS_PROXY", "socks://socks-proxy:9000")
+		_, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).ToNot(BeNil())
+	})
+
+	It("returns error when the proxy URL is malformed", func() {
+		_ = os.Setenv("HTTPS_PROXY", "^&#$")
+		_, err := GetHTTPProxyURL("voltron:9449")
+		Expect(err).ToNot(BeNil())
 	})
 })
