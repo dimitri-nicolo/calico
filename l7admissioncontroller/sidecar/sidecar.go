@@ -186,13 +186,13 @@ func (cfg *sidecarCfg) dikastesInitArgs() string {
 	args := []string{}
 
 	if cfg.logging {
-		args = append(args, `"--logs-enabled"`)
+		args = append(args, `"--sidecar-logs-enabled"`)
 	}
 	if cfg.policy {
-		args = append(args, `"--alp-enabled"`)
+		args = append(args, `"--sidecar-alp-enabled"`)
 	}
 	if cfg.waf {
-		args = append(args, `"--waf-enabled"`)
+		args = append(args, `"--sidecar-waf-enabled"`)
 	}
 
 	return strings.Join(args, ",")
