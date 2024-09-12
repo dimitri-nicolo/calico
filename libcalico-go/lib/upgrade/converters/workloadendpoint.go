@@ -150,6 +150,8 @@ func (_ WorkloadEndpoint) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) 
 		Namespace: namespace,
 		Labels:    labels,
 	}
+
+	appLayer := convertApplicationLayer(wepValue.ApplicationLayer)
 	wep.Spec = libapiv3.WorkloadEndpointSpec{
 		Orchestrator:               convertName(wepKey.OrchestratorID),
 		Workload:                   workload,
@@ -163,6 +165,7 @@ func (_ WorkloadEndpoint) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) 
 		InterfaceName:              wepValue.Name,
 		Ports:                      convertPorts(wepValue.Ports),
 		AllowSpoofedSourcePrefixes: allowedSources,
+		ApplicationLayer:           appLayer,
 	}
 
 	if wepValue.IPv4Gateway != nil {
@@ -243,6 +246,21 @@ func convertIPNATs(v1IPNATs []model.IPNAT) []libapiv3.IPNAT {
 	}
 
 	return ipNATs
+}
+
+// convertApplicationLayer updates the type of ApplicationLayer struct used.
+func convertApplicationLayer(v1AppLayer *model.ApplicationLayer) (appLayer *libapiv3.ApplicationLayer) {
+	if v1AppLayer == nil {
+		return
+	}
+
+	appLayer = &libapiv3.ApplicationLayer{
+		Logging:      v1AppLayer.Logging,
+		Policy:       v1AppLayer.Policy,
+		WAF:          v1AppLayer.WAF,
+		WAFConfigMap: v1AppLayer.WAFConfigMap,
+	}
+	return
 }
 
 // convertProfiles updates the Kubernetes namespace portion from "k8s_ns" to "kns" for each profile.

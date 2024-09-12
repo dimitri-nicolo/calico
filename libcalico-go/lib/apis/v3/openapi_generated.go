@@ -74,6 +74,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata": schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":     schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.AllocationAttribute":      schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref),
+		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.ApplicationLayer":         schema_libcalico_go_lib_apis_v3_ApplicationLayer(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup":  schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.BlockAffinity":            schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.BlockAffinityList":        schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
@@ -2110,6 +2111,47 @@ func schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref common.ReferenceCal
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_ApplicationLayer(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"Logging": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"Policy": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"WAF": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"WAFConfigMap": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+				},
+				Required: []string{"Logging", "Policy", "WAF", "WAFConfigMap"},
+			},
+		},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3509,11 +3551,17 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 							},
 						},
 					},
+					"applicationLayer": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ApplicationLayer control.",
+							Ref:         ref("github.com/projectcalico/calico/libcalico-go/lib/apis/v3.ApplicationLayer"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPNAT", "github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewaySpec"},
+			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.ApplicationLayer", "github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPNAT", "github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.EgressGatewaySpec"},
 	}
 }
 

@@ -480,6 +480,7 @@ message WorkloadEndpoint {
   repeated string allow_spoofed_source_prefixes = 10;
   map<string, string> annotations = 11;
   repeated string external_network_names = 105;
+  ApplicationLayer application_layer = 106;
 }
 
 message WorkloadEndpointRemove {
@@ -522,6 +523,13 @@ message TierInfo {
 message NatInfo {
   string ext_ip = 1;
   string int_ip = 2;
+}
+
+message ApplicationLayer {
+  string logging = 1;
+  string policy = 2;
+  string waf = 3;
+  string waf_config_map = 4;
 }
 
 message ProcessStatusUpdate {

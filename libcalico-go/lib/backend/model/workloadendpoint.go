@@ -166,13 +166,14 @@ type WorkloadEndpoint struct {
 	Annotations                map[string]string `json:"annotations,omitempty"`
 
 	// EE properties below
-	EgressSelector             string    `json:"egress_selector,omitempty"`
-	EgressMaxNextHops          int       `json:"egress_max_next_hops,omitempty" validate:"omitempty"`
-	EgressGatewayPolicy        string    `json:"egress_gateway_policy,omitempty"`
-	DeletionTimestamp          time.Time `json:"deletion_timestamp,omitempty"`
-	DeletionGracePeriodSeconds int64     `json:"deletion_grace_period_seconds,omitempty"`
-	AWSElasticIPs              []string  `json:"aws_elastic_ips,omitempty"`
-	ExternalNetworkNames       []string  `json:"external_network_names,omitempty"`
+	EgressSelector             string            `json:"egress_selector,omitempty"`
+	EgressMaxNextHops          int               `json:"egress_max_next_hops,omitempty" validate:"omitempty"`
+	EgressGatewayPolicy        string            `json:"egress_gateway_policy,omitempty"`
+	DeletionTimestamp          time.Time         `json:"deletion_timestamp,omitempty"`
+	DeletionGracePeriodSeconds int64             `json:"deletion_grace_period_seconds,omitempty"`
+	AWSElasticIPs              []string          `json:"aws_elastic_ips,omitempty"`
+	ExternalNetworkNames       []string          `json:"external_network_names,omitempty"`
+	ApplicationLayer           *ApplicationLayer `json:"application_layer,omitempty"`
 }
 
 type EndpointPort struct {
@@ -189,4 +190,11 @@ type IPNAT struct {
 
 	// The external IP address.
 	ExtIP net.IP `json:"ext_ip" validate:"ip"`
+}
+
+type ApplicationLayer struct {
+	Logging      string `json:"logging"`
+	Policy       string `json:"policy"`
+	WAF          string `json:"waf"`
+	WAFConfigMap string `json:"waf_config_map"`
 }

@@ -91,6 +91,8 @@ type WorkloadEndpointSpec struct {
 	EgressGateway *apiv3.EgressGatewaySpec `json:"egressGateway,omitempty" validate:"omitempty"`
 	// A list of names of the external networks who are associated with the endpoint for egress traffic.
 	ExternalNetworkNames []string `json:"externalNetworkNames,omitempty" validate:"omitempty,dive,name"`
+	// ApplicationLayer control.
+	ApplicationLayer *ApplicationLayer `json:"applicationLayer,omitempty" validate:"omitempty,dive"`
 }
 
 // WorkloadEndpointStatus contains the status for a WorkloadEndpoint resource.
@@ -129,6 +131,13 @@ type IPNAT struct {
 	InternalIP string `json:"internalIP" validate:"omitempty,ip"`
 	// The external IP address.
 	ExternalIP string `json:"externalIP" validate:"omitempty,ip"`
+}
+
+type ApplicationLayer struct {
+	Logging      string
+	Policy       string
+	WAF          string
+	WAFConfigMap string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

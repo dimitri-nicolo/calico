@@ -474,6 +474,7 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 		Annotations:                ep.Annotations,
 		AwsElasticIps:              ep.AWSElasticIPs,
 		ExternalNetworkNames:       ep.ExternalNetworkNames,
+		ApplicationLayer:           appLayerToProtoAppLayer(ep.ApplicationLayer),
 	}
 }
 
@@ -1636,4 +1637,17 @@ func natsToProtoNatInfo(nats []model.IPNAT) []*proto.NatInfo {
 		}
 	}
 	return protoNats
+}
+
+func appLayerToProtoAppLayer(al *model.ApplicationLayer) *proto.ApplicationLayer {
+	if al == nil {
+		return nil
+	}
+
+	return &proto.ApplicationLayer{
+		Logging:      al.Logging,
+		Policy:       al.Policy,
+		Waf:          al.WAF,
+		WafConfigMap: al.WAFConfigMap,
+	}
 }

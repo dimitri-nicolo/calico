@@ -279,6 +279,29 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		}
 	}
 
+	var applicationLayer *libapiv3.ApplicationLayer
+	if labels[LabelSidecarInjection] == "true" {
+		applicationLayer = &libapiv3.ApplicationLayer{}
+		if annotation, ok := pod.Annotations[AnnotationApplicationLayerLogging]; ok {
+			applicationLayer.Logging = annotation
+		} else {
+			applicationLayer.Logging = "Disabled"
+		}
+		if annotation, ok := pod.Annotations[AnnotationApplicationLayerPolicy]; ok {
+			applicationLayer.Policy = annotation
+		} else {
+			applicationLayer.Policy = "Disabled"
+		}
+		if annotation, ok := pod.Annotations[AnnotationApplicationLayerWAF]; ok {
+			applicationLayer.WAF = annotation
+		} else {
+			applicationLayer.WAF = "Disabled"
+		}
+		if annotation, ok := pod.Annotations[AnnotationApplicationLayerWAFConfigMap]; ok {
+			applicationLayer.WAFConfigMap = annotation
+		}
+	}
+
 	// Get the container ID if present.  This is used in the CNI plugin to distinguish different pods that have
 	// the same name.  For example, restarted stateful set pods.
 	containerID := pod.Annotations[AnnotationContainerID]
@@ -311,6 +334,7 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		ServiceAccountName:         pod.Spec.ServiceAccountName,
 		AllowSpoofedSourcePrefixes: sourcePrefixes,
 		ExternalNetworkNames:       externalNetworks,
+		ApplicationLayer:           applicationLayer,
 	}
 	wep.Status = libapiv3.WorkloadEndpointStatus{
 		Phase:         string(pod.Status.Phase),

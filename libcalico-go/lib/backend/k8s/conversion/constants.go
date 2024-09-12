@@ -46,6 +46,11 @@ const (
 	AnnotationEgressExternalNetworkNames        = "egress.projectcalico.org/externalNetworkNames"
 	AnnotationEgressGatewayPolicy               = "egress.projectcalico.org/egressGatewayPolicy"
 	SecurityGroupLabelPrefix                    = "sg.aws.tigera.io"
+	LabelSidecarInjection                       = "applicationlayer.projectcalico.org/sidecar"
+	AnnotationApplicationLayerLogging           = "applicationlayer.projectcalico.org/logging"
+	AnnotationApplicationLayerPolicy            = "applicationlayer.projectcalico.org/policy"
+	AnnotationApplicationLayerWAF               = "applicationlayer.projectcalico.org/waf"
+	AnnotationApplicationLayerWAFConfigMap      = "applicationlayer.projectcalico.org/wafConfigMap"
 
 	// AnnotationContainerID stores the container ID of the pod.  This allows us to disambiguate different pods
 	// that have the same name and namespace.  For example, stateful set pod that is restarted.  May be missing

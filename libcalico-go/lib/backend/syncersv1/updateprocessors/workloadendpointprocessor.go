@@ -198,6 +198,16 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		deletionGracePeriodSeconds = *v3res.DeletionGracePeriodSeconds
 	}
 
+	var appLayer *model.ApplicationLayer
+	if v3res.Spec.ApplicationLayer != nil {
+		appLayer = &model.ApplicationLayer{
+			Logging:      v3res.Spec.ApplicationLayer.Logging,
+			Policy:       v3res.Spec.ApplicationLayer.Policy,
+			WAF:          v3res.Spec.ApplicationLayer.WAF,
+			WAFConfigMap: v3res.Spec.ApplicationLayer.WAFConfigMap,
+		}
+	}
+
 	v1value := &model.WorkloadEndpoint{
 		State:                      "active",
 		Name:                       v3res.Spec.InterfaceName,
@@ -220,6 +230,7 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		DeletionTimestamp:          deletionTimestamp,
 		DeletionGracePeriodSeconds: deletionGracePeriodSeconds,
 		ExternalNetworkNames:       v3res.Spec.ExternalNetworkNames,
+		ApplicationLayer:           appLayer,
 	}
 
 	if v3res.Spec.EgressGateway != nil {
