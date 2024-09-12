@@ -1816,6 +1816,14 @@ var _ = Describe("Static", func() {
 						},
 						Comment: []string{"Restore connmark for pod traffic"},
 					},
+					{
+						Match: Match().
+							DestIPSet("cali40all-ipam-pools"),
+						Action: RestoreConnMarkAction{
+							RestoreMask: 0x400,
+						},
+						Comment: []string{"Restore connmark for external traffic to EGW"},
+					},
 				},
 			}))
 			Expect(findChain(rr.StaticMangleTableChains(4), "cali-pre-egress-in")).To(Equal(&generictables.Chain{

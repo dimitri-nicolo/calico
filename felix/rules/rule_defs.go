@@ -492,11 +492,10 @@ type Config struct {
 	EnableNflogSize bool
 	IPSecEnabled    bool
 
-	EgressIPEnabled        bool
-	EgressIPVXLANPort      int
-	EgressIPVXLANVNI       int
-	EgressIPInterface      string
-	ExternalNetworkEnabled bool
+	EgressIPEnabled   bool
+	EgressIPVXLANPort int
+	EgressIPVXLANVNI  int
+	EgressIPInterface string
 
 	EKSPrimaryENI string
 
