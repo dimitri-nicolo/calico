@@ -158,6 +158,8 @@ require (
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
+	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
+	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
 	k8s.io/api v0.29.8
 	k8s.io/apiextensions-apiserver v0.29.8
 	k8s.io/apimachinery v0.29.8
