@@ -157,6 +157,19 @@ for FILE in $(ls ../charts/tigera-prometheus-operator/crds); do
 		-f ../charts/tigera-operator/values.yaml >> prometheus-operator-crds.yaml
 done
 
+##########################################################################
+# Build tigera-prometheus-operator manifests.
+##########################################################################
+: > tigera-prometheus-operator.yaml
+${HELM} -n tigera-operator template \
+	      --set policyRecommendation.enabled=false \
+	      --set imagePullSecrets.tigera-pull-secret="\{}" \
+	      --set tigeraOperator.version=$OPERATOR_VERSION \
+	      --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+	      --set calicoctl.tag=$CALICO_VERSION \
+	      --include-crds \
+	      --no-hooks \
+	      ../charts/tigera-prometheus-operator >> tigera-prometheus-operator.yaml
 
 ##########################################################################
 # Build tigera-operator manifests for OCP.
