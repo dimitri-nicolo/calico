@@ -126,7 +126,7 @@
       image: tigera/prometheus
       version: master
     coreos-prometheus:
-      version: v2.48.1
+      version: v2.54.1
     coreos-prometheus-operator:
       version: v0.73.2
     coreos-config-reloader:
@@ -155,9 +155,9 @@
       image: tigera/eck-operator
       version: master
     coreos-alertmanager:
-      version: v0.25.1
+      version: v0.27.0
     alertmanager:
-      image: tigera/alertmanager
+      image: tigera/alertmanager`
       version: master
     envoy:
       image: tigera/envoy
