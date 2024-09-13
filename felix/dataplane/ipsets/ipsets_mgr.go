@@ -77,7 +77,7 @@ type IPSetsDomainStore interface {
 
 type IPSetsDomainTracker interface {
 	Add(domain string, setIDs ...string)
-	Del(domain string, setIDs ...string)
+	Delete(domain string, setIDs ...string)
 	ApplyAllChanges() error
 }
 
@@ -233,7 +233,7 @@ func (m *IPSetsManager) domainRemovedFromSet(domain string, ipSetId string) {
 	}
 
 	if m.domainTracker != nil {
-		m.domainTracker.Del(domain, ipSetId)
+		m.domainTracker.Delete(domain, ipSetId)
 	}
 }
 
@@ -339,9 +339,6 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 		// domain name.
 		domain := strings.ToLower(mixedCaseDomain)
 		m.domainRemovedFromSet(domain, ipSetId)
-		if m.domainTracker != nil {
-			m.domainTracker.Del(domain, ipSetId)
-		}
 	}
 
 	// For each programmed IP...

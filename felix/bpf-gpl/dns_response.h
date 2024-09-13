@@ -197,6 +197,7 @@ static CALI_BPF_INLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scr
 
 static long dns_update_sets_with_ip(__unused void *map, const void *key, __unused void *value, void *__ctx)
 {
+#ifndef IPVER6
 	struct dns_iter_ctx *ictx = (struct dns_iter_ctx *)__ctx;
 	struct dns_scratch *scratch = ictx->scratch;
 	struct dns_set_key *sk = (struct dns_set_key *) key;
@@ -209,11 +210,7 @@ static long dns_update_sets_with_ip(__unused void *map, const void *key, __unuse
 		.ip = {
 			.set_id = sk->set_id,
 			.mask = (8 + ictx->ip_len) * 8,
-#ifndef IPVER6
 			.addr = *(__u32*)scratch->ip,
-#else
-			.addr = {*(__u32*)scratch->ip},
-#endif
 		},
 	};
 
@@ -224,6 +221,7 @@ static long dns_update_sets_with_ip(__unused void *map, const void *key, __unuse
 		struct cali_tc_ctx *ctx = ictx->ctx;
 		CALI_DEBUG("DNS: Failed to update ipset 0x%x err %d\n", sk->set_id, ret);
 	}
+#endif
 
 	return 0;
 }
@@ -266,8 +264,8 @@ static long dns_process_answer(__u32 i, void *__ctx)
 
 	switch (bpf_ntohs(rr->type)) {
 	case TYPE_AAAA:
-		ictx->ip_len = 32;
-		/* fallthrough */
+		ictx->ip_len = 16;
+		break; /* FIXME we cannot write IPv6 sets yet, skip, do nothing */
 	case TYPE_A:
 		if (bpf_load_bytes(ctx, off + sizeof(struct dns_rr), scratch->ip, ictx->ip_len)) {
 			CALI_DEBUG("DNS: failed to read data type %d class %d\n",

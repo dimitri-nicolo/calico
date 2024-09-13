@@ -17,6 +17,44 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
+// DomainTracker tracks which domains are associate with what ipsets. That is,
+// when a domain is resolved to an IP, which ipsets need to be updated with that
+// IP. Similarly, when a domain is removed, from which ipsets do we need to
+// clear the domains IPs. Since we allow wildcards (in this case only sufix
+// wildcards of the for *.com) we need to be able to match the wildcards rather
+// than just keep a list of domain->ipsets mappings. To accomodate for the
+// matching, BPF code uses trie for longest prefix match. Since the wildcards
+// are suffixes, we flip them around, that is, *.com becomes moc.(*) - the * is
+// stripped. However, we cannot just say *.com is in sets x y z when cnn.com is
+// in sets v and w. If the bpf code matches cnn.com it must add the IP to any
+// ipsets that matches *.com. Similarly. anything that matches *.ubuntu.com,
+// must also match *.com but not cnn.com, while news.cnn.com must match both
+// *.cnn.com as well as *.com. To accomodate wildcard, the tracker has an
+// internal trie which holds all domains and all sets that need to be updated
+// when that domain matches.
+//
+// When we add a domain like news.cnn.com into the trie, we need to walk all the
+// shorter wildcard suffixes like *.cnn.com and *.com and add the ipsets
+// associated directly (commes straight from policy that refers that domain)
+// with the domain. But it must not add those ipsets to any non-wildcard prefx
+// like us.news.cnn.com.
+//
+// When we are adding a wildcard like *.cnn.com, we need to walks all the
+// shorter wildcard suffixes like *.com (as above) but we also need to inset it
+// into any longer suffixes like new.cnn.com as well as us.new.cnn.com. or
+// *.news.cnn.com.
+//
+// When we are removing an ipset for a non-wildcard domain, we just remove that
+// node and all domain-ipset mappings. sets that belong directly to the perfect
+// match are not included in any wildcard.
+//
+// When we remove an ipset from a wildcard domain, we have to walk the subtree
+// (only if the same ipset was also accumulated from a shorter wildcard)
+// of all longer suffixes and remove the from the accumulated sets unless it
+// also directly belongs to it. If it directly belongs to a longer wildcard,
+// than we can skip the subtree because it would _also_ get it from the longer
+// wildcard.
+
 type DomainTracker struct {
 	mPfx          maps.Map
 	mSets         maps.Map
@@ -30,7 +68,7 @@ type DomainTracker struct {
 type saItem struct {
 	id       uint64
 	wildcard bool
-	acc      set.Set[uint64] /* accumulated */
+	acc      set.Set[uint64] /* accumulated from shorter wildcards */
 	sets     set.Set[uint64] /* those sets which directly belong to this domain/wildcard */
 }
 
@@ -91,10 +129,14 @@ func NewDomainTrackerWithMaps(strToUin64 func(string) uint64, mPfx, mSets maps.M
 }
 
 func (d *DomainTracker) Add(domain string, setIDs ...string) {
-	log.WithFields(log.Fields{
-		"domain": domain,
-		"setIDs": setIDs,
-	}).Debug("Add")
+	loglevel := log.GetLevel()
+
+	if loglevel >= log.DebugLevel {
+		log.WithFields(log.Fields{
+			"domain": domain,
+			"setIDs": setIDs,
+		}).Debug("Add")
+	}
 
 	if len(setIDs) == 0 {
 		return
@@ -103,15 +145,9 @@ func (d *DomainTracker) Add(domain string, setIDs ...string) {
 	wildcard := domain == "" || domain[0] == '*'
 
 	k := NewPfxKey(domain)
+	log.Debugf("k = %s", k)
 
-	isKnown := false
-
-	domainID := d.domainIDAlloc.GetNoAlloc(domain)
-	if domainID != 0 {
-		isKnown = true
-	} else {
-		domainID = d.domainIDAlloc.GetOrAlloc(domain)
-	}
+	domainID := d.domainIDAlloc.GetOrAlloc(domain)
 
 	v := NewPfxValue(domainID)
 	d.pfxMap.Desired().Set(k, v)
@@ -144,57 +180,57 @@ func (d *DomainTracker) Add(domain string, setIDs ...string) {
 			log.Debugf("Set %s (0x%x) alredy belongs to domain %s", si, id64, string(kb))
 			continue
 		}
-		log.Debugf("current %p", current)
-		log.Debugf("current.sets %v", current.sets)
 
-		current.acc.Add(id64)
 		current.sets.Add(id64)
 
-		log.Debugf("Adding set %s (0x%x) to domain %s", si, id64, string(kb))
+		if loglevel >= log.DebugLevel {
+			log.Debugf("Adding set %s (0x%x) to domain %s", si, id64, string(kb))
+		}
 		d.setsMap.Desired().Set(NewDNSSetKey(domainID, id64), DNSSetValueVoid)
 
 		if wildcard {
-			_ = d.setsAcc.VisitPrefixes(kb, func(pfx patricia.Prefix, item patricia.Item) error {
-				if item.(*saItem).wildcard {
-					log.Debugf("Adding set %s (0x%x) to wildcard prefix %s", si, id64, string(pfx))
+			// Insert self into everything that is longer, e.g. *.com into
+			// xyz.com and a.b.com
+			_ = d.setsAcc.VisitSubtree(kb, func(dom patricia.Prefix, item patricia.Item) error {
+				if string(kb) != string(dom) {
+					if loglevel >= log.DebugLevel {
+						log.Debugf("Accumulating set %s (0x%x) to domain %s", si, id64, string(dom))
+					}
 					i := item.(*saItem)
 					i.acc.Add(id64)
 					d.setsMap.Desired().Set(NewDNSSetKey(i.id, id64), DNSSetValueVoid)
 				}
 				return nil
 			})
-			_ = d.setsAcc.VisitSubtree(kb, func(dom patricia.Prefix, item patricia.Item) error {
-				log.Debugf("Adding set %s (0x%x) to domain %s", si, id64, string(dom))
-				i := item.(*saItem)
-				i.acc.Add(id64)
-				d.setsMap.Desired().Set(NewDNSSetKey(i.id, id64), DNSSetValueVoid)
-				return nil
-			})
 		}
 	}
 
-	if !isKnown && !wildcard {
-		_ = d.setsAcc.VisitPrefixes(kb, func(pfx patricia.Prefix, item patricia.Item) error {
-			i := item.(*saItem)
-			if i.wildcard {
-				log.Debugf("Adding wildcard %s set %s to domain %s", pfx, i.sets, domain)
-				i.acc.AddSet(current.sets)
+	// Accumulate to self any shorter wildcards, e.g. *.xyz.com and *.com into
+	// abc.xyz.com. It does not matter if self is a wildcard or not.
+	_ = d.setsAcc.VisitPrefixes(kb, func(pfx patricia.Prefix, item patricia.Item) error {
+		i := item.(*saItem)
+		if string(kb) != string(pfx) && i.wildcard {
+			log.Debugf("Accumultating wildcard %s set %s to domain %s", pfx, i.sets, domain)
+			current.acc.AddSet(i.sets)
 
-				i.sets.Iter(func(setid uint64) error {
-					d.setsMap.Desired().Set(NewDNSSetKey(domainID, setid), DNSSetValueVoid)
-					return nil
-				})
-			}
-			return nil
-		})
-	}
+			i.sets.Iter(func(setid uint64) error {
+				d.setsMap.Desired().Set(NewDNSSetKey(domainID, setid), DNSSetValueVoid)
+				return nil
+			})
+		}
+		return nil
+	})
 }
 
-func (d *DomainTracker) Del(domain string, setIDs ...string) {
-	log.WithFields(log.Fields{
-		"domain": domain,
-		"setIDs": setIDs,
-	}).Debug("Del")
+func (d *DomainTracker) Delete(domain string, setIDs ...string) {
+	loglevel := log.GetLevel()
+
+	if loglevel >= log.DebugLevel {
+		log.WithFields(log.Fields{
+			"domain": domain,
+			"setIDs": setIDs,
+		}).Debug("Delete")
+	}
 
 	wildcard := domain == "" || domain[0] == '*'
 
@@ -220,25 +256,53 @@ func (d *DomainTracker) Del(domain string, setIDs ...string) {
 			continue
 		}
 
-		if wildcard {
+		if !current.sets.Contains(id64) {
+			log.Debugf("Set id '%s' does not belong to domain '%s'", si, domain)
+			continue
+		}
+
+		// If the set is not accumulated from a shorter wildcard (strictly
+		// belongs to self), remove it from anything longer that accumulated it
+		// from here.
+		if wildcard && !current.acc.Contains(id64) {
 			_ = d.setsAcc.VisitSubtree(kb, func(dom patricia.Prefix, item patricia.Item) error {
-				log.Debugf("Removing set %s (0x%x) from domain %s", si, id64, string(dom))
 				i := item.(*saItem)
+
+				if i.wildcard {
+					if i.sets.Contains(id64) && string(dom) != string(kb) {
+						// Anything below (longer) could have equally got it
+						// from here so do not descend.
+						if loglevel >= log.DebugLevel {
+							log.Debugf("Skip subtree for domain %s", string(dom))
+						}
+						return patricia.SkipSubtree
+					}
+				}
+
+				if loglevel >= log.DebugLevel {
+					log.Debugf("Removing set %s (0x%x) from domain %s", si, id64, string(dom))
+				}
 				i.acc.Discard(id64)
-				d.setsMap.Desired().Delete(NewDNSSetKey(i.id, id64))
+				if !i.sets.Contains(id64) {
+					d.setsMap.Desired().Delete(NewDNSSetKey(i.id, id64))
+				}
 				return nil
 			})
 		}
 
 		current.sets.Discard(id64)
-		current.acc.Discard(id64)
 
-		log.Debugf("Removing set %s (0x%x) from domain %s", si, id64, domain)
-		d.setsMap.Desired().Delete(NewDNSSetKey(domainID, id64))
+		if !current.acc.Contains(id64) {
+			if loglevel >= log.DebugLevel {
+				log.Debugf("Removing set %s (0x%x) from domain %s", si, id64, domain)
+			}
+			d.setsMap.Desired().Delete(NewDNSSetKey(domainID, id64))
+		}
 	}
 
 	if current.sets.Len() == 0 {
 		log.Debugf("Removing domain %s without sets", domain)
+		_ = d.domainIDAlloc.ReleaseUintID(domainID)
 		d.setsAcc.Delete(kb)
 		d.pfxMap.Desired().Delete(k)
 	}

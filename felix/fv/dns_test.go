@@ -701,7 +701,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 							pfxs = append(pfxs, k.Domain())
 						}
 						return pfxs
-					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement(".microsoft.com")))
+					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
 				}
 			})
 
@@ -751,7 +751,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 							pfxs = append(pfxs, k.Domain())
 						}
 						return pfxs
-					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement(".microsoft.com")))
+					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
 				}
 			})
 
@@ -886,7 +886,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 							pfxs = append(pfxs, k.Domain())
 						}
 						return pfxs
-					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement(".microsoft.com")))
+					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
 				}
 			})
 
