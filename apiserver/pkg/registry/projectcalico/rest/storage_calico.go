@@ -32,6 +32,7 @@ import (
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
+	calicobfdconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bfdconfiguration"
 	calicobgpconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgpfilter "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpfilter"
 	calicobgppeer "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgppeer"
@@ -1013,6 +1014,30 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 		[]string{"egresspolicy"},
 	)
+
+	bfdConfigurationRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bfdconfigurations"))
+	if err != nil {
+		return nil, err
+	}
+	bfdConfigurationOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   bfdConfigurationRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicobfdconfiguration.EmptyObject(),
+			ScopeStrategy: calicobfdconfiguration.NewStrategy(scheme),
+			NewListFunc:   calicobfdconfiguration.NewList,
+			GetAttrsFunc:  calicobfdconfiguration.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions:    bfdConfigurationRESTOptions,
+			LicenseMonitor: licenseMonitor,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{"bfdconfig", "bfdconfigs"},
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts, calicoLister))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts, calicoLister))
@@ -1026,7 +1051,6 @@ func (p RESTStorageProvider) NewV3Storage(
 		*policyrecommendationscopeOpts,
 		*policyRecommendationScopeStatusStatusOpts,
 	)
-
 	if err != nil {
 		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
 		panic(err)
@@ -1098,6 +1122,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["externalnetworks"] = rESTInPeace(calicoexternalnetwork.NewREST(scheme, *externalnetworkOpts))
 	storage["egressgatewaypolicies"] = rESTInPeace(calicoegressgatewaypolicy.NewREST(scheme, *egressGatewayPolicyOpts))
 	storage["securityeventwebhooks"] = rESTInPeace(securityeventwebhook.NewREST(scheme, *securityeventwebhookOpts))
+	storage["bfdconfigurations"] = rESTInPeace(calicobfdconfiguration.NewREST(scheme, *bfdConfigurationOpts))
 
 	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
 	if err != nil {

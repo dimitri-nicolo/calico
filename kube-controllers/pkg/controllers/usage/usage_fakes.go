@@ -264,6 +264,10 @@ func (f fakeCalicoClient) EnsureInitialized(ctx context.Context, calicoVersion, 
 	panic("implement me")
 }
 
+func (f fakeCalicoClient) BFDConfigurations() clientv3.BFDConfigurationInterface {
+	panic("implement me")
+}
+
 // errorReturningFakeRuntimeClient responds to a limit set of requests with an error. The error may resolve after a specified number of requests.
 type errorReturningFakeRuntimeClient struct {
 	objects []ctrlclient.Object

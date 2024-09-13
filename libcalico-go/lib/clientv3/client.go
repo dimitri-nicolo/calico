@@ -67,7 +67,6 @@ func New(config apiconfig.CalicoAPIConfig) (Interface, error) {
 
 // NewFromEnv loads the config from ENV variables and returns a connected client.
 func NewFromEnv() (Interface, error) {
-
 	config, err := apiconfig.LoadClientConfigFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -274,6 +273,10 @@ func (c client) EgressGatewayPolicy() EgressGatewayPolicyInterface {
 // SecurityEventWebhook returns an interface for managing the SecurityEventWebhook resource.
 func (c client) SecurityEventWebhook() SecurityEventWebhookInterface {
 	return SecurityEventWebhooks{client: c}
+}
+
+func (c client) BFDConfigurations() BFDConfigurationInterface {
+	return bfdConfigurations{client: c}
 }
 
 type poolAccessor struct {

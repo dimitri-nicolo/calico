@@ -37,25 +37,25 @@ func intptr(num int) *int {
 
 func init() {
 	// We need some pointers to ints, so just define as values here.
-	var Vneg1 = -1
-	var V0 = 0
-	var V4 = 4
-	var V6 = 6
-	var V128 = 128
-	var V254 = 254
-	var V255 = 255
-	var V256 = 256
-	var Vxffff = 0xffff
-	var Vx10000 = 0x10000
-	var Vxffffffff = 0xffffffff
-	var Vx100000000 = 0x100000000
-	var tierOrder = float64(100.0)
-	var defaultTierOrder = api.DefaultTierOrder
-	var defaultTierBadOrder = float64(10.0)
+	Vneg1 := -1
+	V0 := 0
+	V4 := 4
+	V6 := 6
+	V128 := 128
+	V254 := 254
+	V255 := 255
+	V256 := 256
+	Vxffff := 0xffff
+	Vx10000 := 0x10000
+	Vxffffffff := 0xffffffff
+	Vx100000000 := 0x100000000
+	tierOrder := float64(100.0)
+	defaultTierOrder := api.DefaultTierOrder
+	defaultTierBadOrder := float64(10.0)
 
 	// We need pointers to bools, so define the values here.
-	var Vtrue = true
-	var Vfalse = false
+	Vtrue := true
+	Vfalse := false
 
 	// Set up some values we use in various tests.
 	ipv4_1 := "1.2.3.4"
@@ -1268,15 +1268,18 @@ func init() {
 
 		// (API) IPPool
 		Entry("should accept IP pool with IPv4 CIDR /26",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
-				Spec: api.IPPoolSpec{CIDR: netv4_3},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec:       api.IPPoolSpec{CIDR: netv4_3},
 			}, true),
 		Entry("should accept IP pool with IPv4 CIDR /10",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
-				Spec: api.IPPoolSpec{CIDR: netv4_4},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec:       api.IPPoolSpec{CIDR: netv4_4},
 			}, true),
 		Entry("should accept IP pool with IPv6 CIDR /122",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:      netv6_3,
 					IPIPMode:  api.IPIPModeNever,
@@ -1284,7 +1287,8 @@ func init() {
 				},
 			}, true),
 		Entry("should accept IP pool with IPv6 CIDR /10",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:      netv6_4,
 					IPIPMode:  api.IPIPModeNever,
@@ -1296,7 +1300,8 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:     netv4_5,
-					Disabled: true},
+					Disabled: true,
+				},
 			}, true),
 		Entry("should accept a disabled IP pool with IPv6 CIDR /128",
 			api.IPPool{
@@ -1305,7 +1310,8 @@ func init() {
 					CIDR:      netv6_1,
 					IPIPMode:  api.IPIPModeNever,
 					VXLANMode: api.VXLANModeNever,
-					Disabled:  true},
+					Disabled:  true,
+				},
 			}, true),
 		Entry("should reject IP pool with IPv4 CIDR /27", api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: netv4_5}}, false),
 		Entry("should reject IP pool with IPv6 CIDR /128", api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: netv6_1}}, false),
@@ -1335,21 +1341,24 @@ func init() {
 			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: "fe80::/120"}}, false),
 
 		Entry("should accept IP pool with valid AWS subnet ID",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "subnet-0123456789abcdef0",
 				},
 			}, true),
 		Entry("should reject IP pool with valid AWS subnet ID but IPv6",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv6_1,
 					AWSSubnetID: "subnet-0123456789abcdef0",
 				},
 			}, false),
 		Entry("should accept IP pool with AWS subnet ID and block size 32",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "subnet-0123456789abcdef0",
@@ -1357,7 +1366,8 @@ func init() {
 				},
 			}, true),
 		Entry("should reject IP pool with AWS subnet ID and block size 31",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "subnet-0123456789abcdef0",
@@ -1365,35 +1375,40 @@ func init() {
 				},
 			}, false),
 		Entry("should accept IP pool with valid short AWS subnet ID",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "subnet-01234567",
 				},
 			}, true),
 		Entry("should reject IP pool with too-long AWS subnet ID",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "subnet-0123456789abcdef01",
 				},
 			}, false),
 		Entry("should reject IP pool with garbage AWS subnet ID",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "fgkjdhfjadhfjah",
 				},
 			}, false),
 		Entry("should reject IP pool with wrong ID type",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "vpc-0123456789abcdef01",
 				},
 			}, false),
 		Entry("should reject IP pool with upper case",
-			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
 					CIDR:        netv4_3,
 					AWSSubnetID: "subnet-0123456789Abcdef0",
@@ -2822,16 +2837,26 @@ func init() {
 		),
 
 		// StagedGlobalNetworkPolicySpec Types field checks.
-		Entry("disallow name with invalid character", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
-			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
-		Entry("disallow name with mixed case characters", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
-			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
-		Entry("allow valid name", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
-			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, true),
-		Entry("disallow k8s policy name", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
-			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
-		Entry("disallow name with dot", &api.StagedGlobalNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
-			Spec: api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""}}, false),
+		Entry("disallow name with invalid character", &api.StagedGlobalNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
+			Spec:       api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""},
+		}, false),
+		Entry("disallow name with mixed case characters", &api.StagedGlobalNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
+			Spec:       api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""},
+		}, false),
+		Entry("allow valid name", &api.StagedGlobalNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "thing"},
+			Spec:       api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""},
+		}, true),
+		Entry("disallow k8s policy name", &api.StagedGlobalNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
+			Spec:       api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""},
+		}, false),
+		Entry("disallow name with dot", &api.StagedGlobalNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
+			Spec:       api.StagedGlobalNetworkPolicySpec{StagedAction: api.StagedActionSet, Selector: "foo == \"bar\""},
+		}, false),
 		Entry("should accept a valid StagedAction value 'Set'",
 			&api.StagedGlobalNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
@@ -2899,47 +2924,56 @@ func init() {
 			ObjectMeta: v1.ObjectMeta{Name: "foo"},
 			Spec: api.TierSpec{
 				Order: &tierOrder,
-			}}, true),
+			},
+		}, true),
 		Entry("Tier: valid name with dash", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "fo-o"},
 			Spec: api.TierSpec{
 				Order: &tierOrder,
-			}}, true),
+			},
+		}, true),
 		Entry("Tier: disallow dot in name", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "fo.o"},
 			Spec: api.TierSpec{
 				Order: &tierOrder,
-			}}, false),
+			},
+		}, false),
 		Entry("Tier: allow valid name of 63 chars", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: string(value63)},
 			Spec: api.TierSpec{
 				Order: &tierOrder,
-			}}, true),
+			},
+		}, true),
 		Entry("Tier: disallow a name of 64 chars", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: string(value64)},
 			Spec: api.TierSpec{
 				Order: &tierOrder,
-			}}, false),
+			},
+		}, false),
 		Entry("Tier: disallow other chars", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
 			Spec: api.TierSpec{
 				Order: &tierOrder,
-			}}, false),
+			},
+		}, false),
 		Entry("Tier: disallow default tier with an invalid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "default"},
 			Spec: api.TierSpec{
 				Order: &defaultTierBadOrder,
-			}}, false),
+			},
+		}, false),
 		Entry("Tier: allow default tier with the predefined order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "default"},
 			Spec: api.TierSpec{
 				Order: &defaultTierOrder,
-			}}, true),
+			},
+		}, true),
 		Entry("Tier: allow a tier with a valid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "platform"},
 			Spec: api.TierSpec{
 				Order: &tierOrder,
-			}}, true),
+			},
+		}, true),
 
 		// NetworkPolicySpec Types field checks.
 		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),
@@ -3004,18 +3038,30 @@ func init() {
 		),
 
 		// StagedNetworkPolicySpec Types field checks.
-		Entry("allow valid name", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"},
-			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
-		Entry("disallow name with dot", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
-			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
-		Entry("disallow name with mixed case", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
-			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
-		Entry("allow valid name of 253 chars", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])},
-			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
-		Entry("disallow a name of 254 chars", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])},
-			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, false),
-		Entry("allow k8s policy name", &api.StagedNetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
-			Spec: api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete}}, true),
+		Entry("allow valid name", &api.StagedNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "thing"},
+			Spec:       api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete},
+		}, true),
+		Entry("disallow name with dot", &api.StagedNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"},
+			Spec:       api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete},
+		}, false),
+		Entry("disallow name with mixed case", &api.StagedNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "tHiNg"},
+			Spec:       api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete},
+		}, false),
+		Entry("allow valid name of 253 chars", &api.StagedNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])},
+			Spec:       api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete},
+		}, true),
+		Entry("disallow a name of 254 chars", &api.StagedNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])},
+			Spec:       api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete},
+		}, false),
+		Entry("allow k8s policy name", &api.StagedNetworkPolicy{
+			ObjectMeta: v1.ObjectMeta{Name: "knp.default.thing"},
+			Spec:       api.StagedNetworkPolicySpec{StagedAction: api.StagedActionDelete},
+		}, true),
 		Entry("allow missing Types",
 			&api.StagedNetworkPolicy{
 				ObjectMeta: v1.ObjectMeta{Name: "eng.thing"},
@@ -4580,16 +4626,26 @@ func init() {
 			Spec: api.DeepPacketInspectionSpec{
 				Selector: "malformed$&/?!",
 			},
-			Status: api.DeepPacketInspectionStatus{Nodes: []api.DPINode{
-				{
-					Node:   "node-0",
-					Active: api.DPIActive{},
-					ErrorConditions: []api.DPIErrorCondition{
-						{Message: "error-1"}, {Message: "error-2"}, {Message: "error-3"}, {Message: "error-4"}, {Message: "error-5"}, {Message: "error-6"},
-						{Message: "error-7"}, {Message: "error-8"}, {Message: "error-9"}, {Message: "error-10"}, {Message: "error-11"},
+			Status: api.DeepPacketInspectionStatus{
+				Nodes: []api.DPINode{
+					{
+						Node:   "node-0",
+						Active: api.DPIActive{},
+						ErrorConditions: []api.DPIErrorCondition{
+							{Message: "error-1"},
+							{Message: "error-2"},
+							{Message: "error-3"},
+							{Message: "error-4"},
+							{Message: "error-5"},
+							{Message: "error-6"},
+							{Message: "error-7"},
+							{Message: "error-8"},
+							{Message: "error-9"},
+							{Message: "error-10"},
+							{Message: "error-11"},
+						},
 					},
 				},
-			},
 			},
 		}, false),
 
@@ -5028,6 +5084,53 @@ func init() {
 		Entry("should accept a valid BPFForceTrackPacketsFromIfaces value 'docker+'", api.FelixConfigurationSpec{BPFForceTrackPacketsFromIfaces: &[]string{"docker+"}}, true),
 		Entry("should accept a valid BPFForceTrackPacketsFromIfaces value 'docker0,docker1'", api.FelixConfigurationSpec{BPFForceTrackPacketsFromIfaces: &[]string{"docker0", "docker1"}}, true),
 		Entry("should reject invalid BPFForceTrackPacketsFromIfaces value 'cali-123,cali@456'", api.FelixConfigurationSpec{BPFForceTrackPacketsFromIfaces: &[]string{"cali-123", "cali@456"}}, false),
+
+		// BFDConfiguration validation
+		Entry("should accept a valid BFDConfiguration", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
+			{
+				MatchPattern:        "eth0",
+				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				Multiplier:          3,
+			},
+		}}, true),
+		Entry("should reject a BFDConfiguration with invalid NodeSelector", api.BFDConfigurationSpec{NodeSelector: "all", Interfaces: []api.BFDInterface{
+			{
+				MatchPattern:        "eth0",
+				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				Multiplier:          3,
+			},
+		}}, false),
+		Entry("should reject a BFDConfiguration with MinimumRecvInterval less than 1ms", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
+			{
+				MatchPattern:        "eth0",
+				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Microsecond},
+				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				Multiplier:          3,
+			},
+		}}, false),
+		Entry("should reject a BFDConfiguration with MinimumSendInterval not a multiple of 1ms", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
+			{
+				MatchPattern:        "eth0",
+				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &metav1.Duration{Duration: 1*time.Millisecond + 1*time.Microsecond},
+				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				Multiplier:          3,
+			},
+		}}, false),
+		Entry("should reject a BFDConfiguration with zero multiplier", api.BFDConfigurationSpec{NodeSelector: "all()", Interfaces: []api.BFDInterface{
+			{
+				MatchPattern:        "eth0",
+				MinimumRecvInterval: &metav1.Duration{Duration: 1 * time.Second},
+				MinimumSendInterval: &metav1.Duration{Duration: 1 * time.Second},
+				IdleSendInterval:    &metav1.Duration{Duration: 1 * time.Second},
+				Multiplier:          0,
+			},
+		}}, false),
 	)
 
 	Describe("particular error string checking", func() {

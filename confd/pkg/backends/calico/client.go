@@ -70,6 +70,12 @@ var (
 	nodeToNodeMeshDisabled  = "{\"enabled\":false}"
 	standardCommunity       = regexp.MustCompile(`^(\d+):(\d+)$`)
 	largeCommunity          = regexp.MustCompile(`^(\d+):(\d+):(\d+)$`)
+
+	// The cache key to use for resolved BFD configuration. Right now, we only support a single
+	// BFD configuration per node, so use a well-known key to store the resolved configuration. If we
+	// eventually support multiple BFD configurations per node, we'll need to instead use a unique key
+	// per BFD configuration.
+	bfdConfigurationKey = model.ResourceKey{Name: "default", Kind: apiv3.KindBFDConfiguration}
 )
 
 var sensitiveValues = map[string]interface{}{
@@ -134,6 +140,13 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	// get the backend client.
 	bc := cc.(backendClientAccessor).Backend()
 
+	// The node label manager tracks node labels for components to use when calculating
+	// node selectors, etc.
+	nodeLabelMgr := newNodeLabelManager()
+
+	// BFD configuration management.
+	bfdResolver := newBFDResolver(template.NodeName, nodeLabelMgr)
+
 	// Create the client.  Initialize the cache revision to 1 so that the watcher
 	// code can handle the first iteration by always rendering.
 	c := &client{
@@ -143,7 +156,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		cacheRevision:           1,
 		revisionsByPrefix:       make(map[string]uint64),
 		nodeMeshEnabled:         nodeMeshEnabled,
-		nodeLabelManager:        newNodeLabelManager(),
+		nodeLabelManager:        nodeLabelMgr,
 		bgpPeers:                make(map[string]*apiv3.BGPPeer),
 		sourceReady:             make(map[string]bool),
 		nodeListenPorts:         make(map[string]uint16),
@@ -167,6 +180,9 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		// non-blocking write into this channel, so as not to block if a trigger is already
 		// pending.
 		recheckC: make(chan struct{}, 1),
+
+		// Resolves BFDConfiguration into the correct BFD configuration for this node.
+		bfdResolver: bfdResolver,
 	}
 	for k, v := range globalDefaults {
 		c.cache[k] = v
@@ -296,7 +312,7 @@ type client struct {
 	// The BGP syncer.
 	syncer           api.Syncer
 	nodeV1Processor  watchersyncer.SyncerUpdateProcessor
-	nodeLabelManager nodeLabelManager
+	nodeLabelManager *nodeLabelManager
 	bgpPeers         map[string]*apiv3.BGPPeer
 	globalListenPort uint16
 	nodeListenPorts  map[string]uint16
@@ -363,6 +379,9 @@ type client struct {
 
 	// Cached value of the default BGP configuration for node to node mesh BGP password lookup.
 	globalBGPConfig *apiv3.BGPConfiguration
+
+	// The BFD configuration manager.
+	bfdResolver *bfdResolver
 }
 
 // SetPrefixes is called from confd to notify this client of the full set of prefixes that will
@@ -873,6 +892,9 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 	// Track whether these updates require service advertisement to be recomputed.
 	needServiceAdvertisementUpdates := false
 
+	// Track BFD configuration changes.
+	needUpdateBFD := false
+
 	log.WithField("cacheRevision", c.cacheRevision).Debug("Processing OnUpdates from syncer")
 	for _, u := range updates {
 		log.Debugf("Update: %#v", u)
@@ -1008,6 +1030,12 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 			needUpdatePeersV1 = true
 			needUpdatePeersReasons = append(needUpdatePeersReasons, "BGPFilter updated or deleted")
 		}
+
+		if v3key.Kind == apiv3.KindBFDConfiguration || v3key.Kind == libapiv3.KindNode {
+			if c.bfdResolver.OnUpdate(u) {
+				needUpdateBFD = true
+			}
+		}
 	}
 
 	// Update our cache from each of the individual updates, and keep track of
@@ -1019,6 +1047,23 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 			c.updateBGPConfigCache(v3key.Name, v3res, &needServiceAdvertisementUpdates, &needUpdatePeersV1, &needUpdatePeersReasons)
 		}
 		c.updateCache(u.UpdateType, &u.KVPair)
+	}
+
+	if needUpdateBFD {
+		// Resolve the latest updates and updated the computed BFD configuration in the cache.
+		bfdCfg, err := c.bfdResolver.Resolve()
+		if err != nil {
+			log.WithError(err).Error("Failed to resolve BFD configuration")
+		} else if bfdCfg != nil {
+			// Update the cache with the new BFD configuration.
+			c.updateCache(api.UpdateTypeKVNew, &model.KVPair{
+				Key:   bfdConfigurationKey,
+				Value: bfdCfg,
+			})
+		} else {
+			// No BFD configuration.
+			c.updateCache(api.UpdateTypeKVDeleted, &model.KVPair{Key: bfdConfigurationKey})
+		}
 	}
 
 	// If configuration relevant to BGP peerings has changed, recalculate the set of v1

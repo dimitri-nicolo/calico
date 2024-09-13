@@ -158,7 +158,6 @@ func (_m *MockClientInterface) Profiles() clientv3.ProfileInterface {
 
 func (_m *MockClientInterface) RemoteClusterConfigurations() clientv3.RemoteClusterConfigurationInterface {
 	return nil
-
 }
 
 func (_m *MockClientInterface) StagedGlobalNetworkPolicies() clientv3.StagedGlobalNetworkPolicyInterface {
@@ -194,5 +193,9 @@ func (_m *MockClientInterface) ExternalNetworks() clientv3.ExternalNetworkInterf
 }
 
 func (_m *MockClientInterface) EgressGatewayPolicy() clientv3.EgressGatewayPolicyInterface {
+	return nil
+}
+
+func (_m *MockClientInterface) BFDConfigurations() clientv3.BFDConfigurationInterface {
 	return nil
 }

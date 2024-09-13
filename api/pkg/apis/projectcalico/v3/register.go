@@ -12,8 +12,10 @@ import (
 const GroupName = "projectcalico.org"
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v3"}
-var SchemeGroupVersionInternal = schema.GroupVersion{Group: GroupName, Version: runtime.APIVersionInternal}
+var (
+	SchemeGroupVersion         = schema.GroupVersion{Group: GroupName, Version: "v3"}
+	SchemeGroupVersionInternal = schema.GroupVersion{Group: GroupName, Version: runtime.APIVersionInternal}
+)
 
 var (
 	SchemeBuilder      runtime.SchemeBuilder
@@ -102,6 +104,8 @@ var (
 		&ExternalNetworkList{},
 		&SecurityEventWebhook{},
 		&SecurityEventWebhookList{},
+		&BFDConfiguration{},
+		&BFDConfigurationList{},
 	}
 )
 

@@ -66,7 +66,6 @@ var _ = Describe("DPI status updater", func() {
 								Group:    "projectcalico.org/v3",
 								Resource: v3.KindDeepPacketInspection,
 							}, dpiName, fmt.Errorf("randomerr"))}
-
 						} else {
 							c.ReturnArguments = mock.Arguments{dpiRes, nil}
 						}
@@ -115,7 +114,8 @@ var _ = Describe("DPI status updater", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
 			Spec:       v3.DeepPacketInspectionSpec{Selector: "k8s-app=='dpi'"},
 			Status: v3.DeepPacketInspectionStatus{Nodes: []v3.DPINode{
-				{Node: "node-0", Active: v3.DPIActive{Success: false},
+				{
+					Node: "node-0", Active: v3.DPIActive{Success: false},
 					ErrorConditions: []v3.DPIErrorCondition{
 						{Message: "error-1"},
 						{Message: "error-2"},
@@ -127,10 +127,12 @@ var _ = Describe("DPI status updater", func() {
 						{Message: "error-8"},
 						{Message: "error-9"},
 						{Message: "error-10"},
-					}},
+					},
+				},
 				{Node: "node-1", Active: v3.DPIActive{Success: false}},
 				{Node: "node-2", Active: v3.DPIActive{Success: true}},
-			}}}
+			}},
+		}
 		mockDPIInterface.On("Get", mock.Anything, dpiKey.Namespace, dpiKey.Name, mock.Anything).Return(dpiRes2, nil).Times(1)
 		mockDPIInterface.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).Return().Run(
 			func(args mock.Arguments) {
@@ -159,14 +161,17 @@ var _ = Describe("DPI status updater", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
 			Spec:       v3.DeepPacketInspectionSpec{Selector: "k8s-app=='dpi'"},
 			Status: v3.DeepPacketInspectionStatus{Nodes: []v3.DPINode{
-				{Node: "node-0", Active: v3.DPIActive{Success: false},
+				{
+					Node: "node-0", Active: v3.DPIActive{Success: false},
 					ErrorConditions: []v3.DPIErrorCondition{
 						{Message: "error-1"},
 						{Message: "error-2"},
-					}},
+					},
+				},
 				{Node: "node-1", Active: v3.DPIActive{Success: false}},
 				{Node: "node-2", Active: v3.DPIActive{Success: true}},
-			}}}
+			}},
+		}
 		mockDPIInterface.On("Get", mock.Anything, dpiKey.Namespace, dpiKey.Name, mock.Anything).Return(dpiRes2, nil).Times(1)
 		mockDPIInterface.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).Return().Run(
 			func(args mock.Arguments) {

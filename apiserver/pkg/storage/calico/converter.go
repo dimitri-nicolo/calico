@@ -186,6 +186,10 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &v3.SecurityEventWebhook{}
 		SecurityEventWebhookConverter{}.convertToAAPI(obj, aapi)
 		return aapi
+	case *v3.BFDConfiguration:
+		aapi := &v3.BFDConfiguration{}
+		BGPConfigurationConverter{}.convertToAAPI(obj, aapi)
+		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil

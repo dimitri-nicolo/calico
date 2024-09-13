@@ -658,7 +658,7 @@ pre-commit:
 
 .PHONY: install-git-hooks
 install-git-hooks:
-	$(REPO_DIR)/install-git-hooks
+	${install_hooks}
 
 .PHONY: check-module-path-tigera-api
 check-module-path-tigera-api:

@@ -41,6 +41,8 @@ type Interface interface {
 	CalicoNodeStatusClient
 	IPAMConfigClient
 	BlockAffinitiesClient
+	BFDConfigurationsClient
+
 	// Tiers returns an interface for managing tier resources.
 	Tiers() TierInterface
 	// StagedGlobalNetworkPolicies returns an interface for managing staged global network policy resources.
@@ -207,6 +209,11 @@ type BlockAffinitiesClient interface {
 type BGPFilterClient interface {
 	// BGPFilter returns an interface for managing BGPFilter resources.
 	BGPFilter() BGPFilterInterface
+}
+
+type BFDConfigurationsClient interface {
+	// BFDConfigurations returns an interface for managing BFD configuration resources.
+	BFDConfigurations() BFDConfigurationInterface
 }
 
 // Compile-time assertion that our client implements its interface.

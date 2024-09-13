@@ -98,6 +98,7 @@ var OpenSourceAPIs = set{
 	api.NewExternalNetwork().GetObjectKind().GroupVersionKind().String():              true,
 	api.NewBGPFilter().GetObjectKind().GroupVersionKind().String():                    true,
 	api.NewEgressGatewayPolicy().GetObjectKind().GroupVersionKind().String():          true,
+	api.NewBFDConfiguration().GetObjectKind().GroupVersionKind().String():             true,
 }
 
 // EnterpriseAPIsToFeatureName maps calico enterprise APIs to feature names
@@ -147,8 +148,10 @@ var CloudCommunityAPIs = merge(OpenSourceAPIs, set{
 var CloudStarterFeatures = merge(CloudCommunityFeatures, set{EgressAccessControl: true, Tiers: true})
 
 // CloudStarterAPIs maps cloud starter package APIs
-var CloudStarterAPIs = merge(CloudCommunityAPIs, set{api.NewTier().GetObjectKind().GroupVersionKind().String(): true,
-	api.NewTierList().GetObjectKind().GroupVersionKind().String(): true})
+var CloudStarterAPIs = merge(CloudCommunityAPIs, set{
+	api.NewTier().GetObjectKind().GroupVersionKind().String():     true,
+	api.NewTierList().GetObjectKind().GroupVersionKind().String(): true,
+})
 
 // CloudProFeatures contains all available features except Compliance and Threat Defense features
 var CloudProFeatures = merge(CloudStarterFeatures, set{FederatedServices: true, ExportLogs: true, AlertManagement: true, TopologicalGraph: true, KibanaDashboard: true, FileOutputL7Logs: true, PacketCapture: true})
@@ -164,7 +167,8 @@ var CloudProAPIs = merge(CloudStarterAPIs, set{
 	api.NewPacketCapture().GetObjectKind().GroupVersionKind().String():                  true,
 	api.NewPacketCaptureList().GetObjectKind().GroupVersionKind().String():              true,
 	api.NewRemoteClusterConfiguration().GetObjectKind().GroupVersionKind().String():     true,
-	api.NewRemoteClusterConfigurationList().GetObjectKind().GroupVersionKind().String(): true})
+	api.NewRemoteClusterConfigurationList().GetObjectKind().GroupVersionKind().String(): true,
+})
 
 // EnterpriseAPIs maps enterprise package to all APIs
 var EnterpriseAPIs = merge(CloudProAPIs, set{

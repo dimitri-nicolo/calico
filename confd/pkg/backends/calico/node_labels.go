@@ -10,8 +10,8 @@ import (
 )
 
 // newNodeLabelManager returns a newly initialized nodeLabelManager with no label data.
-func newNodeLabelManager() nodeLabelManager {
-	return nodeLabelManager{
+func newNodeLabelManager() *nodeLabelManager {
+	return &nodeLabelManager{
 		nodeLabels: map[string]map[string]string{},
 	}
 }
@@ -76,6 +76,20 @@ func (m *nodeLabelManager) nodesMatching(rawSelector string) []string {
 		}
 	}
 	return nodeNames
+}
+
+func (m *nodeLabelManager) selectorMatchesNode(node string, rawSelector string) bool {
+	m.Lock()
+	defer m.Unlock()
+
+	sel, err := selector.Parse(rawSelector)
+	if err != nil {
+		log.Errorf("Couldn't parse selector: %v", rawSelector)
+		return false
+	}
+
+	nodeLabels := m.nodeLabels[node]
+	return sel.Evaluate(nodeLabels)
 }
 
 func (m *nodeLabelManager) listNodes() []string {

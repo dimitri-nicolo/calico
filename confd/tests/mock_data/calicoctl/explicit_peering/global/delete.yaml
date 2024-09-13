@@ -37,3 +37,10 @@ spec:
   ipipMode: Always
   natOutgoing: true
 
+---
+
+kind: BFDConfiguration
+apiVersion: projectcalico.org/v3
+metadata:
+  name: default
+spec: {}

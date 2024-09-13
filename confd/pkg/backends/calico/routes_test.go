@@ -70,7 +70,8 @@ func buildSimpleInternalService(isAnnotated bool) (svc *v1.Service, ep *v1.Endpo
 		Spec: v1.ServiceSpec{
 			Type:      v1.ServiceTypeClusterIP,
 			ClusterIP: "127.0.0.2",
-		}}
+		},
+	}
 
 	if isAnnotated {
 		svc.Annotations[advertiseClusterIPAnnotation] = "true"
@@ -151,6 +152,7 @@ var _ = Describe("RouteGenerator", func() {
 				ExternalIPRouteIndex:     NewRouteIndex(),
 				ClusterIPRouteIndex:      NewRouteIndex(),
 				LoadBalancerIPRouteIndex: NewRouteIndex(),
+				nodeLabelManager:         newNodeLabelManager(),
 
 				externalIPs: []string{
 					ipNet1.String(),

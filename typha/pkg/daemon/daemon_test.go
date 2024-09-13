@@ -493,15 +493,16 @@ func (b *mockDatastore) EgressGatewayPolicy() clientv3.EgressGatewayPolicyInterf
 	panic("not implemented")
 }
 
-var _ RealClientV3 = (*mockDatastore)(nil)
-
-type dummySyncer struct {
+func (b *mockDatastore) BFDConfigurations() clientv3.BFDConfigurationInterface {
+	panic("not implemented")
 }
 
-func (*dummySyncer) Start() {
+var _ RealClientV3 = (*mockDatastore)(nil)
 
+type dummySyncer struct{}
+
+func (*dummySyncer) Start() {
 }
 
 func (*dummySyncer) Stop() {
-
 }

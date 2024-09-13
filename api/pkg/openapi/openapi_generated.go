@@ -38,6 +38,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.AuthorizedResourceVerb":                   schema_pkg_apis_projectcalico_v3_AuthorizedResourceVerb(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.AuthorizedResourceVerbs":                  schema_pkg_apis_projectcalico_v3_AuthorizedResourceVerbs(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.AutoHostEndpointConfig":                   schema_pkg_apis_projectcalico_v3_AutoHostEndpointConfig(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.BFDConfiguration":                         schema_pkg_apis_projectcalico_v3_BFDConfiguration(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.BFDConfigurationList":                     schema_pkg_apis_projectcalico_v3_BFDConfigurationList(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.BFDConfigurationSpec":                     schema_pkg_apis_projectcalico_v3_BFDConfigurationSpec(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.BFDInterface":                             schema_pkg_apis_projectcalico_v3_BFDInterface(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPConfiguration":                         schema_pkg_apis_projectcalico_v3_BGPConfiguration(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPConfigurationList":                     schema_pkg_apis_projectcalico_v3_BGPConfigurationList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPConfigurationSpec":                     schema_pkg_apis_projectcalico_v3_BGPConfigurationSpec(ref),
@@ -1371,6 +1375,176 @@ func schema_pkg_apis_projectcalico_v3_AutoHostEndpointConfig(ref common.Referenc
 				},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_BFDConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.BFDConfigurationSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.BFDConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_BFDConfigurationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BFDConfigurationList is a list of BFDConfiguration resources.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.BFDConfiguration"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.BFDConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_BFDConfigurationSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BFDConfigurationSpec contains the specification for a BFDConfiguration resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"nodeSelector": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"interfaces": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.BFDInterface"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.BFDInterface"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_BFDInterface(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BFDInterface contains per-interface parameters for BFD failure detection.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"matchPattern": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MatchPattern is a pattern to match one or more interfaces. Supports exact interface names, match on interface prefixes (e.g., “eth*”), or “*” to select all interfaces on the selected node(s).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"minimumRecvInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinimumRecvInterval is the minimum interval between received BFD packets. Must be a whole number of milliseconds greater than 0.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"minimumSendInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinimumSendInterval is the minimum interval between transmitted BFD packets. Must be a whole number of milliseconds greater than 0.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"idleSendInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IdleSendInterval is the interval between transmitted BFD packets when the BFD peer is idle. Must be a whole number of milliseconds greater than 0.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"multiplier": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Multiplier is the number of intervals that must pass without receiving a BFD packet before the peer is considered down.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

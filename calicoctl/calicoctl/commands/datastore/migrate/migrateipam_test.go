@@ -380,6 +380,11 @@ func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, c
 	return nil
 }
 
+func (c *MockIPAMClient) BFDConfigurations() client.BFDConfigurationInterface {
+	// DO NOTHING
+	return nil
+}
+
 // MockIPAMBackendClient stubs out bapi.Client but only implements List
 // for the IPAM objects in order to test IPAM migration logic.
 type MockIPAMBackendClient struct {

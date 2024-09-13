@@ -51,6 +51,7 @@ func newFuncMap() map[string]interface{} {
 	m["externalNetworkTableName"] = ExternalNetworkTableName
 	m["bgpFilterFunctionName"] = BGPFilterFunctionName
 	m["bgpFilterBIRDFuncs"] = BGPFilterBIRDFuncs
+	m["formatTime"] = formatTime
 	return m
 }
 
@@ -70,6 +71,19 @@ func ExternalNetworkTableName(name string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("'%s%s'", prefix, resizedName), nil
+}
+
+// time converts the provided time.Duration formatted string into a valid BIRD <time> format.
+// While BIRD accepts time in either s|ms|us, we convert everything to ms for simplicity.
+func formatTime(val interface{}) (string, error) {
+	if _, ok := val.(string); !ok {
+		return "", fmt.Errorf("time value must be a string, got %T", val)
+	}
+	d, err := time.ParseDuration(val.(string))
+	if err != nil {
+		return "", fmt.Errorf("error formatting time value %s: %s", val, err)
+	}
+	return fmt.Sprintf("%dms", d.Milliseconds()), nil
 }
 
 // filterStatement produces a single comparison expression to be used within a multi-statement BIRD filter
@@ -123,14 +137,12 @@ func filterAction(action v3.BGPFilterAction) (string, error) {
 	return fmt.Sprintf("%s;", strings.ToLower(string(action))), nil
 }
 
-var (
-	operatorLUT = map[v3.BGPFilterMatchOperator]string{
-		v3.Equal:    "=",
-		v3.NotEqual: "!=",
-		v3.In:       "~",
-		v3.NotIn:    "!~",
-	}
-)
+var operatorLUT = map[v3.BGPFilterMatchOperator]string{
+	v3.Equal:    "=",
+	v3.NotEqual: "!=",
+	v3.In:       "~",
+	v3.NotIn:    "!~",
+}
 
 func filterMatchPrefixLength(cidr string, prefixMin, prefixMax *int32) (string, error) {
 	cidrIP, cidrNet, err := net.ParseCIDR(cidr)
@@ -245,7 +257,8 @@ func BGPFilterFunctionName(filterName, direction, version string) (string, error
 //	  "}",
 //	 }
 func ExternalNetworkBIRDConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
-	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
+	nodeSpecificPeersKVP memkv.KVPairs,
+) ([]string, error) {
 	lines := []string{}
 	peerReferencedExternalNetworks := map[string][]string{}
 	var line string

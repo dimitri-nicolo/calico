@@ -338,26 +338,29 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		apiv3.KindBGPFilter,
 		resources.NewBGPFilterClient(cs, crdClientV1),
 	)
-
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindExternalNetwork,
 		resources.NewExternalNetworkClient(cs, crdClientV1),
 	)
-
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindEgressGatewayPolicy,
 		resources.NewEgressPolicyClient(cs, crdClientV1),
 	)
-
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindSecurityEventWebhook,
 		resources.NewSecurityEventWebhookClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindBFDConfiguration,
+		resources.NewBFDConfigClient(cs, crdClientV1),
 	)
 
 	if !ca.K8sUsePodCIDR {
@@ -667,6 +670,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindExternalNetwork,
 		apiv3.KindEgressGatewayPolicy,
 		apiv3.KindSecurityEventWebhook,
+		apiv3.KindBFDConfiguration,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
@@ -832,6 +836,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.EgressGatewayPolicyList{},
 					&apiv3.SecurityEventWebhook{},
 					&apiv3.SecurityEventWebhookList{},
+					&apiv3.BFDConfiguration{},
+					&apiv3.BFDConfigurationList{},
 				)
 				return nil
 			})

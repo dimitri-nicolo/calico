@@ -7,6 +7,7 @@ keys = [
     "/bgp/v1/global",
     "/resources/v3/projectcalico.org/externalnetworks",
     "/resources/v3/projectcalico.org/bgpfilters",
+    "/resources/v3/projectcalico.org/bfdconfigurations",
 ]
 check_cmd = "bird -p -c {{.src}}"
 reload_cmd = "sv hup bird || true"

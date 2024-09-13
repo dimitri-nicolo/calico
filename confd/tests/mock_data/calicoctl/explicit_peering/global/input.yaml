@@ -81,3 +81,21 @@ spec:
   cidr: 192.168.0.0/16
   ipipMode: Always
   natOutgoing: true
+
+---
+
+kind: BFDConfiguration
+apiVersion: projectcalico.org/v3
+metadata:
+  name: default
+spec:
+  nodeSelector: 'all()'
+  interfaces:
+  # Fully specified.
+  - matchPattern: "*"
+    minimumRecvInterval: "50ms"
+    minimumSendInterval: "10s"
+    idleSendInterval: "10s"
+    multiplier: 6
+  # Test defaulting of unspecified fields.
+  - matchPattern: "ens*"

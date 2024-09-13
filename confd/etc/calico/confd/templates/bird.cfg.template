@@ -168,6 +168,19 @@ protocol direct from direct_template {
 }
 
 protocol bfd {
+{{- if exists "/resources/v3/projectcalico.org/bfdconfigurations/default"}}
+{{- $bfdconfig := json (getv "/resources/v3/projectcalico.org/bfdconfigurations/default")}}
+{{- range $iface := $bfdconfig.spec.interfaces}}
+
+  interface "{{$iface.matchPattern}}" {
+    min rx interval {{ formatTime $iface.minimumRecvInterval }};
+    min tx interval {{ formatTime $iface.minimumSendInterval }};
+    idle tx interval {{ formatTime $iface.idleSendInterval }};
+    multiplier {{ $iface.multiplier }};
+  };
+
+{{- end}}
+{{- end}}
 }
 
 {{if eq "" ($node_ip)}}# IPv4 disabled on this node.

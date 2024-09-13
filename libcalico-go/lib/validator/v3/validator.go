@@ -403,6 +403,7 @@ func init() {
 	registerStructValidator(validate, validateBlockAffinitySpec, libapi.BlockAffinitySpec{})
 	registerStructValidator(validate, validateHealthTimeoutOverride, api.HealthTimeoutOverride{})
 	registerStructValidator(validate, validateEgressGatewayPolicy, api.EgressGatewayPolicySpec{})
+	registerStructValidator(validate, validateBFDConfigurationSpec, api.BFDConfigurationSpec{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -2401,19 +2402,17 @@ func validatePacketCaptureSpec(structLevel validator.StructLevel) {
 	spec := structLevel.Current().Interface().(api.PacketCaptureSpec)
 
 	if spec.StartTime != nil && spec.EndTime != nil {
-		var start = spec.StartTime.Time
-		var end = spec.EndTime.Time
+		start := spec.StartTime.Time
+		end := spec.EndTime.Time
 		// endTime < startTime
 		if start.After(end) {
 			structLevel.ReportError(reflect.ValueOf(end),
 				"EndTime", "", reason("must be set after startTime"), "")
-
 		}
 		// endTime == startTime
 		if start.Equal(end) {
 			structLevel.ReportError(reflect.ValueOf(end),
 				"EndTime", "", reason("must have a different value than startTime"), "")
-
 		}
 	}
 }
@@ -2939,6 +2938,85 @@ func validateRouteTableIDRange(structLevel validator.StructLevel) {
 	if includesReserved {
 		log.Infof("Felix route-table range includes reserved Linux tables, values 253-255 will be ignored.")
 	}
+}
+
+func validateBFDConfigurationSpec(structLevel validator.StructLevel) {
+	spec := structLevel.Current().Interface().(api.BFDConfigurationSpec)
+	if !selectorIsValid(spec.NodeSelector) {
+		structLevel.ReportError(
+			reflect.ValueOf(structLevel.Current().Interface().(api.BFDConfigurationSpec).NodeSelector),
+			"NodeSelector",
+			"",
+			reason("NodeSelector is invalid"),
+			"",
+		)
+	}
+	for _, ifce := range spec.Interfaces {
+		validateBFDInterface(structLevel, ifce)
+	}
+}
+
+func validateBFDInterface(structLevel validator.StructLevel, ifce api.BFDInterface) {
+	if ifce.MatchPattern == "" {
+		structLevel.ReportError(
+			reflect.ValueOf(ifce.MatchPattern),
+			"MatchPattern",
+			"",
+			reason("MatchPattern cannot be empty"),
+			"",
+		)
+	}
+	if ifce.Multiplier < 1 {
+		structLevel.ReportError(
+			reflect.ValueOf(ifce.Multiplier),
+			"Multiplier",
+			"",
+			reason("Multiplier must be greater than 0"),
+			"",
+		)
+	}
+	if ok, msg := checkBFDInterval(ifce.MinimumRecvInterval); !ok {
+		structLevel.ReportError(
+			reflect.ValueOf(ifce.MinimumRecvInterval.Duration),
+			"MinimumRecvInterval",
+			"",
+			reason(msg),
+			"",
+		)
+	}
+	if ok, msg := checkBFDInterval(ifce.MinimumSendInterval); !ok {
+		structLevel.ReportError(
+			reflect.ValueOf(ifce.MinimumSendInterval.Duration),
+			"MinimumSendInterval",
+			"",
+			reason(msg),
+			"",
+		)
+	}
+	if ok, msg := checkBFDInterval(ifce.IdleSendInterval); !ok {
+		structLevel.ReportError(
+			reflect.ValueOf(ifce.IdleSendInterval.Duration),
+			"IdleSendInterval",
+			"",
+			reason(msg),
+			"",
+		)
+	}
+}
+
+func checkBFDInterval(v *metav1.Duration) (bool, string) {
+	if v == nil {
+		return true, ""
+	}
+	if v.Duration < time.Millisecond {
+		return false, "must be greater than 1ms"
+	}
+
+	// Check if the value is a multiple of 1ms
+	if v.Duration%time.Millisecond != 0 {
+		return false, "must be a multiple of 1ms"
+	}
+	return true, ""
 }
 
 func validateBGPConfigurationSpec(structLevel validator.StructLevel) {

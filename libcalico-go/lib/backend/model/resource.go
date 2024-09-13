@@ -273,6 +273,12 @@ func init() {
 		"SecurityEventWebhooks",
 		reflect.TypeOf(apiv3.SecurityEventWebhook{}),
 	)
+	registerResourceInfo(
+		apiv3.KindBFDConfiguration,
+		"bfdconfigurations",
+		reflect.TypeOf(apiv3.BFDConfiguration{}),
+	)
+
 	// Resources that may be transported in a ResourceKey but are not part of the public API, for use-cases like Federation.
 	registerResourceInfo(
 		libapiv3.KindIPAMBlock,
