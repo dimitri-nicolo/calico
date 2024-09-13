@@ -10,13 +10,13 @@ import (
 	"github.com/sirupsen/logrus"
 
 	authv1 "k8s.io/api/authentication/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/fluent-bit/plugins/out_linseed/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 const (
@@ -60,7 +60,7 @@ func (c *Token) Token() (string, error) {
 	if time.Until(c.expiration) < tokenRenewal {
 		logrus.Infof("token expired for serviceaccount %q", c.serviceAccountName)
 
-		token, expiration, err := getServiceAccountToken(c.clientset.CoreV1(), corev1.NamespaceDefault, c.serviceAccountName)
+		token, expiration, err := getServiceAccountToken(c.clientset.CoreV1(), resource.CalicoNamespaceName, c.serviceAccountName)
 		if err != nil {
 			return "", err
 		}

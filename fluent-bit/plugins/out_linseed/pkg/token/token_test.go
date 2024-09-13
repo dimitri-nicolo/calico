@@ -49,7 +49,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 			TypeMeta: resources.TypeK8sServiceAccounts,
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "noncluster-serviceaccount",
-				Namespace: "default",
+				Namespace: "calico-system",
 			},
 		}
 
@@ -111,7 +111,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
 			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
-			_, err = fakeCoreV1.ServiceAccounts("default").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
+			_, err = fakeCoreV1.ServiceAccounts("calico-system").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
 			tc.clientset = mockClientSet
@@ -145,7 +145,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
 			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
-			_, err = fakeCoreV1.ServiceAccounts("default").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
+			_, err = fakeCoreV1.ServiceAccounts("calico-system").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			// k8s fake corev1 will return an empty jwt token which is invalid
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
@@ -178,7 +178,7 @@ var _ = Describe("Linseed out plugin token tests", func() {
 
 			mockClientSet := lmak8s.NewMockClientSet(GinkgoT())
 			fakeCoreV1 := fake.NewSimpleClientset().CoreV1()
-			_, err = fakeCoreV1.ServiceAccounts("default").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
+			_, err = fakeCoreV1.ServiceAccounts("calico-system").Create(context.Background(), serviceAccount, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			mockClientSet.On("CoreV1").Return(fakeCoreV1)
 			tc.clientset = mockClientSet
