@@ -157,7 +157,7 @@
     coreos-alertmanager:
       version: v0.27.0
     alertmanager:
-      image: tigera/alertmanager`
+      image: tigera/alertmanager
       version: master
     envoy:
       image: tigera/envoy
