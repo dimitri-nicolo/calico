@@ -18,12 +18,11 @@ RUN mkdir -p /usr/bin/l7admctrl
 
 FROM scratch AS source
 
-ARG BIN_DIR
 ARG TARGETARCH
 
 # Precreate the /usr/bin/l7admctrl directory so that we don't need any elevated
 # permission to create the directory at runtime.
-COPY ${BIN_DIR}/l7admctrl-${TARGETARCH} /usr/bin/l7admctrl
+COPY bin/l7admctrl-${TARGETARCH} /usr/bin/l7admctrl
 
 FROM calico/base
 

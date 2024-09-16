@@ -21,7 +21,6 @@ LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 include ../lib.Makefile
 
 IMAGE_CREATED=.image.created-$(ARCH)
-BINDIR=bin
 
 # Shortcut targets
 default: build
@@ -47,10 +46,10 @@ clean:
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
 .PHONY: build
-build: $(BINDIR)/l7admctrl-$(ARCH)
-	$(MAKE) $(BINDIR)/l7admctrl-$(ARCH) ARCH=$(ARCH)
+build: bin/l7admctrl-$(ARCH)
+	$(MAKE) bin/l7admctrl-$(ARCH) ARCH=$(ARCH)
 
-$(BINDIR)/l7admctrl-%: $(SRC_FILES)
+bin/l7admctrl-%: $(SRC_FILES)
 	$(call build_binary, cmd/l7admctrl/*.go, $@)
 
 ###############################################################################
@@ -63,8 +62,8 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(L7ADMCTRL_IMAGE): $(IMAGE_CREATED)
-$(IMAGE_CREATED): Dockerfile $(BINDIR)/l7admctrl-$(ARCH)
-	$(DOCKER_BUILD) --build-arg BIN_DIR=$(BINDIR) -t $(L7ADMCTRL_IMAGE):latest-$(ARCH) -f Dockerfile .
+$(IMAGE_CREATED): Dockerfile bin/l7admctrl-$(ARCH)
+	$(DOCKER_BUILD) -t $(L7ADMCTRL_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
