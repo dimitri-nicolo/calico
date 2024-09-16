@@ -35,4 +35,4 @@
     jobs:
       - name: build binary
         commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
+          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
