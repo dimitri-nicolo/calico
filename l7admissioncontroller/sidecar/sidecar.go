@@ -120,7 +120,7 @@ const (
 	tmplDikastesInit = `{
 		"name":"tigera-dikastes-init",
 		"image":"%s",
-		"command":["/dikastes","init"],
+		"command":["/dikastes","init-sidecar"],
 		"args":[%s],
 		"env":[
 			{"name":"DIKASTES_POD_NAMESPACE","valueFrom":{"fieldRef":{"fieldPath":"metadata.namespace"}}},
