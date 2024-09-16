@@ -124,7 +124,9 @@ const (
 		"args":[%s],
 		"env":[
 			{"name":"DIKASTES_POD_NAMESPACE","valueFrom":{"fieldRef":{"fieldPath":"metadata.namespace"}}},
-			{"name":"DIKASTES_POD_NAME","valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}}
+			{"name":"DIKASTES_POD_NAME","valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}},
+			{"name":"ENVOY_CONFIG_PATH","value":"/etc/tigera/envoy.yaml"},
+			{"name":"ENVOY_INBOUND_PORT","value":"16001"}
 		],
 		"volumeMounts":[
 			{"name":"envoy-config","mountPath":"/etc/tigera"}
