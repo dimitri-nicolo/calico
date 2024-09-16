@@ -130,7 +130,7 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.1
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.17.3
-	github.com/tigera/api v0.0.0-20240708202104-e3f70b269c2c
+	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
 	github.com/urfave/cli/v2 v2.27.3
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240703200800-b54f85093f4a
@@ -163,6 +163,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
 	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
 	k8s.io/api v0.29.9
@@ -424,7 +425,6 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.4.6 // indirect
 	gorm.io/gorm v1.25.1 // indirect
 	gotest.tools/v3 v3.5.0 // indirect
@@ -433,15 +433,15 @@ require (
 	k8s.io/component-helpers v0.29.9 // indirect
 	k8s.io/controller-manager v0.29.9 // indirect
 	k8s.io/cri-api v0.29.9 // indirect
-	k8s.io/csi-translation-lib v0.28.9 // indirect
-	k8s.io/dynamic-resource-allocation v0.28.9 // indirect
+	k8s.io/csi-translation-lib v0.29.9 // indirect
+	k8s.io/dynamic-resource-allocation v0.29.9 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/kms v0.29.9 // indirect
 	k8s.io/kube-scheduler v0.29.9 // indirect
-	k8s.io/kubelet v0.28.9 // indirect
+	k8s.io/kubelet v0.29.9 // indirect
 	k8s.io/legacy-cloud-providers v0.29.9 // indirect
-	k8s.io/mount-utils v0.28.9 // indirect
-	k8s.io/pod-security-admission v0.26.0 // indirect
+	k8s.io/mount-utils v0.29.9 // indirect
+	k8s.io/pod-security-admission v0.29.9 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
