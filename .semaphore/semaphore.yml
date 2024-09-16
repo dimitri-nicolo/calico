@@ -449,6 +449,8 @@ blocks:
         os_image: ubuntu2204
     jobs:
       - name: sig-network conformance
+        execution_time_limit:
+          minutes: 60
         env_vars:
           - name: E2E_FOCUS
             value: "sig-network.*Conformance"
