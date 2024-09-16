@@ -92,6 +92,10 @@ promotions:
     pipeline_file: push-images/kube-controllers.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push l7-admission-controller images
+    pipeline_file: push-images/l7admctrl.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push l7-collector images
     pipeline_file: push-images/l7-collector.yml
     auto_promote:
