@@ -261,6 +261,7 @@ rules:
       - bgpfilters
       - globalbgpconfigs
       - bgpconfigurations
+      - bfdconfigurations
       - ippools
       - ipreservations
       - ipamblocks
