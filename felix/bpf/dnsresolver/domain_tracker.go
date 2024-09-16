@@ -17,14 +17,14 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-// DomainTracker tracks which domains are associate with what ipsets. That is,
+// DomainTracker tracks which domains are associated with what ipsets. That is,
 // when a domain is resolved to an IP, which ipsets need to be updated with that
 // IP. Similarly, when a domain is removed, from which ipsets do we need to
 // clear the domains IPs. Since we allow wildcards (in this case only sufix
 // wildcards of the for *.com) we need to be able to match the wildcards rather
 // than just keep a list of domain->ipsets mappings. To accomodate for the
 // matching, BPF code uses trie for longest prefix match. Since the wildcards
-// are suffixes, we flip them around, that is, *.com becomes moc.(*) - the * is
+// are suffixes, we reverse the string, that is, *.com becomes moc.(*) - the * is
 // stripped. However, we cannot just say *.com is in sets x y z when cnn.com is
 // in sets v and w. If the bpf code matches cnn.com it must add the IP to any
 // ipsets that matches *.com. Similarly. anything that matches *.ubuntu.com,
@@ -54,7 +54,6 @@ import (
 // also directly belongs to it. If it directly belongs to a longer wildcard,
 // than we can skip the subtree because it would _also_ get it from the longer
 // wildcard.
-
 type DomainTracker struct {
 	mPfx          maps.Map
 	mSets         maps.Map
