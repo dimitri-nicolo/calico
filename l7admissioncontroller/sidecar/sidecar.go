@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,15 +65,15 @@ func (s *sidecarWebhook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		goto badRequest
 	}
 	switch *gvk {
-	case v1.SchemeGroupVersion.WithKind("AdmissionReview"):
-		admrev, ok := obj.(*v1.AdmissionReview)
+	case admissionv1.SchemeGroupVersion.WithKind("AdmissionReview"):
+		admrev, ok := obj.(*admissionv1.AdmissionReview)
 		if !ok {
 			klog.Errorf("Expected v1.AdmissionReview but got %T", obj)
 			goto badRequest
 		}
-		resAdmrev := &v1.AdmissionReview{}
+		resAdmrev := &admissionv1.AdmissionReview{}
 		resAdmrev.SetGroupVersionKind(*gvk)
-		resAdmrev.Response = &v1.AdmissionResponse{
+		resAdmrev.Response = &admissionv1.AdmissionResponse{
 			UID:     admrev.Request.UID,
 			Allowed: true,
 		}
@@ -213,7 +212,7 @@ func (cfg *sidecarCfg) envoyOptionalAttributes() string {
 	return strings.Join(attrs, ",") + ","
 }
 
-func (s *sidecarWebhook) patch(res *v1.AdmissionResponse, req *v1.AdmissionRequest) error {
+func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissionv1.AdmissionRequest) error {
 	var pod corev1.Pod
 	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
 		return err
@@ -248,7 +247,7 @@ func (s *sidecarWebhook) patch(res *v1.AdmissionResponse, req *v1.AdmissionReque
 		}, ",")+"]",
 	)
 
-	pt := v1.PatchTypeJSONPatch
+	pt := admissionv1.PatchTypeJSONPatch
 	res.PatchType = &pt
 	res.Patch = []byte(fmt.Sprintf(`[%s]`,
 		strings.Join(append(volumes, initContainers), ","),
