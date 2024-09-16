@@ -519,6 +519,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		Expect(err).NotTo(HaveOccurred())
 		config.ContentType = runtime.ContentTypeJSON
 		cli, err = ctrlclient.New(config, ctrlclient.Options{})
+		Expect(err).NotTo(HaveOccurred())
 
 		// Start the syncer.
 		syncer.Start()

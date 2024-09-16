@@ -741,7 +741,7 @@ func TestGetL3FlowData(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(gotFs, tt.wantL3Flows) {
-				t.Logf(cmp.Diff(gotFs, tt.wantL3Flows))
+				t.Log(cmp.Diff(gotFs, tt.wantL3Flows))
 				t.Errorf("GetL3FlowData() gotFs = %v, want %v", gotFs, tt.wantL3Flows)
 			}
 		})

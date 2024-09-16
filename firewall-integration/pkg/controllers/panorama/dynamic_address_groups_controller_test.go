@@ -90,7 +90,7 @@ var _ = Describe("Test syncToDatastore", func() {
 		key := fakeGnsClientKey
 
 		By("Defining the value returned by datastore Get as not a KeyNotFound error.")
-		someError := fmt.Errorf(fakeGnsClientSomeGetErrorMessage)
+		someError := fmt.Errorf("%s", fakeGnsClientSomeGetErrorMessage)
 		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(nil, someError)
 
 		err := dagc.syncToDatastore(key)
@@ -108,7 +108,7 @@ var _ = Describe("Test syncToDatastore", func() {
 			schema.GroupResource{Group: "projectcalico.org", Resource: "globalnetworksets"},
 			key)
 		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(nil, keyNotFoundError)
-		someError := fmt.Errorf(fakeGnsClientSomeDeleteErrorMessage)
+		someError := fmt.Errorf("%s", fakeGnsClientSomeDeleteErrorMessage)
 		mockGns.On("Delete", dagc.ctx, key, metav1.DeleteOptions{}).Return(someError)
 
 		err := dagc.syncToDatastore(key)
@@ -154,7 +154,7 @@ var _ = Describe("Test syncToDatastore", func() {
 			schema.GroupResource{Group: "projectcalico.org", Resource: "globalnetworksets"},
 			key)
 		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(nil, keyNotFoundGetError)
-		fakeCreateError := fmt.Errorf(fakeGnsClientSomeCreateErrorMessage)
+		fakeCreateError := fmt.Errorf("%s", fakeGnsClientSomeCreateErrorMessage)
 		mockGns.On("Create", dagc.ctx, &validPanoramaGlobalNetworkSetInput, metav1.CreateOptions{}).Return(nil, fakeCreateError)
 
 		err := dagc.syncToDatastore(key)
@@ -197,7 +197,7 @@ var _ = Describe("Test syncToDatastore", func() {
 		dagc.cache.Set(key, validPanoramaGlobalNetworkSetInput)
 
 		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(&validPanoramaGlobalNetworkSetInput, nil)
-		fakeUpdateError := fmt.Errorf(fakeGnsClientSomeUpdateErrorMessage)
+		fakeUpdateError := fmt.Errorf("%s", fakeGnsClientSomeUpdateErrorMessage)
 		mockGns.On("Update", dagc.ctx, &validPanoramaGlobalNetworkSetInput, metav1.UpdateOptions{}).Return(nil, fakeUpdateError)
 
 		err := dagc.syncToDatastore(key)

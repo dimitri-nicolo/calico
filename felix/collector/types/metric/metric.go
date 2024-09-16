@@ -180,7 +180,7 @@ func (mu Update) String() string {
 }
 
 func (mu Update) GetLastRuleID() *calc.RuleID {
-	if mu.RuleIDs != nil && len(mu.RuleIDs) > 0 {
+	if len(mu.RuleIDs) > 0 {
 		return mu.RuleIDs[len(mu.RuleIDs)-1]
 	} else if mu.UnknownRuleID != nil {
 		return mu.UnknownRuleID

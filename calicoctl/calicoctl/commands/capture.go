@@ -144,7 +144,7 @@ Description:
 		for _, e := range errors {
 			result = append(result, e.Error())
 		}
-		return fmt.Errorf(strings.Join(result, ";"))
+		return fmt.Errorf("%s", strings.Join(result, ";"))
 	}
 
 	return nil

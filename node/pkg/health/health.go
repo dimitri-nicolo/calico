@@ -220,7 +220,7 @@ func checkService(serviceName string) error {
 
 	cmdOutput := string(out)
 	if !strings.HasPrefix(cmdOutput, "run") {
-		return fmt.Errorf("Service %s is not running. Output << %s >>", serviceName, strings.Trim(cmdOutput, "\n"))
+		return fmt.Errorf("service %s is not running. Output << %s >>", serviceName, strings.Trim(cmdOutput, "\n"))
 	}
 
 	return nil
@@ -233,7 +233,7 @@ func checkBIRDReady(ipVer bgp.Version, thresholdTime time.Duration) error {
 	// Stat nodename file to get the modified time of the file.
 	nodenameFileStat, err := os.Stat("/var/lib/calico/nodename")
 	if err != nil {
-		return fmt.Errorf("Failed to stat() nodename file: %v", err)
+		return fmt.Errorf("failed to stat() nodename file: %v", err)
 	}
 
 	// Check for unestablished peers
@@ -243,7 +243,7 @@ func checkBIRDReady(ipVer bgp.Version, thresholdTime time.Duration) error {
 	}
 	peers, ok := stats.Data.([]bgp.Peer)
 	if !ok {
-		return fmt.Errorf("Failed to extract peers: %+v", stats.Data)
+		return fmt.Errorf("failed to extract peers: %+v", stats.Data)
 	}
 	log.Debugf("peers: %v", peers)
 

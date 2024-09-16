@@ -119,7 +119,7 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	if srv.dummyRoutes != nil && len(srv.dummyRoutes) > 0 {
+	if len(srv.dummyRoutes) > 0 {
 		// Connect the dummy routes to the IgnoreHandler which returns success without forwarding the traffic
 		err = addRoutes(
 			router,

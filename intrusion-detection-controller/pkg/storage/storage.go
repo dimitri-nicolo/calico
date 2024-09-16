@@ -140,7 +140,7 @@ func (e *Service) checkBulkError(err error, response *lsv1.BulkResponse) error {
 			errorMsg = append(errorMsg, msg.Error())
 		}
 
-		return fmt.Errorf(strings.Join(errorMsg, " and "))
+		return fmt.Errorf("%s", strings.Join(errorMsg, " and "))
 	}
 	return nil
 }

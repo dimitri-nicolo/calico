@@ -194,7 +194,7 @@ func (cli *client) createRole(role Role) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
@@ -222,7 +222,7 @@ func (cli *client) DeleteRole(role Role) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
@@ -270,7 +270,7 @@ func (cli *client) CreateUser(user User) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
@@ -294,7 +294,7 @@ func (cli *client) DeleteUser(user User) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
@@ -349,7 +349,7 @@ func (cli *client) UpdateUser(user User) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
@@ -397,7 +397,7 @@ func (cli *client) GetUsers() ([]User, error) {
 	}
 
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf(string(body))
+		return nil, fmt.Errorf("%s", string(body))
 	}
 
 	var data esUsers
@@ -445,7 +445,7 @@ func (cli *client) SetUserPassword(user User) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
@@ -476,7 +476,7 @@ func (cli *client) CreateRoleMapping(roleMapping RoleMapping) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(body))
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
@@ -501,7 +501,7 @@ func (cli *client) GetRoleMappings() ([]RoleMapping, error) {
 		if err != nil {
 			return nil, err
 		}
-		return nil, fmt.Errorf(string(body))
+		return nil, fmt.Errorf("%s", string(body))
 	}
 
 	body, err := io.ReadAll(response.Body)
@@ -544,7 +544,7 @@ func (cli *client) DeleteRoleMapping(name string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		return false, fmt.Errorf(string(body))
+		return false, fmt.Errorf("%s", string(body))
 	}
 
 	return response.StatusCode == 200, nil

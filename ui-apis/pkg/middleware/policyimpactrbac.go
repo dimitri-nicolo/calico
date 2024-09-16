@@ -58,7 +58,7 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 	if rh == nil {
 		// This is not a resource type we support, so deny the operation.
 		clog.Warning("Resource type is not supported for preview action")
-		return false, fmt.Errorf("resource type '" + rid.Kind + "' is not supported for impact preview")
+		return false, fmt.Errorf("resource type %q is not supported for impact preview", rid.Kind)
 	}
 
 	// If this is a Calico tiered policy then extract the tier since we need that to perform some more complicated
@@ -82,7 +82,7 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 	if authorized, err := h.authz.Authorize(h.user, resAtr, nil); err != nil {
 		return false, err
 	} else if !authorized {
-		clog.Debugf("not authorized to " + verb + " " + rid.String())
+		clog.Debugf("not authorized to %s %s", verb, rid.String())
 		return false, nil
 	}
 
@@ -146,7 +146,7 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 	if authorized, err := h.authz.Authorize(h.user, resAtr, nil); err != nil {
 		return false, err
 	} else if !authorized {
-		clog.Debugf("not authorized to " + verb + " " + rid.String())
+		clog.Debugf("not authorized to %s %s", verb, rid.String())
 		return false, nil
 	}
 
@@ -169,7 +169,7 @@ func getTier(rid v3.ResourceID, res resources.Resource) (tier string, err error)
 	// Sanity check the tier in the spec matches the tier in the name. This has already been done by the unmarshaling
 	// of the resource request, but better safe than sorry.
 	if tier == "" || strings.Contains(tier, ".") || !strings.HasPrefix(rid.Name, tier+".") {
-		return "", fmt.Errorf("policy name " + rid.String() + " is not correct for the configured tier '" + tier + "'")
+		return "", fmt.Errorf("policy name %s is not correct for the configured tier %q", rid.String(), tier)
 	}
 	return tier, nil
 }
