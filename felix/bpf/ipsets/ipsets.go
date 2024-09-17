@@ -116,6 +116,11 @@ func (m *bpfIPSets) getExistingIPSet(setID uint64) *bpfIPSet {
 	return m.ipSets[setID]
 }
 
+// IDStringToUint64 return the internal BPF id for the set or 0 if there is no match.
+func (m *bpfIPSets) IDStringToUint64(strID string) uint64 {
+	return m.ipSetIDAllocator.GetNoAlloc(strID)
+}
+
 // getOrCreateIPSet gets the IP set data given the string set ID; allocates a new uint64 ID and creates the tracking
 // struct if needed.  The returned struct will never have Deleted=true.
 //

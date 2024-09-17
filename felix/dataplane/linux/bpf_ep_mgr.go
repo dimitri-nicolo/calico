@@ -390,6 +390,7 @@ type bpfEndpointManager struct {
 	v6                   *bpfEndpointManagerDataplane
 	healthAggregator     *health.HealthAggregator
 	updateRateLimitedLog *logutilslc.RateLimitedLogger
+	dnsInlineProcessing  bool
 }
 
 type bpfEndpointManagerDataplane struct {
@@ -576,6 +577,8 @@ func newBPFEndpointManager(
 		logutilslc.OptInterval(30*time.Second),
 		logutilslc.OptBurst(10),
 	)
+
+	m.dnsInlineProcessing = config.BPFDNSPolicyMode == apiv3.BPFDNSPolicyModeInline
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
 	// _only_ implemented by XDP, so we _should_ fall back to XDPGeneric if necessary in order
@@ -2983,6 +2986,9 @@ func (d *bpfEndpointManagerDataplane) configureTCAttachPoint(policyDirection Pol
 	}
 
 	ap.ToOrFrom = toOrFrom
+
+	ap.DNSInlineProcessing = d.mgr.dnsInlineProcessing
+
 	return ap
 }
 

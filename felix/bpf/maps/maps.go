@@ -905,6 +905,10 @@ func (b *PinnedMap) upgrade() error {
 	return b.UpgradeFn(oldBpfMap, b)
 }
 
+func (b *PinnedMap) Unpin() {
+	os.Remove(b.Path())
+}
+
 type Upgradable interface {
 	Upgrade() Upgradable
 	AsBytes() []byte

@@ -45,6 +45,7 @@
 #include "bpf_helpers.h"
 #include "egw.h"
 #include "rule_counters.h"
+#include "dns_response.h"
 
 #define HAS_HOST_CONFLICT_PROG CALI_F_TO_HEP
 
@@ -273,8 +274,17 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 		  skb_mark_equals(ctx->skb, CALI_SKB_MARK_BYPASS_MASK, CALI_SKB_MARK_MASQ) ||
 		  skb_mark_equals(ctx->skb, CALI_SKB_MARK_BYPASS_MASK, CALI_SKB_MARK_SKIP_FIB)));
 
-    /* Handle reporting DNS packets up to Felix userspace. */
-	calico_dns_check(ctx);
+	/* Handle reporting DNS packets up to Felix userspace. */
+	if (calico_dns_check(ctx) && DNS_INLINE_PROCESSING) {
+		/* calico_dns_check decides when/where to do the check. It does not quite
+		 * matter if the parsing is done 2x, but lets avoid it.
+		 *
+		 * We ned to do the parsing in a separate program not to runover the
+		 * stack size so we need to mark whether to do the parsing then or not.
+		 */
+		CALI_DEBUG("Marking packet for DNS parsing\n");
+		ctx->state->flags |= CALI_ST_DNS_PROCESS;
+	}
 
 	if (HAS_HOST_CONFLICT_PROG &&
 			/* Do not do conflict resolution for host-self loop. Unlike with
@@ -772,8 +782,17 @@ skip_policy:
 
 	ctx->state->pol_rc = CALI_POL_ALLOW;
 	ctx->state->flags |= CALI_ST_SKIP_POLICY;
-	CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
-	CALI_DEBUG("jump failed\n");
+
+	if (ctx->state->flags & CALI_ST_DNS_PROCESS) {
+		CALI_JUMP_TO(ctx, PROG_INDEX_DNS_PARSER);
+		/* should not reach here */
+		CALI_DEBUG("Failed to jump to allow dns parser.");
+	} else {
+		CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
+		/* should not reach here */
+		CALI_DEBUG("Failed to jump to allow program.");
+	}
+	CALI_DEBUG("jump failed - deny\n");
 	/* should not reach here */
 	goto deny;
 
@@ -2132,11 +2151,44 @@ allow:
 	ctx->state->pol_rc = CALI_POL_ALLOW;
 	ctx->state->flags |= CALI_ST_SKIP_POLICY;
 	ctx->state->rules_hit = 0;
-	CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
-	/* should not reach here */
-	CALI_DEBUG("Failed to jump to allow program.\n");
+
+	if (ctx->state->flags & CALI_ST_DNS_PROCESS) {
+		CALI_JUMP_TO(ctx, PROG_INDEX_DNS_PARSER);
+		/* should not reach here */
+		CALI_DEBUG("Failed to jump to allow dns parser.");
+	} else {
+		CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
+		/* should not reach here */
+		CALI_DEBUG("Failed to jump to allow program.");
+	}
 
 deny:
 	CALI_DEBUG("DENY due to policy\n");
+	return TC_ACT_SHOT;
+}
+
+SEC("tc")
+int calico_tc_dns_parser(struct __sk_buff *skb)
+{
+	DECLARE_TC_CTX(_ctx,
+		.skb = skb,
+		.fwd = {
+			.res = TC_ACT_UNSPEC,
+			.reason = CALI_REASON_UNKNOWN,
+			.mark = CALI_SKB_MARK_SEEN,
+		},
+	);
+	struct cali_tc_ctx *ctx = &_ctx;
+
+	CALI_DEBUG("Entering calico_tc_dns_parser\n");
+
+#ifdef BPF_CORE_SUPPORTED
+	dns_process_datagram(ctx);
+#endif
+
+	CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
+	/* should not reach here */
+	CALI_DEBUG("Failed to jump to allow program - deny.");
+
 	return TC_ACT_SHOT;
 }

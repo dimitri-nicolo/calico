@@ -35,6 +35,7 @@ fi
 
 if [[ "${filename}" =~ test_.* ]]; then
   args+=("-DUNITTEST")
+  args+=("-DBPF_CORE_SUPPORTED")
 fi
 
 if [[ "${filename}" =~ .*_v6.ll ]]; then

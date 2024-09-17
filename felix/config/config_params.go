@@ -439,6 +439,7 @@ type Config struct {
 
 	// Config for DNS policy.
 	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
+	BPFDNSPolicyMode                 string        `config:"oneof(NoDelay,Inline);Inline;non-zero"`
 	DNSPolicyNfqueueID               int           `config:"int;100"`
 	DNSPolicyNfqueueSize             int           `config:"int;255"`
 	DNSPacketsNfqueueID              int           `config:"int;101"`
@@ -451,6 +452,8 @@ type Config struct {
 	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
 	DNSCacheEpoch        int           `config:"int;0"`
 	DNSExtraTTL          time.Duration `config:"seconds;0"`
+
+	DebugDNSDoNotWriteIPSets bool `config:"bool;false"` // Do all the processing, just don't write the IPs in IPsets
 
 	L7LogsFlushInterval                  time.Duration `config:"seconds;300"`
 	L7LogsFileEnabled                    bool          `config:"bool;true"`

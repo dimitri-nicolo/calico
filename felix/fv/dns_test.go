@@ -73,7 +73,33 @@ func getDNSLogs(logFile string) ([]string, error) {
 	return logs, nil
 }
 
-var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
+var _ = Describe("DNS Policy", func() {
+	testDnsPolicy(false, false)
+})
+
+// These tests rely solely on BPF making the updates to the policy iptables.
+// Domainstore keep processing the packet, so that it maintains its mappings,
+// ipsets manager can query which domains belong to which ipsets (which is
+// necessary to build the bpf structures, but it does not receive ip updates and
+// thus does not write the IPs in the sets.
+var _ = Describe("_BPF-SAFE_ Zero latency bpf-only DNS Policy", func() {
+	if !BPFMode() {
+		return
+	}
+
+	testDnsPolicy(true, false)
+})
+
+// This is the new default for BPF, precessing in BPF, with fixups from Felix
+var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy", func() {
+	if !BPFMode() {
+		return
+	}
+
+	testDnsPolicy(true, true)
+})
+
+func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	var (
 		etcd        *containers.Container
 		tc          infrastructure.TopologyContainers
@@ -92,13 +118,19 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		dnsMode       string
 	)
 
+	msWildcards := []string{"microsoft.*", "*.microsoft.com"}
+	if zeroLatency {
+		msWildcards = []string{"*.microsoft.com"}
+		dnsMode = string(api.BPFDNSPolicyModeInline)
+	}
+
 	logAndReport := func(out string, err error) error {
 		log.WithError(err).Infof("test-dns said:\n%v", out)
 		return err
 	}
 
 	wgetMicrosoftErr := func() error {
-		out, err := w[0].ExecCombinedOutput("test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+		out, err := w[0].ExecCombinedOutput("test-dns", "-", "www.microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -113,7 +145,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 
 	hostWgetMicrosoftErr := func() error {
-		out, err := tc.Felixes[0].ExecCombinedOutput("test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+		out, err := tc.Felixes[0].ExecCombinedOutput("test-dns", "-", "www.microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -134,7 +166,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			return // empty string, so won't match anything that higher levels are looking for
 		}
 		for _, log := range dnsLogs {
-			if strings.Contains(log, `"qname":"microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
+			if strings.Contains(log, `"qname":"www.microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
 				lastLog = log
 			}
 		}
@@ -157,6 +189,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		nameservers := GetLocalNameservers()
 		dnsServerIP = nameservers[0]
 
+		opts.FelixLogSeverity = "Debug"
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
 		// For this test file, configure DNSCacheSaveInterval to be much longer than any
@@ -168,7 +201,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
 		if dnsMode != "" {
-			opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+			if !BPFMode() {
+				opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+			} else {
+				opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = dnsMode
+			}
 		}
 		if enableLogs {
 			// Default for this is false.  Set "true" to enable.
@@ -184,6 +221,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		// Tests in this file require a node IP, so that Felix can attach a BPF program to
 		// host interfaces.
 		opts.NeedNodeIP = true
+		if zeroLatency && !setsUpdateFromFelix {
+			opts.ExtraEnvVars["FELIX_DEBUG_DNS_DO_NOT_WRITE_IPSETS"] = "true"
+		}
 		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -234,27 +274,22 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			saveFileMappedOutsideContainer = false
 		})
 
-		It("can wget microsoft.com", func() {
+		It("can wget www.microsoft.com", func() {
 			canWgetMicrosoft()
 		})
 	})
 
-	Context("after wget microsoft.com", func() {
+	Context("after wget www.microsoft.com", func() {
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			canWgetMicrosoft()
 		})
 
-		It("should emit microsoft.com DNS log with latency", func() {
+		It("should emit www.microsoft.com DNS log with latency", func() {
 			Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
 		})
 
 		Context("with a preceding DNS request that went unresponded", func() {
-			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-				// Skip because the following test relies on a HostEndpoint.
-				return
-			}
-
 			JustBeforeEach(func() {
 				hep := api.NewHostEndpoint()
 				hep.Name = "felix-eth0"
@@ -304,7 +339,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				canWgetMicrosoft()
 			})
 
-			It("should emit microsoft.com DNS log with latency", func() {
+			It("should emit www.microsoft.com DNS log with latency", func() {
 				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
 			})
 		})
@@ -314,7 +349,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				enableLatency = false
 			})
 
-			It("should emit microsoft.com DNS log without latency", func() {
+			It("should emit www.microsoft.com DNS log without latency", func() {
 				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":0`))
 			})
 		})
@@ -330,7 +365,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		})
 	})
 
-	Context("after host wget microsoft.com", func() {
+	Context("after host wget www.microsoft.com", func() {
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			hostCanWgetMicrosoft()
@@ -351,11 +386,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		})
 	})
 
-	It("can wget microsoft.com", func() {
+	It("can wget www.microsoft.com", func() {
 		canWgetMicrosoft()
 	})
 
-	It("host can wget microsoft.com", func() {
+	It("host can wget www.microsoft.com", func() {
 		hostCanWgetMicrosoft()
 	})
 
@@ -371,12 +406,12 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("cannot wget microsoft.com", func() {
+		It("cannot wget www.microsoft.com", func() {
 			cannotWgetMicrosoft()
 		})
 
 		// There's no HostEndpoint yet, so the policy doesn't affect the host.
-		It("host can wget microsoft.com", func() {
+		It("host can wget www.microsoft.com", func() {
 			hostCanWgetMicrosoft()
 		})
 
@@ -402,14 +437,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			}
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+
+			if zeroLatency {
+				Eventually(func() []string {
+					m := dumpDNSPfxMap(tc.Felixes[0])
+					pfxs := []string{}
+					for k := range m {
+						pfxs = append(pfxs, k.Domain())
+					}
+					return pfxs
+				}, "1m", "1s").Should(And(ContainElement("microsoft.com"), ContainElement("www.microsoft.com")))
+			}
 		}
 
 		Context("with HostEndpoint", func() {
-			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-				// Skip because the following test relies on a HostEndpoint.
-				return
-			}
-
 			JustBeforeEach(func() {
 				hep := api.NewHostEndpoint()
 				hep.Name = "hep-1"
@@ -419,14 +460,14 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("host cannot wget microsoft.com", func() {
+			It("host cannot wget www.microsoft.com", func() {
 				hostCannotWgetMicrosoft()
 			})
 
 			Context("with domain-allow egress policy", func() {
 				JustBeforeEach(configureGNPAllowToMicrosoft)
 
-				It("host can wget microsoft.com", func() {
+				It("host can wget www.microsoft.com", func() {
 					hostCanWgetMicrosoft()
 				})
 			})
@@ -440,6 +481,12 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		} {
 			localMode := m
 			Context("with DNSPolicyMode explicitly set to "+string(localMode), func() {
+				if zeroLatency {
+					return
+				}
+				if BPFMode() && localMode != api.DNSPolicyModeNoDelay {
+					return
+				}
 				BeforeEach(func() {
 					dnsMode = string(localMode)
 				})
@@ -540,7 +587,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				Context("with domain-allow egress policy", func() {
 					JustBeforeEach(configureGNPAllowToMicrosoft)
 
-					It("can wget microsoft.com", func() {
+					It("can wget www.microsoft.com", func() {
 						canWgetMicrosoft()
 					})
 				})
@@ -569,9 +616,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 						}
 						_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 						Expect(err).NotTo(HaveOccurred())
+
+						if zeroLatency {
+							Eventually(func() []string {
+								m := dumpDNSPfxMap(tc.Felixes[0])
+								pfxs := []string{}
+								for k := range m {
+									pfxs = append(pfxs, k.Domain())
+								}
+								return pfxs
+							}, "1m", "1s").Should(And(ContainElement("microsoft.com"), ContainElement("www.microsoft.com")))
+						}
 					})
 
-					It("can wget microsoft.com", func() {
+					It("can wget www.microsoft.com", func() {
 						canWgetMicrosoft()
 					})
 				})
@@ -604,7 +662,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("cannot wget microsoft.com", func() {
+			It("cannot wget www.microsoft.com", func() {
+				// XXX hard to say whether you cannot get it because the policy
+				// is not in place yet or because it is a wrong namespace.
 				cannotWgetMicrosoft()
 			})
 		})
@@ -620,7 +680,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				policy.Spec.Egress = []api.Rule{
 					{
 						Action:      api.Allow,
-						Destination: api.EntityRule{Domains: []string{"microsoft.*", "*.microsoft.com"}},
+						Destination: api.EntityRule{Domains: msWildcards},
 					},
 					{
 						Action:   api.Allow,
@@ -632,19 +692,30 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				}
 				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
+
+				if zeroLatency {
+					Eventually(func() []string {
+						m := dumpDNSPfxMap(tc.Felixes[0])
+						pfxs := []string{}
+						for k := range m {
+							pfxs = append(pfxs, k.Domain())
+						}
+						return pfxs
+					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
+				}
 			})
 
-			It("can wget microsoft.com", func() {
+			It("can wget www.microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 		})
 
-		Context("with networkset with allowed egress domains", func() {
+		Context("with global networkset with allowed egress wildcard domains", func() {
 			JustBeforeEach(func() {
 				gns := api.NewGlobalNetworkSet()
 				gns.Name = "allow-microsoft"
 				gns.Labels = map[string]string{"founder": "billg"}
-				gns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+				gns.Spec.AllowedEgressDomains = msWildcards
 				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -671,63 +742,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				}
 				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
-			})
 
-			It("can wget microsoft.com", func() {
-				canWgetMicrosoft()
-			})
-
-			It("handles a domain set update", func() {
-				// Create another GNS with same labels as the previous one, so that
-				// the destination selector will now match this one as well, and so
-				// the domain set membership will change.
-				gns := api.NewGlobalNetworkSet()
-				gns.Name = "allow-microsoft-2"
-				gns.Labels = map[string]string{"founder": "billg"}
-				gns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
-				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
-				Expect(err).NotTo(HaveOccurred())
-
-				time.Sleep(2 * time.Second)
-				canWgetMicrosoft()
-			})
-		})
-
-		Context("with networkset with allowed egress wildcard domains", func() {
-			JustBeforeEach(func() {
-				gns := api.NewGlobalNetworkSet()
-				gns.Name = "allow-microsoft"
-				gns.Labels = map[string]string{"founder": "billg"}
-				gns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
-				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
-				Expect(err).NotTo(HaveOccurred())
-
-				policy := api.NewGlobalNetworkPolicy()
-				policy.Name = "allow-microsoft"
-				order := float64(20)
-				policy.Spec.Order = &order
-				policy.Spec.Selector = "all()"
-				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
-					{
-						Action: api.Allow,
-						Destination: api.EntityRule{
-							Selector: "founder == 'billg'",
-						},
-					},
-					{
-						Action:   api.Allow,
-						Protocol: &udp,
-						Destination: api.EntityRule{
-							Ports: []numorstring.Port{numorstring.SinglePort(53)},
-						},
-					},
+				if zeroLatency {
+					Eventually(func() []string {
+						m := dumpDNSPfxMap(tc.Felixes[0])
+						pfxs := []string{}
+						for k := range m {
+							pfxs = append(pfxs, k.Domain())
+						}
+						return pfxs
+					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
 				}
-				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("can wget microsoft.com", func() {
+			It("can wget www.microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 
@@ -781,9 +809,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				}
 				_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
+
+				if zeroLatency {
+					Eventually(func() []string {
+						m := dumpDNSPfxMap(tc.Felixes[0])
+						pfxs := []string{}
+						for k := range m {
+							pfxs = append(pfxs, k.Domain())
+						}
+						return pfxs
+					}, "1m", "1s").Should(ContainElements("microsoft.com", "www.microsoft.com"))
+				}
 			})
 
-			It("can wget microsoft.com", func() {
+			It("can wget www.microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 
@@ -810,7 +849,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				ns.Name = "allow-microsoft"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
-				ns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
+				ns.Spec.AllowedEgressDomains = msWildcards
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -838,9 +877,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				}
 				_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
+
+				if zeroLatency {
+					Eventually(func() []string {
+						m := dumpDNSPfxMap(tc.Felixes[0])
+						pfxs := []string{}
+						for k := range m {
+							pfxs = append(pfxs, k.Domain())
+						}
+						return pfxs
+					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
+				}
 			})
 
-			It("can wget microsoft.com", func() {
+			It("can wget www.microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 
@@ -861,7 +911,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			})
 		})
 	})
-})
+}
 
 var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 	var (

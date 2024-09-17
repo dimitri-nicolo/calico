@@ -15,9 +15,8 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	docopt "github.com/docopt/docopt-go"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/buildinfo"
 	"github.com/projectcalico/calico/felix/daemon"
@@ -29,8 +28,8 @@ Usage:
   calico-felix [options]
 
 Options:
-  -c --config-file=<filename>  Config file to load [default: /etc/calico/felix.cfg].
-  --version                    Print the version and exit.
+  -c --config-file=<filename>   Config file to load [default: /etc/calico/felix.cfg].
+  --version                     Print the version and exit.
 `
 
 // main is the entry point to the calico-felix binary.

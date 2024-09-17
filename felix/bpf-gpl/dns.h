@@ -9,6 +9,7 @@
 #include "perf.h"
 #include "events.h"
 #include "sock.h"
+#include "sendrecv.h"
 #include <linux/bpf_perf_event.h>
 
 static CALI_BPF_INLINE void calico_report_dns(struct cali_tc_ctx *ctx)
@@ -29,12 +30,14 @@ static CALI_BPF_INLINE void calico_report_dns(struct cali_tc_ctx *ctx)
 	}
 }
 
-static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
+static CALI_BPF_INLINE bool calico_check_for_dns(struct cali_tc_ctx *ctx)
 {
+	bool reported = false;
+
 #ifndef IPVER6
 	// Support UDP only; bail for TCP or any other IP protocol.
 	if (ctx->state->ip_proto != IPPROTO_UDP) {
-		return;
+		return false;
 	}
 
 	ipv46_addr_t dst_ip = ctx->state->ip_dst;
@@ -85,6 +88,7 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 	sip.ip.addr = dst_ip;
 	sip.ip.port = bpf_ntohs(dst_port);
 	sip.ip.protocol = 17;
+
 	if (cali_ip_sets_lookup_elem(&sip)) {
 		CALI_DEBUG("Dst IP/port are trusted for DNS\n");
 		// Store 'trusted DNS connection' status in conntrack entry.
@@ -93,14 +97,18 @@ static CALI_BPF_INLINE void calico_check_for_dns(struct cali_tc_ctx *ctx)
 		// userspace.
 		CALI_DEBUG("report probable DNS request\n");
 		calico_report_dns(ctx);
+		reported = true;
 	} else {
 		CALI_DEBUG("Dst IP/port are not trusted for DNS\n");
 	}
+
 #endif
+	return reported;
 }
 
-static CALI_BPF_INLINE void calico_dns_check(struct cali_tc_ctx *ctx)
+static CALI_BPF_INLINE bool calico_dns_check(struct cali_tc_ctx *ctx)
 {
+	bool reported = false;
 	if (ctx->state->ip_proto == IPPROTO_UDP) {
 		// UDP.  We need to recheck this, even when we know that the connection is
 		// trusted for DNS, because an ICMP packet can also match the conntrack
@@ -136,6 +144,7 @@ static CALI_BPF_INLINE void calico_dns_check(struct cali_tc_ctx *ctx)
 			// CT state.
 			CALI_DEBUG("report packet on trusted DNS connection\n");
 			calico_report_dns(ctx);
+			reported = true;
 		} else if ((CALI_F_FROM_WEP || CALI_F_TO_WEP || CALI_F_TO_HEP) &&
 			   (ct_result_rc(ctx->state->ct_result.rc) == CALI_CT_NEW) &&
 			   !skb_seen(ctx->skb)) {
@@ -152,10 +161,11 @@ static CALI_BPF_INLINE void calico_dns_check(struct cali_tc_ctx *ctx)
 			// DNS lookup from a workload, we only want to handle the packets
 			// with the WEP CT state, so that we only get one DNS log per
 			// exchange, and with the correct workload details.
-			calico_check_for_dns(ctx);
+			reported = calico_check_for_dns(ctx);
 		}
 	}
-	return;
+
+	return reported;
 }
 
 #endif /* __CALI_DNS_H__ */

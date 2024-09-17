@@ -68,6 +68,7 @@ enum cali_jump_index {
 	PROG_INDEX_HOST_CT_CONFLICT,
 	PROG_INDEX_ICMP_INNER_NAT,
 	PROG_INDEX_NEW_FLOW,
+	PROG_INDEX_DNS_PARSER,
 
 	PROG_INDEX_MAIN_DEBUG,
 	PROG_INDEX_POLICY_DEBUG,
@@ -77,6 +78,7 @@ enum cali_jump_index {
 	PROG_INDEX_HOST_CT_CONFLICT_DEBUG,
 	PROG_INDEX_ICMP_INNER_NAT_DEBUG,
 	PROG_INDEX_NEW_FLOW_DEBUG,
+	PROG_INDEX_DNS_PARSER_DEBUG,
 };
 
 #if CALI_F_XDP
@@ -96,9 +98,11 @@ CALI_MAP_V1(cali_jump_prog_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 2400, 0)
 
 CALI_MAP_V1(cali_jump_prog_map, BPF_MAP_TYPE_PROG_ARRAY, __u32, __u32, 240000, 0)
 
-#define __CALI_JUMP_TO_POLICY(ctx, allow, deny, pol) do {	\
-	(ctx)->skb->cb[0] = (ctx)->globals->data.jumps[PROG_PATH(allow)];			\
-	(ctx)->skb->cb[1] = (ctx)->globals->data.jumps[PROG_PATH(deny)];				\
+#define __CALI_JUMP_TO_POLICY(ctx, allow, deny, pol) do {					\
+	(ctx)->skb->cb[0] = !((ctx)->state->flags & CALI_ST_DNS_PROCESS) ?			\
+		(ctx)->globals->data.jumps[PROG_PATH(allow)] : 					\
+		(ctx)->globals->data.jumps[PROG_PATH(PROG_INDEX_DNS_PARSER)];			\
+	(ctx)->skb->cb[1] = (ctx)->globals->data.jumps[PROG_PATH(deny)];			\
 	CALI_DEBUG("policy allow prog at %d\n", (ctx)->globals->data.jumps[PROG_PATH(allow)]);	\
 	CALI_DEBUG("policy deny prog at %d\n", (ctx)->globals->data.jumps[PROG_PATH(deny)]);	\
 	CALI_DEBUG("jump to policy prog at %d\n", (ctx)->globals->data.jumps[pol]);		\

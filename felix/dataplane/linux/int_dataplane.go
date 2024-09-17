@@ -44,6 +44,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
 	bpfifstate "github.com/projectcalico/calico/felix/bpf/ifstate"
@@ -314,6 +315,7 @@ type Config struct {
 	DNSLogsLatency       bool
 
 	DNSPolicyMode                    apiv3.DNSPolicyMode
+	BPFDNSPolicyMode                 apiv3.BPFDNSPolicyMode
 	DNSPolicyNfqueueID               int
 	DNSPolicyNfqueueSize             int
 	DNSPacketsNfqueueID              int
@@ -321,6 +323,7 @@ type Config struct {
 	DNSPacketsNfqueueMaxHoldDuration time.Duration
 	DebugDNSResponseDelay            time.Duration
 	DisableDNSPolicyPacketProcessor  bool
+	DebugDNSDoNotWriteIPSets         bool // Do all the processing, just don't write the IPs in IPsets
 
 	EnableDestDomainsByClient bool
 	ServiceLoopPrevention     string
@@ -518,15 +521,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	)
 	dataplaneFeatures := featureDetector.GetFeatures()
 
-	// Based on the feature set, fix the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes
-	// are only available on the iptables dataplane, and the DelayDNSResponse mode is only available on higher kernel
-	// versions.
-	if config.BPFEnabled && config.DNSPolicyMode != apiv3.DNSPolicyModeNoDelay {
-		log.Warning("Dataplane is using eBPF which does not support NfQueue. Set DNSPolicyMode to NoDelay")
-		config.DNSPolicyMode = apiv3.DNSPolicyModeNoDelay
-	} else if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !dataplaneFeatures.NFQueueBypass {
-		log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
-		config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+	if !config.BPFEnabled {
+		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !dataplaneFeatures.NFQueueBypass {
+			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
+			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+		}
 	}
 
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
@@ -944,9 +943,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// bpffs so there's nothing to clean up
 	}
 
-	ipsetsManager := dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
-	ipsetsManagerV6 := dpsets.NewIPSetsManager("ipv6", nil, config.MaxIPSetSize, dp.domainInfoStore)
+	var domainInfoStore dpsets.IPSetsDomainStore
 
+	domainInfoStore = dp.domainInfoStore
+
+	if config.DebugDNSDoNotWriteIPSets {
+		domainInfoStore = new(dpsets.IPSetsDomainStoreVoid)
+	}
+
+	ipsetsManager := dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, domainInfoStore)
+	ipsetsManagerV6 := dpsets.NewIPSetsManager("ipv6", nil, config.MaxIPSetSize, domainInfoStore)
 	var mangleTableV6, natTableV6, rawTableV6, filterTableV6 generictables.Table
 	var nftablesV6RootTable generictables.Table
 
@@ -3341,6 +3347,13 @@ func startBPFDataplaneComponents(
 	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, bpfmaps.IpsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer)
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
+	tracker, err := dnsresolver.NewDomainTracker(func(id string) uint64 {
+		return ipSets.IDStringToUint64(id)
+	})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create BPF domain tracker.")
+	}
+	ipSetsMgr.AddDomainTracker(tracker)
 
 	if ipFamily == proto.IPVersion_IPV4 {
 		// Create an 'ipset' to represent trusted DNS servers.

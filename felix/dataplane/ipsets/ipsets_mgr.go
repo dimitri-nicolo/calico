@@ -15,6 +15,7 @@
 package ipsets
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -49,7 +50,7 @@ type IPSetsManager struct {
 	lg         *log.Entry
 
 	// Provider of domain name to IP information.
-	domainInfoStore store
+	domainInfoStore IPSetsDomainStore
 
 	// Map from each active domain set ID to the IPs that are currently programmed for it and
 	// why.  The interior map is from each IP to the set of lower case domain names that have resolved to
@@ -62,16 +63,27 @@ type IPSetsManager struct {
 
 	// IP set IDs that we don't process.
 	ignoredSetIds set.Set[string]
+	// domainTracker is an optional external component that tracks which domains are part
+	// of which ipset.
+	domainTracker IPSetsDomainTracker
 }
 
-type store interface {
+type IPSetsDomainStore interface {
 	// Register this IPSets manager as a user of the DomainInfoStore.
 	RegisterHandler(common.DomainInfoChangeHandler)
 	// Get the IPs for a given domain name.
 	GetDomainIPs(domain string) []string
 }
 
-func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
+type IPSetsDomainTracker interface {
+	Add(domain string, setIDs ...string)
+	Delete(domain string, setIDs ...string)
+	ApplyAllChanges() error
+}
+
+func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int,
+	domainInfoStore IPSetsDomainStore,
+) *IPSetsManager {
 	m := &IPSetsManager{
 		maxSize:         maxIPSetSize,
 		lg:              log.WithField("name", name),
@@ -92,6 +104,10 @@ func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int, do
 
 func (m *IPSetsManager) AddDataplane(dp IPSetsDataplane) {
 	m.dataplanes = append(m.dataplanes, dp)
+}
+
+func (m *IPSetsManager) AddDomainTracker(domainTracker IPSetsDomainTracker) {
+	m.domainTracker = domainTracker
 }
 
 func (m *IPSetsManager) GetIPSetType(setID string) (typ ipsets.IPSetType, err error) {
@@ -190,7 +206,13 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 }
 
 func (m *IPSetsManager) CompleteDeferredWork() error {
-	// Nothing to do, we don't defer any work.
+	if m.domainTracker != nil {
+		err := m.domainTracker.ApplyAllChanges()
+		if err != nil {
+			return fmt.Errorf("failed to apply changes to domain tracker: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -208,6 +230,10 @@ func (m *IPSetsManager) domainRemovedFromSet(domain string, ipSetId string) {
 		if m.domainSetIds[domain].Len() == 0 {
 			delete(m.domainSetIds, domain)
 		}
+	}
+
+	if m.domainTracker != nil {
+		m.domainTracker.Delete(domain, ipSetId)
 	}
 }
 
@@ -267,6 +293,15 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 		dp.AddOrReplaceIPSet(*metadata, ipMembers)
 	}
 
+	if m.domainTracker != nil {
+		// Now that we created the IPsets that possibly did not exists, we can update the
+		// tracker so it points to existing sets.
+		for _, mixedCaseDomain := range msg.Members {
+			domain := strings.ToLower(mixedCaseDomain)
+			m.domainTracker.Add(domain, msg.Id)
+		}
+	}
+
 	// Record the programming that we've asked the dataplane for.
 	m.domainSetProgramming[msg.Id] = ipToDomains
 }
@@ -302,7 +337,8 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 	for _, mixedCaseDomain := range domainsRemoved {
 		// Update the reverse map that tells us all of the domain sets that include a given
 		// domain name.
-		m.domainRemovedFromSet(strings.ToLower(mixedCaseDomain), ipSetId)
+		domain := strings.ToLower(mixedCaseDomain)
+		m.domainRemovedFromSet(domain, ipSetId)
 	}
 
 	// For each programmed IP...
@@ -324,6 +360,9 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 		// Update the reverse map that tells us all of the domain sets that include a given
 		// domain name.
 		m.domainIncludedInSet(domain, ipSetId)
+		if m.domainTracker != nil {
+			m.domainTracker.Add(domain, ipSetId)
+		}
 
 		// Get the IPs and expiry times for this domain, then merge those into the current
 		// programming, noting any updates that we need to send to the dataplane.
@@ -384,3 +423,8 @@ func (m *IPSetsManager) OnDomainChange(domain string) (dataplaneSyncNeeded bool)
 
 	return
 }
+
+type IPSetsDomainStoreVoid struct{}
+
+func (_ *IPSetsDomainStoreVoid) RegisterHandler(common.DomainInfoChangeHandler) {}
+func (_ *IPSetsDomainStoreVoid) GetDomainIPs(domain string) []string            { return nil }

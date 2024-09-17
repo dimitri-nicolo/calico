@@ -94,7 +94,6 @@ struct cali_tc_state {
 	__u16 post_nat_dport;
 	/* Packet IP proto; updated to UDP when we encap. */
 	__u8 ip_proto;
-	/* Flags from enum cali_state_flags. */
 	__u8 __pad;
 	/* Packet size filled from iphdr->tot_len in tc_state_fill_from_iphdr(). */
 	__be16 ip_size;
@@ -105,6 +104,7 @@ struct cali_tc_state {
 
 	/* We must not scatter the above ^^^ to copy it in a single memcpy */
 
+	/* Flags from enum cali_state_flags. */
 	__u64 flags;
 	/* Result of the conntrack lookup. */
 	struct calico_ct_result ct_result; /* 40 (v4) 72 (v6) bytes */
@@ -154,6 +154,13 @@ enum cali_state_flags {
 	CALI_ST_CT_NP_REMOTE	  = 0x100,
 	/* CALI_ST_NAT_EXCLUDE is set when there is a NAT hit, but we don't want to resolve (such as node local DNS). */
 	CALI_ST_NAT_EXCLUDE       = 0x200,
+
+	/* EE flags */
+
+	/* CALI_ST_DNS_PROCESS is set if the packet was reported to userspace
+	 * and should be also process by the dns parser.
+	 */
+	CALI_ST_DNS_PROCESS	  = 0x100000000
 };
 
 struct fwd {

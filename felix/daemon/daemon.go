@@ -264,6 +264,7 @@ configRetry:
 			}
 			break
 		}
+
 		err = configParams.Validate()
 		if err != nil {
 			log.WithError(err).Error("Failed to parse/validate configuration from datastore.")

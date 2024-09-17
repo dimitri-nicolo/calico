@@ -21,6 +21,8 @@
 
 #include "globals.h"
 
+#define __unused __attribute__ ((unused))
+
 #define BPF_REDIR_EGRESS 0
 #define BPF_REDIR_INGRESS 1
 
@@ -311,6 +313,7 @@ extern const volatile struct cali_tc_preamble_globals __globals;
 #define EGRESS_CLIENT 		(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_CLIENT)
 #define ENABLE_TCP_STATS 	(GLOBAL_FLAGS & CALI_GLOBALS_TCP_STATS_ENABLED)
 #define EGRESS_IP_ENABLED	(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_IP_ENABLED)
+#define DNS_INLINE_PROCESSING	(GLOBAL_FLAGS & CALI_GLOBALS_DNS_INLINE)
 
 #ifdef UNITTEST
 #define CALI_PATCH_DEFINE(name, pattern)							\
