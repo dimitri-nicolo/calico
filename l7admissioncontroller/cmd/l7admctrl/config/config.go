@@ -2,24 +2,34 @@
 
 package config
 
-import "os"
-
-var (
-	TLSCert, TLSKey       string
-	EnvoyImg, DikastesImg string
+import (
+	"fmt"
+	"os"
 )
 
-func init() {
-	TLSCert = os.Getenv("L7ADMCTRL_TLSCERTPATH")
-	TLSKey = os.Getenv("L7ADMCTRL_TLSKEYPATH")
-	EnvoyImg = os.Getenv("L7ADMCTRL_ENVOYIMAGE")
-	DikastesImg = os.Getenv("L7ADMCTRL_DIKASTESIMAGE")
+type Config struct {
+	TLSCert, TLSKey       string
+	EnvoyImg, DikastesImg string
+}
 
-	missingRequired := TLSCert == "" ||
-		TLSKey == "" ||
-		EnvoyImg == "" ||
-		DikastesImg == ""
+func FromEnv() (*Config, error) {
+	tlsCert := os.Getenv("L7ADMCTRL_TLSCERTPATH")
+	tlsKey := os.Getenv("L7ADMCTRL_TLSKEYPATH")
+	envoyImg := os.Getenv("L7ADMCTRL_ENVOYIMAGE")
+	dikastesImg := os.Getenv("L7ADMCTRL_DIKASTESIMAGE")
+
+	missingRequired := tlsCert == "" ||
+		tlsKey == "" ||
+		envoyImg == "" ||
+		dikastesImg == ""
 	if missingRequired {
-		panic("Required env vars not declared.")
+		return nil, fmt.Errorf("one of required env vars not declared")
 	}
+
+	return &Config{
+		TLSCert:     tlsCert,
+		TLSKey:      tlsKey,
+		EnvoyImg:    envoyImg,
+		DikastesImg: dikastesImg,
+	}, nil
 }

@@ -11,12 +11,15 @@ import (
 )
 
 func main() {
-	http.Handle("/sidecar-webhook", sidecar.NewSidecarHandler())
+	cfg, err := config.FromEnv()
+	if err != nil {
+		log.Fatal("Failed to load config: ", err)
+	}
+
+	http.Handle("/sidecar-webhook", sidecar.NewSidecarHandler(cfg))
 	http.HandleFunc("/live", liveHandler)
 
-	err := http.ListenAndServeTLS(":6443", config.TLSCert, config.TLSKey,
-		nil)
-	if err != nil {
+	if err := http.ListenAndServeTLS(":6443", cfg.TLSCert, cfg.TLSKey, nil); err != nil {
 		log.Fatal("Server stopped unexpected: ", err)
 	}
 }

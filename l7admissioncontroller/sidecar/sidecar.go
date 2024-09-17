@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/imdario/mergo"
+
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,9 +25,10 @@ import (
 
 type sidecarWebhook struct {
 	deserializer runtime.Decoder
+	cfg          *config.Config
 }
 
-func NewSidecarHandler() http.Handler {
+func NewSidecarHandler(cfg *config.Config) http.Handler {
 	scheme := runtime.NewScheme()
 	codecs := serializer.NewCodecFactory(scheme)
 	utilruntime.Must(corev1.AddToScheme(scheme))
@@ -34,6 +37,7 @@ func NewSidecarHandler() http.Handler {
 
 	return &sidecarWebhook{
 		deserializer: codecs.UniversalDeserializer(),
+		cfg:          cfg,
 	}
 }
 
@@ -108,58 +112,105 @@ badRequest:
 }
 
 var (
-	defaultVolumes = []string{
-		`{"name":"envoy-config","emptyDir":{}}`,
-		`{"name":"dikastes-sock","hostPath":{"path":"/var/run/dikastes","type":"Directory"}}`,
-		`{"name":"l7-collector-sock","hostPath":{"path":"/var/run/l7-collector","type":"Directory"}}`,
+	defaultVolumes = []map[string]interface{}{
+		{"name": "envoy-config", "emptyDir": map[string]interface{}{}},
+		{"name": "dikastes-sock", "hostPath": map[string]interface{}{"path": "/var/run/dikastes", "type": "Directory"}},
+		{"name": "l7-collector-sock", "hostPath": map[string]interface{}{"path": "/var/run/l7-collector", "type": "Directory"}},
 	}
 )
 
-const (
-	tmplDikastesInit = `{
-		"name":"tigera-dikastes-init",
-		"image":"%s",
-		"command":["/dikastes","init-sidecar"],
-		"args":[%s],
-		"env":[
-			{"name":"DIKASTES_POD_NAMESPACE","valueFrom":{"fieldRef":{"fieldPath":"metadata.namespace"}}},
-			{"name":"DIKASTES_POD_NAME","valueFrom":{"fieldRef":{"fieldPath":"metadata.name"}}},
-			{"name":"ENVOY_CONFIG_PATH","value":"/etc/tigera/envoy.yaml"},
-			{"name":"ENVOY_INBOUND_PORT","value":"16001"}
-		],
-		"volumeMounts":[
-			{"name":"envoy-config","mountPath":"/etc/tigera"}
-		],
-		"securityContext":{
-			"runAsGroup":0,
-			"runAsUser":0,
-			"capabilities":{
-				"add":["NET_ADMIN","NET_RAW"]
-			}
-		}
-	}`
-	tmplEnvoy = `{
-		"name":"tigera-envoy",
-		"image":"%s",%s
-		"command":["envoy","-c","/etc/tigera/envoy.yaml"],
-		"restartPolicy":"Always",
-		"ports":[{"containerPort":16001}],
-		"startupProbe":{
-			"tcpSocket":{
-				"port":16001
-			}
+func generateDikastesInitContainer(image string, args string) []map[string]interface{} {
+	return []map[string]interface{}{
+		{
+			"name":    "tigera-dikastes-init",
+			"image":   image,
+			"command": []string{"/dikastes", "init-sidecar"},
+			"args":    strings.Split(args, ","),
+			"env": []map[string]interface{}{
+				{
+					"name": "DIKASTES_POD_NAMESPACE",
+					"valueFrom": map[string]interface{}{
+						"fieldRef": map[string]interface{}{
+							"fieldPath": "metadata.namespace",
+						},
+					},
+				},
+				{
+					"name": "DIKASTES_POD_NAME",
+					"valueFrom": map[string]interface{}{
+						"fieldRef": map[string]interface{}{
+							"fieldPath": "metadata.name",
+						},
+					},
+				},
+				{
+					"name":  "ENVOY_CONFIG_PATH",
+					"value": "/etc/tigera/envoy.yaml",
+				},
+				{
+					"name":  "ENVOY_INBOUND_PORT",
+					"value": "16001",
+				},
+			},
+			"volumeMounts": []map[string]interface{}{
+				{
+					"name":      "envoy-config",
+					"mountPath": "/etc/tigera",
+				},
+			},
+			"securityContext": map[string]interface{}{
+				"runAsGroup": 0,
+				"runAsUser":  0,
+				"capabilities": map[string]interface{}{
+					"add": []string{"NET_ADMIN", "NET_RAW"},
+				},
+			},
 		},
-		"securityContext":{
-			"runAsGroup":0,
-			"runAsUser":0
+	}
+}
+
+func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[string]interface{}, error) {
+	res := map[string]interface{}{
+		"name":          "tigera-envoy",
+		"image":         image,
+		"command":       []string{"envoy", "-c", "/etc/tigera/envoy.yaml"},
+		"restartPolicy": "Always",
+		"ports": []map[string]interface{}{
+			{
+				"containerPort": 16001,
+			},
 		},
-		"volumeMounts":[
-			{"name":"envoy-config","mountPath":"/etc/tigera"},
-			{"name":"dikastes-sock","mountPath":"/var/run/dikastes"},
-			{"name":"l7-collector-sock","mountPath":"/var/run/l7-collector"}
-		]
-	}`
-)
+		"startupProbe": map[string]interface{}{
+			"tcpSocket": map[string]interface{}{
+				"port": 16001,
+			},
+		},
+		"securityContext": map[string]interface{}{
+			"runAsGroup": 0,
+			"runAsUser":  0,
+		},
+		"volumeMounts": []map[string]interface{}{
+			{
+				"name":      "envoy-config",
+				"mountPath": "/etc/tigera",
+			},
+			{
+				"name":      "dikastes-sock",
+				"mountPath": "/var/run/dikastes",
+			},
+			{
+				"name":      "l7-collector-sock",
+				"mountPath": "/var/run/l7-collector",
+			},
+		},
+	}
+
+	if err := mergo.Map(&res, attrs); err != nil {
+		return nil, err
+	}
+
+	return []map[string]interface{}{res}, nil
+}
 
 type sidecarCfg struct {
 	dikastesImg    string
@@ -170,17 +221,29 @@ type sidecarCfg struct {
 	envoyResources string
 }
 
-func (cfg *sidecarCfg) volumes() []string {
-	volumes := append([]string(nil), defaultVolumes...)
+func (cfg *sidecarCfg) volumes() (res []map[string]interface{}) {
+	res = append(res, defaultVolumes...)
 
 	if cfg.logging || cfg.policy {
-		volumes = append(volumes, `{"name":"felix-sync","csi":{"driver":"csi.tigera.io"}}`)
-	}
-	if cfg.waf {
-		volumes = append(volumes, `{"name":"tigera-waf-logfiles","hostPath":{"path":"/var/log/calico/waf","type":"DirectoryOrCreate"}}`)
+		res = append(res, map[string]interface{}{
+			"name": "felix-sync",
+			"csi": map[string]interface{}{
+				"driver": "csi.tigera.io",
+			},
+		})
 	}
 
-	return volumes
+	if cfg.waf {
+		res = append(res, map[string]interface{}{
+			"name": "tigera-waf-logfiles",
+			"hostPath": map[string]interface{}{
+				"path": "/var/log/calico/waf",
+				"type": "DirectoryOrCreate",
+			},
+		})
+	}
+
+	return res
 }
 
 func (cfg *sidecarCfg) dikastesInitArgs() string {
@@ -199,17 +262,41 @@ func (cfg *sidecarCfg) dikastesInitArgs() string {
 	return strings.Join(args, ",")
 }
 
-func (cfg *sidecarCfg) envoyOptionalAttributes() string {
-	attrs := []string{}
-
+func (cfg *sidecarCfg) envoyOptionalAttributes() (res map[string]interface{}) {
 	if cfg.envoyResources != "" {
-		attrs = append(attrs, fmt.Sprintf(`"resources":%s`, cfg.envoyResources))
+		res["resources"] = cfg.envoyResources
+	}
+	return res
+}
+
+func (cfg *sidecarCfg) patchBytes() ([]byte, error) {
+	if !(cfg.logging || cfg.policy || cfg.waf) {
+		return nil, nil
 	}
 
-	if len(attrs) == 0 {
-		return ""
+	envoyValues, err := generateEnvoyContainer(cfg.envoyImg, cfg.envoyOptionalAttributes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate envoy container patch: %w", err)
 	}
-	return strings.Join(attrs, ",") + ","
+
+	// build patch with volumes and initContainers
+	patch := patchOps{
+		patchOp{
+			Op:    "add",
+			Path:  "/spec/volumes/-",
+			Value: cfg.volumes(),
+		},
+		patchOp{
+			Op:   "add",
+			Path: "/spec/initContainers",
+			Value: append(
+				generateDikastesInitContainer(cfg.dikastesImg, cfg.dikastesInitArgs()),
+				envoyValues...,
+			),
+		},
+	}
+
+	return patch.MarshalJSON()
 }
 
 func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissionv1.AdmissionRequest) error {
@@ -219,39 +306,34 @@ func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissio
 	}
 
 	cfg := sidecarCfg{
-		dikastesImg:    config.DikastesImg,
-		envoyImg:       config.EnvoyImg,
+		dikastesImg:    s.cfg.DikastesImg,
+		envoyImg:       s.cfg.EnvoyImg,
 		logging:        (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/logging"] == "Enabled"),
 		policy:         (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/policy"] == "Enabled"),
 		waf:            (pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/waf"] == "Enabled"),
 		envoyResources: pod.ObjectMeta.Annotations["applicationlayer.projectcalico.org/sidecarResources"],
 	}
 
-	if !(cfg.logging || cfg.policy || cfg.waf) {
-		return nil
-	}
-
-	// injects volumes and initContainers
-	volumes := []string{}
-	for _, v := range cfg.volumes() {
-		volumes = append(volumes, fmt.Sprintf(
-			`{"op":"add","path":"/spec/volumes/-","value":%s}`,
-			v,
-		))
-	}
-	initContainers := fmt.Sprintf(
-		`{"op":"add","path":"/spec/initContainers","value":%s}`,
-		"["+strings.Join([]string{
-			fmt.Sprintf(tmplDikastesInit, config.DikastesImg, cfg.dikastesInitArgs()),
-			fmt.Sprintf(tmplEnvoy, config.EnvoyImg, cfg.envoyOptionalAttributes()),
-		}, ",")+"]",
-	)
-
 	pt := admissionv1.PatchTypeJSONPatch
 	res.PatchType = &pt
-	res.Patch = []byte(fmt.Sprintf(`[%s]`,
-		strings.Join(append(volumes, initContainers), ","),
-	))
+
+	patchBytes, err := cfg.patchBytes()
+	if err != nil {
+		return err
+	}
+	res.Patch = patchBytes
 
 	return nil
+}
+
+type patchOp struct {
+	Op    string                   `json:"op"`
+	Path  string                   `json:"path"`
+	Value []map[string]interface{} `json:"value"`
+}
+
+type patchOps []patchOp
+
+func (p patchOps) MarshalJSON() ([]byte, error) {
+	return json.Marshal([]patchOp(p))
 }
