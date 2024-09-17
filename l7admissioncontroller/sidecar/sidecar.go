@@ -262,7 +262,8 @@ func (cfg *sidecarCfg) dikastesInitArgs() string {
 	return strings.Join(args, ",")
 }
 
-func (cfg *sidecarCfg) envoyOptionalAttributes() (res map[string]interface{}) {
+func (cfg *sidecarCfg) envoyOptionalAttributes() map[string]interface{} {
+	res := map[string]interface{}{}
 	if cfg.envoyResources != "" {
 		res["resources"] = cfg.envoyResources
 	}
