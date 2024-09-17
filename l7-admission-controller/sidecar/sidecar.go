@@ -20,7 +20,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/klog/v2"
 
-	"github.com/projectcalico/calico/l7admissioncontroller/cmd/l7admctrl/config"
+	"github.com/projectcalico/calico/l7-admission-controller/cmd/l7-admission-controller/config"
 )
 
 type sidecarWebhook struct {

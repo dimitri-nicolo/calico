@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+
 package sidecar
 
 import (
@@ -15,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/projectcalico/calico/l7admissioncontroller/cmd/l7admctrl/config"
+	"github.com/projectcalico/calico/l7-admission-controller/cmd/l7-admission-controller/config"
 )
 
 const (

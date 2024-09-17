@@ -1,6 +1,6 @@
 include ../metadata.mk
 
-PACKAGE_NAME = github.com/projectcalico/calico/l7admissioncontroller
+PACKAGE_NAME = github.com/projectcalico/calico/l7-admission-controller
 
 ###############################################################################
 
@@ -8,8 +8,8 @@ SRC_FILES=$(shell find . -name '*.go')
 
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
-L7ADMCTRL_IMAGE ?=l7-admission-controller
-BUILD_IMAGES ?= $(L7ADMCTRL_IMAGE)
+L7_ADMISSION_CONTROLLER_IMAGE ?=l7-admission-controller
+BUILD_IMAGES ?= $(L7_ADMISSION_CONTROL_IMAGE)
 
 LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 
@@ -19,8 +19,6 @@ LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
 include ../lib.Makefile
-
-IMAGE_CREATED=.image.created-$(ARCH)
 
 # Shortcut targets
 default: build
@@ -38,32 +36,32 @@ clean:
 	find . -name '.*.created*' -type f -delete
 	find . -name '.*.published*' -type f -delete
 	rm -rf bin report
-	-docker image rm -f $$(docker images $(L7ADMCTRL_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(L7_ADMISSION_CONTROLLER_IMAGE) -a -q)
 
 ###############################################################################
 # Building the binary
 ###############################################################################
-.PHONY: build-all
-## Build the binaries for all architectures and platforms
 .PHONY: build
-build: bin/l7admctrl-$(ARCH)
-	$(MAKE) bin/l7admctrl-$(ARCH) ARCH=$(ARCH)
+build: bin/l7-admission-controller-$(ARCH)
 
-bin/l7admctrl-%: $(SRC_FILES)
-	$(call build_binary, cmd/l7admctrl/*.go, $@)
+bin/l7-admission-controller-$(ARCH): $(SRC_FILES)
+	$(call build_binary, ./cmd/l7-admission-controller, $@)
 
 ###############################################################################
 # Building the image
 ###############################################################################
-.PHONY: image $(L7ADMCTRL_IMAGE)
-image: $(L7ADMCTRL_IMAGE)
+L7_ADMISSION_CONTROLLER_IMAGE_CREATED=.l7-admission-controller.created-$(ARCH)
+
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-$(L7ADMCTRL_IMAGE): $(IMAGE_CREATED)
-$(IMAGE_CREATED): Dockerfile bin/l7admctrl-$(ARCH)
-	$(DOCKER_BUILD) -t $(L7ADMCTRL_IMAGE):latest-$(ARCH) -f Dockerfile .
+.PHONY: image $(L7_ADMISSION_CONTROLLER_IMAGE)
+image: $(L7_ADMISSION_CONTROLLER_IMAGE)
+
+$(L7_ADMISSION_CONTROLLER_IMAGE): $(L7_ADMISSION_CONTROLLER_IMAGE_CREATED)
+$(L7_ADMISSION_CONTROLLER_IMAGE_CREATED): Dockerfile bin/l7-admission-controller-$(ARCH)
+	$(DOCKER_BUILD) -t $(L7_ADMISSION_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -71,15 +69,15 @@ $(IMAGE_CREATED): Dockerfile bin/l7admctrl-$(ARCH)
 # UTs
 ###############################################################################
 .PHONY: ut
-## Run the tests in a container. Useful for CI, Mac dev
 ut:
+	$(DOCKER_GO_BUILD) sh -c 'go test -v ./... -cover -count 1'
 
 ###############################################################################
 # CI
 ###############################################################################
 
 .PHONY: ci
-ci: static-checks image ut
+ci: clean static-checks ut image
 
 ###############################################################################
 # CD

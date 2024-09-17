@@ -93,7 +93,7 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push l7-admission-controller images
-    pipeline_file: push-images/l7admctrl.yml
+    pipeline_file: push-images/l7-admission-controller.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push l7-collector images

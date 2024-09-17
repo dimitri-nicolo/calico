@@ -1,12 +1,12 @@
-- name: l7admissioncontroller
+- name: l7-admission-controller
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/l7admissioncontroller/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/l7-admission-controller/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
     prologue:
       commands:
-        - cd l7admissioncontroller
+        - cd l7-admission-controller
     jobs:
       - name: make ci
         commands:

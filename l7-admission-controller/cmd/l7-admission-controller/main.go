@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/projectcalico/calico/l7admissioncontroller/cmd/l7admctrl/config"
-	"github.com/projectcalico/calico/l7admissioncontroller/sidecar"
+	"github.com/projectcalico/calico/l7-admission-controller/cmd/l7-admission-controller/config"
+	"github.com/projectcalico/calico/l7-admission-controller/sidecar"
 )
 
 func main() {

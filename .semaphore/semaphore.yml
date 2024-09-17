@@ -140,7 +140,7 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push l7-admission-controller images
-    pipeline_file: push-images/l7admctrl.yml
+    pipeline_file: push-images/l7-admission-controller.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push l7-collector images
@@ -735,26 +735,6 @@ blocks:
       always:
         commands:
           - test-results publish report
-- name: l7admissioncontroller
-  run:
-    when: "false or change_in(['/*', '/l7admissioncontroller/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd l7admissioncontroller
-    jobs:
-      - name: make ci
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: libcalico-go
   run:
     when: "false or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1504,6 +1484,26 @@ blocks:
       - name: kibana tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+- name: l7-admission-controller
+  run:
+    when: "false or change_in(['/*', '/l7-admission-controller/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd l7-admission-controller
+    jobs:
+      - name: make ci
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: Publish tigera/envoybinary images
   run:
     when: "false or change_in(['/third_party/envoybinary'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
