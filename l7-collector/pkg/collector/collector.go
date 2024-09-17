@@ -5,6 +5,8 @@ package collector
 import (
 	"context"
 
+	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
+
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
@@ -21,13 +23,15 @@ type EnvoyCollector interface {
 	ReadLogs(context.Context)
 	Report() <-chan EnvoyInfo
 	ParseRawLogs(string) (EnvoyLog, error)
+	ReceiveLogs(*accesslogv3.HTTPAccessLogEntry)
+	Start(context.Context)
 }
 
-func NewEnvoyCollector(cfg *config.Config) EnvoyCollector {
+func NewEnvoyCollector(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
 	// Currently it will only return a log file collector but
 	// this should inspect the config to return other collectors
 	// once they need to be implemented.
-	return EnvoyCollectorNew(cfg)
+	return EnvoyCollectorNew(cfg, ch)
 }
 
 type EnvoyInfo struct {

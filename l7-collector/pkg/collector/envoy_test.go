@@ -28,7 +28,8 @@ var (
 
 var _ = Describe("Envoy Log Collector ParseRawLogs test", func() {
 	// Can use an empty config since the config is not used in ParseRawLogs
-	c := EnvoyCollectorNew(&config.Config{})
+	ch := make(chan EnvoyInfo)
+	c := EnvoyCollectorNew(&config.Config{}, ch)
 
 	Context("With a log with HTTP destination json format", func() {
 		It("should return the expected EnvoyLog", func() {

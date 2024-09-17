@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
+	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/nxadm/tail"
 	log "github.com/sirupsen/logrus"
 
@@ -26,9 +28,9 @@ type envoyCollector struct {
 	connectionCounts map[TupleKey]int
 }
 
-func EnvoyCollectorNew(cfg *config.Config) EnvoyCollector {
+func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
 	return &envoyCollector{
-		collectedLogs:    make(chan EnvoyInfo),
+		collectedLogs:    ch,
 		config:           cfg,
 		batch:            NewBatchEnvoyLog(cfg.EnvoyRequestsPerInterval),
 		connectionCounts: make(map[TupleKey]int),
@@ -219,4 +221,58 @@ func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
 
 	return envoyLog, nil
 
+}
+
+// gRPC functions
+//
+
+func (ec *envoyCollector) Start(ctx context.Context) {
+	t := time.NewTicker(time.Second * time.Duration(ec.config.EnvoyLogIntervalSecs))
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+			ec.ingestLogs()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
+	if log.IsLevelEnabled(log.DebugLevel) {
+		log.WithField("log", logMsg).Debug("Log received from envoy via gRPC")
+	}
+	// Treat values
+	timeToLastUpstreamTxByte := logMsg.GetCommonProperties().GetTimeToLastUpstreamTxByte()
+	if timeToLastUpstreamTxByte == nil {
+		timeToLastUpstreamTxByte = &duration.Duration{}
+	}
+	entry := EnvoyLog{
+		Reporter:            DestinationEnvoyReporter,
+		StartTime:           logMsg.GetCommonProperties().GetStartTime().String(),
+		Duration:            int32(logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte().Nanos / 1000000),
+		ResponseCode:        int32(logMsg.Response.GetResponseCode().Value),
+		BytesSent:           int32(logMsg.Request.RequestBodyBytes + logMsg.Request.RequestHeadersBytes),
+		BytesReceived:       int32(logMsg.Response.ResponseBodyBytes + logMsg.Response.ResponseHeadersBytes),
+		UserAgent:           logMsg.Request.RequestHeaders["user-agent"],
+		RequestPath:         logMsg.Request.GetPath(),
+		RequestMethod:       logMsg.Request.GetRequestMethod().String(),
+		RequestId:           logMsg.Request.RequestId,
+		Type:                "http",
+		DSRemoteAddress:     logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetAddress(),
+		DSLocalAddress:      logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetAddress(),
+		UpstreamServiceTime: strconv.Itoa(int(timeToLastUpstreamTxByte.Nanos / 1000000)),
+		Protocol:            "tcp", //log.ProtocolVersion.String(),
+		SrcIp:               logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetAddress(),
+		DstIp:               logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetAddress(),
+		SrcPort:             int32(logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetPortValue()),
+		DstPort:             int32(logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetPortValue()),
+		Count:               1,
+		DurationMax:         int32(logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte().Nanos / 1000000),
+		Latency:             int32(logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte().Nanos / 1000000),
+	}
+	ec.batch.Insert(entry)
+	key := TupleKeyFromEnvoyLog(entry)
+	ec.connectionCounts[key] = ec.connectionCounts[key] + 1
 }

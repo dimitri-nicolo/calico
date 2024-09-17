@@ -5,7 +5,13 @@ package main
 import (
 	"context"
 	"flag"
+	"net"
+	"os"
 	"sync"
+	"syscall"
+
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/l7-collector/pkg/collector"
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
@@ -29,14 +35,49 @@ func main() {
 	cfg.InitializeLogging()
 
 	// Instantiate the log collector
-	c := collector.NewEnvoyCollector(cfg)
+	reportCh := make(chan collector.EnvoyInfo)
+	c := collector.NewEnvoyCollector(cfg, reportCh)
 
 	// Instantiate the felix client
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(cfg.DialTarget, opts)
 
+	// Start gRPC log collector
+	gRPCServerStart(cfg, reportCh)
+
 	// Start the log collector
 	CollectAndSend(context.Background(), felixClient, c)
+}
+
+func gRPCServerStart(cfg *config.Config, reportCh chan collector.EnvoyInfo) {
+	log.Info("Starting gRCP server...")
+	ctx := context.Background()
+	gs := grpc.NewServer()
+	grpcCollector := collector.NewEnvoyCollector(cfg, reportCh)
+	logServer := collector.NewLoggingServer(grpcCollector.ReceiveLogs)
+	logServer.RegisterAccessLogServiceServer(gs)
+	go grpcCollector.Start(ctx)
+
+	// Run gRPC server on separate goroutine so we catch any signals and clean up.
+	if cfg.ListenNetwork == "unix" {
+		_ = syscall.Unlink(cfg.ListenAddress)
+	}
+	lis, err := net.Listen(cfg.ListenNetwork, cfg.ListenAddress)
+	if err != nil {
+		log.Fatal("could not start listener: ", err)
+	}
+	if cfg.ListenNetwork == "unix" {
+		// anyone on system can connect.
+		if err := os.Chmod(cfg.ListenAddress, 0777); err != nil {
+			log.Fatal("unable to set write permission on socket: ", err)
+		}
+	}
+	go func() {
+		if err := gs.Serve(lis); err != nil {
+			log.Errorf("failed to serve: %v", err)
+		}
+		defer lis.Close()
+	}()
 }
 
 func CollectAndSend(ctx context.Context, client felixclient.FelixClient, collector collector.EnvoyCollector) {
