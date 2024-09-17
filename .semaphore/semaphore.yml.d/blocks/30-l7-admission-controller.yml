@@ -1,0 +1,20 @@
+- name: l7-admission-controller
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/l7-admission-controller/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd l7-admission-controller
+    jobs:
+      - name: make ci
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH

@@ -119,6 +119,10 @@ promotions:
     pipeline_file: ../kibana/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut L7 Admission Controller Release
+    pipeline_file: ../l7-admission-controller/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut l7 Collector Release
     pipeline_file: ../l7-collector/.semaphore/test-cut-release.yml
     auto_promote:

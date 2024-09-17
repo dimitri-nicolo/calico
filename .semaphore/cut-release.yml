@@ -123,6 +123,10 @@ promotions:
     pipeline_file: ../kibana/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut L7 Admission Controller Release
+    pipeline_file: ../l7-admission-controller/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut l7 Collector Release
     pipeline_file: ../l7-collector/.semaphore/cut-release.yml
     auto_promote:
