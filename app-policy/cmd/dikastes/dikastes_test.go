@@ -70,7 +70,7 @@ func TestRunServer(t *testing.T) {
 		"-dial", policySyncPath,
 		"-listen", listenPath,
 		"-waf-log-file", wafLogFile,
-		"-waf-enabled",
+		"-per-host-waf-enabled",
 		"-waf-ruleset-file", confPath,
 		"-waf-directive", "SecRuleEngine On",
 		"-waf-events-flush-interval", "500ms",
@@ -162,7 +162,7 @@ func TestRunServeNoPolicySync(t *testing.T) {
 		"-log-level", "trace",
 		"-listen", listenPath,
 		"-waf-log-file", wafLogFile,
-		"-waf-enabled",
+		"-per-host-waf-enabled",
 		"-waf-events-flush-interval", "500ms",
 		"-subscription-type", "per-pod-policies",
 	}

@@ -25,7 +25,7 @@ func TestFlagDefaults(t *testing.T) {
 		{config.DialNetwork, "unix"},
 		{config.DialAddress, ""},
 		{config.LogLevel, "info"},
-		{config.WAFEnabled, false},
+		{config.PerHostWAFEnabled, false},
 		{config.WAFDirectives.Value(), []string{}},
 		{config.WAFEventsFlushInterval, "15s"},
 	} {
@@ -54,7 +54,7 @@ func TestAcceptLegacyArgs(t *testing.T) {
 		{config.DialNetwork, "unix"},
 		{config.DialAddress, "/var/run/nodeagent/nodeagent.sock"},
 		{config.LogLevel, "info"},
-		{config.WAFEnabled, false},
+		{config.PerHostWAFEnabled, false},
 		{config.WAFDirectives.Value(), []string{}},
 	} {
 		if fmt.Sprint(v.loaded) != fmt.Sprint(v.expected) {
@@ -117,7 +117,7 @@ func TestStringArrayArgs(t *testing.T) {
 }
 
 func TestBoolArgs(t *testing.T) {
-	args := []string{"dikastes", "server", "-waf-enabled"}
+	args := []string{"dikastes", "server", "-per-host-waf-enabled"}
 	config := flags.New()
 	if err := config.Parse(args); err != nil {
 		t.Errorf("error parsing args: %s", err)
@@ -128,7 +128,7 @@ func TestBoolArgs(t *testing.T) {
 		loaded   interface{}
 		expected interface{}
 	}{
-		{config.WAFEnabled, true},
+		{config.PerHostWAFEnabled, true},
 	} {
 		if fmt.Sprint(v.loaded) != fmt.Sprint(v.expected) {
 			t.Errorf("Loaded flag is %v, but we expected %v", v.loaded, v.expected)

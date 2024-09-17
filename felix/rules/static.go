@@ -1358,6 +1358,18 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			},
 		)
 
+		// When external network is enabled, packets from EGW to the external network is marked with 0x80000.
+		// The mark must be restored for the return traffic, if the packet is from external and destined to
+		// EGW pod.
+		rules = append(rules,
+			generictables.Rule{
+				Match: r.NewMatch().
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)),
+				Action:  r.RestoreConnMark(r.IptablesMarkEgress),
+				Comment: []string{"Restore connmark for external traffic to EGW"},
+			},
+		)
+
 		chains = append(chains, &generictables.Chain{Name: ChainManglePreroutingEgress, Rules: rules})
 
 		// Postrouting chain for egress ip

@@ -28,7 +28,21 @@ func main() {
 	}
 
 	log.Infof("Dikastes (%s) launching", VERSION)
-	runServer(ctx, config)
+	switch config.Command {
+	case "init-sidecar":
+		// At least one of them should be enabled
+		if !(config.SidecarALPEnabled || config.SidecarWAFEnabled || config.SidecarLogsEnabled) {
+			log.Fatal("At least one of the main features ALP, WAF and Logs should be enabled")
+		}
+
+		runInit(config)
+	case "server":
+		if config.DialAddress == "" {
+			log.Fatal("Dial Address for PolicySync connection is mandatory")
+		}
+
+		runServer(ctx, config)
+	}
 }
 
 func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct{}) {
@@ -51,8 +65,9 @@ func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct
 		server.WithListenArguments(config.ListenNetwork, config.ListenAddress),
 		server.WithDialAddress(config.DialNetwork, config.DialAddress),
 		server.WithSubscriptionType(config.SubscriptionType),
+		server.WithALPConfig(config.PerHostALPEnabled),
 		server.WithWAFConfig(
-			config.WAFEnabled,
+			config.PerHostWAFEnabled,
 			config.WAFLogFile,
 			config.WAFRulesetFiles.Value(),
 			config.WAFDirectives.Value(),

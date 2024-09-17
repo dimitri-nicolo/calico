@@ -30,7 +30,8 @@ type Dikastes struct {
 	subscriptionType             string
 	dialNetwork, dialAddress     string
 	listenNetwork, listenAddress string
-	wafEnabled                   bool
+	perHostAlpEnabled            bool
+	perHostWafEnabled            bool
 	wafLogFile                   string
 	wafRulesetFiles              []string
 	wafDirectives                []string
@@ -69,9 +70,15 @@ func WithGRPCServerOpts(opts ...grpc.ServerOption) DikastesServerOptions {
 	}
 }
 
+func WithALPConfig(enabled bool) DikastesServerOptions {
+	return func(ds *Dikastes) {
+		ds.perHostAlpEnabled = enabled
+	}
+}
+
 func WithWAFConfig(enabled bool, logfile string, files, directives []string) DikastesServerOptions {
 	return func(ds *Dikastes) {
-		ds.wafEnabled = enabled
+		ds.perHostWafEnabled = enabled
 		ds.wafLogFile = logfile
 		ds.wafDirectives = directives
 		ds.wafRulesetFiles = files
@@ -153,44 +160,40 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 
 	checkServerOptions := []checker.AuthServerOption{}
 
-	if s.policySyncEnabled() {
-		// features that require policy sync
+	// features that require policy sync
 
-		// syncClient provides synchronization with the policy store and start reporting stats.
-		// ALP uses the policy store to retrieve the policy for a given endpoint.
-		opts := uds.GetDialOptionsWithNetwork(s.dialNetwork)
-		syncClient := syncher.NewClient(
-			s.dialAddress,
-			s.policyStoreManager,
-			opts,
-			syncher.WithSubscriptionType(s.subscriptionType),
-		)
-		syncClient.RegisterGRPCServices(gs)
-		dpStats.RegisterFlushCallback(syncClient.OnStatsCacheFlush)
-		go syncClient.Start(ctx)
+	// syncClient provides synchronization with the policy store and start reporting stats.
+	// ALP uses the policy store to retrieve the policy for a given endpoint.
+	opts := uds.GetDialOptionsWithNetwork(s.dialNetwork)
+	syncClient := syncher.NewClient(
+		s.dialAddress,
+		s.policyStoreManager,
+		opts,
+		syncher.WithSubscriptionType(s.subscriptionType),
+	)
+	syncClient.RegisterGRPCServices(gs)
+	dpStats.RegisterFlushCallback(syncClient.OnStatsCacheFlush)
+	go syncClient.Start(ctx)
 
-		// register ALP check provider. registrations are ordered (first-registered-processed-first)
-		checkServerOptions = append(
-			checkServerOptions,
-			checker.WithSubscriptionType(s.subscriptionType),
-			checker.WithRegisteredCheckProvider(checker.NewALPCheckProvider(s.subscriptionType)),
-		)
+	// register ALP check provider. registrations are ordered (first-registered-processed-first)
+	checkServerOptions = append(
+		checkServerOptions,
+		checker.WithSubscriptionType(s.subscriptionType),
+		checker.WithRegisteredCheckProvider(checker.NewALPCheckProvider(s.subscriptionType, s.perHostAlpEnabled)),
+	)
+
+	wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
+	events := waf.NewEventsPipeline(wafLogHandler.Process)
+	go events.Start(ctx, s.wafEventsFlushDuration)
+	wafServer, err := waf.New(s.wafRulesetFiles, s.wafDirectives, s.perHostWafEnabled, events)
+	if err != nil {
+		log.Fatalf("cannot initialize WAF: %v", err)
 	}
 
-	if s.wafEnabled {
-		wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
-		events := waf.NewEventsPipeline(wafLogHandler.Process)
-		go events.Start(ctx, s.wafEventsFlushDuration)
-		wafServer, err := waf.New(s.wafRulesetFiles, s.wafDirectives, events)
-		if err != nil {
-			log.Fatalf("cannot initialize WAF: %v", err)
-		}
-
-		checkServerOptions = append(
-			checkServerOptions,
-			checker.WithRegisteredCheckProvider(wafServer),
-		)
-	}
+	checkServerOptions = append(
+		checkServerOptions,
+		checker.WithRegisteredCheckProvider(wafServer),
+	)
 
 	// checkServer provides envoy v3, v2, v2 alpha ext authz services
 	checkServer := checker.NewServer(
@@ -240,8 +243,4 @@ func setupWAFLogging(logFile string) []io.Writer {
 		res = append(res, w)
 	}
 	return res
-}
-
-func (s *Dikastes) policySyncEnabled() bool {
-	return s.dialAddress != ""
 }

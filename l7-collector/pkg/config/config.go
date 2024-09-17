@@ -36,6 +36,9 @@ type Config struct {
 
 	// Parsed values
 	ParsedLogLevel log.Level
+
+	ListenNetwork string `envoyconfig:"LISTEN_NETWORK"`
+	ListenAddress string `envoyconfig:"LISTEN_ADDRESS"`
 }
 
 func MustLoadConfig() *Config {
@@ -75,6 +78,16 @@ func LoadConfig() (*Config, error) {
 	// Default the EnvoyTailMaxLag to 1 MB
 	if config.EnvoyTailMaxLag == 0 {
 		config.EnvoyTailMaxLag = 1000000
+	}
+
+	// Default the ListenNetwork to unix
+	if config.ListenNetwork == "" {
+		config.ListenNetwork = "unix"
+	}
+
+	// Default the ListenAdress to /var/run/l7-collector/l7-collector.sock
+	if config.ListenAddress == "" {
+		config.ListenAddress = "/var/run/l7-collector/l7-collector.sock"
 	}
 
 	// Make sure that the tail reads from the end of the envoy log.

@@ -30,7 +30,7 @@ func TestCheckAuthScenarios(t *testing.T) {
 			ctx, ps, dpStats,
 			checker.WithSubscriptionType(scenario.subscriptionType),
 			checker.WithRegisteredCheckProvider(
-				checker.NewALPCheckProvider(scenario.subscriptionType),
+				checker.NewALPCheckProvider(scenario.subscriptionType, true),
 			),
 		)
 

@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM alpine:3 AS builder
+ARG UBI8_IMAGE
+
+FROM ${UBI8_IMAGE} AS builder
+
+# Embedding iptables
+RUN microdnf update && microdnf install findutils iptables && \
+  ldd /sbin/iptables | tr -s '[:blank:]' '\n' | grep '^/' | \
+  xargs -I % sh -c 'mkdir -p $(dirname /deps%); cp % /deps%;'
 
 RUN mkdir -p /var/run/dikastes
 
@@ -24,6 +31,9 @@ ARG TARGETARCH
 # Precreate the /var/run/dikastes directory so that we don't need any elevated
 # permission to create the directory at runtime.
 COPY --from=builder /var/run/dikastes /var/run/dikastes/
+COPY --from=builder /sbin/iptables /sbin/iptables
+COPY --from=builder /usr/lib64/xtables /usr/lib64/xtables
+COPY --from=builder /deps /
 
 COPY ${BIN_DIR}/dikastes-${TARGETARCH} /dikastes
 

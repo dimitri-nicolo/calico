@@ -111,6 +111,7 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 	waf, err := waf.New(
 		files,
 		scenario.directives,
+		true,
 		evp,
 	)
 	if err != nil {

@@ -54,7 +54,7 @@ var (
 	rlog = logutils.NewRateLimitedLogger()
 )
 
-func LookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest) (source, destination []*proto.WorkloadEndpoint, err error) {
+func LookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.CheckRequest, sidecar *proto.WorkloadEndpoint) (source, destination []*proto.WorkloadEndpoint, err error) {
 	log.Debugf("extracting endpoints from request %s", req.String())
 
 	// Extract source and destination IP addresses if possible:
@@ -65,7 +65,9 @@ func LookupEndpointsFromRequest(store *policystore.PolicyStore, req *authz.Check
 	}
 
 	// map destination first
-	if addr, port, ok := addrPortFromPeer(requestAttributes.Destination); ok {
+	if sidecar != nil {
+		destination = []*proto.WorkloadEndpoint{sidecar}
+	} else if addr, port, ok := addrPortFromPeer(requestAttributes.Destination); ok {
 		log.Debugf("found destination address we would like to match: [%v:%v]", addr, port)
 		destinationIp, err := ip.ParseCIDROrIP(addr)
 		if err != nil {
@@ -137,22 +139,24 @@ func ipToEndpointKeys(store *policystore.PolicyStore, addr ip.Addr) []proto.Work
 	return store.IPToIndexes.Keys(addr)
 }
 
-func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest) status.Status {
-	src, dst, err := LookupEndpointsFromRequest(store, req)
+func checkRequest(store *policystore.PolicyStore, req *authz.CheckRequest, sidecar *proto.WorkloadEndpoint) status.Status {
+	src, dst, err := LookupEndpointsFromRequest(store, req, sidecar)
 	if err != nil {
 		return status.Status{Code: INTERNAL, Message: fmt.Sprintf("endpoint lookup error: %v", err)}
 	}
 	log.Debugf("Found endpoints from request [src: %v, dst: %v]", src, dst)
 
 	if len(dst) > 0 {
-		alpIPset, ok := store.IPSetByID[tproxydefs.ApplicationLayerPolicyIPSet]
-		if !ok {
-			return status.Status{Code: UNKNOWN, Message: "cannot process ALP yet"}
-		}
+		if sidecar == nil {
+			alpIPset, ok := store.IPSetByID[tproxydefs.ApplicationLayerPolicyIPSet]
+			if !ok {
+				return status.Status{Code: UNKNOWN, Message: "cannot process ALP yet"}
+			}
 
-		reqAddr := req.Attributes.Destination.Address
-		if !alpIPset.ContainsAddress(reqAddr) {
-			return status.Status{Code: UNKNOWN, Message: "ALP not enabled for this request destination"}
+			reqAddr := req.Attributes.Destination.Address
+			if !alpIPset.ContainsAddress(reqAddr) {
+				return status.Status{Code: UNKNOWN, Message: "ALP not enabled for this request destination"}
+			}
 		}
 		// Destination is local workload, apply its ingress policy.
 		// possible there's multiple weps for an ip.

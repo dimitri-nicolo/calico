@@ -49,13 +49,17 @@ var _ checker.CheckProvider = (*Server)(nil)
 
 type Server struct {
 	coraza.WAF
-	evp *wafEventsPipeline
+	evp            *wafEventsPipeline
+	perHostEnabled bool
 
 	currPolicyStore *policystore.PolicyStore
 }
 
-func New(files, directives []string, evp *wafEventsPipeline) (*Server, error) {
-	srv := &Server{evp: evp}
+func New(files, directives []string, tproxyEnabled bool, evp *wafEventsPipeline) (*Server, error) {
+	srv := &Server{
+		evp:            evp,
+		perHostEnabled: tproxyEnabled,
+	}
 	cfg := coraza.NewWAFConfig().
 		WithRootFS(mergefs.Merge(
 			coreruleset.FS,
@@ -92,6 +96,14 @@ func (w *Server) Name() string {
 func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
 	// Update current policystore
 	w.currPolicyStore = st
+
+	resp := &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code.Code_INTERNAL)}}
+	wledp, err := checker.CheckWorkloadEndpoint(w.currPolicyStore, checkReq)
+	if err != nil {
+		return resp, err
+	} else if (wledp == nil && !w.perHostEnabled) || (wledp != nil && wledp.ApplicationLayer.Waf != "Enabled") {
+		return &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code.Code_UNKNOWN)}}, nil
+	}
 
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{"attributes": checkReq.Attributes}).Debug("check request received")

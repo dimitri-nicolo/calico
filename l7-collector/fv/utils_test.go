@@ -38,7 +38,8 @@ type CollectorTestHandler struct {
 
 func NewCollectorTestHandler() *CollectorTestHandler {
 	cfg := createTestConfig()
-	c := collector.NewEnvoyCollector(cfg)
+	ch := make(chan collector.EnvoyInfo)
+	c := collector.NewEnvoyCollector(cfg, ch)
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(cfg.DialTarget, opts)
 	ctx := context.Background()

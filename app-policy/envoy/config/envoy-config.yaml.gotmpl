@@ -1,0 +1,166 @@
+{{- define "access_log" -}}
+                access_log:
+                  - name: envoy.access_loggers.grpc
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig
+                      common_config:
+                        log_name: "{{.}}"
+                        grpc_service:
+                          google_grpc:
+                            target_uri: unix:///var/run/l7-collector/l7-collector.sock
+                            stat_prefix: envoylogs1
+                          timeout: 0.5s
+                        transport_api_version: V3
+{{- end -}}
+
+{{- define "DIKASTES" -}}
+                  - name: envoy.filters.http.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      with_request_body:
+                        max_request_bytes: 9000
+                        allow_partial_message: true
+                      grpc_service:
+                        google_grpc:
+                          target_uri: unix:///var/run/dikastes/dikastes.sock
+                          stat_prefix: exauth1
+                        timeout: 0.5s
+                      transport_api_version: V3
+{{- end -}}
+
+{{- define "DIKASTES_CTX" -}}
+                      typed_per_filter_config:
+                        envoy.filters.http.ext_authz:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                          check_settings:
+                            context_extensions:
+                              podid: {{.}}
+{{- end -}}
+
+{{- define "XFF" -}}
+                xff_num_trusted_hops: {{.NumTrustedHopsXFF}}
+                use_remote_address: {{.UseRemoteAddressXFF}}
+{{- end -}}
+
+static_resources:
+  listeners:
+    - name: services
+      transparent: true
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 16001
+      listener_filters:
+        - name: envoy.filters.listener.tls_inspector
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+        - name: envoy.filters.listener.http_inspector
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+        - name: envoy.filters.listener.original_dst
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
+      filter_chains: &filter_chains
+        - filter_chain_match:
+            transport_protocol: tls
+          filters:
+            - name: envoy.filters.network.tcp_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                stat_prefix: ingress_tls
+                cluster: original_dst_cluster
+                {{if .SidecarLogsEnabled}}{{template "access_log" "tls"}}{{end}}
+        - filter_chain_match:
+            application_protocols:
+              - http/1.0
+              - http/1.1
+          filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                {{template "XFF" .}}
+                {{if .SidecarLogsEnabled}}{{template "access_log" "%PROTOCOL%"}}{{end}}
+                route_config:
+                  name: local_service
+                  virtual_hosts:
+                    - name: backend
+                      domains:
+                        - "*"
+                      {{if or .SidecarALPEnabled .SidecarWAFEnabled}}{{template "DIKASTES_CTX" .PodID}}{{end}}
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: original_dst_cluster
+                http_filters:
+                  {{if or .SidecarALPEnabled .SidecarWAFEnabled}}{{template "DIKASTES"}}{{end}}
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                codec_type: auto
+        - filter_chain_match:
+            application_protocols:
+              - h2c
+          filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: ingress_http
+                {{template "XFF" .}}
+                {{if .SidecarLogsEnabled}}{{template "access_log" "%PROTOCOL%"}}{{end}}
+                route_config:
+                  name: local_service
+                  virtual_hosts:
+                    - name: backend
+                      domains:
+                        - "*"
+                      {{if or .SidecarALPEnabled .SidecarWAFEnabled}}{{template "DIKASTES_CTX" .PodID}}{{end}}
+                      routes:
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: original_dst_cluster_h2c
+                http_filters:
+                  {{if or .SidecarALPEnabled .SidecarWAFEnabled}}{{template "DIKASTES"}}{{end}}
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                codec_type: auto
+        - filter_chain_match: {}
+          filters:
+            - name: envoy.filters.network.tcp_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                stat_prefix: ingress_tcp
+                cluster: original_dst_cluster
+                {{if .SidecarLogsEnabled}}{{template "access_log" "tcp"}}{{end}}
+    - name: nodeports
+      transparent: true
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 16002 # must be services port + 1
+      listener_filters:
+        - name: envoy.filters.listener.tls_inspector
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+        - name: envoy.filters.listener.http_inspector
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.listener.http_inspector.v3.HttpInspector
+        - name: envoy.filters.listener.original_dst
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.listener.original_dst.v3.OriginalDst
+      filter_chains: *filter_chains
+  clusters:
+    - name: original_dst_cluster
+      type: ORIGINAL_DST
+      connect_timeout: 30s
+      lb_policy: CLUSTER_PROVIDED
+      dns_lookup_family: V4_ONLY
+    - name: original_dst_cluster_h2c
+      type: ORIGINAL_DST
+      connect_timeout: 30s
+      lb_policy: CLUSTER_PROVIDED
+      dns_lookup_family: V4_ONLY
+      http2_protocol_options: {} # force http2

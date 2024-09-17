@@ -25,7 +25,7 @@ func TestCheckStoreNoHTTP(t *testing.T) {
 
 	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
-	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies")))
+	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies", true)))
 
 	psm.OnInSync()
 	psm.Write(func(s *policystore.PolicyStore) {
@@ -61,7 +61,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 
 	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
-	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies")))
+	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies", true)))
 
 	psm.OnInSync()
 	psm.Write(func(s *policystore.PolicyStore) {
@@ -132,7 +132,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 
 	dpStats := statscache.New()
 	psm := policystore.NewPolicyStoreManager()
-	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies")))
+	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies", true)))
 
 	psm.OnInSync()
 	psm.Write(func(s *policystore.PolicyStore) {
