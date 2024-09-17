@@ -18,12 +18,10 @@ func FromEnv() (*Config, error) {
 	envoyImg := os.Getenv("L7ADMCTRL_ENVOYIMAGE")
 	dikastesImg := os.Getenv("L7ADMCTRL_DIKASTESIMAGE")
 
-	missingRequired := tlsCert == "" ||
-		tlsKey == "" ||
-		envoyImg == "" ||
-		dikastesImg == ""
-	if missingRequired {
-		return nil, fmt.Errorf("one of required env vars not declared")
+	for _, v := range []string{tlsCert, tlsKey, envoyImg, dikastesImg} {
+		if v == "" {
+			return nil, fmt.Errorf("one of required env vars not declared")
+		}
 	}
 
 	return &Config{
