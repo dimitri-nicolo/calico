@@ -49,6 +49,7 @@ func (s *dikastesTestSuite) SetupTest() {
 		server.WithDialAddress("unix", policySync.Addr()),
 		server.WithListenArguments("unix", dikastesListenPath),
 		server.WithSubscriptionType("per-host-policies"),
+		server.WithALPConfig(true),
 	)
 	go dikastes.Serve(ctx)
 	<-dikastes.Ready

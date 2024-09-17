@@ -115,6 +115,8 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 				// check provider is requesting to continue to next check
 				logCtx.Debugf("request returned unknown for %s check", checkName)
 				unknownChecks++
+				// Force OK if the last one is UNKNOWN
+				resp.Status.Code = OK
 				continue T
 			default:
 				logCtx.Errorf("request denied by %s with status %s", checkName, code.Code(v).String())
