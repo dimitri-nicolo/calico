@@ -74,10 +74,10 @@ struct dnshdr {
 	      tc:1,
 	      rd:1,
 	      ra:1;
-	__be16 queries;
-	__be16 answers;
-	__be16 authority;
-	__be16 additional;
+	__u16 queries;
+	__u16 answers;
+	__u16 authority;
+	__u16 additional;
 };
 
 struct dns_query {
@@ -134,7 +134,7 @@ static CALI_BPF_INLINE int dns_skip_name(struct cali_tc_ctx *ctx, struct dns_scr
 
 	unsigned int i;
 
-	/* We could have jump from size to size over the labes, but verifier wouldn't be happy */
+	/* We could have jump from size to size over the labels, but verifier wouldn't be happy */
 	for (i = 0; i < DNS_SCRATCH_SIZE && scratch->buf[i] != 0; i++) {
 		if ((scratch->buf[i] & 0xc0) == 0xc0) {
 			CALI_DEBUG("DNS: pointer in name\n");
