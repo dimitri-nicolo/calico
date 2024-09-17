@@ -13,18 +13,18 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
-
-	"github.com/projectcalico/calico/crypto/pkg/tls"
-
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
+
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 )
 
 // Target describes which path is proxied to what destination URL
 type Target struct {
 	Path  string
 	Dest  *url.URL
-	Token string
+	Token oauth2.TokenSource
 	CAPem string
 
 	// PathRegexp, if not nil, check if Regexp matches the path
@@ -122,11 +122,6 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 		}
 	}
 
-	var token string
-	if tgt.Token != "" {
-		token = "Bearer " + tgt.Token
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		logCtx := log.WithField("dst", tgt)
 		if tgt.PathRegexp != nil {
@@ -146,8 +141,15 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 			}
 		}
 
-		if token != "" {
-			r.Header.Set("Authorization", token)
+		// Get the token value in the handler so if the Token changes we'll pick up the
+		// updated token.
+		if tgt.Token != nil {
+			tok, err := tgt.Token.Token()
+			if err != nil {
+				http.Error(w, "Internal Server Error, token read failure", 500)
+				logCtx.Errorf("Loading token failed %s", err)
+			}
+			tok.SetAuthHeader(r)
 		}
 
 		logCtx.Debugf("Received request %s will proxy to %s", r.RequestURI, tgt.Dest)

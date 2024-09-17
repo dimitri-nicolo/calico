@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,7 @@ import (
 
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
@@ -148,11 +150,14 @@ func (c *testClient) request(clusterID string, schema string, address string) (*
 }
 
 type testServer struct {
-	msg  string
-	http *http.Server
+	msg string
+	// store the last auth header received
+	authHeader string
+	http       *http.Server
 }
 
 func (s *testServer) handler(w http.ResponseWriter, r *http.Request) {
+	s.authHeader = r.Header.Get(authentication.AuthorizationHeader)
 	fmt.Fprintf(w, s.msg)
 }
 
@@ -171,8 +176,9 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxied bo
 		lisHTTP2  net.Listener
 		lisTun    net.Listener
 
-		guardian  *client.Client
-		guardian2 *client.Client
+		guardian          *client.Client
+		guardianTokenFile *os.File
+		guardian2         *client.Client
 
 		ts    *testServer
 		lisTs net.Listener
@@ -202,6 +208,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxied bo
 
 	AfterEach(func() {
 		_ = guardian.Close()
+		_ = os.Remove(guardianTokenFile.Name())
 		_ = voltron.Close()
 		_ = guardian.Close()
 		_ = guardian2.Close()
@@ -407,19 +414,29 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxied bo
 
 		// It should also start Guardian.
 		By("starting guardian", func() {
+			var err error
+			// Setup to read token from a file like we do with the service account token
+			// so we can update it and test that we re-load the token when it changes
+			guardianTokenFile, err = os.CreateTemp("", "guardianToken")
+			Expect(err).NotTo(HaveOccurred())
+			_, err = guardianTokenFile.WriteString("initialToken")
+			Expect(err).NotTo(HaveOccurred())
+			err = guardianTokenFile.Close()
+			Expect(err).NotTo(HaveOccurred())
+			targets, err := bootstrap.ProxyTargets([]bootstrap.Target{
+				{
+					Path:      "/some/path",
+					Dest:      listenerURL(lisTs).String(),
+					TokenPath: guardianTokenFile.Name(),
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 			guardian, err = client.New(
 				lisTun.Addr().String(),
 				"voltron",
 				client.WithTunnelCreds(certPemID1, keyPemID1),
 				client.WithTunnelRootCA(rootCAs),
-				client.WithProxyTargets(
-					[]proxy.Target{
-						{
-							Path: "/some/path",
-							Dest: listenerURL(lisTs),
-						},
-					},
-				),
+				client.WithProxyTargets(targets),
 				client.WithHTTPProxyURL(proxyURL),
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -469,6 +486,31 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxied bo
 			return err
 		}, "10s", "1s").ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts.msg))
+	})
+
+	It("should pickup refreshed token", func() {
+		var err error
+		Eventually(func() string {
+			_, err = ui.doRequest(clusterID)
+			if err != nil {
+				return ""
+			}
+			return ts.authHeader
+		}, "10s", "1s").Should(Equal("Bearer initialToken"))
+
+		guardianTokenFile, err = os.OpenFile(guardianTokenFile.Name(), os.O_RDWR, 0644)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = guardianTokenFile.WriteString("updatedToken")
+		Expect(err).NotTo(HaveOccurred())
+		err = guardianTokenFile.Close()
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() string {
+			_, err = ui.doRequest(clusterID)
+			if err != nil {
+				return ""
+			}
+			return ts.authHeader
+		}, "1m", "1s").Should(Equal("Bearer updatedToken"))
 	})
 
 	It("should be possible to reach the other test server on http2", func() {

@@ -10,6 +10,7 @@ import (
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/transport"
 
 	"github.com/pkg/errors"
 
@@ -115,12 +116,13 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 		}
 
 		if t.TokenPath != "" {
-			token, err := os.ReadFile(t.TokenPath)
+			// Read the token from file to verify the token exists
+			_, err := os.ReadFile(t.TokenPath)
 			if err != nil {
 				return nil, errors.Errorf("Failed reading token from %s: %s", t.TokenPath, err)
 			}
 
-			pt.Token = string(token)
+			pt.Token = transport.NewCachedFileTokenSource(t.TokenPath)
 		}
 
 		if t.CABundlePath != "" {
