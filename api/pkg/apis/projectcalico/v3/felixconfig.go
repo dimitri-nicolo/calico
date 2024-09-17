@@ -858,7 +858,7 @@ type FelixConfigurationSpec struct {
 	// the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
 	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 	// [Default: Inline]
-	BPFDNSPolicyMode *BPFDNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay Inline"`
+	BPFDNSPolicyMode *BPFDNSPolicyMode `json:"bpfDNSPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay Inline"`
 	// DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed
 	// to ipsets yet. Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
 	DNSPolicyNfqueueID *int `json:"dnsPolicyNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`
