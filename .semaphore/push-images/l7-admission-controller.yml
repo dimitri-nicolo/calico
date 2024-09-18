@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish apiserver images
+name: Publish l7-admission-controller images
 agent:
   machine:
     type: f1-standard-2
