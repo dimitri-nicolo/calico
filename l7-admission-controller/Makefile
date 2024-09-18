@@ -9,7 +9,7 @@ SRC_FILES=$(shell find . -name '*.go')
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 L7_ADMISSION_CONTROLLER_IMAGE ?=l7-admission-controller
-BUILD_IMAGES ?= $(L7_ADMISSION_CONTROL_IMAGE)
+BUILD_IMAGES ?= $(L7_ADMISSION_CONTROLLER_IMAGE)
 
 LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 
