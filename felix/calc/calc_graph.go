@@ -588,7 +588,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 
 	if conf.TPROXYModeEnabled() {
 		tproxyResolver := NewL7ServiceIPSetsCalculator(callbacks, conf)
-		tproxyResolver.RegisterWithAllUpdates(allUpdDispatcher)
+		tproxyResolver.RegisterWithAllUpdates(allUpdDispatcher, localEndpointDispatcher)
 		tproxyWEPIPSetCalc := NewL7WorkloadIPSetCalculator(callbacks)
 		tproxyWEPIPSetCalc.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
 		activeRulesCalc.PolicyMatchListeners = append(activeRulesCalc.PolicyMatchListeners, tproxyWEPIPSetCalc)

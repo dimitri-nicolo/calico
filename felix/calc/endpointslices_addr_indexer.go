@@ -29,6 +29,7 @@ type EndpointSliceAddrIndexer struct {
 	ipPortProtoSetByService map[model.ResourceKey]set.Set[ipPortProtoKey]
 	endpointSlicesByService map[model.ResourceKey]set.Set[model.ResourceKey]
 	endpointSlices          map[model.ResourceKey]*discovery.EndpointSlice
+	ignoredWorkloads        map[model.WorkloadEndpointKey]*model.WorkloadEndpoint
 }
 
 func NewEndpointSliceAddrIndexer() *EndpointSliceAddrIndexer {
@@ -36,6 +37,7 @@ func NewEndpointSliceAddrIndexer() *EndpointSliceAddrIndexer {
 		ipPortProtoSetByService: map[model.ResourceKey]set.Set[ipPortProtoKey]{},
 		endpointSlicesByService: map[model.ResourceKey]set.Set[model.ResourceKey]{},
 		endpointSlices:          map[model.ResourceKey]*discovery.EndpointSlice{},
+		ignoredWorkloads:        map[model.WorkloadEndpointKey]*model.WorkloadEndpoint{},
 	}
 	return e
 }
@@ -145,6 +147,20 @@ func (e *EndpointSliceAddrIndexer) handleEndpointSlice(
 	if needFlush {
 		e.flush([]*model.ResourceKey{serviceKey, oldServiceKey})
 	}
+}
+
+// Add ignored WorkloadEndpoint appends to the ignore list endpoints won't be
+// diverted by TPROXY
+func (e *EndpointSliceAddrIndexer) AddIgnoredWorkloadEndpoint(k model.WorkloadEndpointKey, v *model.WorkloadEndpoint) {
+	e.ignoredWorkloads[k] = v
+}
+
+func (e *EndpointSliceAddrIndexer) RemoveIgnoredWorkloadEndpoint(k model.WorkloadEndpointKey) bool {
+	if _, ok := e.ignoredWorkloads[k]; ok {
+		delete(e.ignoredWorkloads, k)
+		return true
+	}
+	return false
 }
 
 // AddOrUpdateEndpointSlice tracks endpointSlice IP to EndpointSlice mappings.

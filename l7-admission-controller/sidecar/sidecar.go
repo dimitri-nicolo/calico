@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/imdario/mergo"
 
@@ -119,13 +118,13 @@ var (
 	}
 )
 
-func generateDikastesInitContainer(image string, args string) []map[string]interface{} {
+func generateDikastesInitContainer(image string, args []string) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
 			"name":    "tigera-dikastes-init",
 			"image":   image,
 			"command": []string{"/dikastes", "init-sidecar"},
-			"args":    strings.Split(args, ","),
+			"args":    args,
 			"env": []map[string]interface{}{
 				{
 					"name": "DIKASTES_POD_NAMESPACE",
@@ -246,28 +245,33 @@ func (cfg *sidecarCfg) volumes() (res []map[string]interface{}) {
 	return res
 }
 
-func (cfg *sidecarCfg) dikastesInitArgs() string {
+func (cfg *sidecarCfg) dikastesInitArgs() []string {
 	args := []string{}
 
 	if cfg.logging {
-		args = append(args, `"--sidecar-logs-enabled"`)
+		args = append(args, "--sidecar-logs-enabled")
 	}
 	if cfg.policy {
-		args = append(args, `"--sidecar-alp-enabled"`)
+		args = append(args, "--sidecar-alp-enabled")
 	}
 	if cfg.waf {
-		args = append(args, `"--sidecar-waf-enabled"`)
+		args = append(args, "--sidecar-waf-enabled")
 	}
 
-	return strings.Join(args, ",")
+	return args
 }
 
-func (cfg *sidecarCfg) envoyOptionalAttributes() map[string]interface{} {
+func (cfg *sidecarCfg) envoyOptionalAttributes() (map[string]interface{}, error) {
 	res := map[string]interface{}{}
 	if cfg.envoyResources != "" {
-		res["resources"] = cfg.envoyResources
+		var envres interface{}
+		err := json.Unmarshal([]byte(cfg.envoyResources), &envres)
+		if err != nil {
+			return nil, err
+		}
+		res["resources"] = envres
 	}
-	return res
+	return res, nil
 }
 
 func (cfg *sidecarCfg) patchBytes() ([]byte, error) {
@@ -275,27 +279,32 @@ func (cfg *sidecarCfg) patchBytes() ([]byte, error) {
 		return nil, nil
 	}
 
-	envoyValues, err := generateEnvoyContainer(cfg.envoyImg, cfg.envoyOptionalAttributes())
+	envoyOpts, err := cfg.envoyOptionalAttributes()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse envoy optional attributes: %w", err)
+	}
+	envoyValues, err := generateEnvoyContainer(cfg.envoyImg, envoyOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate envoy container patch: %w", err)
 	}
 
 	// build patch with volumes and initContainers
-	patch := patchOps{
-		patchOp{
+	var patch patchOps
+	for _, vol := range cfg.volumes() {
+		patch = append(patch, patchOp{
 			Op:    "add",
 			Path:  "/spec/volumes/-",
-			Value: cfg.volumes(),
-		},
-		patchOp{
-			Op:   "add",
-			Path: "/spec/initContainers",
-			Value: append(
-				generateDikastesInitContainer(cfg.dikastesImg, cfg.dikastesInitArgs()),
-				envoyValues...,
-			),
-		},
+			Value: vol,
+		})
 	}
+	patch = append(patch, patchOp{
+		Op:   "add",
+		Path: "/spec/initContainers",
+		Value: append(
+			generateDikastesInitContainer(cfg.dikastesImg, cfg.dikastesInitArgs()),
+			envoyValues...,
+		),
+	})
 
 	return patch.MarshalJSON()
 }
@@ -328,9 +337,9 @@ func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissio
 }
 
 type patchOp struct {
-	Op    string                   `json:"op"`
-	Path  string                   `json:"path"`
-	Value []map[string]interface{} `json:"value"`
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
 }
 
 type patchOps []patchOp

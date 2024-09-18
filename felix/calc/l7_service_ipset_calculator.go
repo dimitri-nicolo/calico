@@ -65,9 +65,10 @@ func NewL7ServiceIPSetsCalculator(callbacks ipSetUpdateCallbacks, conf *config.C
 	return tpr
 }
 
-func (c *L7ServiceIPSetsCalculator) RegisterWithAllUpdates(allUpdateDisp *dispatcher.Dispatcher) {
+func (c *L7ServiceIPSetsCalculator) RegisterWithAllUpdates(allUpdateDisp, localUpdDisp *dispatcher.Dispatcher) {
 	log.Debugf("registering with all update dispatcher for tproxy service updates")
 	allUpdateDisp.Register(model.ResourceKey{}, c.OnResourceUpdate)
+	localUpdDisp.Register(model.WorkloadEndpointKey{}, c.OnResourceUpdate)
 }
 
 func (c *L7ServiceIPSetsCalculator) isEndpointSliceFromAnnotatedService(
@@ -140,6 +141,18 @@ func (c *L7ServiceIPSetsCalculator) OnResourceUpdate(update api.Update) (_ bool)
 			}
 		default:
 			log.Debugf("Ignoring update for resource: %s", k)
+		}
+	case model.WorkloadEndpointKey:
+		// skip this workload because it is set to be using sidecars
+		if update.Value == nil {
+			if c.esai.RemoveIgnoredWorkloadEndpoint(update.Key.(model.WorkloadEndpointKey)) {
+				c.flush()
+			}
+			return
+		}
+		if v, ok := update.Value.(*model.WorkloadEndpoint); ok && v.ApplicationLayer != nil {
+			c.esai.AddIgnoredWorkloadEndpoint(update.Key.(model.WorkloadEndpointKey), v)
+			c.flush()
 		}
 	default:
 		log.Errorf("Ignoring unexpected update: %v %#v",
@@ -234,6 +247,15 @@ func (c *L7ServiceIPSetsCalculator) resolveRegularEndpoints() (added []ipPortPro
 func (c *L7ServiceIPSetsCalculator) flushRegularEndpoints(added []ipPortProtoKey,
 	removed []ipPortProtoKey) {
 
+	ignored := map[[16]byte]struct{}{}
+	for _, wledp := range c.esai.ignoredWorkloads {
+		for _, ipnet := range wledp.IPv4Nets {
+			var ip [16]byte
+			copy(ip[:], ipnet.IP.To16())
+			ignored[ip] = struct{}{}
+		}
+	}
+
 	for _, ipPortProto := range removed {
 		member := getIpSetMemberFromIpPortProto(ipPortProto)
 		c.callbacks.OnIPSetMemberRemoved(tproxydefs.ServiceIPsIPSet, member)
@@ -241,6 +263,10 @@ func (c *L7ServiceIPSetsCalculator) flushRegularEndpoints(added []ipPortProtoKey
 	}
 
 	for _, ipPortProto := range added {
+		// skip to add ignored
+		if _, ok := ignored[ipPortProto.ip]; ok {
+			continue
+		}
 		member := getIpSetMemberFromIpPortProto(ipPortProto)
 		c.callbacks.OnIPSetMemberAdded(tproxydefs.ServiceIPsIPSet, member)
 		c.activeEndpoints.Add(ipPortProto)

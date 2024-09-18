@@ -174,6 +174,11 @@ func (w *L7WorkloadIPSetCalculator) OnResourceUpdate(update api.Update) (_ bool)
 			return
 		}
 		if v, ok := update.Value.(*model.WorkloadEndpoint); ok {
+			if v.ApplicationLayer != nil {
+				// skip this workload because it is set to be
+				// using sidecars
+				return
+			}
 			w.handleWEPUpdate(k, v)
 		}
 	}

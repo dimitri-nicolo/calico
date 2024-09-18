@@ -151,8 +151,8 @@ func New() *Config {
 }
 
 var subcmds = map[string]bool{
-	"init":   true,
-	"server": true,
+	"init-sidecar": true,
+	"server":       true,
 }
 
 func (c *Config) Parse(args []string) error {
