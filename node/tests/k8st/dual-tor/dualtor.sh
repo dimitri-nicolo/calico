@@ -669,6 +669,8 @@ EOF
             echo ===== ${kubectl} logs -l k8s-app=${k8sapp} -n calico-system --all-containers --ignore-errors --prefix --max-log-requests 42 --tail 30000
             ${kubectl} logs -l k8s-app=${k8sapp} -n calico-system --all-containers --ignore-errors --prefix --max-log-requests 42 --tail 30000
           done
+          echo ===== ${kubectl} logs -l k8s-app=calico-kube-controllers -n calico-system --all-containers --ignore-errors --prefix --max-log-requests 42 --tail 30000
+          ${kubectl} logs -l k8s-app=calico-kube-controllers -n calico-system --all-containers --ignore-errors --prefix --max-log-requests 42 --tail 30000
           exit 1
         fi
       done
