@@ -33,14 +33,18 @@ struct cidr {
 
 // WARNING: must be kept in sync with the definitions in bpf/polprog/pol_prog_builder.go.
 // WARNING: must be kept in sync with the definitions in bpf/ipsets/map.go.
-struct ip_set_key {
-	__u32 mask;
-	__be64 set_id;
-	ipv46_addr_t addr;
-	__u16 port;
-	__u8 protocol;
-	__u8 pad;
-} __attribute__((packed));
+
+#define DECLARE_IP_SET_KEY(name, ip_type)	\
+struct name {					\
+	__u32 mask;				\
+	__be64 set_id;				\
+	ip_type addr;				\
+	__u16 port;				\
+	__u8 protocol;				\
+	__u8 pad;				\
+} __attribute__((packed))
+
+DECLARE_IP_SET_KEY(ip_set_key, ipv46_addr_t);
 
 union ip_set_lpm_key {
 	struct bpf_lpm_trie_key lpm;

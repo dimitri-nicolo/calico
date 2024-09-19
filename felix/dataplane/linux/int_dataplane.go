@@ -3352,7 +3352,7 @@ func startBPFDataplaneComponents(
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
 	if config.BPFDNSPolicyMode == apiv3.BPFDNSPolicyModeInline {
-		tracker, err := dnsresolver.NewDomainTracker(func(id string) uint64 {
+		tracker, err := dnsresolver.NewDomainTracker(int(ipFamily), func(id string) uint64 {
 			return ipSets.IDStringToUint64(id)
 		})
 		if err != nil {

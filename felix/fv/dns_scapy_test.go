@@ -184,6 +184,14 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		}
 		return err
 	}
+	workloadCanPingTargetV6 := func() error {
+		out, err := w[0].ExecOutput("ping6", "-6", "-c", "1", "-W", "1", pingTarget.IPv6)
+		log.WithError(err).Infof("ping said:\n%v", out)
+		if err != nil {
+			log.Infof("stderr was:\n%v", err)
+		}
+		return err
+	}
 
 	policyModes := []string{
 		string(api.DNSPolicyModeNoDelay),
@@ -219,6 +227,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 				// Now start etcd and Felix, with Felix trusting scapy's IP.
 				opts.ExtraVolumes[dnsDir] = "/dnsinfo"
+				opts.EnableIPv6 = true
+				opts.IPIPEnabled = false
 				if BPFMode() {
 					opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = mode
 				} else {
@@ -234,7 +244,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				// Create a workload, using that profile.
 				for ii := range w {
 					iiStr := strconv.Itoa(ii)
-					w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+					w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp",
+						workload.WithIPv6Address("dead:beef::0:1"))
 					w[ii].Configure(client)
 					if BPFMode() {
 						ensureBPFProgramsAttached(tc.Felixes[0])
@@ -448,6 +459,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 			Context("with policy in place first, then connection attempted", func() {
 				BeforeEach(func() {
+					if mode == "Inline" {
+						tc.Felixes[0].SetEnv(map[string]string{"FELIX_DEBUGDNSDONOTWRITEIPSETS": "true"})
+						tc.Felixes[0].Restart()
+					}
+
 					policy := api.NewGlobalNetworkPolicy()
 					policy.Name = "default-deny-egress"
 					policy.Spec.Selector = "all()"
@@ -487,6 +503,20 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
 					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", tc.Felixes[0].IP)
+					pingTarget.Exec("ip", "-6", "r", "add", w[0].IP6, "via", tc.Felixes[0].IPv6)
+
+					if mode == "Inline" {
+						// Make sure that the BPF structures are programmed,
+						// that means the restarted felix saw the policy.
+						Eventually(func() []string {
+							pfx6 := dumpDNSPfx6Map(tc.Felixes[0])
+							pfxs := []string{}
+							for k := range pfx6 {
+								pfxs = append(pfxs, k.Domain())
+							}
+							return pfxs
+						}, "10s", "1s").Should(ContainElement("xyz.com"))
+					}
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
@@ -494,16 +524,30 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='AAAA'),an=(DNSRR(rrname='server-5.xyz.com',type='AAAA',ttl=36000,rdata='" + pingTarget.IPv6 + "')))",
 					})
 					scapyTrusted.Stdin.Close()
 				})
 
 				It("workload can ping etcd", func() {
-					// Allow 4 seconds for Felix to see the DNS responses and update ipsets.
-					time.Sleep(4 * time.Second)
+					if mode == "Inline" {
+						// Make sure that the BPF parser processed the last packet
+						Eventually(func() string {
+							s := dumpIPSets6Map(tc.Felixes[0])
+							for e := range s {
+								return e.Addr().String()
+							}
+							return ""
+						}, "5s", "300ms").Should(Equal(pingTarget.IPv6))
+					} else {
+						// Allow 4 seconds for Felix to see the DNS responses and update ipsets.
+						time.Sleep(4 * time.Second)
+					}
 
 					// Ping should now go through.
 					Expect(workloadCanPingTarget()).NotTo(HaveOccurred())
+					Expect(workloadCanPingTargetV6()).NotTo(HaveOccurred())
+
 				})
 			})
 
