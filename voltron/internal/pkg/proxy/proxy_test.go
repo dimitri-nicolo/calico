@@ -11,14 +11,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/projectcalico/calico/voltron/internal/pkg/test"
-	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 
 func init() {
@@ -297,7 +297,7 @@ var _ = Describe("Proxy", func() {
 					Scheme: "http",
 					Host:   "some",
 				},
-				Token:     token,
+				Token:     oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 				Transport: withToken,
 			},
 			{

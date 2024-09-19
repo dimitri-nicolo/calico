@@ -16,6 +16,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/oauth2"
 
 	"github.com/hashicorp/yamux"
 	log "github.com/sirupsen/logrus"
@@ -111,7 +112,7 @@ var _ = Describe("Client", func() {
 				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				}, 1, 0, 5*time.Second)),
-				client.WithProxyTargets([]proxy.Target{{Path: "/test", Dest: url, Token: "some-token"}}),
+				client.WithProxyTargets([]proxy.Target{{Path: "/test", Dest: url, Token: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "some-token"})}}),
 			)
 
 			Expect(err).ShouldNot(HaveOccurred())
