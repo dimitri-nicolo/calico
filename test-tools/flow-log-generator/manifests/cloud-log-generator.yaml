@@ -22,6 +22,8 @@ spec:
           value: "4"
         - name: BATCH_SIZE
           value: "20"
+        - name: DIRECT_OUTPUT
+          value: "true"
         - name: LINSEED_ENDPOINT
           value: https://tigera-linseed.tigera-elasticsearch.svc
         - name: LINSEED_CA_PATH
