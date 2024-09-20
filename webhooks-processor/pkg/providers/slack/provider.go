@@ -40,6 +40,7 @@ func (p *Slack) Validate(config map[string]string) error {
 }
 
 func (p *Slack) Process(ctx context.Context, config map[string]string, labels map[string]string, event *lsApi.Event) (httpResponse providers.ProviderResponse, err error) {
+	helpers.FillInEventBlanks(event)
 	payload, err := p.message(event, labels).JSON()
 	if err != nil {
 		return
