@@ -1,0 +1,136 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+package webhooks
+
+import (
+	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+)
+
+var (
+	webhookTestPayloads = map[string]lsApi.Event{
+		"waf": {
+			Description:  "[TEST] Traffic inside your cluster triggered Web Application Firewall rules.",
+			Time:         lsApi.TimestampOrDate{},
+			Origin:       "Web Application Firewall",
+			AttackVector: "Network",
+			Severity:     80,
+			MitreIDs:     &[]string{"T1190"},
+			MitreTactic:  "Initial Access",
+			Mitigations: &[]string{
+				"This Web Application Firewall event is generated for the purpose of webhook testing, no action is required.",
+				"Payload of this event is consistent with actual expected payload when a similar event happens in your cluster.",
+			},
+			Record: map[string]any{
+				"@timestamp": "2024-01-01T12:00:00.000000000Z",
+				"destination": map[string]string{
+					"hostname":  "",
+					"ip":        "10.244.151.190",
+					"name":      "frontend-7d56967868-drpjs",
+					"namespace": "online-boutique",
+					"port_num":  "8080",
+				},
+				"host":       "aks-agentpool-22979750-vmss000000",
+				"level":      "",
+				"method":     "GET",
+				"msg":        "WAF detected 2 violations [deny]",
+				"path":       "/test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user",
+				"protocol":   "HTTP/1.1",
+				"request_id": "460182972949411176",
+				"rules": []map[string]string{
+					{
+						"disruptive": "true",
+						"file":       "/etc/modsecurity-ruleset/@owasp_crs/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+						"id":         "942100",
+						"line":       "5195",
+						"message":    "SQL Injection Attack Detected via libinjection",
+						"severity":   "critical",
+					},
+					{
+						"disruptive": "true",
+						"file":       "/etc/modsecurity-ruleset/@owasp_crs/REQUEST-949-BLOCKING-EVALUATION.conf",
+						"id":         "949110",
+						"line":       "6946",
+						"message":    "Inbound Anomaly Score Exceeded (Total Score: 5)",
+						"severity":   "emergency",
+					},
+				},
+				"source": map[string]string{
+					"hostname":  "",
+					"ip":        "10.244.214.122",
+					"name":      "busybox",
+					"namespace": "online-boutique",
+					"port_num":  "33387",
+				},
+			},
+		},
+		"gtf": {
+			Description:  "[TEST] A pod made a DNS lookup for a domain name that appears to be algorithm-generated. This may indicate malware connecting out to a control server for exfiltration or further instructions.",
+			Time:         lsApi.TimestampOrDate{},
+			Origin:       "Domain Generation Algorithm",
+			AttackVector: "Network",
+			Severity:     80,
+			MitreIDs:     &[]string{"T1568", "T1568.002"},
+			MitreTactic:  "Command and Control",
+			Mitigations: &[]string{
+				"This Global Threat Feeds event is generated for the purpose of webhook testing, no action is required.",
+				"Payload of this event is consistent with actual expected payload when a similar event happens in your cluster.",
+			},
+			Record: map[string]any{
+				"client_ip": "null",
+				"client_labels": map[string]string{
+					"projectcalico.org/namespace":      "default",
+					"projectcalico.org/orchestrator":   "k8s",
+					"projectcalico.org/serviceaccount": "default",
+					"run":                              "test-evil-sim-pod",
+				},
+				"client_name":      "-",
+				"client_name_aggr": "test-evil-sim-pod",
+				"client_namespace": "default",
+				"count":            1,
+				"end_time":         "2024-07-09T18:07:01.210455014Z",
+				"generated_time":   "2024-07-09T18:07:06.286119215Z",
+				"host":             "antony-bz-0l7r-kadm-node-0",
+				"id":               "oXOtmJABiNH1R3Pmgr0x",
+				"latency": map[string]int{
+					"count": 1,
+					"max":   16987000,
+					"mean":  16987000,
+				},
+				"latency_count": 1,
+				"latency_max":   16987000,
+				"latency_mean":  16987000,
+				"qclass":        "IN",
+				"qname":         "bowjjxxnhkyvygk.biz",
+				"qtype":         "A",
+				"rcode":         "NXDomain",
+				"rrsets": []map[string]any{
+					{
+						"class": "IN",
+						"name":  "biz",
+						"rdata": []string{
+							"a.gtld.biz admin.tldns.godaddy 1720547603 1800 300 604800 1800",
+						},
+						"type": "SOA",
+					},
+				},
+				"servers": []map[string]any{
+					{
+						"ip": "192.168.95.74",
+						"labels": map[string]string{
+							"k8s-app":                          "kube-dns",
+							"pod-template-hash":                "76f75df574",
+							"projectcalico.org/namespace":      "kube-system",
+							"projectcalico.org/orchestrator":   "k8s",
+							"projectcalico.org/serviceaccount": "coredns",
+						},
+						"name":      "coredns-76f75df574-4vd2p",
+						"name_aggr": "coredns-76f75df574-*",
+						"namespace": "kube-system",
+					},
+				},
+				"start_time": "2024-07-09T18:01:31.604356499Z",
+				"type":       "log",
+			},
+		},
+	}
+)
