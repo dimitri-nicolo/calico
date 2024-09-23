@@ -30,7 +30,7 @@ init-source:: $(ENVOY_DOWNLOADED)
 $(ENVOY_DOWNLOADED):
 	mkdir -p envoy
 	curl -sfL https://github.com/envoyproxy/envoy/archive/refs/tags/${ENVOY_VERSION}.tar.gz | tar xz --strip-components 1 -C envoy
-	patch -d envoy -p1 < patches/0001-use-localaddr-if-sock-is-transparent.patch
+	for i in patches/*.patch; do patch -d envoy -p1 < $$i; done
 	touch $@
 
 build: init-source
