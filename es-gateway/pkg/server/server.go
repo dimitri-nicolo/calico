@@ -101,7 +101,7 @@ func New(opts ...Option) (*Server, error) {
 
 	if srv.kibanaTarget != nil {
 		// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
-		kibanaHandler, err := handlers.GetProxyHandler(srv.kibanaTarget, KibanaModifyResponseFunc())
+		kibanaHandler, err := handlers.GetProxyHandler(srv.kibanaTarget, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -166,13 +166,6 @@ func New(opts ...Option) (*Server, error) {
 	}
 
 	return srv, nil
-}
-
-func KibanaModifyResponseFunc() func(res *http.Response) error {
-	return func(resp *http.Response) error {
-		resp.Header.Set("X-Frame-Options", "DENY")
-		return nil
-	}
 }
 
 // ListenAndServeHTTPS starts listening and serving HTTPS requests
