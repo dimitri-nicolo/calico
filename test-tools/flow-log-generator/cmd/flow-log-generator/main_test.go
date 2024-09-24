@@ -108,6 +108,7 @@ func Test_loadConfig(t *testing.T) {
 				CACertPath:     "/certs/cacert.crt",
 				ClientCertPath: "/certs/tls.crt",
 				ClientKeyPath:  "/certs/tls.key",
+				LogLevel:       "INFO",
 			},
 		},
 		{"custom",
@@ -123,6 +124,7 @@ func Test_loadConfig(t *testing.T) {
 				{"LINSEED_CA_PATH", "/custom/cacert.crt"},
 				{"TLS_CRT_PATH", "/custom/tls.crt"},
 				{"TLS_KEY_PATH", "/custom/tls.key"},
+				{"LOG_LEVEL", "DEBUG"},
 			},
 			LoadedConfig{
 				PromPort:       1234,
@@ -136,6 +138,7 @@ func Test_loadConfig(t *testing.T) {
 				ClientCertPath: "/custom/tls.crt",
 				ClientKeyPath:  "/custom/tls.key",
 				TenantID:       "abcdef",
+				LogLevel:       "DEBUG",
 			},
 		},
 	}

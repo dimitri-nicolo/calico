@@ -47,6 +47,7 @@ type LoadedConfig struct {
 	CACertPath     string `envconfig:"LINSEED_CA_PATH" default:"/certs/cacert.crt"`
 	ClientCertPath string `envconfig:"TLS_CRT_PATH" default:"/certs/tls.crt"`
 	ClientKeyPath  string `envconfig:"TLS_KEY_PATH" default:"/certs/tls.key"`
+	LogLevel       string `envconfig:"LOG_LEVEL" default:"INFO"` // The log level (one of PANIC, FATAL, ERROR, WARN, INFO, DEBUG, or TRACE)
 }
 
 // Config holds the config for this tool
@@ -76,6 +77,7 @@ func loadConfig() LoadedConfig {
 		"restcfg.CACertPath":     cfg.CACertPath,
 		"restcfg.ClientCertPath": cfg.ClientCertPath,
 		"restcfg.ClientKeyPath":  cfg.ClientKeyPath,
+		"restcfg.LogLevel":       cfg.LogLevel,
 	}).Info("Loaded configuration using envconfig")
 
 	return cfg
@@ -102,6 +104,7 @@ func main() {
 
 	var cfg Config
 	cfg.loaded = loadConfig()
+	setLogLevel(cfg.loaded.LogLevel)
 	cfg.restConfig.URL = cfg.loaded.URL
 	cfg.restConfig.CACertPath = cfg.loaded.CACertPath
 	cfg.restConfig.ClientCertPath = cfg.loaded.ClientCertPath
@@ -231,4 +234,14 @@ func makeFlowLog(exampleflows []v1.FlowLog) v1.FlowLog {
 	data.EndTime = now
 	data.StartTime = now - int64(rand.Intn(400))
 	return data
+}
+
+func setLogLevel(logLevel string) {
+	level, err := log.ParseLevel(logLevel)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		log.SetLevel(level)
+		log.Info(fmt.Sprintf("Log level set to %s", level))
+	}
 }

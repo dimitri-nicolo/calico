@@ -22,6 +22,8 @@ spec:
           value: "4"
         - name: BATCH_SIZE
           value: "20"
+        - name: FLOW_LOG_FILE
+          value: "./flows.log"
         - name: DIRECT_OUTPUT
           value: "true"
         - name: LINSEED_ENDPOINT
@@ -37,7 +39,7 @@ spec:
         ports:
         - name: metrics
           containerPort: 2112
-        image: gcr.io/unique-caldron-775/log-gen:lwr-flowlog-gen
+        image: gcr.io/unique-caldron-775/cnx/tigera/flow-log-generator:master
         imagePullPolicy: Always
         name: log-generator
         volumeMounts:

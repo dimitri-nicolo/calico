@@ -10,12 +10,15 @@ kubectl exec -n "tigera-fluentd" "$podname" -- cat /tigera-fluentd-prometheus-tl
 kubectl exec -n "tigera-fluentd" "$podname" -- cat /tigera-fluentd-prometheus-tls/tls.crt > certs/tls.crt
 kubectl exec -n "tigera-fluentd" "$podname" -- cat /var/run/secrets/tigera.io/linseed/token > certs/token
 
-# kubectl port-forward -n tigera-guardian svc/tigera-guardian 9443:443 &
+pkill -9 kubectl
+kubectl port-forward -n tigera-guardian svc/tigera-guardian 9443:443 &
 
 docker run --rm -ti --network="host" -v "$(pwd)"/certs:/certs \
   -e RATE=100 \
   -e BATCH_SIZE=200 \
   -e DIRECT_OUTPUT="true" \
+  -e FLOW_LOG_FILE="./flows.log" \
+  -e LOG_LEVEL="DEBUG" \
   --add-host tigera-linseed.tigera-elasticsearch.svc:127.0.0.1 \
   flow-log-generator:latest-amd64
 pkill -9 kubectl
