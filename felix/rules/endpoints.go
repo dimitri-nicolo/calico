@@ -23,6 +23,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
 	"github.com/projectcalico/calico/felix/generictables"
@@ -45,6 +47,7 @@ const (
 
 type TierPolicyGroups struct {
 	Name            string
+	DefaultAction   string
 	IngressPolicies []*PolicyGroup
 	EgressPolicies  []*PolicyGroup
 }
@@ -652,7 +655,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			}
 
 			if chainType == chainTypeNormal || chainType == chainTypeForward {
-				if endOfTierDrop {
+				if endOfTierDrop && tier.DefaultAction != string(v3.Pass) {
 					nfqueueRule := r.NfqueueRuleDelayDeniedPacket(
 						r.NewMatch().MarkClear(r.MarkPass),
 						fmt.Sprintf("%s if no policies passed packet", r.IptablesFilterDenyAction()),

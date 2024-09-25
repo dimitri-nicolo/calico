@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 
@@ -1736,7 +1737,7 @@ func qcStagedAdjustment(p *client.Policy) {
 		p.Name = model.PolicyNamePrefixStaged + p.Name
 		p.Kind = apiv3.KindGlobalNetworkPolicy
 	case apiv3.KindStagedKubernetesNetworkPolicy:
-		p.Name = model.PolicyNamePrefixStaged + conversion.K8sNetworkPolicyNamePrefix + p.Name
+		p.Name = model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + p.Name
 		p.Kind = apiv3.KindNetworkPolicy
 	}
 }
@@ -1891,7 +1892,7 @@ func stagedResourceKey(res resourcemgr.ResourceObject) model.ResourceKey {
 	if res.GetObjectKind().GroupVersionKind().Kind == apiv3.KindStagedKubernetesNetworkPolicy {
 		return model.ResourceKey{
 			Kind:      res.GetObjectKind().GroupVersionKind().Kind,
-			Name:      model.PolicyNamePrefixStaged + conversion.K8sNetworkPolicyNamePrefix + res.GetObjectMeta().GetName(),
+			Name:      model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + res.GetObjectMeta().GetName(),
 			Namespace: res.GetObjectMeta().GetNamespace(),
 		}
 	}

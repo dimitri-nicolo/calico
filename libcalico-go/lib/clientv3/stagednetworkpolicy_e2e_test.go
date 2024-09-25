@@ -97,8 +97,9 @@ var _ = testutils.E2eDatastoreDescribe("StagedNetworkPolicy tests", testutils.Da
 			spec2.Tier = tier
 
 			if tier != "" && tier != "default" {
+				passAction := apiv3.Pass
 				// Create the tier if required before running other tiered policy tests.
-				tierSpec := apiv3.TierSpec{Order: &tierOrder}
+				tierSpec := apiv3.TierSpec{Order: &tierOrder, DefaultAction: &passAction}
 				By("Creating the tier")
 				tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
 					ObjectMeta: metav1.ObjectMeta{Name: tier},
