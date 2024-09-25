@@ -53,7 +53,7 @@ func init() {
 	tierOrder := float64(100.0)
 	defaultTierOrder := api.DefaultTierOrder
 	defaultTierBadOrder := float64(10.0)
-	anpTierOrder = api.AdminNetworkPolicyTierOrder
+	anpTierOrder := api.AdminNetworkPolicyTierOrder
 
 	// We need pointers to bools, so define the values here.
 	Vtrue := true

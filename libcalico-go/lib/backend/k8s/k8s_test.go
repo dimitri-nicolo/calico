@@ -2946,10 +2946,10 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		Expect(err).NotTo(HaveOccurred())
 		c = client.(*k8s.KubeClient)
 
-		config, _, err := CreateKubernetesClientset(&cfg.Spec)
+		config, _, err := k8s.CreateKubernetesClientset(&cfg.Spec)
 		Expect(err).NotTo(HaveOccurred())
 		config.ContentType = runtime.ContentTypeJSON
-		anpClient, err = buildK8SAdminPolicyClient(config)
+		anpClient, err = k8s.BuildK8SAdminPolicyClient(config)
 		Expect(err).NotTo(HaveOccurred())
 
 		ctx = context.Background()

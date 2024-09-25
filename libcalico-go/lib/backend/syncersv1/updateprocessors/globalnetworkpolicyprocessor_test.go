@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	adminpolicy "sigs.k8s.io/network-policy-api/apis/v1alpha1"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
+	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

@@ -93,7 +93,7 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		return nil, fmt.Errorf("Failed to build V1 CRD client: %v", err)
 	}
 
-	k8sAdminPolicyClient, err := buildK8SAdminPolicyClient(config)
+	k8sAdminPolicyClient, err := BuildK8SAdminPolicyClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to build K8S Admin Network Policy client: %v", err)
 	}
@@ -749,8 +749,8 @@ func (c *KubeClient) Close() error {
 
 var addToSchemeOnce sync.Once
 
-// buildK8SAdminPolicyClient builds a RESTClient configured to interact (Baseline) Admin Network Policy.
-func buildK8SAdminPolicyClient(cfg *rest.Config) (*adminpolicyclient.PolicyV1alpha1Client, error) {
+// BuildK8SAdminPolicyClient builds a RESTClient configured to interact (Baseline) Admin Network Policy.
+func BuildK8SAdminPolicyClient(cfg *rest.Config) (*adminpolicyclient.PolicyV1alpha1Client, error) {
 	return adminpolicyclient.NewForConfig(cfg)
 }
 

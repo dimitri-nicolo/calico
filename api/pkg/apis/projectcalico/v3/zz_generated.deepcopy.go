@@ -7062,6 +7062,11 @@ func (in *TierSpec) DeepCopyInto(out *TierSpec) {
 		*out = new(float64)
 		**out = **in
 	}
+	if in.DefaultAction != nil {
+		in, out := &in.DefaultAction, &out.DefaultAction
+		*out = new(Action)
+		**out = **in
+	}
 	return
 }
 
