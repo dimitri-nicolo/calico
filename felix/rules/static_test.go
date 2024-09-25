@@ -53,7 +53,7 @@ var _ = Describe("Static", func() {
 			if ipvs {
 				// Accept IPVS-forwarded traffic.
 				expRules = append(expRules, generictables.Rule{
-					Match:  Match().MarkNotClear(conf.IptablesMarkEndpoint),
+					Match:  Match().MarkNotClear(conf.MarkEndpoint),
 					Action: ReturnAction{},
 				})
 			}
@@ -106,23 +106,23 @@ var _ = Describe("Static", func() {
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 23},
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 1023},
 					},
-					DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-					DNSPolicyNfqueueID:               100,
-					DNSPacketsNfqueueID:              101,
-					IptablesMarkAccept:               0x10,
-					IptablesMarkPass:                 0x20,
-					IptablesMarkScratch0:             0x40,
-					IptablesMarkScratch1:             0x80,
-					IptablesMarkDrop:                 0x200,
-					IptablesMarkEgress:               0x400,
-					IptablesMarkEndpoint:             0xff000,
-					IptablesMarkNonCaliEndpoint:      0x1000,
-					IptablesMarkDNSPolicy:            0x00001,
-					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
-					KubeNodePortRanges:               []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
-					IptablesFilterDenyAction:         denyActionCommand,
-					DNSTrustedServers:                []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
+					DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+					DNSPolicyNfqueueID:       100,
+					DNSPacketsNfqueueID:      101,
+					MarkAccept:               0x10,
+					MarkPass:                 0x20,
+					MarkScratch0:             0x40,
+					MarkScratch1:             0x80,
+					MarkDrop:                 0x200,
+					MarkEgress:               0x400,
+					MarkEndpoint:             0xff000,
+					MarkNonCaliEndpoint:      0x1000,
+					MarkDNSPolicy:            0x00001,
+					MarkSkipDNSPolicyNfqueue: 0x400000,
+					KubeIPVSSupportEnabled:   kubeIPVSEnabled,
+					KubeNodePortRanges:       []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
+					FilterDenyAction:         denyActionCommand,
+					DNSTrustedServers:        []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
 				}
 			})
 
@@ -384,10 +384,10 @@ var _ = Describe("Static", func() {
 									},
 
 									// Forward check chain.
-									{Action: ClearMarkAction{Mark: conf.IptablesMarkEndpoint}},
+									{Action: ClearMarkAction{Mark: conf.MarkEndpoint}},
 									{Action: JumpAction{Target: ChainForwardCheck}},
 									{
-										Match:  Match().MarkNotClear(conf.IptablesMarkEndpoint),
+										Match:  Match().MarkNotClear(conf.MarkEndpoint),
 										Action: ReturnAction{},
 									},
 
@@ -467,7 +467,7 @@ var _ = Describe("Static", func() {
 
 									// From endpoint mark chain
 									{
-										Match:  Match().MarkNotClear(conf.IptablesMarkEndpoint),
+										Match:  Match().MarkNotClear(conf.MarkEndpoint),
 										Action: GotoAction{Target: ChainForwardEndpointMark},
 									},
 
@@ -810,26 +810,26 @@ var _ = Describe("Static", func() {
 			epMark := uint32(0xff000)
 			BeforeEach(func() {
 				conf = Config{
-					WorkloadIfacePrefixes:            []string{"cali"},
-					IPIPEnabled:                      true,
-					IPIPTunnelAddress:                net.ParseIP("10.0.0.1"),
-					IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-					IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-					DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-					DNSPolicyNfqueueID:               100,
-					DNSPacketsNfqueueID:              101,
-					IptablesMarkAccept:               0x10,
-					IptablesMarkPass:                 0x20,
-					IptablesMarkScratch0:             0x40,
-					IptablesMarkScratch1:             0x80,
-					IptablesMarkEgress:               0x400,
-					IptablesMarkEndpoint:             epMark,
-					IptablesMarkNonCaliEndpoint:      0x1000,
-					IptablesMarkDNSPolicy:            0x00001,
-					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-					IptablesMarkDrop:                 0x200,
-					KubeIPVSSupportEnabled:           kubeIPVSEnabled,
-					IptablesFilterDenyAction:         denyActionCommand,
+					WorkloadIfacePrefixes:    []string{"cali"},
+					IPIPEnabled:              true,
+					IPIPTunnelAddress:        net.ParseIP("10.0.0.1"),
+					IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+					IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+					DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+					DNSPolicyNfqueueID:       100,
+					DNSPacketsNfqueueID:      101,
+					MarkAccept:               0x10,
+					MarkPass:                 0x20,
+					MarkScratch0:             0x40,
+					MarkScratch1:             0x80,
+					MarkEgress:               0x400,
+					MarkEndpoint:             epMark,
+					MarkNonCaliEndpoint:      0x1000,
+					MarkDNSPolicy:            0x00001,
+					MarkSkipDNSPolicyNfqueue: 0x400000,
+					MarkDrop:                 0x200,
+					KubeIPVSSupportEnabled:   kubeIPVSEnabled,
+					FilterDenyAction:         denyActionCommand,
 				}
 			})
 
@@ -1220,13 +1220,13 @@ var _ = Describe("Static", func() {
 				})
 
 				It("IPv4: Should return expected VXLAN notrack PREROUTING chain", func() {
-					allCalicoMarkBits := rr.IptablesMarkAccept |
-						rr.IptablesMarkPass |
-						rr.IptablesMarkScratch0 |
-						rr.IptablesMarkScratch1 |
-						rr.IptablesMarkIPsec |
-						rr.IptablesMarkDNSPolicy
-					markFromWorkload := rr.IptablesMarkScratch0
+					allCalicoMarkBits := rr.MarkAccept |
+						rr.MarkPass |
+						rr.MarkScratch0 |
+						rr.MarkScratch1 |
+						rr.MarkIPsec |
+						rr.MarkDNSPolicy
+					markFromWorkload := rr.MarkScratch0
 
 					chain := &generictables.Chain{
 						Name: "cali-PREROUTING",
@@ -1257,7 +1257,7 @@ var _ = Describe("Static", func() {
 						Match:  Match().MarkClear(markFromWorkload),
 						Action: JumpAction{Target: ChainDispatchFromHostEndpoint},
 					}, generictables.Rule{
-						Match:  Match().MarkSingleBitSet(rr.IptablesMarkAccept),
+						Match:  Match().MarkSingleBitSet(rr.MarkAccept),
 						Action: AcceptAction{},
 					})
 
@@ -1265,12 +1265,12 @@ var _ = Describe("Static", func() {
 				})
 
 				It("IPv4: Should return expected VXLAN notrack OUTPUT chain", func() {
-					allCalicoMarkBits := rr.IptablesMarkAccept |
-						rr.IptablesMarkPass |
-						rr.IptablesMarkScratch0 |
-						rr.IptablesMarkScratch1 |
-						rr.IptablesMarkIPsec |
-						rr.IptablesMarkDNSPolicy
+					allCalicoMarkBits := rr.MarkAccept |
+						rr.MarkPass |
+						rr.MarkScratch0 |
+						rr.MarkScratch1 |
+						rr.MarkIPsec |
+						rr.MarkDNSPolicy
 					Expect(rr.StaticRawOutputChain(0, 4, nil)).To(Equal(&generictables.Chain{
 						Name: "cali-OUTPUT",
 						Rules: []generictables.Rule{
@@ -1281,7 +1281,7 @@ var _ = Describe("Static", func() {
 								Action: NoTrackAction{},
 							},
 							{
-								Match:  Match().MarkSingleBitSet(rr.IptablesMarkAccept),
+								Match:  Match().MarkSingleBitSet(rr.MarkAccept),
 								Action: AcceptAction{},
 							},
 						},
@@ -1342,13 +1342,13 @@ var _ = Describe("Static", func() {
 				})
 
 				It("IPv6: Should return expected VXLAN notrack PREROUTING chain", func() {
-					allCalicoMarkBits := rr.IptablesMarkAccept |
-						rr.IptablesMarkPass |
-						rr.IptablesMarkScratch0 |
-						rr.IptablesMarkScratch1 |
-						rr.IptablesMarkIPsec |
-						rr.IptablesMarkDNSPolicy
-					markFromWorkload := rr.IptablesMarkScratch0
+					allCalicoMarkBits := rr.MarkAccept |
+						rr.MarkPass |
+						rr.MarkScratch0 |
+						rr.MarkScratch1 |
+						rr.MarkIPsec |
+						rr.MarkDNSPolicy
+					markFromWorkload := rr.MarkScratch0
 
 					chain := &generictables.Chain{
 						Name: "cali-PREROUTING",
@@ -1381,7 +1381,7 @@ var _ = Describe("Static", func() {
 						Match:  Match().MarkClear(markFromWorkload),
 						Action: JumpAction{Target: ChainDispatchFromHostEndpoint},
 					}, generictables.Rule{
-						Match:  Match().MarkSingleBitSet(rr.IptablesMarkAccept),
+						Match:  Match().MarkSingleBitSet(rr.MarkAccept),
 						Action: AcceptAction{},
 					})
 
@@ -1431,23 +1431,23 @@ var _ = Describe("Static", func() {
 	Describe("with multiple KubePortRanges", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:            []string{"cali"},
-				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             0xff000,
-				IptablesMarkNonCaliEndpoint:      0x1000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-				IptablesMarkDrop:                 0x200,
-				KubeIPVSSupportEnabled:           true,
+				WorkloadIfacePrefixes:    []string{"cali"},
+				IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:       100,
+				DNSPacketsNfqueueID:      101,
+				MarkAccept:               0x10,
+				MarkPass:                 0x20,
+				MarkScratch0:             0x40,
+				MarkScratch1:             0x80,
+				MarkEgress:               0x400,
+				MarkEndpoint:             0xff000,
+				MarkNonCaliEndpoint:      0x1000,
+				MarkDNSPolicy:            0x00001,
+				MarkSkipDNSPolicyNfqueue: 0x400000,
+				MarkDrop:                 0x200,
+				KubeIPVSSupportEnabled:   true,
 				KubeNodePortRanges: []numorstring.Port{
 					{MinPort: 30030, MaxPort: 30040, PortName: ""},
 					{MinPort: 30130, MaxPort: 30140, PortName: ""},
@@ -1533,25 +1533,25 @@ var _ = Describe("Static", func() {
 	Describe("with openstack special-cases", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:            []string{"tap"},
-				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				OpenStackSpecialCasesEnabled:     true,
-				OpenStackMetadataIP:              net.ParseIP("10.0.0.1"),
-				OpenStackMetadataPort:            1234,
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkDrop:                 0x200,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             0xff000,
-				IptablesMarkNonCaliEndpoint:      0x1000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				WorkloadIfacePrefixes:        []string{"tap"},
+				IPSetConfigV4:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:           100,
+				DNSPacketsNfqueueID:          101,
+				OpenStackSpecialCasesEnabled: true,
+				OpenStackMetadataIP:          net.ParseIP("10.0.0.1"),
+				OpenStackMetadataPort:        1234,
+				MarkAccept:                   0x10,
+				MarkPass:                     0x20,
+				MarkScratch0:                 0x40,
+				MarkScratch1:                 0x80,
+				MarkDrop:                     0x200,
+				MarkEgress:                   0x400,
+				MarkEndpoint:                 0xff000,
+				MarkNonCaliEndpoint:          0x1000,
+				MarkDNSPolicy:                0x00001,
+				MarkSkipDNSPolicyNfqueue:     0x400000,
 			}
 		})
 
@@ -1655,26 +1655,26 @@ var _ = Describe("Static", func() {
 	Describe("with openstack special-cases and RETURN action", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:            []string{"tap"},
-				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				OpenStackSpecialCasesEnabled:     true,
-				OpenStackMetadataIP:              net.ParseIP("10.0.0.1"),
-				OpenStackMetadataPort:            1234,
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkDrop:                 0x200,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             0xff000,
-				IptablesMarkNonCaliEndpoint:      0x1000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-				IptablesFilterAllowAction:        "RETURN",
+				WorkloadIfacePrefixes:        []string{"tap"},
+				IPSetConfigV4:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:                ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:           100,
+				DNSPacketsNfqueueID:          101,
+				OpenStackSpecialCasesEnabled: true,
+				OpenStackMetadataIP:          net.ParseIP("10.0.0.1"),
+				OpenStackMetadataPort:        1234,
+				MarkAccept:                   0x10,
+				MarkPass:                     0x20,
+				MarkScratch0:                 0x40,
+				MarkScratch1:                 0x80,
+				MarkDrop:                     0x200,
+				MarkEgress:                   0x400,
+				MarkEndpoint:                 0xff000,
+				MarkNonCaliEndpoint:          0x1000,
+				MarkDNSPolicy:                0x00001,
+				MarkSkipDNSPolicyNfqueue:     0x400000,
+				FilterAllowAction:            "RETURN",
 			}
 		})
 
@@ -1745,23 +1745,23 @@ var _ = Describe("Static", func() {
 	Describe("with Egress IP enabled", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:            []string{"tap"},
-				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				EgressIPEnabled:                  true,
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkDrop:                 0x200,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             0xff000,
-				IptablesMarkNonCaliEndpoint:      0x1000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				WorkloadIfacePrefixes:    []string{"tap"},
+				IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:       100,
+				DNSPacketsNfqueueID:      101,
+				EgressIPEnabled:          true,
+				MarkAccept:               0x10,
+				MarkPass:                 0x20,
+				MarkScratch0:             0x40,
+				MarkScratch1:             0x80,
+				MarkDrop:                 0x200,
+				MarkEgress:               0x400,
+				MarkEndpoint:             0xff000,
+				MarkNonCaliEndpoint:      0x1000,
+				MarkDNSPolicy:            0x00001,
+				MarkSkipDNSPolicyNfqueue: 0x400000,
 			}
 		})
 
@@ -1851,7 +1851,7 @@ var _ = Describe("Static", func() {
 				Name: "cali-post-egress",
 				Rules: []generictables.Rule{
 					{
-						Match:  Match().MarkSingleBitSet(rr.IptablesMarkEgress).OutInterface("tunl0"),
+						Match:  Match().MarkSingleBitSet(rr.MarkEgress).OutInterface("tunl0"),
 						Action: ChecksumAction{},
 					},
 				},
@@ -1863,7 +1863,7 @@ var _ = Describe("Static", func() {
 				Name: "cali-post-egress",
 				Rules: []generictables.Rule{
 					{
-						Match:  Match().MarkSingleBitSet(rr.IptablesMarkEgress).OutInterface("vxlan.calico"),
+						Match:  Match().MarkSingleBitSet(rr.MarkEgress).OutInterface("vxlan.calico"),
 						Action: ChecksumAction{},
 					},
 				},
@@ -1881,24 +1881,24 @@ var _ = Describe("Static", func() {
 		epMark := uint32(0xff000)
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:            []string{"cali"},
-				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkDrop:                 0x200,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             epMark,
-				IptablesMarkNonCaliEndpoint:      0x1000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-				IptablesFilterAllowAction:        "RETURN",
-				IptablesMangleAllowAction:        "RETURN",
+				WorkloadIfacePrefixes:    []string{"cali"},
+				IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:       100,
+				DNSPacketsNfqueueID:      101,
+				MarkAccept:               0x10,
+				MarkPass:                 0x20,
+				MarkScratch0:             0x40,
+				MarkScratch1:             0x80,
+				MarkDrop:                 0x200,
+				MarkEgress:               0x400,
+				MarkEndpoint:             epMark,
+				MarkNonCaliEndpoint:      0x1000,
+				MarkDNSPolicy:            0x00001,
+				MarkSkipDNSPolicyNfqueue: 0x400000,
+				FilterAllowAction:        "RETURN",
+				MangleAllowAction:        "RETURN",
 			}
 		})
 
@@ -2010,29 +2010,29 @@ var _ = Describe("Static", func() {
 						WorkloadIfacePrefixes:       []string{"cali"},
 						IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 						IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-						IptablesMarkAccept:          0x10,
-						IptablesMarkPass:            0x20,
-						IptablesMarkScratch0:        0x40,
-						IptablesMarkScratch1:        0x80,
-						IptablesMarkEndpoint:        0xff000,
-						IptablesMarkNonCaliEndpoint: 0x1000,
+						MarkAccept:                  0x10,
+						MarkPass:                    0x20,
+						MarkScratch0:                0x40,
+						MarkScratch1:                0x80,
+						MarkEndpoint:                0xff000,
+						MarkNonCaliEndpoint:         0x1000,
 						WireguardEnabled:            enableIPv4,
 						WireguardEnabledV6:          enableIPv6,
 						WireguardInterfaceName:      "wireguard.cali",
 						WireguardInterfaceNameV6:    "wg-v6.cali",
-						WireguardIptablesMark:       0x100000,
+						WireguardMark:               0x100000,
 						WireguardListeningPort:      51820,
 						WireguardListeningPortV6:    51821,
 						WireguardEncryptHostTraffic: true,
 						RouteSource:                 "WorkloadIPs",
 
 						// Enterprise fields.
-						DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-						DNSPolicyNfqueueID:               100,
-						DNSPacketsNfqueueID:              101,
-						IptablesMarkDrop:                 0x200,
-						IptablesMarkDNSPolicy:            0x00001,
-						IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+						DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+						DNSPolicyNfqueueID:       100,
+						DNSPacketsNfqueueID:      101,
+						MarkDrop:                 0x200,
+						MarkDNSPolicy:            0x00001,
+						MarkSkipDNSPolicyNfqueue: 0x400000,
 					}
 				})
 
@@ -2221,11 +2221,11 @@ var _ = Describe("Static", func() {
 
 		BeforeEach(func() {
 			conf = Config{
-				IptablesMarkAccept:   0x10,
-				IptablesMarkPass:     0x20,
-				IptablesMarkScratch0: 0x40,
-				BPFEnabled:           true,
-				IptablesMarkDrop:     0x200,
+				MarkAccept:   0x10,
+				MarkPass:     0x20,
+				MarkScratch0: 0x40,
+				BPFEnabled:   true,
+				MarkDrop:     0x200,
 			}
 		})
 
@@ -2302,24 +2302,24 @@ var _ = Describe("Static", func() {
 		}
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes:            []string{"cali"},
-				IPIPEnabled:                      true,
-				IPIPTunnelAddress:                net.ParseIP("10.0.0.1"),
-				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             0xff000,
-				IptablesMarkNonCaliEndpoint:      0x1000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-				IptablesMarkDrop:                 0x200,
+				WorkloadIfacePrefixes:    []string{"cali"},
+				IPIPEnabled:              true,
+				IPIPTunnelAddress:        net.ParseIP("10.0.0.1"),
+				IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:       100,
+				DNSPacketsNfqueueID:      101,
+				MarkAccept:               0x10,
+				MarkPass:                 0x20,
+				MarkScratch0:             0x40,
+				MarkScratch1:             0x80,
+				MarkEgress:               0x400,
+				MarkEndpoint:             0xff000,
+				MarkNonCaliEndpoint:      0x1000,
+				MarkDNSPolicy:            0x00001,
+				MarkSkipDNSPolicyNfqueue: 0x400000,
+				MarkDrop:                 0x200,
 			}
 		})
 
@@ -2392,21 +2392,21 @@ var _ = Describe("Static", func() {
 	Describe("with drop override and multiple prefixes", func() {
 		BeforeEach(func() {
 			conf = Config{
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				WorkloadIfacePrefixes:            []string{"cali", "tap"},
-				ActionOnDrop:                     "ACCEPT",
-				IptablesMarkAccept:               0x10,
-				IptablesMarkPass:                 0x20,
-				IptablesMarkScratch0:             0x40,
-				IptablesMarkScratch1:             0x80,
-				IptablesMarkDrop:                 0x100,
-				IptablesMarkEgress:               0x400,
-				IptablesMarkEndpoint:             0xff000,
-				IptablesMarkNonCaliEndpoint:      0x2000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+				DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:       100,
+				DNSPacketsNfqueueID:      101,
+				WorkloadIfacePrefixes:    []string{"cali", "tap"},
+				ActionOnDrop:             "ACCEPT",
+				MarkAccept:               0x10,
+				MarkPass:                 0x20,
+				MarkScratch0:             0x40,
+				MarkScratch1:             0x80,
+				MarkDrop:                 0x100,
+				MarkEgress:               0x400,
+				MarkEndpoint:             0xff000,
+				MarkNonCaliEndpoint:      0x2000,
+				MarkDNSPolicy:            0x00001,
+				MarkSkipDNSPolicyNfqueue: 0x400000,
 			}
 		})
 
@@ -2575,22 +2575,22 @@ var _ = Describe("DropRules", func() {
 		Describe("with LOGandDROP override", func() {
 			BeforeEach(func() {
 				conf = Config{
-					DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-					DNSPolicyNfqueueID:               100,
-					DNSPacketsNfqueueID:              101,
-					WorkloadIfacePrefixes:            []string{"cali", "tap"},
-					ActionOnDrop:                     "LOGandDROP",
-					IptablesMarkAccept:               0x10,
-					IptablesMarkPass:                 0x20,
-					IptablesMarkScratch0:             0x40,
-					IptablesMarkScratch1:             0x80,
-					IptablesMarkDrop:                 0x200,
-					IptablesMarkEgress:               0x400,
-					IptablesMarkEndpoint:             0xff000,
-					IptablesMarkNonCaliEndpoint:      0x1000,
-					IptablesMarkDNSPolicy:            0x00001,
-					IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-					IptablesFilterDenyAction:         denyActionCommand,
+					DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+					DNSPolicyNfqueueID:       100,
+					DNSPacketsNfqueueID:      101,
+					WorkloadIfacePrefixes:    []string{"cali", "tap"},
+					ActionOnDrop:             "LOGandDROP",
+					MarkAccept:               0x10,
+					MarkPass:                 0x20,
+					MarkScratch0:             0x40,
+					MarkScratch1:             0x80,
+					MarkDrop:                 0x200,
+					MarkEgress:               0x400,
+					MarkEndpoint:             0xff000,
+					MarkNonCaliEndpoint:      0x1000,
+					MarkDNSPolicy:            0x00001,
+					MarkSkipDNSPolicyNfqueue: 0x400000,
+					FilterDenyAction:         denyActionCommand,
 				}
 			})
 
@@ -2603,7 +2603,7 @@ var _ = Describe("DropRules", func() {
 
 			Describe("with a custom prefix", func() {
 				BeforeEach(func() {
-					conf.IptablesLogPrefix = "my-prefix"
+					conf.LogPrefix = "my-prefix"
 				})
 
 				It("should render a log and a drop with calico-drop as prefix", func() {

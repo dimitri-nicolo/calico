@@ -408,26 +408,26 @@ type Config struct {
 	DNSPolicyNfqueueID  int64
 	DNSPacketsNfqueueID int64
 
-	IptablesMarkAccept   uint32
-	IptablesMarkPass     uint32
-	IptablesMarkDrop     uint32
-	IptablesMarkIPsec    uint32
-	IptablesMarkEgress   uint32
-	IptablesMarkScratch0 uint32
-	IptablesMarkScratch1 uint32
-	IptablesMarkEndpoint uint32
-	// IptablesMarkNonCaliEndpoint is an endpoint mark which is reserved
+	MarkAccept   uint32
+	MarkPass     uint32
+	MarkDrop     uint32
+	MarkIPsec    uint32
+	MarkEgress   uint32
+	MarkScratch0 uint32
+	MarkScratch1 uint32
+	MarkEndpoint uint32
+	// MarkNonCaliEndpoint is an endpoint mark which is reserved
 	// to mark non-calico (workload or host) endpoint.
-	IptablesMarkNonCaliEndpoint uint32
+	MarkNonCaliEndpoint uint32
 
-	// IptablesMarkProxy marks packets that are to/from proxy.
-	IptablesMarkProxy uint32
+	// MarkProxy marks packets that are to/from proxy.
+	MarkProxy uint32
 
-	// IptablesMarkDNSPolicy marks packets that have been evaluated by a DNS policy rule.
-	IptablesMarkDNSPolicy uint32
+	// MarkDNSPolicy marks packets that have been evaluated by a DNS policy rule.
+	MarkDNSPolicy uint32
 
-	// IptablesMarkSkipDNSPolicyNfqueue marks a packet that should not be added to nfqueue again.
-	IptablesMarkSkipDNSPolicyNfqueue uint32
+	// MarkSkipDNSPolicyNfqueue marks a packet that should not be added to nfqueue again.
+	MarkSkipDNSPolicyNfqueue uint32
 
 	KubeNodePortRanges     []numorstring.Port
 	KubeIPVSSupportEnabled bool
@@ -459,19 +459,19 @@ type Config struct {
 	WireguardEnabledV6          bool
 	WireguardInterfaceName      string
 	WireguardInterfaceNameV6    string
-	WireguardIptablesMark       uint32
+	WireguardMark               uint32
 	WireguardListeningPort      int
 	WireguardListeningPortV6    int
 	WireguardEncryptHostTraffic bool
 	RouteSource                 string
 
-	IptablesLogPrefix         string
+	LogPrefix                 string
 	IncludeDropActionInPrefix bool
 	EndpointToHostAction      string
 	ActionOnDrop              string
-	IptablesFilterAllowAction string
-	IptablesMangleAllowAction string
-	IptablesFilterDenyAction  string
+	FilterAllowAction         string
+	MangleAllowAction         string
+	FilterDenyAction          string
 
 	FailsafeInboundHostPorts  []config.ProtoPort
 	FailsafeOutboundHostPorts []config.ProtoPort
@@ -507,12 +507,12 @@ type Config struct {
 }
 
 var unusedBitsInBPFMode = map[string]bool{
-	"IptablesMarkPass":                 true,
-	"IptablesMarkScratch1":             true,
-	"IptablesMarkEndpoint":             true,
-	"IptablesMarkNonCaliEndpoint":      true,
-	"IptablesMarkDNSPolicy":            true,
-	"IptablesMarkSkipDNSPolicyNfqueue": true,
+	"MarkPass":                 true,
+	"MarkScratch1":             true,
+	"MarkEndpoint":             true,
+	"MarkNonCaliEndpoint":      true,
+	"MarkDNSPolicy":            true,
+	"MarkSkipDNSPolicyNfqueue": true,
 }
 
 func (c *Config) validate() {
@@ -524,18 +524,18 @@ func (c *Config) validate() {
 	usedBits := uint32(0)
 	for i := 0; i < myValue.NumField(); i++ {
 		fieldName := myType.Field(i).Name
-		if fieldName == "IptablesMarkNonCaliEndpoint" ||
-			fieldName == "IptablesMarkIPsec" ||
-			fieldName == "IptablesMarkEgress" {
+		if fieldName == "MarkNonCaliEndpoint" ||
+			fieldName == "MarkIPsec" ||
+			fieldName == "MarkEgress" {
 			// These mark bits are only used when needed (by IPVS, IPsec and Egress IP support, respectively) so we allow them to
 			// be zero.
 			continue
 		}
 		// Not set if Proxy is not enabled
-		if fieldName == "IptablesMarkProxy" && !c.TPROXYModeEnabled() {
+		if fieldName == "MarkProxy" && !c.TPROXYModeEnabled() {
 			continue
 		}
-		if strings.HasPrefix(fieldName, "IptablesMark") {
+		if strings.HasPrefix(fieldName, "Mark") && fieldName != "MarkNonCaliEndpoint" {
 			if c.BPFEnabled && unusedBitsInBPFMode[fieldName] {
 				log.WithField("field", fieldName).Debug("Ignoring unused field in BPF mode.")
 				continue
@@ -543,11 +543,11 @@ func (c *Config) validate() {
 			bits := myValue.Field(i).Interface().(uint32)
 			if bits == 0 {
 				log.WithField("field", fieldName).Panic(
-					"IptablesMarkXXX field not set.")
+					"MarkXXX field not set.")
 			}
 			if usedBits&bits > 0 {
 				log.WithField("field", fieldName).Panic(
-					"IptablesMarkXXX field overlapped with another's bits.")
+					"MarkXXX field overlapped with another's bits.")
 			}
 			usedBits |= bits
 			found++
@@ -555,11 +555,11 @@ func (c *Config) validate() {
 	}
 	if found == 0 {
 		// Check the reflection found something we were expecting.
-		log.Panic("Didn't find any IptablesMarkXXX fields.")
+		log.Panic("Didn't find any MarkXXX fields.")
 	}
 
-	if c.IptablesMarkDNSPolicy != 0x0 && c.DNSPolicyNfqueueID == 0 {
-		log.WithField("field", "DNSPolicyNfqueueID").Panic("Must not be 0 when the IptablesMarkDNSPolicy is set.")
+	if c.MarkDNSPolicy != 0x0 && c.DNSPolicyNfqueueID == 0 {
+		log.WithField("field", "DNSPolicyNfqueueID").Panic("Must not be 0 when the MarkDNSPolicy is set.")
 	}
 }
 
@@ -594,7 +594,7 @@ func NewRenderer(config Config) RuleRenderer {
 
 	// First, what should we do when packets are not accepted.
 	var iptablesFilterDenyAction generictables.Action
-	switch config.IptablesFilterDenyAction {
+	switch config.FilterDenyAction {
 	case "REJECT":
 		log.Info("packets that are not passed by any policy or profile will be rejected.")
 		iptablesFilterDenyAction = reject
@@ -609,7 +609,7 @@ func NewRenderer(config Config) RuleRenderer {
 	var dropRules []generictables.Rule
 	var nfqueueRuleDelayDeniedPacket *generictables.Rule
 	if strings.HasPrefix(config.ActionOnDrop, "LOG") {
-		log.Warnf("Action on drop includes LOG.  All dropped packets will be logged. %s", config.IptablesLogPrefix)
+		log.Warnf("Action on drop includes LOG.  All dropped packets will be logged. %s", config.LogPrefix)
 		logPrefix := "calico-drop"
 		if config.IncludeDropActionInPrefix {
 			logPrefix = logPrefix + " " + config.ActionOnDrop
@@ -628,11 +628,11 @@ func NewRenderer(config Config) RuleRenderer {
 			Action: actions.Allow(),
 		})
 	} else {
-		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket && config.IptablesMarkDNSPolicy != 0x0 {
+		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket && config.MarkDNSPolicy != 0x0 {
 			nfqueueRuleDelayDeniedPacket = &generictables.Rule{
 				Match: newMatchFn().
-					MarkSingleBitSet(config.IptablesMarkDNSPolicy).
-					NotMarkMatchesWithMask(config.IptablesMarkSkipDNSPolicyNfqueue, config.IptablesMarkSkipDNSPolicyNfqueue),
+					MarkSingleBitSet(config.MarkDNSPolicy).
+					NotMarkMatchesWithMask(config.MarkSkipDNSPolicyNfqueue, config.MarkSkipDNSPolicyNfqueue),
 				Action: actions.Nfqueue(config.DNSPolicyNfqueueID),
 			}
 		}
@@ -663,7 +663,7 @@ func NewRenderer(config Config) RuleRenderer {
 
 	// What should we do with packets that are accepted in the forwarding chain
 	var filterAllowAction, mangleAllowAction generictables.Action
-	switch config.IptablesFilterAllowAction {
+	switch config.FilterAllowAction {
 	case "RETURN":
 		log.Info("filter table allowed packets will be returned to FORWARD chain.")
 		filterAllowAction = ret
@@ -671,7 +671,7 @@ func NewRenderer(config Config) RuleRenderer {
 		log.Info("filter table allowed packets will be accepted immediately.")
 		filterAllowAction = accept
 	}
-	switch config.IptablesMangleAllowAction {
+	switch config.MangleAllowAction {
 	case "RETURN":
 		log.Info("mangle table allowed packets will be returned to PREROUTING chain.")
 		mangleAllowAction = ret

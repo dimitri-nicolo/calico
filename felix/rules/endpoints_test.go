@@ -55,56 +55,56 @@ var _ = Describe("Endpoints", func() {
 
 		kubeIPVSEnabled := trueOrFalse
 		rrConfigNormalMangleReturn := Config{
-			IPIPEnabled:                      true,
-			IPIPTunnelAddress:                nil,
-			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-			DNSPolicyNfqueueID:               100,
-			DNSPacketsNfqueueID:              101,
-			IptablesMarkEgress:               0x4,
-			IptablesMarkAccept:               0x8,
-			IptablesMarkPass:                 0x10,
-			IptablesMarkScratch0:             0x20,
-			IptablesMarkScratch1:             0x40,
-			IptablesMarkDrop:                 0x80,
-			IptablesMarkEndpoint:             0xff00,
-			IptablesMarkNonCaliEndpoint:      0x0100,
-			IptablesMarkDNSPolicy:            0x00001,
-			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-			KubeIPVSSupportEnabled:           kubeIPVSEnabled,
-			IptablesMangleAllowAction:        "RETURN",
-			IptablesFilterDenyAction:         denyActionCommand,
-			VXLANPort:                        4789,
-			EgressIPVXLANPort:                4790,
-			VXLANVNI:                         4096,
+			IPIPEnabled:              true,
+			IPIPTunnelAddress:        nil,
+			IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+			DNSPolicyNfqueueID:       100,
+			DNSPacketsNfqueueID:      101,
+			MarkEgress:               0x4,
+			MarkAccept:               0x8,
+			MarkPass:                 0x10,
+			MarkScratch0:             0x20,
+			MarkScratch1:             0x40,
+			MarkDrop:                 0x80,
+			MarkEndpoint:             0xff00,
+			MarkNonCaliEndpoint:      0x0100,
+			MarkDNSPolicy:            0x00001,
+			MarkSkipDNSPolicyNfqueue: 0x400000,
+			KubeIPVSSupportEnabled:   kubeIPVSEnabled,
+			MangleAllowAction:        "RETURN",
+			FilterDenyAction:         denyActionCommand,
+			VXLANPort:                4789,
+			EgressIPVXLANPort:        4790,
+			VXLANVNI:                 4096,
 		}
 
 		rrConfigConntrackDisabledReturnAction := Config{
-			IPIPEnabled:                      true,
-			IPIPTunnelAddress:                nil,
-			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-			DNSPolicyNfqueueID:               100,
-			DNSPacketsNfqueueID:              101,
-			IptablesMarkEgress:               0x4,
-			IptablesMarkAccept:               0x8,
-			IptablesMarkPass:                 0x10,
-			IptablesMarkScratch0:             0x20,
-			IptablesMarkScratch1:             0x40,
-			IptablesMarkDrop:                 0x80,
-			IptablesMarkEndpoint:             0xff00,
-			IptablesMarkNonCaliEndpoint:      0x0100,
-			IptablesMarkDNSPolicy:            0x00001,
-			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-			KubeIPVSSupportEnabled:           kubeIPVSEnabled,
-			DisableConntrackInvalid:          true,
-			IptablesFilterAllowAction:        "RETURN",
-			IptablesFilterDenyAction:         denyActionCommand,
-			VXLANPort:                        4789,
-			EgressIPVXLANPort:                4790,
-			VXLANVNI:                         4096,
+			IPIPEnabled:              true,
+			IPIPTunnelAddress:        nil,
+			IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+			DNSPolicyNfqueueID:       100,
+			DNSPacketsNfqueueID:      101,
+			MarkEgress:               0x4,
+			MarkAccept:               0x8,
+			MarkPass:                 0x10,
+			MarkScratch0:             0x20,
+			MarkScratch1:             0x40,
+			MarkDrop:                 0x80,
+			MarkEndpoint:             0xff00,
+			MarkNonCaliEndpoint:      0x0100,
+			MarkDNSPolicy:            0x00001,
+			MarkSkipDNSPolicyNfqueue: 0x400000,
+			KubeIPVSSupportEnabled:   kubeIPVSEnabled,
+			DisableConntrackInvalid:  true,
+			FilterAllowAction:        "RETURN",
+			FilterDenyAction:         denyActionCommand,
+			VXLANPort:                4789,
+			EgressIPVXLANPort:        4790,
+			VXLANVNI:                 4096,
 		}
 
 		var renderer RuleRenderer
@@ -125,8 +125,8 @@ var _ = Describe("Endpoints", func() {
 		Context("with normal config", func() {
 			BeforeEach(func() {
 				renderer = NewRenderer(rrConfigNormalMangleReturn)
-				epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.IptablesMarkEndpoint,
-					rrConfigNormalMangleReturn.IptablesMarkNonCaliEndpoint)
+				epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.MarkEndpoint,
+					rrConfigNormalMangleReturn.MarkNonCaliEndpoint)
 			})
 
 			It("should render a minimal workload endpoint", func() {
@@ -1926,8 +1926,8 @@ var _ = Describe("Endpoints", func() {
 		Describe("with ctstate=INVALID disabled", func() {
 			BeforeEach(func() {
 				renderer = NewRenderer(rrConfigConntrackDisabledReturnAction)
-				epMarkMapper = NewEndpointMarkMapper(rrConfigConntrackDisabledReturnAction.IptablesMarkEndpoint,
-					rrConfigConntrackDisabledReturnAction.IptablesMarkNonCaliEndpoint)
+				epMarkMapper = NewEndpointMarkMapper(rrConfigConntrackDisabledReturnAction.MarkEndpoint,
+					rrConfigConntrackDisabledReturnAction.MarkNonCaliEndpoint)
 			})
 
 			It("should render a minimal workload endpoint", func() {
@@ -2078,8 +2078,8 @@ var _ = Describe("Endpoints", func() {
 				It("should render a minimal workload endpoint without VXLAN drop encap rule and with IPIP drop encap rule", func() {
 					rrConfigNormalMangleReturn.AllowVXLANPacketsFromWorkloads = true
 					renderer = NewRenderer(rrConfigNormalMangleReturn)
-					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.IptablesMarkEndpoint,
-						rrConfigNormalMangleReturn.IptablesMarkNonCaliEndpoint)
+					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.MarkEndpoint,
+						rrConfigNormalMangleReturn.MarkNonCaliEndpoint)
 					Expect(renderer.WorkloadEndpointToIptablesChains(
 						"cali1234", epMarkMapper,
 						true,
@@ -2171,8 +2171,8 @@ var _ = Describe("Endpoints", func() {
 				It("should render a minimal workload endpoint with VXLAN drop encap rule and without IPIP drop encap rule", func() {
 					rrConfigNormalMangleReturn.AllowIPIPPacketsFromWorkloads = true
 					renderer = NewRenderer(rrConfigNormalMangleReturn)
-					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.IptablesMarkEndpoint,
-						rrConfigNormalMangleReturn.IptablesMarkNonCaliEndpoint)
+					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.MarkEndpoint,
+						rrConfigNormalMangleReturn.MarkNonCaliEndpoint)
 
 					actual := renderer.WorkloadEndpointToIptablesChains(
 						"cali1234", epMarkMapper,
@@ -2269,8 +2269,8 @@ var _ = Describe("Endpoints", func() {
 					rrConfigNormalMangleReturn.AllowVXLANPacketsFromWorkloads = true
 					rrConfigNormalMangleReturn.AllowIPIPPacketsFromWorkloads = true
 					renderer = NewRenderer(rrConfigNormalMangleReturn)
-					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.IptablesMarkEndpoint,
-						rrConfigNormalMangleReturn.IptablesMarkNonCaliEndpoint)
+					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.MarkEndpoint,
+						rrConfigNormalMangleReturn.MarkNonCaliEndpoint)
 					Expect(renderer.WorkloadEndpointToIptablesChains(
 						"cali1234", epMarkMapper,
 						true,
@@ -2371,8 +2371,8 @@ var _ = Describe("Endpoints", func() {
 				BeforeEach(func() {
 					rrConfigNormalMangleReturn.DNSPolicyMode = dnsMode
 					renderer = NewRenderer(rrConfigNormalMangleReturn)
-					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.IptablesMarkEndpoint,
-						rrConfigNormalMangleReturn.IptablesMarkNonCaliEndpoint)
+					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.MarkEndpoint,
+						rrConfigNormalMangleReturn.MarkNonCaliEndpoint)
 				})
 
 				AfterEach(func() {
@@ -2692,18 +2692,18 @@ var _ = Describe("PolicyGroups", func() {
 var _ = table.DescribeTable("PolicyGroup chains",
 	func(group PolicyGroup, expectedRules []generictables.Rule) {
 		renderer := NewRenderer(Config{
-			DNSPolicyNfqueueID:               100,
-			DNSPacketsNfqueueID:              101,
-			IptablesMarkEgress:               0x4,
-			IptablesMarkAccept:               0x8,
-			IptablesMarkPass:                 0x10,
-			IptablesMarkScratch0:             0x20,
-			IptablesMarkScratch1:             0x40,
-			IptablesMarkDrop:                 0x80,
-			IptablesMarkEndpoint:             0xff00,
-			IptablesMarkNonCaliEndpoint:      0x0100,
-			IptablesMarkDNSPolicy:            0x00001,
-			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
+			DNSPolicyNfqueueID:       100,
+			DNSPacketsNfqueueID:      101,
+			MarkEgress:               0x4,
+			MarkAccept:               0x8,
+			MarkPass:                 0x10,
+			MarkScratch0:             0x20,
+			MarkScratch1:             0x40,
+			MarkDrop:                 0x80,
+			MarkEndpoint:             0xff00,
+			MarkNonCaliEndpoint:      0x0100,
+			MarkDNSPolicy:            0x00001,
+			MarkSkipDNSPolicyNfqueue: 0x400000,
 		})
 		chains := renderer.PolicyGroupToIptablesChains(&group)
 		Expect(chains).To(HaveLen(1))

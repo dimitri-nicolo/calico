@@ -92,7 +92,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			log.Panic("Starting dataplane with nil callback func.")
 		}
 
-		allowedMarkBits := configParams.IptablesMarkMask
+		allowedMarkBits := configParams.MarkMask()
 		if configParams.BPFEnabled {
 			// In BPF mode, the BPF programs use mark bits that are not configurable.  Make sure that those
 			// bits are covered by our allowed mask.
@@ -101,7 +101,7 @@ func StartDataplaneDriver(configParams *config.Config,
 					"Name":            "felix-iptables",
 					"MarkMask":        allowedMarkBits,
 					"RequiredBPFBits": tcdefs.MarksMask,
-				}).Panic("IptablesMarkMask doesn't cover bits that are used (unconditionally) by eBPF mode.")
+				}).Panic("IptablesMarkMask/NftablesMarkMask doesn't cover bits that are used (unconditionally) by eBPF mode.")
 			}
 			allowedMarkBits ^= allowedMarkBits & tcdefs.MarksMask
 			log.WithField("updatedBits", allowedMarkBits).Info(
@@ -128,7 +128,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			if markIPsec == 0 {
 				log.WithFields(log.Fields{
 					"Name":     "felix-iptables",
-					"MarkMask": configParams.IptablesMarkMask,
+					"MarkMask": configParams.MarkMask,
 				}).Panic("Failed to allocate a mark bit for IPsec, not enough mark bits available.")
 			}
 		}
@@ -144,7 +144,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			if markEgressIP == 0 {
 				log.WithFields(log.Fields{
 					"Name":     "felix-iptables",
-					"MarkMask": configParams.IptablesMarkMask,
+					"MarkMask": configParams.MarkMask,
 				}).Panic("Failed to allocate a mark bit for Egress IP, not enough mark bits available.")
 			}
 		}
@@ -305,17 +305,17 @@ func StartDataplaneDriver(configParams *config.Config,
 				DNSPolicyNfqueueID:  int64(configParams.DNSPolicyNfqueueID),
 				DNSPacketsNfqueueID: int64(configParams.DNSPacketsNfqueueID),
 
-				IptablesMarkAccept:               markAccept,
-				IptablesMarkPass:                 markPass,
-				IptablesMarkDrop:                 markDrop,
-				IptablesMarkIPsec:                markIPsec,
-				IptablesMarkEgress:               markEgressIP,
-				IptablesMarkScratch0:             markScratch0,
-				IptablesMarkScratch1:             markScratch1,
-				IptablesMarkEndpoint:             markEndpointMark,
-				IptablesMarkNonCaliEndpoint:      markEndpointNonCaliEndpoint,
-				IptablesMarkDNSPolicy:            markDNSPolicy,
-				IptablesMarkSkipDNSPolicyNfqueue: markSkipDNSPolicyNfqueue,
+				MarkAccept:               markAccept,
+				MarkPass:                 markPass,
+				MarkDrop:                 markDrop,
+				MarkIPsec:                markIPsec,
+				MarkEgress:               markEgressIP,
+				MarkScratch0:             markScratch0,
+				MarkScratch1:             markScratch1,
+				MarkEndpoint:             markEndpointMark,
+				MarkNonCaliEndpoint:      markEndpointNonCaliEndpoint,
+				MarkDNSPolicy:            markDNSPolicy,
+				MarkSkipDNSPolicyNfqueue: markSkipDNSPolicyNfqueue,
 
 				VXLANEnabled:   configParams.Encapsulation.VXLANEnabled,
 				VXLANEnabledV6: configParams.Encapsulation.VXLANEnabledV6,
@@ -342,19 +342,19 @@ func StartDataplaneDriver(configParams *config.Config,
 				WireguardEnabledV6:          configParams.WireguardEnabledV6,
 				WireguardInterfaceName:      configParams.WireguardInterfaceName,
 				WireguardInterfaceNameV6:    configParams.WireguardInterfaceNameV6,
-				WireguardIptablesMark:       markWireguard,
+				WireguardMark:               markWireguard,
 				WireguardListeningPort:      configParams.WireguardListeningPort,
 				WireguardListeningPortV6:    configParams.WireguardListeningPortV6,
 				WireguardEncryptHostTraffic: configParams.WireguardHostEncryptionEnabled,
 				RouteSource:                 configParams.RouteSource,
 
-				IptablesLogPrefix:         configParams.LogPrefix,
+				LogPrefix:                 configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
 				ActionOnDrop:              configParams.DropActionOverride,
 				EndpointToHostAction:      configParams.DefaultEndpointToHostAction,
-				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
-				IptablesMangleAllowAction: configParams.IptablesMangleAllowAction,
-				IptablesFilterDenyAction:  configParams.IptablesFilterDenyAction,
+				FilterAllowAction:         configParams.IptablesFilterAllowAction,
+				MangleAllowAction:         configParams.IptablesMangleAllowAction,
+				FilterDenyAction:          configParams.IptablesFilterDenyAction,
 
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
@@ -372,7 +372,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				TPROXYMode:             configParams.TPROXYMode,
 				TPROXYPort:             configParams.TPROXYPort,
 				TPROXYUpstreamConnMark: configParams.TPROXYUpstreamConnMark,
-				IptablesMarkProxy:      markProxy,
+				MarkProxy:              markProxy,
 				KubeMasqueradeMark:     k8sMasqMark,
 			},
 
@@ -400,7 +400,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			VXLANMTUV6:                     configParams.VXLANMTUV6,
 			VXLANPort:                      configParams.VXLANPort,
 			IptablesBackend:                configParams.IptablesBackend,
-			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
+			TableRefreshInterval:           configParams.TableRefreshInterval(),
 			RouteSyncDisabled:              configParams.RouteSyncDisabled,
 			RouteRefreshInterval:           configParams.RouteRefreshInterval,
 			DeviceRouteSourceAddress:       configParams.DeviceRouteSourceAddress,

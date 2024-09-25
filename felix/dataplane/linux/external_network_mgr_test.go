@@ -24,7 +24,7 @@ var _ = Describe("ExternalNetworkManager", func() {
 
 		dpConfig = Config{
 			RulesConfig: rules.Config{
-				IptablesMarkEgress: 0x200,
+				MarkEgress: 0x200,
 			},
 			ExternalNetworkEnabled:             true,
 			ExternalNetworkRoutingRulePriority: 100,

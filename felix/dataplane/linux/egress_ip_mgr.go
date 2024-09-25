@@ -1241,7 +1241,7 @@ func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID
 	for _, ipAddr := range workload.Ipv4Nets {
 		m.deleteRouteRule(&egressRule{
 			priority:   m.dpConfig.EgressIPRoutingRulePriority,
-			mark:       int(m.dpConfig.RulesConfig.IptablesMarkEgress),
+			mark:       int(m.dpConfig.RulesConfig.MarkEgress),
 			srcIP:      ip.FromIPOrCIDRString(ipAddr),
 			tableIndex: index,
 		})
@@ -1324,7 +1324,7 @@ func (m *egressIPManager) createRouteRule(srcIP ip.Addr, tableIndex int) {
 		"tableIndex": tableIndex,
 	}).Debug("Creating route rule.")
 	rule := newRouteRule(m.dpConfig.EgressIPRoutingRulePriority,
-		m.dpConfig.RulesConfig.IptablesMarkEgress,
+		m.dpConfig.RulesConfig.MarkEgress,
 		srcIP, tableIndex)
 	m.routeRules.SetRule(rule)
 }
@@ -1628,7 +1628,7 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 
 	priority := m.dpConfig.EgressIPRoutingRulePriority
 	family := syscall.AF_INET
-	mark := int(m.dpConfig.RulesConfig.IptablesMarkEgress)
+	mark := int(m.dpConfig.RulesConfig.MarkEgress)
 
 	log.WithFields(log.Fields{
 		"srcIPs":             workload.Ipv4Nets,

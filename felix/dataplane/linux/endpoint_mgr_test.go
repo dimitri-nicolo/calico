@@ -362,7 +362,7 @@ func chainsForIfaces(ipVersion uint8,
 		}
 		outRules = append(outRules, generictables.Rule{
 			Match:  iptables.Match(),
-			Action: iptables.ClearMarkAction{Mark: 0x98}, // IptablesMarkAccept + IptablesMarkDrop + IptablesMarkPass
+			Action: iptables.ClearMarkAction{Mark: 0x98}, // MarkAccept + MarkDrop + MarkPass
 		})
 
 		if egress && ipVersion == 4 && isEgressGateway {
@@ -501,7 +501,7 @@ func chainsForIfaces(ipVersion uint8,
 		}
 		inRules = append(inRules, generictables.Rule{
 			Match:  iptables.Match(),
-			Action: iptables.ClearMarkAction{Mark: 0x98}, // IptablesMarkAccept + IptablesMarkDrop + IptablesMarkPass
+			Action: iptables.ClearMarkAction{Mark: 0x98}, // MarkAccept + MarkDrop + MarkPass
 		})
 
 		if ingress && tierName != "" && tableKind == ifaceKind {
@@ -833,14 +833,6 @@ func (t *mockRouteTable) SetRemoveExternalRoutes(_ bool) {
 	panic("implement me")
 }
 
-func (t *mockRouteTable) ReadRoutesFromKernel(ifaceName string) ([]routetable.Target, error) {
-	return t.kernelRoutes[ifaceName], nil
-}
-
-func (t *mockRouteTable) Index() int {
-	return t.index
-}
-
 func (t *mockRouteTable) SetRoutes(routeClass routetable.RouteClass, ifaceName string, targets []routetable.Target) {
 	log.WithFields(log.Fields{
 		"index":     t.index,
@@ -865,6 +857,15 @@ func (t *mockRouteTable) RouteUpdate(routeClass routetable.RouteClass, ifaceName
 func (t *mockRouteTable) OnIfaceStateChanged(string, int, ifacemonitor.State) {}
 func (t *mockRouteTable) QueueResync()                                        {}
 func (t *mockRouteTable) QueueResyncIface(ifaceName string)                   {}
+
+func (t *mockRouteTable) Index() int {
+	return t.index
+}
+
+func (t *mockRouteTable) ReadRoutesFromKernel(ifaceName string) ([]routetable.Target, error) {
+	// TODO implement me
+	panic("implement me")
+}
 
 func (t *mockRouteTable) Apply() error {
 	return nil
@@ -931,29 +932,29 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		BeforeEach(func() {
 			rrConfigNormal = rules.Config{
-				IPIPEnabled:                      true,
-				IPIPTunnelAddress:                nil,
-				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-				DNSPolicyNfqueueID:               100,
-				DNSPacketsNfqueueID:              101,
-				IptablesMarkEgress:               0x4,
-				IptablesMarkAccept:               0x8,
-				IptablesMarkPass:                 0x10,
-				IptablesMarkScratch0:             0x20,
-				IptablesMarkScratch1:             0x40,
-				IptablesMarkDrop:                 0x80,
-				IptablesMarkIPsec:                0x10000,
-				IptablesMarkDNSPolicy:            0x00001,
-				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-				IptablesMarkEndpoint:             0xff00,
-				IptablesMarkNonCaliEndpoint:      0x0100,
-				KubeIPVSSupportEnabled:           true,
-				WorkloadIfacePrefixes:            []string{"cali", "tap"},
-				VXLANPort:                        4789,
-				EgressIPVXLANPort:                4790,
-				VXLANVNI:                         4096,
+				IPIPEnabled:              true,
+				IPIPTunnelAddress:        nil,
+				IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+				DNSPolicyNfqueueID:       100,
+				DNSPacketsNfqueueID:      101,
+				MarkEgress:               0x4,
+				MarkAccept:               0x8,
+				MarkPass:                 0x10,
+				MarkScratch0:             0x20,
+				MarkScratch1:             0x40,
+				MarkDrop:                 0x80,
+				MarkIPsec:                0x10000,
+				MarkDNSPolicy:            0x00001,
+				MarkSkipDNSPolicyNfqueue: 0x400000,
+				MarkEndpoint:             0xff00,
+				MarkNonCaliEndpoint:      0x0100,
+				KubeIPVSSupportEnabled:   true,
+				WorkloadIfacePrefixes:    []string{"cali", "tap"},
+				VXLANPort:                4789,
+				EgressIPVXLANPort:        4790,
+				VXLANVNI:                 4096,
 			}
 			eth0Addrs = set.New[string]()
 			eth0Addrs.Add(ipv4)
@@ -987,7 +988,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				renderer,
 				routeTable,
 				ipVersion,
-				rules.NewEndpointMarkMapper(rrConfigNormal.IptablesMarkEndpoint, rrConfigNormal.IptablesMarkNonCaliEndpoint),
+				rules.NewEndpointMarkMapper(rrConfigNormal.MarkEndpoint, rrConfigNormal.MarkNonCaliEndpoint),
 				rrConfigNormal.KubeIPVSSupportEnabled,
 				[]string{"cali"},
 				statusReportRec.endpointStatusUpdateCallback,

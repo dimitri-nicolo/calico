@@ -175,8 +175,8 @@ func (m *externalNetworkManager) CompleteDeferredWork() error {
 		var CreatedByExternalNetworkManager routerule.RuleFilterFunc = func(r *routerule.Rule) bool {
 			// Return true if the rule is created by this manager.
 			nlRule := r.NetLinkRule()
-			if (nlRule.Mark == int(m.dpConfig.RulesConfig.IptablesMarkEgress)) &&
-				(nlRule.Mask == int(m.dpConfig.RulesConfig.IptablesMarkEgress)) &&
+			if (nlRule.Mark == int(m.dpConfig.RulesConfig.MarkEgress)) &&
+				(nlRule.Mask == int(m.dpConfig.RulesConfig.MarkEgress)) &&
 				(nlRule.Priority == m.dpConfig.ExternalNetworkRoutingRulePriority) {
 				return true
 			}
@@ -228,7 +228,7 @@ func (m *externalNetworkManager) PopulateActiveRules() {
 			info.Networks.Iter(func(name string) error {
 				if network, ok := m.activeNetworks[name]; ok {
 					rule := newRouteRule(m.dpConfig.ExternalNetworkRoutingRulePriority,
-						m.dpConfig.RulesConfig.IptablesMarkEgress,
+						m.dpConfig.RulesConfig.MarkEgress,
 						ip.FromIPOrCIDRString(srcIP), int(network.RouteTableIndex))
 
 					m.activeRules.Add(rule)

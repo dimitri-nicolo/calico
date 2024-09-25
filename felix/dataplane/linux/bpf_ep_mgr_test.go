@@ -414,24 +414,24 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		maps.CommonMaps = commonMaps
 
 		rrConfigNormal = rules.Config{
-			IPIPEnabled:                      true,
-			IPIPTunnelAddress:                nil,
-			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			DNSPolicyNfqueueID:               100,
-			IptablesMarkAccept:               0x8,
-			IptablesMarkPass:                 0x10,
-			IptablesMarkScratch0:             0x20,
-			IptablesMarkScratch1:             0x40,
-			IptablesMarkEndpoint:             0xff00,
-			IptablesMarkNonCaliEndpoint:      0x0100,
-			IptablesMarkDrop:                 0x80,
-			IptablesMarkDNSPolicy:            0x00001,
-			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-			KubeIPVSSupportEnabled:           true,
-			WorkloadIfacePrefixes:            []string{"cali", "tap"},
-			VXLANPort:                        4789,
-			VXLANVNI:                         4096,
+			IPIPEnabled:              true,
+			IPIPTunnelAddress:        nil,
+			IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyNfqueueID:       100,
+			MarkAccept:               0x8,
+			MarkPass:                 0x10,
+			MarkScratch0:             0x20,
+			MarkScratch1:             0x40,
+			MarkEndpoint:             0xff00,
+			MarkNonCaliEndpoint:      0x0100,
+			MarkDrop:                 0x80,
+			MarkDNSPolicy:            0x00001,
+			MarkSkipDNSPolicyNfqueue: 0x400000,
+			KubeIPVSSupportEnabled:   true,
+			WorkloadIfacePrefixes:    []string{"cali", "tap"},
+			VXLANPort:                4789,
+			VXLANVNI:                 4096,
 		}
 		ruleRenderer = rules.NewRenderer(rrConfigNormal)
 		filterTableV4 = newMockTable("filter")
@@ -936,7 +936,6 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				Expect(dp.programAttached("bond0:egress")).To(BeTrue())
 				Expect(dp.programAttached("eth10:xdp")).To(BeFalse())
 				Expect(dp.programAttached("eth20:xdp")).To(BeFalse())
-
 			})
 		})
 	})
@@ -1425,7 +1424,6 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 
 		It("should reclaim indexes for active interfaces", func() {
-
 			bpfEpMgr.bpfLogLevel = "debug"
 			bpfEpMgr.logFilters = map[string]string{"all": "tcp"}
 
