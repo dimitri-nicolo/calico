@@ -401,6 +401,7 @@ const (
 	GlobalsNoDSRCidrs       uint32 = C.CALI_GLOBALS_NO_DSR_CIDRS
 	GlobalsLoUDPOnly        uint32 = C.CALI_GLOBALS_LO_UDP_ONLY
 	GlobalsDNSInline        uint32 = C.CALI_GLOBALS_DNS_INLINE
+	GlobalsRedirectPeer     uint32 = C.CALI_GLOBALS_REDIRECT_PEER
 )
 
 func TcSetGlobals(

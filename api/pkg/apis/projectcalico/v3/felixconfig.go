@@ -1056,6 +1056,14 @@ type FelixConfigurationSpec struct {
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.
 	WindowsNetworkName *string `json:"windowsNetworkName,omitempty"`
+	// BPFRedirectToPeer controls which whether it is allowed to forward straight to the
+	// peer side of the workload devices. It is allowed for any host L2 devices by default
+	// (L2Only), but it breaks TCP dump on the host side of workload device as it bypasses
+	// it on ingress. Value of Enabled also allows redirection from L3 host devices like
+	// IPIP tunnel or Wireguard directly to the peer side of the workload's device. This
+	// makes redirection faster, however, it breaks tools like tcpdump on the peer side.
+	// Use Enabled with caution. [Default: Disabled]
+	BPFRedirectToPeer string `json:"bpfRedirectToPeer,omitempty"`
 
 	// RouteSource configures where Felix gets its routing information.
 	// - WorkloadIPs: use workload endpoints to construct routes.

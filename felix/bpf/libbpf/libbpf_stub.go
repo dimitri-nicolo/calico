@@ -149,6 +149,7 @@ const (
 	GlobalsNoDSRCidrs       uint32 = 12345
 	GlobalsLoUDPOnly        uint32 = 12345
 	GlobalsDNSInline        uint32 = 12345
+	GlobalsRedirectPeer     uint32 = 12345
 )
 
 func TcSetGlobals(_ *Map, globalData *TcGlobalData) error {

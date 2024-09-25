@@ -79,6 +79,7 @@ type AttachPoint struct {
 	EgressIPEnabled         bool
 	EgressGatewayHealthPort uint16
 	DNSInlineProcessing     bool
+	RedirectPeer            bool
 }
 
 var ErrDeviceNotFound = errors.New("device not found")
@@ -542,6 +543,10 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	}
 	if ap.DNSInlineProcessing {
 		globalData.Flags |= libbpf.GlobalsDNSInline
+	}
+
+	if ap.RedirectPeer {
+		globalData.Flags |= libbpf.GlobalsRedirectPeer
 	}
 
 	globalData.HostTunnelIPv4 = globalData.HostIPv4

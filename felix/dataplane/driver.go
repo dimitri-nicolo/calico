@@ -504,6 +504,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			FlowLogsFileIncludeService:         configParams.FlowLogsFileIncludeService,
 			FlowLogsFileDomainsLimit:           configParams.FlowLogsFileDomainsLimit,
 			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
+			BPFRedirectToPeer:                  configParams.BPFRedirectToPeer,
 			ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 
 			IPAMClient: ipamClient,
