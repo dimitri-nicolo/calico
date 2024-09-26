@@ -127,7 +127,7 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.1
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.17.3
-	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
+	github.com/tigera/api v0.0.0-20240708202104-e3f70b269c2c
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
 	github.com/urfave/cli/v2 v2.27.3
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240703200800-b54f85093f4a
@@ -446,8 +446,6 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
-
-require github.com/tigera/api v0.0.0-20240708202104-e3f70b269c2c
 
 require github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
 

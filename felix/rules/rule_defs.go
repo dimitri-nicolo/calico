@@ -369,7 +369,7 @@ type DefaultRuleRenderer struct {
 	filterAllowAction        generictables.Action
 	mangleAllowAction        generictables.Action
 	blockCIDRAction          generictables.Action
-	iptablesFilterDenyAction generictables.Action
+	FilterDenyAction generictables.Action
 
 	NewMatch       func() generictables.MatchCriteria
 	CombineMatches func(m1, m2 generictables.MatchCriteria) generictables.MatchCriteria
@@ -384,7 +384,7 @@ type DefaultRuleRenderer struct {
 }
 
 func (r *DefaultRuleRenderer) IptablesFilterDenyAction() generictables.Action {
-	return r.iptablesFilterDenyAction
+	return r.FilterDenyAction
 }
 
 func (r *DefaultRuleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
@@ -710,7 +710,7 @@ func NewRenderer(config Config) RuleRenderer {
 		filterAllowAction:            filterAllowAction,
 		mangleAllowAction:            mangleAllowAction,
 		blockCIDRAction:              blockCIDRAction,
-		iptablesFilterDenyAction:     iptablesFilterDenyAction,
+		FilterDenyAction:     iptablesFilterDenyAction,
 		wildcard:                     wildcard,
 		maxNameLength:                maxNameLength,
 		CombineMatches:               combineMatches,
