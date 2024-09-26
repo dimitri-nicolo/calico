@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -13,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
@@ -80,12 +82,29 @@ func (c *EndpointController) getAndWatchEndpoint() (string, error) {
 		Resource: "nonclusterhosts",
 	}
 
-	// get existing NonClusterHost resource
-	nonclusterhost, err := c.dynamicClient.Resource(gvr).Namespace(corev1.NamespaceAll).Get(context.Background(), resource.DefaultTSEEInstanceName, metav1.GetOptions{})
-	if err != nil {
+	backoff := wait.Backoff{
+		Duration: 15 * time.Second,
+		Factor:   2,
+		Jitter:   0.2,
+		Steps:    6,
+	}
+
+	// get NonClusterHost resource
+	var nonclusterhost *unstructured.Unstructured
+	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		var err error
+		nonclusterhost, err = c.dynamicClient.Resource(gvr).Namespace(corev1.NamespaceAll).Get(context.Background(), resource.DefaultTSEEInstanceName, metav1.GetOptions{})
+		if err != nil {
+			logrus.WithError(err).Info("failed to get nonclusterhost resource. will retry...")
+			// if we failed to get the resource due to network or cluster issues, we will retry.
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
 		return "", err
 	}
 
+	// extract endpoint from the NonClusterHost resource
 	endpoint, err := extractEndpointFromSpec(nonclusterhost.Object["spec"])
 	if err != nil {
 		return "", err
