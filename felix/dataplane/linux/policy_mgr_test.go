@@ -261,18 +261,18 @@ var _ = Describe("Raw egress policy manager", func() {
 		numCallbackCalls = 0
 		rawTable = newMockTable("raw")
 		ruleRenderer := rules.NewRenderer(rules.Config{
-			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			IptablesMarkAccept:               0x8,
-			IptablesMarkPass:                 0x10,
-			IptablesMarkScratch0:             0x20,
-			IptablesMarkScratch1:             0x40,
-			IptablesMarkDrop:                 0x80,
-			IptablesMarkEndpoint:             0xff00,
-			IptablesMarkNonCaliEndpoint:      0x0100,
-			IptablesMarkDNSPolicy:            0x00001,
-			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-			DNSPolicyNfqueueID:               100,
+			IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			MarkAccept:               0x8,
+			MarkPass:                 0x10,
+			MarkScratch0:             0x20,
+			MarkScratch1:             0x40,
+			MarkDrop:                 0x80,
+			MarkEndpoint:             0xff00,
+			MarkNonCaliEndpoint:      0x0100,
+			MarkDNSPolicy:            0x00001,
+			MarkSkipDNSPolicyNfqueue: 0x400000,
+			DNSPolicyNfqueueID:       100,
 		})
 		policyMgr = newRawEgressPolicyManager(
 			rawTable,

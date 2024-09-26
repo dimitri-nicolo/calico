@@ -5275,8 +5275,9 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"maxIpsetSize": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+							Description: "MaxIpsetSize is the maximum number of IP addresses that can be stored in an IP set. Not applicable if using the nftables backend.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 					"iptablesBackend": {
@@ -5870,6 +5871,38 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Description: "NFTablesMode configures nftables support in Felix. [Default: Disabled]",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"nftablesRefreshInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NftablesRefreshInterval controls the interval at which Felix periodically refreshes the nftables rules. [Default: 90s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"nftablesFilterAllowAction": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"nftablesMangleAllowAction": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"nftablesFilterDenyAction": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FilterDenyAction controls what happens to traffic that is denied by network policy. By default Calico blocks traffic with a \"drop\" action. If you want to use a \"reject\" action instead you can configure it here.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"nftablesMarkMask": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MarkMask is the mask that Felix selects its nftables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system. [Default: 0xffff0000]",
+							Type:        []string{"integer"},
+							Format:      "int64",
 						},
 					},
 					"bpfEnabled": {
@@ -6661,6 +6694,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					"windowsNetworkName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"bpfRedirectToPeer": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFRedirectToPeer controls which whether it is allowed to forward straight to the peer side of the workload devices. It is allowed for any host L2 devices by default (L2Only), but it breaks TCP dump on the host side of workload device as it bypasses it on ingress. Value of Enabled also allows redirection from L3 host devices like IPIP tunnel or Wireguard directly to the peer side of the workload's device. This makes redirection faster, however, it breaks tools like tcpdump on the peer side. Use Enabled with caution. [Default: Disabled]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -12994,6 +13034,13 @@ func schema_pkg_apis_projectcalico_v3_TierSpec(ref common.ReferenceCallback) com
 							Description: "Order is an optional field that specifies the order in which the tier is applied. Tiers with higher \"order\" are applied after those with lower order.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the tier will be applied last.  Tiers with identical order will be applied in alphanumerical order based on the Tier \"Name\".",
 							Type:        []string{"number"},
 							Format:      "double",
+						},
+					},
+					"defaultAction": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DefaultAction specifies the action applied to workloads selected by a policy in the tier, but not rule matched the workload's traffic. [Default: Deny]",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

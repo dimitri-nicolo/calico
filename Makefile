@@ -192,10 +192,12 @@ image:
 # using a local kind cluster.
 ###############################################################################
 E2E_FOCUS ?= "sig-network.*Conformance"
+ADMINPOLICY_UNSUPPORTED_FEATURES ?= "BaselineAdminNetworkPolicy"
 e2e-test:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
-	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/e2e.test -ginkgo.focus=$(E2E_FOCUS)
+	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS)
+	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/adminpolicy/e2e.test -exempt-features=$(ADMINPOLICY_UNSUPPORTED_FEATURES)
 
 # Merge OSS branch.
 # Expects the following arguments:
@@ -227,12 +229,12 @@ os-merge-status:
 build-openstack: bin/yq
 	$(eval VERSION=$(shell bin/yq '.version' charts/calico/values.yaml))
 	$(info Building openstack packages for version $(VERSION))
-	$(MAKE) -C hack/release/packaging release VERSION=$(VERSION)
+	$(MAKE) -C release/packaging release VERSION=$(VERSION)
 
 publish-openstack: bin/yq
 	$(eval VERSION=$(shell bin/yq '.version' charts/calico/values.yaml))
 	$(info Publishing openstack packages for version $(VERSION))
-	$(MAKE) -C hack/release/packaging release-publish VERSION=$(VERSION)
+	$(MAKE) -C release/packaging release-publish VERSION=$(VERSION)
 
 ## Kicks semaphore job which syncs github released helm charts with helm index file
 .PHONY: helm-index
@@ -318,7 +320,7 @@ endif
 		-w /code \
 		-e GITHUB_TOKEN=$(GITHUB_TOKEN) \
 		python:3 \
-		bash -c '/usr/local/bin/python hack/release/get-contributors.py >> /code/AUTHORS.md'
+		bash -c '/usr/local/bin/python release/get-contributors.py >> /code/AUTHORS.md'
 
 hack/release/release:
 	$(call build_binary, hack/release/cmd/main.go, $@)

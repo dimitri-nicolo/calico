@@ -190,23 +190,23 @@ var ruleTestData = []TableEntry{
 
 var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	rrConfigNormal := Config{
-		IPIPEnabled:                      true,
-		IPIPTunnelAddress:                nil,
-		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-		DNSPolicyNfqueueID:               100,
-		DNSPacketsNfqueueID:              101,
-		IptablesMarkEgress:               0x40,
-		IptablesMarkAccept:               0x80,
-		IptablesMarkPass:                 0x100,
-		IptablesMarkScratch0:             0x200,
-		IptablesMarkScratch1:             0x400,
-		IptablesMarkDrop:                 0x800,
-		IptablesMarkDNSPolicy:            0x00001,
-		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-		IptablesLogPrefix:                "calico-packet",
-		IptablesMarkEndpoint:             0xff000,
+		IPIPEnabled:              true,
+		IPIPTunnelAddress:        nil,
+		IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+		DNSPolicyNfqueueID:       100,
+		DNSPacketsNfqueueID:      101,
+		MarkEgress:               0x40,
+		MarkAccept:               0x80,
+		MarkPass:                 0x100,
+		MarkScratch0:             0x200,
+		MarkScratch1:             0x400,
+		MarkDrop:                 0x800,
+		MarkDNSPolicy:            0x00001,
+		MarkSkipDNSPolicyNfqueue: 0x400000,
+		LogPrefix:                "calico-packet",
+		MarkEndpoint:             0xff000,
 	}
 
 	DescribeTable(
@@ -370,7 +370,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"Log rules should be correctly rendered with non-default prefix",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			rrConfigPrefix := rrConfigNormal
-			rrConfigPrefix.IptablesLogPrefix = "foobar"
+			rrConfigPrefix.LogPrefix = "foobar"
 			renderer := NewRenderer(rrConfigPrefix)
 			logRule := in
 			logRule.Action = "log"
@@ -885,7 +885,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"Deny (REJECT) rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			rrConfigReject := rrConfigNormal
-			rrConfigReject.IptablesFilterDenyAction = "REJECT"
+			rrConfigReject.FilterDenyAction = "REJECT"
 			renderer := NewRenderer(rrConfigReject)
 			denyRule := in
 			denyRule.Action = "deny"
@@ -1711,23 +1711,23 @@ var _ = Describe("rule metadata tests", func() {
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
 	}
 	rrConfigNormal := Config{
-		IPIPEnabled:                      true,
-		IPIPTunnelAddress:                nil,
-		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
-		DNSPolicyNfqueueID:               100,
-		DNSPacketsNfqueueID:              101,
-		IptablesMarkEgress:               0x40,
-		IptablesMarkAccept:               0x80,
-		IptablesMarkPass:                 0x100,
-		IptablesMarkScratch0:             0x200,
-		IptablesMarkScratch1:             0x400,
-		IptablesMarkDrop:                 0x800,
-		IptablesLogPrefix:                "calico-packet",
-		IptablesMarkDNSPolicy:            0x00001,
-		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-		IptablesMarkEndpoint:             0xff000,
+		IPIPEnabled:              true,
+		IPIPTunnelAddress:        nil,
+		IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyMode:            apiv3.DNSPolicyModeDelayDeniedPacket,
+		DNSPolicyNfqueueID:       100,
+		DNSPacketsNfqueueID:      101,
+		MarkEgress:               0x40,
+		MarkAccept:               0x80,
+		MarkPass:                 0x100,
+		MarkScratch0:             0x200,
+		MarkScratch1:             0x400,
+		MarkDrop:                 0x800,
+		LogPrefix:                "calico-packet",
+		MarkDNSPolicy:            0x00001,
+		MarkSkipDNSPolicyNfqueue: 0x400000,
+		MarkEndpoint:             0xff000,
 	}
 
 	It("IPv4 should include annotations in comments", func() {
@@ -1842,22 +1842,22 @@ var _ = Describe("rule metadata tests", func() {
 
 var _ = Describe("DNS policy rules", func() {
 	rrConfigNormal := Config{
-		IPIPEnabled:                      true,
-		IPIPTunnelAddress:                nil,
-		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		DNSPolicyNfqueueID:               100,
-		DNSPacketsNfqueueID:              101,
-		IptablesMarkEgress:               0x40,
-		IptablesMarkAccept:               0x80,
-		IptablesMarkPass:                 0x100,
-		IptablesMarkScratch0:             0x200,
-		IptablesMarkScratch1:             0x400,
-		IptablesMarkDrop:                 0x800,
-		IptablesLogPrefix:                "calico-packet",
-		IptablesMarkDNSPolicy:            0x00001,
-		IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
-		IptablesMarkEndpoint:             0xff000,
+		IPIPEnabled:              true,
+		IPIPTunnelAddress:        nil,
+		IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyNfqueueID:       100,
+		DNSPacketsNfqueueID:      101,
+		MarkEgress:               0x40,
+		MarkAccept:               0x80,
+		MarkPass:                 0x100,
+		MarkScratch0:             0x200,
+		MarkScratch1:             0x400,
+		MarkDrop:                 0x800,
+		LogPrefix:                "calico-packet",
+		MarkDNSPolicy:            0x00001,
+		MarkSkipDNSPolicyNfqueue: 0x400000,
+		MarkEndpoint:             0xff000,
 	}
 
 	DescribeTable("with DNSPolicyModes",

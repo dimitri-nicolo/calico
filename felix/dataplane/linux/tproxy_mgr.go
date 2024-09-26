@@ -55,7 +55,7 @@ func newTProxyManager(
 ) *tproxyManager {
 
 	ipv6Enabled := dpConfig.IPv6Enabled
-	mark := dpConfig.RulesConfig.IptablesMarkProxy
+	mark := dpConfig.RulesConfig.MarkProxy
 
 	enabled := dpConfig.RulesConfig.TPROXYModeEnabled()
 

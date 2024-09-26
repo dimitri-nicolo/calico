@@ -5,6 +5,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -53,7 +54,7 @@ func StagedToEnforcedConversion(uv1 *api.Update, uv3 *api.Update) {
 		}
 	case v3.KindStagedKubernetesNetworkPolicy:
 		p3Key.Kind = v3.KindNetworkPolicy
-		p3Key.Name = model.PolicyNamePrefixStaged + conversion.K8sNetworkPolicyNamePrefix + p3Key.Name
+		p3Key.Name = model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + p3Key.Name
 		if p3Value, ok := uv3.Value.(*v3.StagedKubernetesNetworkPolicy); ok {
 			//From StagedKubernetesNetworkPolicy to networkingv1 NetworkPolicy
 			_, v1NetworkPolicy := v3.ConvertStagedKubernetesPolicyToK8SEnforced(p3Value)

@@ -20,7 +20,6 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -67,10 +66,10 @@ func (r stagedNetworkPolicies) Create(ctx context.Context, res *apiv3.StagedNetw
 		res.Spec.Types = []apiv3.PolicyType(nil)
 	}
 
-	if strings.HasPrefix(res.GetObjectMeta().GetName(), conversion.K8sNetworkPolicyNamePrefix) {
+	if strings.HasPrefix(res.GetObjectMeta().GetName(), names.K8sNetworkPolicyNamePrefix) {
 		// We don't support Create of a StagedNetworkPolicy with such prefix
 		return nil, cerrors.ErrorOperationNotSupported{
-			Identifier: conversion.K8sNetworkPolicyNamePrefix,
+			Identifier: names.K8sNetworkPolicyNamePrefix,
 			Operation:  "Create",
 			Reason:     "Cannot create a StagedNetworkPolicy with that name prefix",
 		}
@@ -121,10 +120,10 @@ func (r stagedNetworkPolicies) Update(ctx context.Context, res *apiv3.StagedNetw
 		res.Spec.Types = []apiv3.PolicyType(nil)
 	}
 
-	if strings.HasPrefix(res.GetObjectMeta().GetName(), conversion.K8sNetworkPolicyNamePrefix) {
+	if strings.HasPrefix(res.GetObjectMeta().GetName(), names.K8sNetworkPolicyNamePrefix) {
 		// We don't support Create of a StagedNetworkPolicy with such prefix
 		return nil, cerrors.ErrorOperationNotSupported{
-			Identifier: conversion.K8sNetworkPolicyNamePrefix,
+			Identifier: names.K8sNetworkPolicyNamePrefix,
 			Operation:  "Update",
 			Reason:     "Cannot creaupdatete a StagedNetworkPolicy with that name prefix",
 		}
@@ -162,10 +161,10 @@ func (r stagedNetworkPolicies) Update(ctx context.Context, res *apiv3.StagedNetw
 
 // Delete takes name of the StagedNetworkPolicy and deletes it. Returns an error if one occurs.
 func (r stagedNetworkPolicies) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.StagedNetworkPolicy, error) {
-	if strings.HasPrefix(name, conversion.K8sNetworkPolicyNamePrefix) {
+	if strings.HasPrefix(name, names.K8sNetworkPolicyNamePrefix) {
 		// We don't support Create of a StagedNetworkPolicy with such prefix
 		return nil, cerrors.ErrorOperationNotSupported{
-			Identifier: conversion.K8sNetworkPolicyNamePrefix,
+			Identifier: names.K8sNetworkPolicyNamePrefix,
 			Operation:  "Delete",
 			Reason:     "No staged network policies should be available to be deleted for the knp prefix",
 		}

@@ -28,6 +28,7 @@ import (
 
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 )
 
@@ -52,6 +53,7 @@ func init() {
 	tierOrder := float64(100.0)
 	defaultTierOrder := api.DefaultTierOrder
 	defaultTierBadOrder := float64(10.0)
+	anpTierOrder := api.AdminNetworkPolicyTierOrder
 
 	// We need pointers to bools, so define the values here.
 	Vtrue := true
@@ -2957,17 +2959,26 @@ func init() {
 			},
 		}, false),
 		Entry("Tier: disallow default tier with an invalid order", &api.Tier{
-			ObjectMeta: v1.ObjectMeta{Name: "default"},
+			ObjectMeta: v1.ObjectMeta{Name: names.DefaultTierName},
 			Spec: api.TierSpec{
 				Order: &defaultTierBadOrder,
 			},
 		}, false),
 		Entry("Tier: allow default tier with the predefined order", &api.Tier{
-			ObjectMeta: v1.ObjectMeta{Name: "default"},
+			ObjectMeta: v1.ObjectMeta{Name: names.DefaultTierName},
 			Spec: api.TierSpec{
 				Order: &defaultTierOrder,
-			},
-		}, true),
+			}}, true),
+		Entry("Tier: disallow adminnetworkpolicy tier with an invalid order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.AdminNetworkPolicyTierName},
+			Spec: api.TierSpec{
+				Order: &defaultTierBadOrder,
+			}}, false),
+		Entry("Tier: allow adminnetworkpolicy tier with the predefined order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.AdminNetworkPolicyTierName},
+			Spec: api.TierSpec{
+				Order: &anpTierOrder,
+			}}, true),
 		Entry("Tier: allow a tier with a valid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "platform"},
 			Spec: api.TierSpec{

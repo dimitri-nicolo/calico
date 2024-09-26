@@ -161,3 +161,26 @@ func ProtoIPSetMemberToBPFEntry(id uint64, member string) IPSetEntryInterface {
 	entry := MakeBPFIPSetEntry(id, cidr, port, protocol)
 	return entry
 }
+
+type MapMem map[IPSetEntry]struct{}
+
+func MapMemIter(m MapMem) func(k, v []byte) {
+	ks := len(IPSetEntry{})
+
+	return func(k, v []byte) {
+		var key IPSetEntry
+		copy(key[:ks], k[:ks])
+
+		m[key] = struct{}{}
+	}
+}
+
+func (m MapMem) String() string {
+	var out string
+
+	for k := range m {
+		out += k.String() + "\n"
+	}
+
+	return out
+}

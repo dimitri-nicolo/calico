@@ -79,7 +79,7 @@ func (r *DefaultRuleRenderer) tproxyInputPolicyRules(ipVersion uint8) []generict
 	// Accept packet if policies above set ACCEPT mark.
 	rules = append(rules,
 		generictables.Rule{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:   r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action:  r.filterAllowAction,
 			Comment: []string{"Policy explicitly accepted packet."},
 		},
@@ -129,7 +129,7 @@ func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*generi
 func (r *DefaultRuleRenderer) acceptAlreadyAccepted() []generictables.Rule {
 	return []generictables.Rule{
 		{
-			Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:  r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action: r.filterAllowAction,
 		},
 	}
@@ -217,11 +217,11 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *gene
 		// we're called from the OUTPUT chain, we're forbidden from using the input interface match.
 		// Instead, we rely on the INPUT chain to mark the packet with a per-endpoint mark value
 		// and do our dispatch on that mark value.  So that we don't touch "Class 2" packets, we
-		// mark them with mark pattern IptablesMarkNonCaliEndpoint and exclude them here.  This
+		// mark them with mark pattern MarkNonCaliEndpoint and exclude them here.  This
 		// prevents the default drop at the end of the dispatch chain from dropping non-Calico
 		// traffic.
 		generictables.Rule{
-			Match:  r.NewMatch().NotMarkMatchesWithMask(r.IptablesMarkNonCaliEndpoint, r.IptablesMarkEndpoint),
+			Match:  r.NewMatch().NotMarkMatchesWithMask(r.MarkNonCaliEndpoint, r.MarkEndpoint),
 			Action: r.Jump(ChainDispatchFromEndPointMark),
 		},
 	)
@@ -252,7 +252,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *gene
 		// packet would inherit the mark bits, it would be (incorrectly) treated as a forwarded
 		// packet.
 		generictables.Rule{
-			Action: r.ClearMark(r.IptablesMarkEndpoint),
+			Action: r.ClearMark(r.MarkEndpoint),
 		},
 
 		// If a packet reaches here, one of the following must be true:
@@ -267,7 +267,7 @@ func (r *DefaultRuleRenderer) StaticFilterOutputForwardEndpointMarkChain() *gene
 		// the other case, we don't own the packet so we always return it to the OUTPUT chain
 		// for further processing.
 		generictables.Rule{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:   r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action:  r.filterAllowAction,
 			Comment: []string{"Policy explicitly accepted packet."},
 		},
@@ -323,7 +323,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 	var inputRules []generictables.Rule
 
 	if r.TPROXYModeEnabled() {
-		mark := r.IptablesMarkProxy
+		mark := r.MarkProxy
 		inputRules = append(inputRules,
 			generictables.Rule{
 				Comment: []string{"Police packets towards proxy"},
@@ -475,13 +475,13 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 		// If it is, set endpoint mark and skip "to local host" rules below.
 		inputRules = append(inputRules,
 			generictables.Rule{
-				Action: r.ClearMark(r.IptablesMarkEndpoint),
+				Action: r.ClearMark(r.MarkEndpoint),
 			},
 			generictables.Rule{
 				Action: r.Jump(ChainForwardCheck),
 			},
 			generictables.Rule{
-				Match:  r.NewMatch().MarkNotClear(r.IptablesMarkEndpoint),
+				Match:  r.NewMatch().MarkNotClear(r.MarkEndpoint),
 				Action: r.Return(),
 			},
 		)
@@ -511,7 +511,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *generictables.C
 			Action: r.Jump(ChainDispatchFromHostEndpoint),
 		},
 		generictables.Rule{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:   r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action:  r.filterAllowAction,
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
@@ -766,12 +766,12 @@ func (r *DefaultRuleRenderer) filterFromHEP(ipVersion uint8) []generictables.Rul
 			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
 			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
 			// Similarly, the IPsec bit is used across multiple tables.
-			Action: r.ClearMark(r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)),
+			Action: r.ClearMark(r.allCalicoMarkBits() &^ (r.MarkAccept | r.MarkIPsec)),
 		},
 		{
 			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
 			// was not accepted in a previous raw or pre-DNAT chain.
-			Match:  r.NewMatch().MarkClear(r.IptablesMarkAccept),
+			Match:  r.NewMatch().MarkClear(r.MarkAccept),
 			Action: r.Jump(ChainDispatchFromHostEndPointForward),
 		},
 	}
@@ -803,7 +803,19 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*gene
 	}
 
 	// Jump to from-host-endpoint dispatch chains.
-	rules = append(rules, r.filterFromHEP(ipVersion)...)
+	rules = append(rules,
+		generictables.Rule{
+			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
+			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
+			Action: r.ClearMark(r.allCalicoMarkBits() &^ r.MarkAccept),
+		},
+		generictables.Rule{
+			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
+			// was not accepted in a previous raw or pre-DNAT chain.
+			Match:  r.NewMatch().MarkClear(r.MarkAccept),
+			Action: r.Jump(ChainDispatchFromHostEndPointForward),
+		},
+	)
 
 	// Jump to workload dispatch chains.
 	for _, prefix := range r.WorkloadIfacePrefixes {
@@ -925,14 +937,14 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 func (r *DefaultRuleRenderer) StaticFilterForwardAppendRules() []generictables.Rule {
 	return []generictables.Rule{
 		{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:   r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action:  r.filterAllowAction,
 			Comment: []string{"Policy explicitly accepted packet."},
 		},
-		// Set IptablesMarkAccept bit here, to indicate to our mangle-POSTROUTING chain that this is
+		// Set MarkAccept bit here, to indicate to our mangle-POSTROUTING chain that this is
 		// forwarded traffic and should not be subject to normal host endpoint policy.
 		{
-			Action: r.SetMark(r.IptablesMarkAccept),
+			Action: r.SetMark(r.MarkAccept),
 		},
 	}
 }
@@ -988,7 +1000,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 		// and continue execution in the parent chain (OUTPUT).
 		rules = append(rules,
 			generictables.Rule{
-				Match:  r.NewMatch().MarkNotClear(r.IptablesMarkEndpoint),
+				Match:  r.NewMatch().MarkNotClear(r.MarkEndpoint),
 				Action: r.GoTo(ChainForwardEndpointMark),
 			},
 		)
@@ -1174,7 +1186,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *generictables.
 			Action: r.Jump(ChainDispatchToHostEndpoint),
 		},
 		generictables.Rule{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:   r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action:  r.filterAllowAction,
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
@@ -1228,7 +1240,7 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*gene
 					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
 					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)).
 					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)),
-				Action:  r.SetMaskedMark(r.IptablesMarkEgress, r.IptablesMarkEgress),
+				Action:  r.SetMaskedMark(r.MarkEgress, r.MarkEgress),
 				Comment: []string{"Set mark for egress packet"},
 			},
 		)
@@ -1236,8 +1248,8 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*gene
 		// Save mark to connmark which is used to be restored for subsequent packets in the same connection.
 		egressRules = append(egressRules,
 			generictables.Rule{
-				Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkEgress),
-				Action:  r.SaveConnMark(r.IptablesMarkEgress),
+				Match:   r.NewMatch().MarkSingleBitSet(r.MarkEgress),
+				Action:  r.SaveConnMark(r.MarkEgress),
 				Comment: []string{"Save mark for egress connection"},
 			},
 		)
@@ -1353,7 +1365,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 		rules = append(rules,
 			generictables.Rule{
 				Match:   r.NewMatch().SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)),
-				Action:  r.RestoreConnMark(r.IptablesMarkEgress),
+				Action:  r.RestoreConnMark(r.MarkEgress),
 				Comment: []string{"Restore connmark for pod traffic"},
 			},
 		)
@@ -1365,7 +1377,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			generictables.Rule{
 				Match: r.NewMatch().
 					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDNATOutgoingAllPools)),
-				Action:  r.RestoreConnMark(r.IptablesMarkEgress),
+				Action:  r.RestoreConnMark(r.MarkEgress),
 				Comment: []string{"Restore connmark for external traffic to EGW"},
 			},
 		)
@@ -1385,7 +1397,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			chains = append(chains, &generictables.Chain{
 				Name: ChainManglePostroutingEgress,
 				Rules: []generictables.Rule{{
-					Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkEgress).OutInterface(tunnelDeviceName),
+					Match:  r.NewMatch().MarkSingleBitSet(r.MarkEgress).OutInterface(tunnelDeviceName),
 					Action: r.Checksum(),
 				}},
 			})
@@ -1398,8 +1410,8 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				{
 					Match: r.NewMatch().InInterface("egress.calico"),
 					Action: r.SetMaskedMark(
-						r.IptablesMarkEgress,
-						r.IptablesMarkEgress,
+						r.MarkEgress,
+						r.MarkEgress,
 					),
 					Comment: []string{"Set mark for returning egress packet"},
 				},
@@ -1408,7 +1420,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 	}
 
 	if r.TPROXYModeEnabled() {
-		mark := r.IptablesMarkProxy
+		mark := r.MarkProxy
 
 		// We match in this chain if the packet is either on an established
 		// connection that is proxied and marked accordingly or not.
@@ -1615,7 +1627,7 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *gene
 	// Or if we've already accepted this packet in the raw table.
 	rules = append(rules,
 		generictables.Rule{
-			Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:  r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action: r.mangleAllowAction,
 		},
 	)
@@ -1634,7 +1646,7 @@ func (r *DefaultRuleRenderer) StaticManglePreroutingChain(ipVersion uint8) *gene
 		// In the MarkAccept case, we ACCEPT or RETURN according to
 		// IptablesMangleAllowAction.
 		generictables.Rule{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:   r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action:  r.mangleAllowAction,
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
@@ -1686,17 +1698,17 @@ func (r *DefaultRuleRenderer) StaticManglePostroutingChain(ipVersion uint8) *gen
 	// mangle table is typically used, if at all, for packet manipulations that might need to
 	// apply to our allowed traffic.
 
-	// Allow immediately if IptablesMarkAccept is set.  Our filter-FORWARD chain sets this for
+	// Allow immediately if MarkAccept is set.  Our filter-FORWARD chain sets this for
 	// any packets that reach the end of that chain.  The principle is that we don't want to
 	// apply normal host endpoint policy to forwarded traffic.
 	rules = append(rules, generictables.Rule{
-		Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+		Match:  r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 		Action: r.Return(),
 	})
 
 	// Similarly, avoid applying normal host endpoint policy to IPVS-forwarded traffic.
 	// IPVS-forwarded traffic is identified by having a non-zero endpoint ID in the
-	// IptablesMarkEndpoint bits.  Note: we only need this check for when net.ipv4.vs.conntrack
+	// MarkEndpoint bits.  Note: we only need this check for when net.ipv4.vs.conntrack
 	// is enabled.  When net.ipv4.vs.conntrack is disabled (which is the default),
 	// IPVS-forwarded traffic will fail the ConntrackState("DNAT") match below, and so would
 	// avoid normal host endpoint policy anyway.  But it doesn't hurt to have this additional
@@ -1704,7 +1716,7 @@ func (r *DefaultRuleRenderer) StaticManglePostroutingChain(ipVersion uint8) *gen
 	if r.KubeIPVSSupportEnabled {
 		rules = append(rules,
 			generictables.Rule{
-				Match:  r.NewMatch().MarkNotClear(r.IptablesMarkEndpoint),
+				Match:  r.NewMatch().MarkNotClear(r.MarkEndpoint),
 				Action: r.Return(),
 			},
 		)
@@ -1747,7 +1759,7 @@ func (r *DefaultRuleRenderer) StaticManglePostroutingChain(ipVersion uint8) *gen
 			Action: r.Jump(ChainDispatchToHostEndpoint),
 		},
 		generictables.Rule{
-			Match:   r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:   r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action:  r.Return(),
 			Comment: []string{"Host endpoint policy accepted packet."},
 		},
@@ -1937,7 +1949,7 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 	}
 
 	// Set a mark on the packet if it's from a workload interface.
-	markFromWorkload := r.IptablesMarkScratch0
+	markFromWorkload := r.MarkScratch0
 	for _, ifacePrefix := range r.WorkloadIfacePrefixes {
 		rules = append(rules, generictables.Rule{
 			Match:  r.NewMatch().InInterface(ifacePrefix + r.wildcard),
@@ -1945,10 +1957,10 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 		})
 	}
 
-	if ipVersion == 4 && r.IptablesMarkIPsec != 0 {
+	if ipVersion == 4 && r.MarkIPsec != 0 {
 		rules = append(rules, generictables.Rule{
 			Match:  r.NewMatch().MarkSingleBitSet(markFromWorkload),
-			Action: r.SetMark(r.IptablesMarkIPsec),
+			Action: r.SetMark(r.MarkIPsec),
 		})
 	}
 
@@ -1987,7 +1999,7 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8, nodeLoca
 		// without the mark bit set if the interface wasn't one that we're policing.  We
 		// let those packets fall through to the user's policy.
 		generictables.Rule{
-			Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+			Match:  r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 			Action: r.Allow(),
 		},
 	)
@@ -2048,12 +2060,12 @@ func (r *DefaultRuleRenderer) RPFilter(ipVersion uint8, mark, mask uint32, openS
 }
 
 func (r *DefaultRuleRenderer) allCalicoMarkBits() uint32 {
-	return r.IptablesMarkAccept |
-		r.IptablesMarkPass |
-		r.IptablesMarkScratch0 |
-		r.IptablesMarkScratch1 |
-		r.IptablesMarkIPsec |
-		r.IptablesMarkDNSPolicy
+	return r.MarkAccept |
+		r.MarkPass |
+		r.MarkScratch0 |
+		r.MarkScratch1 |
+		r.MarkIPsec |
+		r.MarkDNSPolicy
 }
 
 func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *generictables.Chain {
@@ -2079,7 +2091,7 @@ func (r *DefaultRuleRenderer) WireguardIncomingMarkChain() *generictables.Chain 
 		})
 	}
 
-	rules = append(rules, generictables.Rule{Match: nil, Action: r.SetMark(r.WireguardIptablesMark)})
+	rules = append(rules, generictables.Rule{Match: nil, Action: r.SetMark(r.WireguardMark)})
 
 	return &generictables.Chain{
 		Name:  ChainSetWireguardIncomingMark,
@@ -2127,11 +2139,11 @@ func (r *DefaultRuleRenderer) dnsLogChain() *generictables.Chain {
 			),
 		},
 	}
-	if r.IptablesMarkSkipDNSPolicyNfqueue != 0 {
+	if r.MarkSkipDNSPolicyNfqueue != 0 {
 		rules = append(rules, generictables.Rule{
 			Action: r.SetMaskedMark(
-				r.IptablesMarkSkipDNSPolicyNfqueue,
-				r.IptablesMarkSkipDNSPolicyNfqueue,
+				r.MarkSkipDNSPolicyNfqueue,
+				r.MarkSkipDNSPolicyNfqueue,
 			),
 		})
 	}
@@ -2170,14 +2182,14 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32, ipVersio
 	if tcBypassMark == 0 {
 		rules = append(rules, []generictables.Rule{
 			{
-				Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+				Match:  r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 				Action: r.Allow(),
 			},
 		}...)
 	} else {
 		rules = append(rules, []generictables.Rule{
 			{
-				Match:  r.NewMatch().MarkSingleBitSet(r.IptablesMarkAccept),
+				Match:  r.NewMatch().MarkSingleBitSet(r.MarkAccept),
 				Action: r.SetMaskedMark(tcBypassMark, 0xffffffff),
 			},
 			{

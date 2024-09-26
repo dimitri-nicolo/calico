@@ -1,6 +1,8 @@
 module github.com/projectcalico/calico
 
-go 1.22.2
+go 1.22.3
+
+toolchain go1.22.7
 
 require (
 	github.com/AppsFlyer/go-sundheit v0.6.0
@@ -125,7 +127,7 @@ require (
 	github.com/tchap/go-patricia/v2 v2.3.1
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tidwall/gjson v1.17.3
-	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
+	github.com/tigera/api v0.0.0-20240708202104-e3f70b269c2c
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
 	github.com/urfave/cli/v2 v2.27.3
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240703200800-b54f85093f4a
@@ -157,7 +159,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.1
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
 	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
 	k8s.io/api v0.29.8
@@ -177,6 +179,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.17.3
 	sigs.k8s.io/kind v0.24.0
 	sigs.k8s.io/knftables v0.0.17
+	sigs.k8s.io/network-policy-api v0.1.5
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -240,7 +243,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/ttrpc v1.2.5 // indirect
 	github.com/corazawaf/libinjection-go v0.2.1 // indirect
-	github.com/coreos/go-iptables v0.7.0 // indirect
+	github.com/coreos/go-iptables v0.7.0
 	github.com/coreos/go-oidc/v3 v3.10.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
@@ -302,7 +305,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/homeport/dyff v1.6.0 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
-	github.com/imdario/mergo v0.3.15 // indirect
+	github.com/imdario/mergo v0.3.15
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
@@ -408,7 +411,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
+	golang.org/x/oauth2 v0.21.0
 	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200121 // indirect

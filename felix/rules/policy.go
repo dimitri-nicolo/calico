@@ -225,8 +225,8 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	matchBlockBuilder := matchBlockBuilder{
 		actions:           r.ActionFactory,
 		newMatch:          r.NewMatch,
-		markAllBlocksPass: r.IptablesMarkScratch0,
-		markThisBlockPass: r.IptablesMarkScratch1,
+		markAllBlocksPass: r.MarkScratch0,
+		markThisBlockPass: r.MarkScratch1,
 	}
 
 	// Port matches.  We only need to render blocks of ports if, in total, there's more than one
@@ -618,7 +618,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	case "", "allow":
 		// If this is not a staged policy then allow needs to set the accept mark.
 		if !staged {
-			mark = r.IptablesMarkAccept
+			mark = r.MarkAccept
 		}
 
 		// NFLOG the allow - we don't do this for untracked due to the performance hit.
@@ -639,7 +639,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 		// If this is not a staged policy then pass (called next-tier in the API for historical reasons) needs to set
 		// the pass mark.
 		if !staged {
-			mark = r.IptablesMarkPass
+			mark = r.MarkPass
 		}
 
 		// NFLOG the pass - we don't do this for untracked due to the performance hit.
@@ -659,7 +659,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	case "deny":
 		// If this is not a staged policy then deny maps to DROP.
 		if !staged {
-			mark = r.IptablesMarkDrop
+			mark = r.MarkDrop
 		}
 
 		nfqueueRule := r.NfqueueRuleDelayDeniedPacket(nil)
@@ -713,10 +713,10 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 
 	// If this is not a staged policy, we have an DNS policy mark bit, and this rule has a DNS match, set the mark to
 	// signal that we may need to nfqueue the packet.
-	if markDNSPolicyRule && r.IptablesMarkDNSPolicy != 0x0 {
+	if markDNSPolicyRule && r.MarkDNSPolicy != 0x0 {
 		finalRules = append(finalRules, generictables.Rule{
 			Match:  r.NewMatch(),
-			Action: r.SetMark(r.IptablesMarkDNSPolicy),
+			Action: r.SetMark(r.MarkDNSPolicy),
 		})
 	}
 

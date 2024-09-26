@@ -66,9 +66,9 @@ var _ = Describe("EgressIPManager", func() {
 
 		dpConfig = Config{
 			RulesConfig: rules.Config{
-				IptablesMarkEgress: 0x200,
-				EgressIPVXLANVNI:   2,
-				EgressIPVXLANPort:  4790,
+				MarkEgress:        0x200,
+				EgressIPVXLANVNI:  2,
+				EgressIPVXLANPort: 4790,
 			},
 			EgressIPRoutingRulePriority: 100,
 			FelixHostname:               "host0",

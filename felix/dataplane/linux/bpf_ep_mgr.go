@@ -364,6 +364,7 @@ type bpfEndpointManager struct {
 	hostNetworkedNATMode hostNetworkedNATMode
 
 	bpfPolicyDebugEnabled bool
+	bpfRedirectToPeer     string
 
 	routeTableV4     *routetable.ClassView
 	routeTableV6     *routetable.ClassView
@@ -429,23 +430,23 @@ func NewTestEpMgr(
 ) (ManagerWithHEPUpdate, error) {
 	return newBPFEndpointManager(nil, config, bpfmaps, true, workloadIfaceRegex, idalloc.New(), idalloc.New(),
 		rules.NewRenderer(rules.Config{
-			BPFEnabled:                  true,
-			IPIPEnabled:                 true,
-			IPIPTunnelAddress:           nil,
-			IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-			IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-			IptablesMarkAccept:          0x8,
-			IptablesMarkPass:            0x10,
-			IptablesMarkScratch0:        0x20,
-			IptablesMarkScratch1:        0x40,
-			IptablesMarkEndpoint:        0xff00,
-			IptablesMarkNonCaliEndpoint: 0x0100,
-			KubeIPVSSupportEnabled:      true,
-			WorkloadIfacePrefixes:       []string{"cali", "tap"},
-			VXLANPort:                   4789,
-			VXLANVNI:                    4096,
+			BPFEnabled:             true,
+			IPIPEnabled:            true,
+			IPIPTunnelAddress:      nil,
+			IPSetConfigV4:          ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+			IPSetConfigV6:          ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			MarkAccept:             0x8,
+			MarkPass:               0x10,
+			MarkScratch0:           0x20,
+			MarkScratch1:           0x40,
+			MarkEndpoint:           0xff00,
+			MarkNonCaliEndpoint:    0x0100,
+			KubeIPVSSupportEnabled: true,
+			WorkloadIfacePrefixes:  []string{"cali", "tap"},
+			VXLANPort:              4789,
+			VXLANVNI:               4096,
 
-			IptablesMarkDrop: 0x80,
+			MarkDrop: 0x80,
 		}),
 		generictables.NewNoopTable(),
 		generictables.NewNoopTable(),
@@ -555,6 +556,7 @@ func newBPFEndpointManager(
 		bpfPolicyDebugEnabled:  config.BPFPolicyDebugEnabled,
 		egwVxlanPort:           uint16(config.EgressIPVXLANPort),
 		egIPEnabled:            config.EgressIPEnabled,
+		bpfRedirectToPeer:      config.BPFRedirectToPeer,
 		polNameToMatchIDs:      map[string]set.Set[polprog.RuleMatchID]{},
 		dirtyRules:             set.New[polprog.RuleMatchID](),
 
@@ -2924,6 +2926,12 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(ifaceName string) *tc.Attach
 		ap.Wg6Port = m.wg6Port
 		ap.NATin = uint32(m.natInIdx)
 		ap.NATout = uint32(m.natOutIdx)
+
+		if m.bpfRedirectToPeer == "Enabled" {
+			ap.RedirectPeer = true
+		} else if (ap.Type == tcdefs.EpTypeTunnel || ap.Type == tcdefs.EpTypeL3Device) && m.bpfRedirectToPeer == "L2Only" {
+			ap.RedirectPeer = false
+		}
 	} else {
 		ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 		ap.EnableTCPStats = m.enableTcpStats
@@ -3055,7 +3063,7 @@ func (m *bpfEndpointManager) extractTiers(tiers []*proto.TierInfo, direction Pol
 				polTier.Policies[i] = policy
 			}
 
-			if endTierDrop && !stagedOnly {
+			if endTierDrop && !stagedOnly && tier.DefaultAction != string(apiv3.Pass) {
 				polTier.EndRuleID = m.endOfTierDropID(dir, tier.Name)
 				polTier.EndAction = polprog.TierEndDeny
 			} else {

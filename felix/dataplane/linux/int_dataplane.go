@@ -195,7 +195,7 @@ type Config struct {
 	DeviceRouteSourceAddressIPv6   net.IP
 	DeviceRouteProtocol            netlink.RouteProtocol
 	RemoveExternalRoutes           bool
-	IptablesRefreshInterval        time.Duration
+	TableRefreshInterval           time.Duration
 	IPSecPolicyRefreshInterval     time.Duration
 	IptablesPostWriteCheckInterval time.Duration
 	IptablesInsertMode             string
@@ -261,6 +261,7 @@ type Config struct {
 	BPFDisableGROForIfaces             *regexp.Regexp
 	BPFExcludeCIDRsFromNAT             []string
 	BPFExportBufferSizeMB              int
+	BPFRedirectToPeer                  string
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
@@ -545,8 +546,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ruleRenderer = rules.NewRenderer(config.RulesConfig)
 	}
 	epMarkMapper := rules.NewEndpointMarkMapper(
-		config.RulesConfig.IptablesMarkEndpoint,
-		config.RulesConfig.IptablesMarkNonCaliEndpoint)
+		config.RulesConfig.MarkEndpoint,
+		config.RulesConfig.MarkNonCaliEndpoint)
 
 	// Auto-detect host MTU.
 	hostMTU, err := findHostMTU(config.MTUIfacePattern)
@@ -594,7 +595,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	iptablesOptions := iptables.TableOptions{
 		HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
 		InsertMode:            config.IptablesInsertMode,
-		RefreshInterval:       config.IptablesRefreshInterval,
+		RefreshInterval:       config.TableRefreshInterval,
 		PostWriteInterval:     config.IptablesPostWriteCheckInterval,
 		LockTimeout:           config.IptablesLockTimeout,
 		LockProbeInterval:     config.IptablesLockProbeInterval,
@@ -604,7 +605,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		OpRecorder:            dp.loopSummarizer,
 	}
 	nftablesOptions := nftables.TableOptions{
-		RefreshInterval:  config.IptablesRefreshInterval,
+		RefreshInterval:  config.TableRefreshInterval,
 		LookPathOverride: config.LookPathOverride,
 		OnStillAlive:     dp.reportHealth,
 		OpRecorder:       dp.loopSummarizer,
@@ -849,21 +850,21 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.RegisterManager(dp.domainInfoStore)
 
 	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket &&
-		config.RulesConfig.IptablesMarkDNSPolicy != 0x0 &&
+		config.RulesConfig.MarkDNSPolicy != 0x0 &&
 		!config.DisableDNSPolicyPacketProcessor {
 
 		// We use mark bits to track packets that go through IPVS; we must
 		// preserve those mark bits when we queue packets or the re-injected
-		// packet will be mishandled.  IptablesMarkEndpoint is essential, the
+		// packet will be mishandled.  MarkEndpoint is essential, the
 		// others "make sense" to preserve but may not be needed.
-		markBitsToPreserve := config.RulesConfig.IptablesMarkEndpoint |
-			config.RulesConfig.IptablesMarkEgress |
+		markBitsToPreserve := config.RulesConfig.MarkEndpoint |
+			config.RulesConfig.MarkEgress |
 			uint32(config.Wireguard.FirewallMark)
 
 		packetProcessor := dnsdeniedpacket.New(
 			uint16(config.DNSPolicyNfqueueID),
 			uint32(config.DNSPolicyNfqueueSize),
-			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue,
+			config.RulesConfig.MarkSkipDNSPolicyNfqueue,
 			markBitsToPreserve,
 		)
 		dp.dnsDeniedPacketProcessor = packetProcessor
@@ -1640,7 +1641,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.ipSecDataplane = ipsec.NewDataplane(
 			config.NodeIP,
 			config.IPSecPSK,
-			config.RulesConfig.IptablesMarkIPsec,
+			config.RulesConfig.MarkIPsec,
 			dp.ipSecPolTable,
 			ikeDaemon,
 			config.IPSecAllowUnsecuredTraffic,
@@ -1686,7 +1687,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config.NfNetlinkBufSize, config.FlowLogsFileIncludeService)
 			collectorPacketInfoReader = nflogrd
 			log.Debug("Stats collection is required, create conntrack reader")
-			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval, config.RulesConfig.IptablesMarkProxy)
+			ctrd := collector.NewNetLinkConntrackReader(felixconfig.DefaultConntrackPollingInterval, config.RulesConfig.MarkProxy)
 			collectorConntrackInfoReader = ctrd
 		}
 
