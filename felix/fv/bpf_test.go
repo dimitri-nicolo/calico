@@ -54,6 +54,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/ifstate"
+	"github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	"github.com/projectcalico/calico/felix/bpf/proxy"
@@ -5289,6 +5290,20 @@ func dumpDNSPfxMap(felix *infrastructure.Felix) dnsresolver.PfxMapMem {
 	im := dnsresolver.DNSPrefixMap()
 	m := make(dnsresolver.PfxMapMem)
 	dumpBPFMap(felix, im, dnsresolver.PfxMapMemIter(m))
+	return m
+}
+
+func dumpIPSetsMap(felix *infrastructure.Felix) ipsets.MapMem {
+	im := ipsets.Map()
+	m := make(ipsets.MapMem)
+	dumpBPFMap(felix, im, ipsets.MapMemIter(m))
+	return m
+}
+
+func dumpIPSets6Map(felix *infrastructure.Felix) ipsets.MapMemV6 {
+	im := ipsets.MapV6()
+	m := make(ipsets.MapMemV6)
+	dumpBPFMap(felix, im, ipsets.MapMemV6Iter(m))
 	return m
 }
 
