@@ -364,12 +364,12 @@ type DefaultRuleRenderer struct {
 
 	Config
 
-	dropRules                []generictables.Rule
-	inputAcceptActions       []generictables.Action
-	filterAllowAction        generictables.Action
-	mangleAllowAction        generictables.Action
-	blockCIDRAction          generictables.Action
-	FilterDenyAction generictables.Action
+	dropRules          []generictables.Rule
+	inputAcceptActions []generictables.Action
+	filterAllowAction  generictables.Action
+	mangleAllowAction  generictables.Action
+	blockCIDRAction    generictables.Action
+	FilterDenyAction   generictables.Action
 
 	NewMatch       func() generictables.MatchCriteria
 	CombineMatches func(m1, m2 generictables.MatchCriteria) generictables.MatchCriteria
@@ -710,7 +710,7 @@ func NewRenderer(config Config) RuleRenderer {
 		filterAllowAction:            filterAllowAction,
 		mangleAllowAction:            mangleAllowAction,
 		blockCIDRAction:              blockCIDRAction,
-		FilterDenyAction:     iptablesFilterDenyAction,
+		FilterDenyAction:             iptablesFilterDenyAction,
 		wildcard:                     wildcard,
 		maxNameLength:                maxNameLength,
 		CombineMatches:               combineMatches,

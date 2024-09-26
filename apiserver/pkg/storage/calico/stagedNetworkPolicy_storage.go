@@ -17,9 +17,9 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
@@ -30,7 +30,7 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*v3.StagedNetworkPolicy)
-		if strings.HasPrefix(res.Name, conversion.K8sNetworkPolicyNamePrefix) {
+		if strings.HasPrefix(res.Name, names.K8sNetworkPolicyNamePrefix) {
 			return nil, cerrors.ErrorOperationNotSupported{
 				Operation:  "create or apply",
 				Identifier: obj,
@@ -42,7 +42,7 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*v3.StagedNetworkPolicy)
-		if strings.HasPrefix(res.Name, conversion.K8sNetworkPolicyNamePrefix) {
+		if strings.HasPrefix(res.Name, names.K8sNetworkPolicyNamePrefix) {
 			return nil, cerrors.ErrorOperationNotSupported{
 				Operation:  "update or apply",
 				Identifier: obj,
@@ -57,7 +57,7 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 	}
 	deleteFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
-		if strings.HasPrefix(name, conversion.K8sNetworkPolicyNamePrefix) {
+		if strings.HasPrefix(name, names.K8sNetworkPolicyNamePrefix) {
 			return nil, cerrors.ErrorOperationNotSupported{
 				Operation:  "delete",
 				Identifier: name,
