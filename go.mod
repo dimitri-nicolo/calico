@@ -447,7 +447,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
 
-require github.com/projectcalico/api v0.0.0-20240708202104-e3f70b269c2c
+require github.com/tigera/api v0.0.0-20240708202104-e3f70b269c2c
 
 require github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
 
