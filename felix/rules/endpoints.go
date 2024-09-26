@@ -663,7 +663,6 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					if nfqueueRule != nil {
 						rules = append(rules, *nfqueueRule)
 					}
-
 					// When rendering normal and forward rules, if no policy marked the packet as "pass", drop the
 					// packet.
 					//

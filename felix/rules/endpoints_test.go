@@ -1264,6 +1264,194 @@ var _ = Describe("Endpoints", func() {
 				})))
 			})
 
+			It("should render a fully-loaded workload endpoint with tier defaultAction is Pass", func() {
+				Expect(renderer.WorkloadEndpointToIptablesChains(
+					"cali1234",
+					epMarkMapper,
+					true,
+					tiersToSinglePolGroups([]*proto.TierInfo{{
+						Name:            "default",
+						DefaultAction:   "Pass",
+						IngressPolicies: []string{"ai", "bi"},
+						EgressPolicies:  []string{"ae", "be"},
+					}}),
+					[]string{"prof1", "prof2"},
+					NotAnEgressGateway,
+					0,
+					UndefinedIPVersion,
+				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
+					{
+						Name: "cali-tw-cali1234",
+						Rules: []generictables.Rule{
+							// conntrack rules.
+							{
+								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{},
+							},
+							{
+								Match:  Match().ConntrackState("INVALID"),
+								Action: denyAction,
+							},
+
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: 0x98},
+							},
+
+							{
+								Comment: []string{"Start of tier default"},
+								Match:   Match(),
+								Action:  ClearMarkAction{Mark: 0x10},
+							},
+							{
+								Match:  Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-pi-default/ai"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"},
+							},
+							{
+								Match:  Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-pi-default/bi"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"},
+							},
+							{
+								Match:  Match().MarkClear(0x10),
+								Action: NflogAction{Group: 1, Prefix: "PPI|default"},
+							},
+							{
+								Match:  Match(),
+								Action: JumpAction{Target: "cali-pri-prof1"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"},
+							},
+							{
+								Match:  Match(),
+								Action: JumpAction{Target: "cali-pri-prof2"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{
+								Match:  Match(),
+								Action: NflogAction{Group: 1, Prefix: "DRI"},
+							},
+							{
+								Match:   Match(),
+								Action:  denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+						},
+					},
+					{
+						Name: "cali-fw-cali1234",
+						Rules: []generictables.Rule{
+							// conntrack rules.
+							{
+								Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
+								Action: AcceptAction{},
+							},
+							{
+								Match:  Match().ConntrackState("INVALID"),
+								Action: denyAction,
+							},
+
+							{
+								Match:  Match(),
+								Action: ClearMarkAction{Mark: 0x98},
+							},
+							dropVXLANRule,
+							dropIPIPRule,
+
+							{
+								Comment: []string{"Start of tier default"},
+								Match:   Match(),
+								Action:  ClearMarkAction{Mark: 0x10},
+							},
+							{
+								Match:  Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-po-default/ae"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"},
+							},
+							{
+								Match:  Match().MarkClear(0x10),
+								Action: JumpAction{Target: "cali-po-default/be"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if policy accepted"},
+							},
+							{
+								Match:  Match().MarkClear(0x10),
+								Action: NflogAction{Group: 2, Prefix: "PPE|default"},
+							},
+							{
+								Match:  Match(),
+								Action: JumpAction{Target: "cali-pro-prof1"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"},
+							},
+							{
+								Match:  Match(),
+								Action: JumpAction{Target: "cali-pro-prof2"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x8),
+								Action:  ReturnAction{},
+								Comment: []string{"Return if profile accepted"},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{
+								Match:  Match(),
+								Action: NflogAction{Group: 2, Prefix: "DRE"},
+							},
+							{
+								Match:   Match(),
+								Action:  denyAction,
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+						},
+					},
+					{
+						Name: "cali-sm-cali1234",
+						Rules: []generictables.Rule{
+							{
+								Match:  Match(),
+								Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00},
+							},
+						},
+					},
+				})))
+			})
+
 			It("should render a host endpoint", func() {
 				actual := renderer.HostEndpointToFilterChains("eth0",
 					tiersToSinglePolGroups([]*proto.TierInfo{{
@@ -2576,7 +2764,8 @@ func trimSMChain(ipvsEnable bool, chains []*generictables.Chain) []*generictable
 func tiersToSinglePolGroups(tiers []*proto.TierInfo) (tierGroups []TierPolicyGroups) {
 	for _, t := range tiers {
 		tg := TierPolicyGroups{
-			Name: t.Name,
+			Name:          t.Name,
+			DefaultAction: t.DefaultAction,
 		}
 		for _, n := range t.IngressPolicies {
 			tg.IngressPolicies = append(tg.IngressPolicies, &PolicyGroup{
