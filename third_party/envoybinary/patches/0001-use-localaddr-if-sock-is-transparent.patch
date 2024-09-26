@@ -88,7 +88,7 @@ index 1a60b7e6eb51..0173d27fa826 100644
 -    Network::Address::InstanceConstSharedPtr original_local_address = getOriginalDst(socket);
 +    Network::Address::InstanceConstSharedPtr original_local_address;
 +
-+    if (Network::Utility::isTransparent(socket)) {
++    if (strncmp(std::getenv("TIGERA_TPROXY"), "Enabled", 7) == 0 && Network::Utility::isTransparent(socket)) {
 +      original_local_address = socket.connectionInfoProvider().localAddress();
 +    } else {
 +      original_local_address = getOriginalDst(socket);
