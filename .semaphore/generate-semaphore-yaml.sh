@@ -22,6 +22,15 @@ sed -i "s/\${WEEKLY_RUN}/false/g" semaphore.yml
 sed -i "s/\${FORCE_RUN}/true/g" semaphore-scheduled-builds.yml
 sed -i "s/\${WEEKLY_RUN}/false/g" semaphore-scheduled-builds.yml
 
+current_branch=$(git branch --show-current)
+if [[ $current_branch == release-calient-v* ]]; then
+    branch_stanza=", default_branch: '${current_branch}'"
+else
+    branch_stanza=""
+fi
+
+sed -i "s/\${DEFAULT_BRANCH}/${branch_stanza}/" semaphore.yml semaphore-scheduled-builds.yml
+
 # generate semaphore yaml file for third-party builds
 out_file=semaphore-third-party-builds.yml
 

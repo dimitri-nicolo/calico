@@ -1,6 +1,6 @@
 - name: Publish tigera/kibana images
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
@@ -19,7 +19,7 @@
           - make -C third_party/kibana cd CONFIRM=true
 - name: Publish tigera/kibana multi-arch manifests
   run:
-    when: "${WEEKLY_RUN} or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+    when: "${WEEKLY_RUN} or change_in(['/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'${DEFAULT_BRANCH}})"
   dependencies:
     - Publish tigera/kibana images
   task:
@@ -35,7 +35,7 @@
 
 - name: kibana
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/kibana/', '/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/kibana/', '/third_party/kibana'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Publish tigera/kibana multi-arch manifests
   task:
