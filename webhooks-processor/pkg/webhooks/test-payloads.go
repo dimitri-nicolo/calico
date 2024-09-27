@@ -9,7 +9,7 @@ import (
 var (
 	webhookTestPayloads = map[string]lsApi.Event{
 		"ga": {
-			Description: "GlobalAlert description",
+			Description: "[TEST] The GlobalAlert description",
 			Time:        lsApi.TimestampOrDate{},
 			Origin:      "your-global-alert",
 			Severity:    100,
@@ -23,7 +23,7 @@ var (
 			},
 		},
 		"dpi": {
-			Description:  "",
+			Description:  "[TEST] Deep Packet Inspection found a matching snort rule(s) for some packets in your network",
 			Time:         lsApi.TimestampOrDate{},
 			Origin:       "dpi.default/default-namespace-all-endpoints",
 			AttackVector: "Network",
