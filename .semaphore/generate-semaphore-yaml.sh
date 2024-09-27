@@ -66,8 +66,6 @@ sed -i "s/\${WEEKLY_RUN}/false/g" semaphore.yml
 sed -i "s/\${FORCE_RUN}/true/g" semaphore-scheduled-builds.yml
 sed -i "s/\${WEEKLY_RUN}/false/g" semaphore-scheduled-builds.yml
 
-sed -i "s/\${DEFAULT_BRANCH}/${branch_stanza}/" semaphore.yml semaphore-scheduled-builds.yml
-
 # generate semaphore yaml file for third-party builds
 out_file=semaphore-third-party-builds.yml
 
@@ -84,3 +82,9 @@ cat semaphore.yml.d/blocks/30-fluentd.yml >>$out_file
 
 sed -i "s/\${FORCE_RUN}/true/g" semaphore-third-party-builds.yml
 sed -i "s/\${WEEKLY_RUN}/true/g" semaphore-third-party-builds.yml
+
+# Add the `default_branch` parameter to `change_in` clauses
+sed -i "s/\${DEFAULT_BRANCH}/${branch_stanza}/" \
+          semaphore.yml \
+          semaphore-scheduled-builds.yml \
+          semaphore-third-party-builds.yml
