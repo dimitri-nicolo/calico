@@ -322,12 +322,12 @@ endif
 		python:3 \
 		bash -c '/usr/local/bin/python release/get-contributors.py >> /code/AUTHORS.md'
 
-hack/release/release:
-	$(call build_binary, hack/release/cmd/main.go, $@)
+release/release:
+	$(MAKE) -C release
 
-bin/metadata.yaml: hack/release/release
+bin/metadata.yaml: release/release
 	mkdir -p bin
-	./hack/release/release -metadata -dir bin/
+	./release/release release metadata --dir bin/
 
 ###############################################################################
 # Post-release validation

@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -228,6 +229,39 @@ func hashreleaseSubCommands(cfg *config.Config, runner *registry.DockerRunner) [
 				return nil
 			},
 		},
+
+		// Build metadata for a release.
+		{
+			Name:  "metadata",
+			Usage: "Generate metadata for a hashrelease",
+			Flags: []cli.Flag{
+				&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to"},
+				&cli.StringFlag{Name: "versions-file", Usage: "Path to the versions file"},
+			},
+			Action: func(c *cli.Context) error {
+				configureLogging("hashrelease-metadata.log")
+				versions, err := hashrelease.LoadPinnedVersionFile(c.String("versions-file"))
+				if err != nil {
+					return err
+				}
+				logrus.WithField("version", versions).Info("versions file")
+				imgs := []string{}
+				for _, c := range versions.Components {
+					image := c.Image
+					version := c.Version
+					if image != "" && version != "" {
+						image := strings.TrimPrefix(image, "tigera/")
+						imgs = append(imgs, fmt.Sprintf("%s:%s", image, version))
+					}
+				}
+				opts := []builder.Option{
+					builder.WithRepoRoot(cfg.RepoRootDir),
+					builder.WithVersions(versions.Title, versions.TigeraOperator.Version),
+				}
+				r := builder.NewReleaseBuilder(opts...)
+				return r.BuildMetadata(c.String("dir"), imgs...)
+			},
+		},
 	}
 }
 
@@ -320,6 +354,36 @@ func releaseSubCommands(cfg *config.Config) []*cli.Command {
 				}
 				r := builder.NewReleaseBuilder(opts...)
 				return r.PublishRelease()
+			},
+		},
+
+		// Build metadata for a hashrelease.
+		{
+			Name:  "metadata",
+			Usage: "Generate metadata for release",
+			Flags: []cli.Flag{
+				&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to"},
+			},
+			Action: func(c *cli.Context) error {
+				configureLogging("release-metadata.log")
+
+				// Determine the versions to use for the release.
+				ver, err := version.DetermineReleaseVersion(version.GitVersion(), cfg.DevTagSuffix)
+				if err != nil {
+					return err
+				}
+				operatorVer, err := version.DetermineOperatorVersion(cfg.RepoRootDir)
+				if err != nil {
+					return err
+				}
+
+				// Configure the builder.
+				opts := []builder.Option{
+					builder.WithRepoRoot(cfg.RepoRootDir),
+					builder.WithVersions(ver.FormattedString(), operatorVer.FormattedString()),
+				}
+				r := builder.NewReleaseBuilder(opts...)
+				return r.BuildMetadata(c.String("dir"))
 			},
 		},
 	}

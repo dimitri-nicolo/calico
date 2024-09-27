@@ -180,7 +180,7 @@ func releaseImages(version, operatorVersion, registry string, overrides []string
 		fmt.Sprintf("%spod2daemon-flexvol:%s", registry, version),
 		fmt.Sprintf("%scsi:%s", registry, version),
 		fmt.Sprintf("%snode-driver-registrar:%s", registry, version),
-		fmt.Sprintf("%skey-cert-provisioner:%s", registry, "1.15.1"), // TODO
+		fmt.Sprintf("%skey-cert-provisioner:%s", registry, version),
 		fmt.Sprintf("%sfluentd-windows:%s", registry, version),
 		fmt.Sprintf("%scni-windows:%s", registry, version),
 		fmt.Sprintf("%scnx-node-windows:%s", registry, version),

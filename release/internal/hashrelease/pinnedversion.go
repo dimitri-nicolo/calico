@@ -70,15 +70,23 @@ type PinnedVersionData struct {
 	ReleaseBranch  string
 }
 
+type CalicoComponent struct {
+	MinorVersion string `yaml:"minor_version"`
+	ArchivePath  string `yaml:"archive_path"`
+}
+
 // PinnedVersion represents an entry in pinned version file.
 type PinnedVersion struct {
 	Title          string               `yaml:"title"`
-	ManifestURL    string               `yaml:"manifest_url"`
+	HelmRelease    string               `yaml:"helmRelease"`
+	ManifestURL    string               `yaml:"manifests_url"`
 	ReleaseName    string               `yaml:"release_name"`
 	Note           string               `yaml:"note"`
-	Hash           string               `yaml:"full_hash"`
+	Hash           string               `yaml:"full_hash,omitempty"`
+	Calico         CalicoComponent      `yaml:"calico"`
 	TigeraOperator Component            `yaml:"tigera-operator"`
 	Components     map[string]Component `yaml:"components"`
+	DockerRepo     string               `yaml:"dockerRepo"`
 }
 
 // PinnedVersionFile represents the pinned version file.
@@ -90,6 +98,19 @@ func pinnedVersionFilePath(outputDir string) string {
 
 func operatorComponentsFilePath(outputDir string) string {
 	return filepath.Join(outputDir, operatorComponentsFileName)
+}
+
+func LoadPinnedVersionFile(pinnedVersionPath string) (PinnedVersion, error) {
+	var pinnedversion PinnedVersionFile
+	pinnedVersionData, err := os.ReadFile(pinnedVersionPath)
+	if err != nil {
+		return PinnedVersion{}, err
+	}
+	err = yaml.Unmarshal([]byte(pinnedVersionData), &pinnedversion)
+	if err != nil {
+		return PinnedVersion{}, err
+	}
+	return pinnedversion[0], nil
 }
 
 // GeneratePinnedVersionFile generates the pinned version file.
