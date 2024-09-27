@@ -231,6 +231,25 @@ bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 # In order to make use of complex structures like protobuf.google.timestamp, we need to link the
 # protobuf google types when generating go code from protobuf messages
 protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
+	if [ "$(SKIP_PROTOBUF)" = "true" ]; then \
+  	  echo "Skipping build of protobufs."; \
+  	else \
+	  docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
+	  	  -v $(CURDIR):/code -v $(CURDIR)/proto:/src:rw \
+	  	      $(PROTOC_CONTAINER) \
+	  	      --gogofaster_out=\
+	Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,\
+	plugins=grpc:. \
+	felixbackend.proto && \
+	  # Make sure the generated code won't cause a static-checks failure. \
+	  $(MAKE) fix; \
+	fi
+
+protobuf2: proto/felixbackend.proto
 	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
 		  -v $(CURDIR):/code -v $(CURDIR)/proto:/src:rw \
 		      $(PROTOC_CONTAINER) \
