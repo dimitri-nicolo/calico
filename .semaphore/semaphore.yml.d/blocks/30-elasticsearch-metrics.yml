@@ -1,6 +1,6 @@
 - name: elasticsearch-metrics
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/elasticsearch-metrics/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/elasticsearch-metrics/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
   dependencies:
     - Prerequisites
   task:
