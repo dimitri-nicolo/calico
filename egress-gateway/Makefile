@@ -49,7 +49,7 @@ clean:
 # Protobufs, defer to felix's makefile.
 ###############################################################################
 
-../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
+protobuf ../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
 	$(MAKE) --directory ../felix protobuf
 
 ###############################################################################

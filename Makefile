@@ -84,6 +84,7 @@ generate:
 	$(MAKE) -C felix gen-files
 	$(MAKE) -C calicoctl gen-crds
 	$(MAKE) -C app-policy protobuf
+	$(MAKE) -C egress-gateway protobuf
 	$(MAKE) gen-manifests
 
 gen-manifests: bin/helm bin/yq

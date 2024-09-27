@@ -50,13 +50,12 @@
         - cd felix
         - cache restore go-pkg-cache
         - cache restore go-mod-cache
-        # We don't have an ARM64 protoc image, but we also know that the
-        # file is fresh because the pre-flight check verifies that.
-        - touch proto/felixbackend.pb.go
     jobs:
       - name: Build binary
         commands:
-          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
+          # Skip building protofbufs because the build fails on ARM due to missing image.
+          # We know they are up-to-date because an earlier build job checks already.
+          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64 SKIP_PROTOBUF=true
 
 - name: "Felix: Build Windows binaries"
   run:
