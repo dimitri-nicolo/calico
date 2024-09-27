@@ -8,6 +8,32 @@ import (
 
 var (
 	webhookTestPayloads = map[string]lsApi.Event{
+		"ga": {
+			Description: "GlobalAlert description",
+			Time:        lsApi.TimestampOrDate{},
+			Origin:      "your-global-alert",
+			Severity:    100,
+			MitreIDs:    &[]string{"n/a"},
+			MitreTactic: "n/a",
+			Mitigations: &[]string{"n/a"},
+			Record: map[string]any{
+				"source_name_aggr": "jump-pod",
+				"source_namespace": "default",
+				"sum":              122,
+			},
+		},
+		"dpi": {
+			Description:  "",
+			Time:         lsApi.TimestampOrDate{},
+			Origin:       "dpi.default/default-namespace-all-endpoints",
+			AttackVector: "Network",
+			Severity:     100,
+			Record: map[string]any{
+				"snort_alert":              "24/09/27-08:24:10.080704 [**] [1:408:8] \"PROTOCOL-ICMP Echo Reply\" [**] [Classification: Misc activity] [Priority: 3] {ICMP} 8.8.8.8 -\u003e 192.168.142.9",
+				"snort_signature_id":       "408",
+				"snort_signature_revision": "8",
+			},
+		},
 		"waf": {
 			Description:  "[TEST] Traffic inside your cluster triggered Web Application Firewall rules.",
 			Time:         lsApi.TimestampOrDate{},
