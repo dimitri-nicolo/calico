@@ -35,8 +35,10 @@ require (
 	github.com/containernetworking/plugins v1.5.1
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6
 	github.com/corazawaf/coraza/v3 v3.2.1
+	github.com/coreos/go-iptables v0.7.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-semver v0.3.1
+	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/dexidp/dex v0.0.0-20240603194342-23efe9200ccd
 	github.com/dexidp/dex/api/v2 v2.1.1-0.20240603194342-23efe9200ccd
@@ -77,6 +79,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/gruntwork-io/terratest v0.47.0
 	github.com/hashicorp/yamux v0.1.1
+	github.com/imdario/mergo v0.3.15
 	github.com/ishidawataru/sctp v0.0.0-20230406120618-7ff4192f6ff2
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/jcchavezs/mergefs v0.0.0-20230503083351-07f27d256761
@@ -141,6 +144,7 @@ require (
 	golang.org/x/crypto v0.26.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/net v0.28.0
+	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.24.0
 	golang.org/x/text v0.17.0
@@ -228,6 +232,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.4 // indirect
 	github.com/beevik/etree v1.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -243,9 +248,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/ttrpc v1.2.5 // indirect
 	github.com/corazawaf/libinjection-go v0.2.1 // indirect
-	github.com/coreos/go-iptables v0.7.0
 	github.com/coreos/go-oidc/v3 v3.10.0 // indirect
-	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
@@ -305,7 +308,6 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/homeport/dyff v1.6.0 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
-	github.com/imdario/mergo v0.3.15
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
@@ -411,7 +413,6 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/oauth2 v0.21.0
 	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200121 // indirect
@@ -446,8 +447,6 @@ require (
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
-
-require github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
 
 replace (
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
