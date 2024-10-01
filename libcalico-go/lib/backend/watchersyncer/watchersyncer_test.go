@@ -1048,7 +1048,6 @@ func (c *fakeClient) Clean() error {
 
 func (c *fakeClient) Close() error {
 	panic("should not be called")
-	return nil
 }
 
 func (c *fakeClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {

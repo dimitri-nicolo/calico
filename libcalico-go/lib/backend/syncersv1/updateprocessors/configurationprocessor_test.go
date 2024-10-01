@@ -458,7 +458,7 @@ var _ = FDescribe("Test the generic configuration update processor and the concr
 		Entry("Non-default settings for DNS policy config",
 			func(fc *apiv3.FelixConfiguration) {
 				fc.Spec.DNSCacheFile = "/dnsinfo.txt"
-				oneHour := metav1.Duration{time.Hour}
+				oneHour := metav1.Duration{Duration: time.Hour}
 				fc.Spec.DNSCacheSaveInterval = &oneHour
 				myServers := []string{"1.2.3.4", "5.6.7.8"}
 				fc.Spec.DNSTrustedServers = &myServers
@@ -480,7 +480,7 @@ var _ = FDescribe("Test the generic configuration update processor and the concr
 		),
 		Entry("Non-default settings for DNS logging config",
 			func(fc *apiv3.FelixConfiguration) {
-				oneHour := metav1.Duration{time.Hour}
+				oneHour := metav1.Duration{Duration: time.Hour}
 				fc.Spec.DNSLogsFlushInterval = &oneHour
 				disabled := false
 				fc.Spec.DNSLogsFileEnabled = &disabled
@@ -590,5 +590,5 @@ func checkExpectedConfigs(kvps []*model.KVPair, dataType int, expectedNum int, e
 	}
 
 	By(" - checking all expected values were accounted for")
-	ExpectWithOffset(1, ev).To(HaveLen(0), fmt.Sprintf("config name missing in response"))
+	ExpectWithOffset(1, ev).To(HaveLen(0), "config name missing in response")
 }
