@@ -10,9 +10,9 @@ COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 RUN microdnf install -y shadow-utils
 
-FROM envoyproxy/envoy:v1.29.0 AS envoy
+FROM envoyproxy/envoy:v1.29.9 AS envoy
 
-FROM ${THIRD_PARTY_REGISTRY}/envoybinary:v1.29.0 AS envoybinary
+FROM ${THIRD_PARTY_REGISTRY}/envoybinary:v1.29.9 AS envoybinary
 
 FROM scratch AS source
 
