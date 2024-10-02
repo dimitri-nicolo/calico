@@ -16,6 +16,9 @@ ARG UBI8_IMAGE
 
 FROM ${UBI8_IMAGE} AS builder
 
+# Update base packages to pick up security updates. 
+RUN microdnf upgrade
+
 # Embedding iptables
 RUN microdnf update && microdnf install findutils iptables && \
   ldd /sbin/iptables | tr -s '[:blank:]' '\n' | grep '^/' | \
