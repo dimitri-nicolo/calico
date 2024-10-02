@@ -8,6 +8,9 @@ FROM ${UBI9_IMAGE} AS ubi
 
 COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
+# Update base packages to pick up security updates. 
+RUN microdnf upgrade
+
 RUN microdnf install -y shadow-utils
 
 FROM envoyproxy/envoy:v1.29.9 AS envoy
