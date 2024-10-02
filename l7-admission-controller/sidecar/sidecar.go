@@ -179,6 +179,12 @@ func generateEnvoyContainer(image string, attrs map[string]interface{}) ([]map[s
 				"containerPort": 16001,
 			},
 		},
+		"env": []map[string]interface{}{
+			{
+				"name":  "TIGERA_TPROXY",
+				"value": "Disabled",
+			},
+		},
 		"startupProbe": map[string]interface{}{
 			"tcpSocket": map[string]interface{}{
 				"port": 16001,
