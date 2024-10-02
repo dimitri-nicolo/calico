@@ -5,7 +5,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoybinary
 ENVOYBINARY_IMAGE ?= envoybinary
 BUILD_IMAGES ?= $(ENVOYBINARY_IMAGE)
 
-ENVOY_VERSION=v1.29.0
+ENVOY_VERSION=v1.29.9
 # https://github.com/envoyproxy/envoy/issues/2181
 ENVOY_COMMIT=a6d1d66a62b985baed414ba90ad0daebfc074664
 
