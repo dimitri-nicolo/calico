@@ -171,7 +171,6 @@ require (
 	k8s.io/apimachinery v0.29.9
 	k8s.io/apiserver v0.29.9
 	k8s.io/client-go v0.29.9
-	k8s.io/code-generator v0.29.9
 	k8s.io/component-base v0.29.9
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kube-aggregator v0.29.9
@@ -412,7 +411,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200121 // indirect
@@ -435,7 +433,6 @@ require (
 	k8s.io/cri-api v0.29.9 // indirect
 	k8s.io/csi-translation-lib v0.29.9 // indirect
 	k8s.io/dynamic-resource-allocation v0.29.9 // indirect
-	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/kms v0.29.9 // indirect
 	k8s.io/kube-scheduler v0.29.9 // indirect
 	k8s.io/kubelet v0.29.9 // indirect
