@@ -16,8 +16,8 @@ ARG UBI8_IMAGE
 
 FROM ${UBI8_IMAGE} AS builder
 
-# Embedding iptables
-RUN microdnf update && microdnf install findutils iptables && \
+# Update base packages to pick up security updates and embedding iptables
+RUN microdnf upgrade && microdnf install findutils iptables && \
   ldd /sbin/iptables | tr -s '[:blank:]' '\n' | grep '^/' | \
   xargs -I % sh -c 'mkdir -p $(dirname /deps%); cp % /deps%;'
 
