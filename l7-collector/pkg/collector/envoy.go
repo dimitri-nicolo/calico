@@ -15,6 +15,8 @@ import (
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/nxadm/tail"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
@@ -248,11 +250,21 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	if timeToLastUpstreamTxByte == nil {
 		timeToLastUpstreamTxByte = &duration.Duration{}
 	}
+	startTime := logMsg.GetCommonProperties().GetStartTime()
+	duration := logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte()
+	if duration == nil {
+		duration = durationpb.New(time.Since(startTime.AsTime()))
+	}
+	responseCode := logMsg.Response.GetResponseCode()
+	if responseCode == nil {
+		responseCode = wrapperspb.UInt32(504)
+	}
+
 	entry := EnvoyLog{
 		Reporter:            DestinationEnvoyReporter,
-		StartTime:           logMsg.GetCommonProperties().GetStartTime().String(),
-		Duration:            int32(logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte().Nanos / 1000000),
-		ResponseCode:        int32(logMsg.Response.GetResponseCode().Value),
+		StartTime:           startTime.String(),
+		Duration:            int32(duration.Nanos / 1000000),
+		ResponseCode:        int32(responseCode.Value),
 		BytesSent:           int32(logMsg.Request.RequestBodyBytes + logMsg.Request.RequestHeadersBytes),
 		BytesReceived:       int32(logMsg.Response.ResponseBodyBytes + logMsg.Response.ResponseHeadersBytes),
 		UserAgent:           logMsg.Request.RequestHeaders["user-agent"],
@@ -269,8 +281,8 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 		SrcPort:             int32(logMsg.GetCommonProperties().GetDownstreamRemoteAddress().GetSocketAddress().GetPortValue()),
 		DstPort:             int32(logMsg.GetCommonProperties().GetDownstreamLocalAddress().GetSocketAddress().GetPortValue()),
 		Count:               1,
-		DurationMax:         int32(logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte().Nanos / 1000000),
-		Latency:             int32(logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte().Nanos / 1000000),
+		DurationMax:         int32(duration.Nanos / 1000000),
+		Latency:             int32(duration.Nanos / 1000000),
 	}
 	ec.batch.Insert(entry)
 	key := TupleKeyFromEnvoyLog(entry)

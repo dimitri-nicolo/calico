@@ -527,6 +527,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 		}
+	} else if !dataplaneFeatures.DNSPolicyInlineMode {
+		config.BPFDNSPolicyMode = apiv3.BPFDNSPolicyModeNoDelay
+		log.Warning("Kernel is too old to support BPFDNSPolicyModeInline. Requires at least 5.17")
 	}
 
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
@@ -3348,13 +3351,15 @@ func startBPFDataplaneComponents(
 	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, bpfmaps.IpsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer)
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
-	tracker, err := dnsresolver.NewDomainTracker(func(id string) uint64 {
-		return ipSets.IDStringToUint64(id)
-	})
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create BPF domain tracker.")
+	if config.BPFDNSPolicyMode == apiv3.BPFDNSPolicyModeInline {
+		tracker, err := dnsresolver.NewDomainTracker(func(id string) uint64 {
+			return ipSets.IDStringToUint64(id)
+		})
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create BPF domain tracker.")
+		}
+		ipSetsMgr.AddDomainTracker(tracker)
 	}
-	ipSetsMgr.AddDomainTracker(tracker)
 
 	if ipFamily == proto.IPVersion_IPV4 {
 		// Create an 'ipset' to represent trusted DNS servers.

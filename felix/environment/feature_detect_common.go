@@ -23,6 +23,10 @@ type Features struct {
 	// KernelSideRouteFiltering is true if the kernel supports filtering netlink route dumps kernel-side.
 	// This is much more efficient.
 	KernelSideRouteFiltering bool
+
+	// Entreprise
+
+	DNSPolicyInlineMode bool
 }
 
 type FeatureDetectorIface interface {
