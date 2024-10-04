@@ -13,7 +13,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	coraza "github.com/corazawaf/coraza/v3"
 	corazatypes "github.com/corazawaf/coraza/v3/types"
 
@@ -24,7 +24,6 @@ import (
 	code "google.golang.org/genproto/googleapis/rpc/code"
 	status "google.golang.org/genproto/googleapis/rpc/status"
 
-	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
@@ -62,8 +61,24 @@ func New(files, directives []string, tproxyEnabled bool, evp *wafEventsPipeline)
 	}
 	cfg := coraza.NewWAFConfig().
 		WithRootFS(mergefs.Merge(
-			coreruleset.FS,
+			// Add mergefs OSFS first to avoid "invalid argument" error from golang 1.23+.
+			//
+			// Since golang 1.23 io/fs.SubFS, the error returned from Sub() call is changed
+			// to ErrInvalid [1] (from "invalid name"). This change escapes mergefs ReadFile
+			// error suppression in [2] so that it causes Coraza WAF initialization [3] to fail.
+			// Reordering mergefsio.OSFS to the first will use os.ReadFile [4] for on-disk
+			// configurations. Once the on-disk config is read successfully, mergefs ReaFile
+			// won't retry Coraza ReadFile [5] so that ErrInvalid is avoided. io/fs ValidPath
+			// check won't allow leading slash [6] and this is where the error is from.
+			//
+			// [1] https://github.com/golang/go/commit/bf821f65cfd61dcc431922eea2cb97ce0825d60c
+			// [2] https://github.com/jcchavezs/mergefs/blob/07f27d25676181074133e7573825402b88bf2f99/readfile.go#L23
+			// [3] https://github.com/corazawaf/coraza/blob/34cdde87ae4d3754e8da080387e0511b779fc228/waf.go#L64
+			// [4] https://github.com/jcchavezs/mergefs/blob/07f27d25676181074133e7573825402b88bf2f99/io/os.go#L20
+			// [5] https://github.com/corazawaf/coraza-coreruleset/blob/b20e2628b747fb7368178092fa472f3a9dc76f43/coreruleset.go#L62
+			// [6] https://github.com/golang/go/blob/2f507985dc24d198b763e5568ebe5c04d788894f/src/io/fs/fs.go#L47
 			mergefsio.OSFS,
+			coreruleset.FS,
 		)).
 		WithRequestBodyAccess().
 		WithErrorCallback(func(rule corazatypes.MatchedRule) {
@@ -131,16 +146,16 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 				Status: &status.Status{Code: int32(code.Code_OK)},
 				HttpResponse: &envoyauthz.CheckResponse_OkResponse{
 					OkResponse: &envoyauthz.OkHttpResponse{
-						Headers: []*corev3.HeaderValueOption{
+						Headers: []*envoycore.HeaderValueOption{
 							{
-								Header: &corev3.HeaderValue{
+								Header: &envoycore.HeaderValue{
 									Key:   "x-source-workload-name",
 									Value: srcName,
 								},
 								Append: &wrappers.BoolValue{Value: false},
 							},
 							{
-								Header: &corev3.HeaderValue{
+								Header: &envoycore.HeaderValue{
 									Key:   "x-source-workload-namespace",
 									Value: srcNamespace,
 								},

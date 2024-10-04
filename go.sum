@@ -266,8 +266,8 @@ github.com/containernetworking/cni v1.2.2 h1:9IbP6KJQQxVKo4hhnm8r50YcVKrJbJu3Dqw
 github.com/containernetworking/cni v1.2.2/go.mod h1:DuLgF+aPd3DzcTQTtp/Nvl1Kim23oFKdm2okJzBQA5M=
 github.com/containernetworking/plugins v1.5.1 h1:T5ji+LPYjjgW0QM+KyrigZbLsZ8jaX+E5J/EcKOE4gQ=
 github.com/containernetworking/plugins v1.5.1/go.mod h1:MIQfgMayGuHYs0XdNudf31cLLAC+i242hNm6KuDGqCM=
-github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6 h1:MjSFYff3j1L4zo3MNuqnQ19Jp5ps/sibntdtS/Kq/yk=
-github.com/corazawaf/coraza-coreruleset v0.0.0-20231103220038-fd5c847140a6/go.mod h1:7rsocqNDkTCira5T0M7buoKR2ehh7YZiPkzxRuAgvVU=
+github.com/corazawaf/coraza-coreruleset/v4 v4.6.0 h1:VGlMw3QMuKaV7XgifPgcqCm66K+HRSdM4d9PRh1nD50=
+github.com/corazawaf/coraza-coreruleset/v4 v4.6.0/go.mod h1:1FQt1p+JSQ6tYrafMqZrEEdDmhq6aVuIJdnk+bM9hMY=
 github.com/corazawaf/coraza/v3 v3.2.1 h1:zBIji4ut9FtFe8lXdqFwXMAkUoDJZ7HsOlEUYWERLI8=
 github.com/corazawaf/coraza/v3 v3.2.1/go.mod h1:fVndCGdUHJWl9c26VZPcORQRzUYwMPnRkC6TyTkhbUg=
 github.com/corazawaf/libinjection-go v0.2.1 h1:vNJ7L6c4xkhRgYU6sIO0Tl54TmeCQv/yfxBma30Dy/Y=
