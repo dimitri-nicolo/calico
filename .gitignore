@@ -46,3 +46,4 @@ charts/tigera-operator/charts
 crypto/tmp
 
 metadata.yaml
+/ccs/regolibrary
