@@ -45,7 +45,9 @@
 #include "bpf_helpers.h"
 #include "egw.h"
 #include "rule_counters.h"
+#ifndef IPVER6
 #include "dns_response.h"
+#endif
 
 #define HAS_HOST_CONFLICT_PROG CALI_F_TO_HEP
 
@@ -2175,9 +2177,11 @@ int calico_tc_dns_parser(struct __sk_buff *skb)
 
 	CALI_DEBUG("Entering calico_tc_dns_parser\n");
 
+#ifndef IPVER6
 #ifdef BPF_CORE_SUPPORTED
 	dns_process_datagram(ctx);
 #endif
+#endif /* IPVER6 */
 
 	CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
 	/* should not reach here */

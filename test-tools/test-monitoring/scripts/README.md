@@ -4,7 +4,7 @@ This directory contains a number of simple, but helpful scripts described below.
 
 ### apply-all.sh
 
-This script applies all the infrastructure necesary for monitoring the tests in one go.
+This script applies all the infrastructure necessary for monitoring the tests in one go.
 Namely, it installs Prometheus, Grafana.
 
 ### clear-prometheus.sh
@@ -43,3 +43,6 @@ or failed to apply.
 
 Changes LoadBalancer services into Nodeport services, for when your cluster
 doesn't have the cloud integration installed for creating LBs.
+
+### prometheus_grafana_stack
+Contains scripts that will setup the kubernetes, prometheus, and grafana monitoring stack on your cluster using helm. It comes pre-loaded with several useful kubernetes cluster, deployment, and pod level dashboards.

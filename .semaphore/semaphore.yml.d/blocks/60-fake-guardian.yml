@@ -1,0 +1,13 @@
+- name: Fake guardian
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/test-tools/fake-guardian/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd test-tools/fake-guardian
+    jobs:
+      - name: Fake guardian
+        commands:
+          - ../../.semaphore/run-and-monitor make-ci.log make ci

@@ -5,6 +5,7 @@ FROM ${UBI8_IMAGE} AS ubi
 COPY clean.sh /usr/local/bin/clean.sh
 RUN touch /in-the-container
 
+# Update base packages to pick up security updates. 
 RUN microdnf upgrade && microdnf install curl
 
 RUN curl -OL https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 

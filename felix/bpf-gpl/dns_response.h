@@ -14,6 +14,19 @@
 
 #define DNS_ANSWERS_MAX		1000
 
+DECLARE_IP_SET_KEY(ip6_set_key, ipv6_addr_t);
+CALI_MAP(cali_v6_ip_sets,,
+	BPF_MAP_TYPE_LPM_TRIE,
+	union ip6_set_lpm_key,
+	__u32,
+	1024*1024,
+	BPF_F_NO_PREALLOC)
+
+union ip6_set_lpm_key {
+	struct bpf_lpm_trie_key lpm;
+	struct ip6_set_key ip;
+};
+
 union dns_lpm_key {
         struct bpf_lpm_trie_key lpm;
 	struct {
@@ -31,12 +44,22 @@ CALI_MAP(cali_dns_pfx, 2,
 	 union dns_lpm_key, struct dns_lpm_value,
 	 64*1024, BPF_F_NO_PREALLOC)
 
+CALI_MAP(cali_dns_pfx6, 2,
+	 BPF_MAP_TYPE_LPM_TRIE,
+	 union dns_lpm_key, struct dns_lpm_value,
+	 64*1024, BPF_F_NO_PREALLOC)
+
 struct dns_set_key {
 	__u64 dns_id;
 	__u64 set_id;
 };
 
 CALI_MAP(cali_dns_sets, 2,
+	 BPF_MAP_TYPE_HASH,
+	 struct dns_set_key, __u32,
+	 64*1024, BPF_F_NO_PREALLOC)
+
+CALI_MAP(cali_dns_sets6, 2,
 	 BPF_MAP_TYPE_HASH,
 	 struct dns_set_key, __u32,
 	 64*1024, BPF_F_NO_PREALLOC)
@@ -197,7 +220,6 @@ static CALI_BPF_INLINE bool dns_get_name(struct cali_tc_ctx *ctx, struct dns_scr
 
 static long dns_update_sets_with_ip(__unused void *map, const void *key, __unused void *value, void *__ctx)
 {
-#ifndef IPVER6
 	struct dns_iter_ctx *ictx = (struct dns_iter_ctx *)__ctx;
 	struct dns_scratch *scratch = ictx->scratch;
 	struct dns_set_key *sk = (struct dns_set_key *) key;
@@ -221,7 +243,36 @@ static long dns_update_sets_with_ip(__unused void *map, const void *key, __unuse
 		struct cali_tc_ctx *ctx = ictx->ctx;
 		CALI_DEBUG("DNS: Failed to update ipset 0x%x err %d\n", sk->set_id, ret);
 	}
-#endif
+
+	return 0;
+}
+
+static long dns_update_sets_with_ip6(__unused void *map, const void *key, __unused void *value, void *__ctx)
+{
+	struct dns_iter_ctx *ictx = (struct dns_iter_ctx *)__ctx;
+	struct dns_scratch *scratch = ictx->scratch;
+	struct dns_set_key *sk = (struct dns_set_key *) key;
+
+	if (sk->dns_id != ictx->dns_id) {
+		return 0;
+	}
+
+	union ip6_set_lpm_key k = {
+		.ip = {
+			.set_id = sk->set_id,
+			.mask = (8 + ictx->ip_len) * 8,
+		},
+	};
+
+	k.ip.addr = *(ipv6_addr_t *)&scratch->ip;
+
+	__u32 v = 0;
+	int ret = cali_v6_ip_sets_update_elem(&k, &v, 0);
+
+	if (ret) {
+		struct cali_tc_ctx *ctx = ictx->ctx;
+		CALI_DEBUG("DNS: Failed to update v6 ipset 0x%x err %d\n", sk->set_id, ret);
+	}
 
 	return 0;
 }
@@ -260,13 +311,22 @@ static long dns_process_answer(__u32 i, void *__ctx)
 		goto failed;
 	}
 
-	ictx->ip_len = 4;
-
 	switch (bpf_ntohs(rr->type)) {
 	case TYPE_AAAA:
 		ictx->ip_len = 16;
-		break; /* FIXME we cannot write IPv6 sets yet, skip, do nothing */
+		if (bpf_load_bytes(ctx, off + sizeof(struct dns_rr), scratch->ip, ictx->ip_len)) {
+			CALI_DEBUG("DNS: failed to read data type %d class %d\n",
+					bpf_ntohs(rr->type), bpf_ntohs(rr->class));
+			goto failed;
+		}
+		CALI_DEBUG("DNS: IP 0x%x\n", *(__u32*)scratch->ip);
+
+		bpf_for_each_map_elem(&cali_dns_sets62, dns_update_sets_with_ip6, ictx, 0);
+
+		barrier(); /* use the barrier so that verifier does not complain abusing map_ptr */
+		break;
 	case TYPE_A:
+		ictx->ip_len = 4;
 		if (bpf_load_bytes(ctx, off + sizeof(struct dns_rr), scratch->ip, ictx->ip_len)) {
 			CALI_DEBUG("DNS: failed to read data type %d class %d\n",
 					bpf_ntohs(rr->type), bpf_ntohs(rr->class));
@@ -276,6 +336,7 @@ static long dns_process_answer(__u32 i, void *__ctx)
 
 		bpf_for_each_map_elem(&cali_dns_sets2, dns_update_sets_with_ip, ictx, 0);
 
+		barrier(); /* use the barrier so that verifier does not complain abusing map_ptr */
 		break;
 	default:
 		CALI_DEBUG("DNS: skipping rr type %d class %d\n", bpf_ntohs(rr->type), bpf_ntohs(rr->class));
@@ -405,24 +466,25 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		return;
 	}
 
+	struct dns_lpm_value *v;
+
 	switch (bpf_ntohs(q->qtype)) {
-#ifdef IPVER6
 	case TYPE_AAAA:
-#else
+		dns_get_lpm_key(scratch);
+		v = cali_dns_pfx6_lookup_elem(&scratch->lpm_key);
+		break;
 	case TYPE_A:
-#endif
+		dns_get_lpm_key(scratch);
+		v = cali_dns_pfx_lookup_elem(&scratch->lpm_key);
 		break;
 	default:
 		CALI_DEBUG("DNS: Not interested in qtype %d\n", bpf_ntohs(q->qtype));
 		return;
 	}
 
-	dns_get_lpm_key(scratch);
-
-	struct dns_lpm_value *v = cali_dns_pfx_lookup_elem(&scratch->lpm_key);
 	if (v) {
 		CALI_DEBUG("DNS: HIT key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
-		CALI_DEBUG("DNS: HIT id %d\n", v->dns_id);
+		CALI_DEBUG("DNS: HIT id 0x%llx\n", v->dns_id);
 	} else {
 		CALI_DEBUG("MISS key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
 		return;
