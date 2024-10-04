@@ -48,7 +48,7 @@ func TestDNSParser(t *testing.T) {
 		"666":  666,
 	}
 
-	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
+	tracker, err := dnsresolver.NewDomainTracker(4, func(s string) uint64 {
 		return ids[s]
 	})
 	Expect(err).NotTo(HaveOccurred())
@@ -146,7 +146,7 @@ func TestDNSParserMicrosoftFV(t *testing.T) {
 		"545": 545,
 	}
 
-	tracker, err := dnsresolver.NewDomainTracker(func(s string) uint64 {
+	tracker, err := dnsresolver.NewDomainTracker(4, func(s string) uint64 {
 		return ids[s]
 	})
 	Expect(err).NotTo(HaveOccurred())

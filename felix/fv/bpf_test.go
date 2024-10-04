@@ -5293,6 +5293,13 @@ func dumpDNSPfxMap(felix *infrastructure.Felix) dnsresolver.PfxMapMem {
 	return m
 }
 
+func dumpDNSPfx6Map(felix *infrastructure.Felix) dnsresolver.PfxMapMem {
+	im := dnsresolver.DNSPrefixMapV6()
+	m := make(dnsresolver.PfxMapMem)
+	dumpBPFMap(felix, im, dnsresolver.PfxMapMemIter(m))
+	return m
+}
+
 func dumpIPSetsMap(felix *infrastructure.Felix) ipsets.MapMem {
 	im := ipsets.Map()
 	m := make(ipsets.MapMem)

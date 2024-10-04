@@ -222,7 +222,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		// host interfaces.
 		opts.NeedNodeIP = true
 		if zeroLatency && !setsUpdateFromFelix {
-			opts.ExtraEnvVars["FELIX_DEBUG_DNS_DO_NOT_WRITE_IPSETS"] = "true"
+			opts.ExtraEnvVars["FELIX_DEBUGDNSDONOTWRITEIPSETS"] = "true"
 		}
 		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")

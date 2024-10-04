@@ -29,8 +29,22 @@ var DNSPfxMapParams = maps.MapParameters{
 	Version:    2,
 }
 
+var DNSPfxMapParamsV6 = maps.MapParameters{
+	Type:       "lpm_trie",
+	KeySize:    DNSPfxKeySize,
+	ValueSize:  DNSPfxValueSize,
+	MaxEntries: 64 * 1024,
+	Name:       "cali_dns_pfx6",
+	Flags:      unix.BPF_F_NO_PREALLOC,
+	Version:    2,
+}
+
 func DNSPrefixMap() maps.Map {
 	return maps.NewPinnedMap(DNSPfxMapParams)
+}
+
+func DNSPrefixMapV6() maps.Map {
+	return maps.NewPinnedMap(DNSPfxMapParamsV6)
 }
 
 const (
@@ -48,8 +62,22 @@ var DNSSetMapParams = maps.MapParameters{
 	Version:    2,
 }
 
+var DNSSetMapParamsV6 = maps.MapParameters{
+	Type:       "hash",
+	KeySize:    DNSSetKeySize,
+	ValueSize:  DNSSetValueSize,
+	MaxEntries: 64 * 1024,
+	Name:       "cali_dns_sets6",
+	Flags:      unix.BPF_F_NO_PREALLOC,
+	Version:    2,
+}
+
 func DNSSetMap() maps.Map {
 	return maps.NewPinnedMap(DNSSetMapParams)
+}
+
+func DNSSetMapV6() maps.Map {
+	return maps.NewPinnedMap(DNSSetMapParamsV6)
 }
 
 type DNSPfxKey [DNSPfxKeySize]byte
