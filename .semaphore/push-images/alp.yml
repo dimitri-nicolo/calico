@@ -52,7 +52,7 @@ blocks:
       jobs:
         - name: Linux arm64
           commands:
-            - make -C app-policy cd ARCHES=arm64 CONFIRM=true
+            - make -C app-policy cd ARCHES=arm64 CONFIRM=true SKIP_PROTOBUF=true
   - name: Publish ALP multi-arch manifests
     dependencies:
       - Publish ALP images

@@ -52,7 +52,7 @@ blocks:
       jobs:
         - name: Linux arm64
           commands:
-            - make -C egress-gateway cd ARCHES=arm64 CONFIRM=true
+            - make -C egress-gateway cd ARCHES=arm64 CONFIRM=true SKIP_PROTOBUF=true
   - name: Publish egress-gateway multi-arch manifests
     dependencies:
       - Publish egress-gateway images
