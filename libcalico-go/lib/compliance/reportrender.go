@@ -230,67 +230,67 @@ var (
 		},
 		Flows: []api.EndpointsReportFlow{FlowSample1, FlowSample2, FlowSample3},
 		CISBenchmark: []api.CISBenchmarkNode{
-			api.CISBenchmarkNode{
+			{
 				Results: []api.CISBenchmarkSectionResult{
-					api.CISBenchmarkSectionResult{
+					{
 						Results: []api.CISBenchmarkResult{
-							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.2", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.3", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.4", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.5", "Test1", "fix1", "PASS", true},
+							{TestNumber: "1.1.1", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.2", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.3", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.4", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.5", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
 						},
 					},
 				},
 			},
-			api.CISBenchmarkNode{
+			{
 				Results: []api.CISBenchmarkSectionResult{
-					api.CISBenchmarkSectionResult{
+					{
 						Results: []api.CISBenchmarkResult{
-							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "PASS", true},
-							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "PASS", true},
+							{TestNumber: "1.1.1", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.2", TestDesc: "Test2", TestInfo: "fix2", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.3", TestDesc: "Test3", TestInfo: "fix3", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.4", TestDesc: "Test4", TestInfo: "fix4", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.5", TestDesc: "Test5", TestInfo: "fix5", Status: "PASS", Scored: true},
 						},
 					},
 				},
 			},
-			api.CISBenchmarkNode{
+			{
 				Results: []api.CISBenchmarkSectionResult{
-					api.CISBenchmarkSectionResult{
+					{
 						Results: []api.CISBenchmarkResult{
-							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "PASS", true},
-							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "PASS", true},
-							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "PASS", true},
+							{TestNumber: "1.1.1", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.2", TestDesc: "Test2", TestInfo: "fix2", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.3", TestDesc: "Test3", TestInfo: "fix3", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.4", TestDesc: "Test4", TestInfo: "fix4", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.5", TestDesc: "Test5", TestInfo: "fix5", Status: "PASS", Scored: true},
 						},
 					},
 				},
 			},
-			api.CISBenchmarkNode{
+			{
 				Results: []api.CISBenchmarkSectionResult{
-					api.CISBenchmarkSectionResult{
+					{
 						Results: []api.CISBenchmarkResult{
-							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "FAIL", true},
+							{TestNumber: "1.1.1", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.2", TestDesc: "Test2", TestInfo: "fix2", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.3", TestDesc: "Test3", TestInfo: "fix3", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.4", TestDesc: "Test4", TestInfo: "fix4", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.5", TestDesc: "Test5", TestInfo: "fix5", Status: "FAIL", Scored: true},
 						},
 					},
 				},
 			},
-			api.CISBenchmarkNode{
+			{
 				Results: []api.CISBenchmarkSectionResult{
-					api.CISBenchmarkSectionResult{
+					{
 						Results: []api.CISBenchmarkResult{
-							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
-							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "FAIL", true},
-							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "PASS", true},
-							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "FAIL", true},
+							{TestNumber: "1.1.1", TestDesc: "Test1", TestInfo: "fix1", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.2", TestDesc: "Test2", TestInfo: "fix2", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.3", TestDesc: "Test3", TestInfo: "fix3", Status: "FAIL", Scored: true},
+							{TestNumber: "1.1.4", TestDesc: "Test4", TestInfo: "fix4", Status: "PASS", Scored: true},
+							{TestNumber: "1.1.5", TestDesc: "Test5", TestInfo: "fix5", Status: "FAIL", Scored: true},
 						},
 					},
 				},
@@ -471,7 +471,7 @@ func computeTopFailedCISBenchmarkTests(d *api.ReportData) SortableCISBenchmarkTe
 	// Coerce map values into an array and sort.
 	sortedTests := SortableCISBenchmarkTests{}
 	for test, count := range counter {
-		sortedTests = append(sortedTests, &api.CISBenchmarkResultCount{test, count})
+		sortedTests = append(sortedTests, &api.CISBenchmarkResultCount{CISBenchmarkResult: test, Count: count})
 	}
 	sort.Sort(sortedTests)
 

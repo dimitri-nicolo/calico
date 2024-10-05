@@ -223,7 +223,7 @@ var _ = Describe("AWS Tests", func() {
 		Expect(errMsg).To(Equal(fmt.Sprintf("%s: %s", fakeCode, fakeMsg)))
 
 		fakeMsg = "fake non-aws error"
-		err := fmt.Errorf(fakeMsg)
+		err := fmt.Errorf("%s", fakeMsg)
 		errMsg = convertError(err)
 		Expect(errMsg).To(Equal(fakeMsg))
 	})
@@ -242,7 +242,7 @@ var _ = Describe("AWS Tests", func() {
 		Expect(retriable(awsErr)).To(BeFalse())
 
 		fakeMsg = "non-aws error"
-		err := fmt.Errorf(fakeMsg)
+		err := fmt.Errorf("%s", fakeMsg)
 		Expect(retriable(err)).To(BeFalse())
 	})
 

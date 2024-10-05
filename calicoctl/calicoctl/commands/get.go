@@ -210,7 +210,7 @@ Description:
 				errStr += "\n"
 			}
 		}
-		return fmt.Errorf(errStr)
+		return fmt.Errorf("%s", errStr)
 	}
 
 	return nil

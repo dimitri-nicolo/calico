@@ -623,5 +623,5 @@ func assertBlockUpdate(kvps []*model.KVPair, expected *model.KVPair) {
 
 	}
 	e += "]"
-	Expect(fmt.Errorf(e)).NotTo(HaveOccurred())
+	Expect(fmt.Errorf("%s", e)).NotTo(HaveOccurred())
 }

@@ -35,7 +35,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			EtcdPassword:  "abc123",
 		},
 		SyncOptions: apiv3.RemoteClusterSyncOptions{
-			apiv3.OverlayRoutingModeDisabled,
+			OverlayRoutingMode: apiv3.OverlayRoutingModeDisabled,
 		},
 	}
 	spec2 := apiv3.RemoteClusterConfigurationSpec{
