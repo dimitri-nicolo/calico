@@ -38,7 +38,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-//go:embed tigera.conf
+//go:embed testdata/tigera.conf
 var tigeraConfContents string
 var tigeraConfName = "tigera.conf"
 
@@ -48,13 +48,13 @@ func TestRunServer(t *testing.T) {
 
 	tempDir := t.TempDir()
 	confPath := filepath.Join(tempDir, tigeraConfName)
-	if err := os.WriteFile(confPath, []byte(tigeraConfContents), 0777); err != nil {
+	if err := os.WriteFile(confPath, []byte(tigeraConfContents), 0644); err != nil {
 		t.Fatalf("Failed to write file %s: %s", tigeraConfName, err)
 	}
 
-	listenPath := filepath.Join(t.TempDir(), "dikastes.sock")
-	policySyncPath := filepath.Join(t.TempDir(), "nodeagent.sock")
-	wafLogFile := filepath.Join(t.TempDir(), "waf.log")
+	listenPath := filepath.Join(tempDir, "dikastes.sock")
+	policySyncPath := filepath.Join(tempDir, "nodeagent.sock")
+	wafLogFile := filepath.Join(tempDir, "waf.log")
 
 	fps, err := fakepolicysync.NewFakePolicySync(policySyncPath)
 	if err != nil {
@@ -145,9 +145,10 @@ func TestRunServeNoPolicySync(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	listenPath := filepath.Join(t.TempDir(), "dikastes.sock")
-	policySyncPath := filepath.Join(t.TempDir(), "nodeagent.sock")
-	wafLogFile := filepath.Join(t.TempDir(), "waf.log")
+	tempDir := t.TempDir()
+	listenPath := filepath.Join(tempDir, "dikastes.sock")
+	policySyncPath := filepath.Join(tempDir, "nodeagent.sock")
+	wafLogFile := filepath.Join(tempDir, "waf.log")
 
 	fps, err := fakepolicysync.NewFakePolicySync(policySyncPath)
 	if err != nil {

@@ -121,7 +121,7 @@ $(CONTAINER_FIPS_CREATED): Dockerfile $(BINDIR)/dikastes-$(ARCH)
 ut: protobuf ut-exec
 
 ut-exec:
-	$(DOCKER_GO_BUILD) /bin/bash -c "gotestsum --junitfile report/tests.xml ./..."
+	$(DOCKER_GO_BUILD) sh -c "gotestsum --junitfile report/tests.xml -- -count 1 ./..."
 
 
 ###############################################################################

@@ -17,7 +17,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-//go:embed tigera.conf
+//go:embed testdata/tigera.conf
 var tigeraConfContents string
 
 func TestCorazaWAFAuthzScenarios(t *testing.T) {
@@ -95,7 +95,7 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 	files := []string{}
 	for name, content := range scenario.additionalConfigFiles {
 		t.Log("Writing additional config file", tempDir, name)
-		if err := os.WriteFile(filepath.Join(tempDir, name), []byte(content), 0777); err != nil {
+		if err := os.WriteFile(filepath.Join(tempDir, name), []byte(content), 0644); err != nil {
 			t.Fatalf("Failed to write file %s: %s", name, err)
 		}
 		// append the file to the directives
