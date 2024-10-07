@@ -82,7 +82,7 @@ spec:
               fieldPath: metadata.namespace
         - name: FAKE_GUARDIAN_FLOW_PUBLISH_BATCH_SIZE
           value: "10"
-        image: gcr.io/tigera-cc-dev/gordon/fake-guardian:20240925T1414
+        image: gcr.io/unique-caldron-775/cnx/tigera/fake-guardian:master
         imagePullPolicy: IfNotPresent
         resources:
           limits:

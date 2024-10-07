@@ -162,6 +162,10 @@ promotions:
     auto_promote:
       when: "branch =~ 'master|release-'"
 
+  - name: Push fake-guardian images
+    pipeline_file: push-images/fake-guardian.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push flow-log-generator images
     pipeline_file: push-images/flow-log-generator.yml
     auto_promote:
