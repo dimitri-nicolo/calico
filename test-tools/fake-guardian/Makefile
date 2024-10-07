@@ -15,10 +15,11 @@ test: ut ## Run the tests for the current platform/architecture
 # Variables controlling the image
 ###############################################################################
 IMAGE_CREATED=.container.created-$(ARCH)
-# Files that go into the image
-BINARY=./bin/fake-guardian-$(ARCH)
 # Files to be built
-SRC_FILES=$(shell find . -name '*.go' | grep -v vendor)
+SRC_FILES=$(shell find . -name '*.go')
+
+CONTROLLER_RUNTIME_VERSION=v0.19.0
+K8S_VERSION=1.29.5
 
 ###############################################################################
 # Include ../../lib.Makefile
@@ -32,12 +33,10 @@ include ../../lib.Makefile
 ###############################################################################
 .PHONY: clean
 clean:
-	find . -name '*.created' -exec rm -f {} +
-	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	find . -name '*.pyc' -exec rm -f {} +
-	rm -rf .go-pkg-cache bin
-	# Delete images that we built in this repo
-	-docker rmi $(IMAGE_NAME):latest-$(ARCH)
+	rm -rf bin
+	rm -f $(IMAGE_CREATED)
+	find . -name '*.pyc' -delete
+	-docker image rm -f $$(docker images $(IMAGE_NAME) -a -q)
 
 ###############################################################################
 # Building the binary
@@ -51,8 +50,8 @@ build-all: $(addprefix bin/fake-guardian-,$(VALIDARCHES))
 
 .PHONY: build
 ## Build the binary for the current architecture and platform
-build: $(BINARY)
-$(BINARY): $(SRC_FILES)
+build: bin/fake-guardian-$(ARCH)
+bin/fake-guardian-$(ARCH): $(SRC_FILES)
 	$(call build_binary, ./cmd/fake-guardian, $@)
 
 ###############################################################################
@@ -67,8 +66,8 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(IMAGE_NAME): $(IMAGE_CREATED)
-$(IMAGE_CREATED): Dockerfile $(BINARY)
-	$(DOCKER_BUILD) -t $(IMAGE_NAME):latest-$(ARCH) -f Dockerfile .
+$(IMAGE_CREATED): register Dockerfile bin/fake-guardian-$(ARCH)
+	$(DOCKER_BUILD) --build-arg CONTROLLER_RUNTIME_VERSION=$(CONTROLLER_RUNTIME_VERSION) --build-arg K8S_VERSION=$(K8S_VERSION) -t $(IMAGE_NAME):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 

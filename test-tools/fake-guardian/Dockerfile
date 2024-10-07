@@ -1,28 +1,26 @@
 # Copyright (c) 2023 Tigera, Inc. All rights reserved.
-ARG K8S_VERSION=1.29.4
-
 FROM alpine:3 AS builder
 
-ARG TARGETARCH
+ARG CONTROLLER_RUNTIME_VERSION
 ARG K8S_VERSION
-ARG CONTROLLER_RUNTIME_VERSION=v0.19.0
+ARG TARGETARCH
 
 RUN apk add --no-cache curl
 
 RUN curl -sfL https://github.com/kubernetes-sigs/controller-runtime/releases/download/${CONTROLLER_RUNTIME_VERSION}/setup-envtest-linux-${TARGETARCH} -o /usr/bin/setup-envtest && chmod +x /usr/bin/setup-envtest
 
 # Download etcd, kube-apiserver, and kubectl binaries using setup-envtest
-RUN setup-envtest use ${K8S_VERSION} --bin-dir /usr/bin
+RUN setup-envtest use ${K8S_VERSION} --bin-dir /usr/local/bin
 
 FROM scratch AS source
 
-FROM calico/base
-
-ARG TARGETARCH
 ARG K8S_VERSION
+ARG TARGETARCH
 
-COPY --from=builder /usr/bin/k8s/${K8S_VERSION}-linux-${TARGETARCH}/ /usr/share/kubebuilder-envtest/
+COPY --from=builder /usr/local/bin/k8s/${K8S_VERSION}-linux-${TARGETARCH}/ /usr/share/kubebuilder-envtest/
 COPY bin/fake-guardian-${TARGETARCH} /usr/bin/fake-guardian
+
+FROM calico/base
 
 ARG GIT_VERSION=unknown
 
