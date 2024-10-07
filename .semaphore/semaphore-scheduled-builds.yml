@@ -1358,26 +1358,6 @@ blocks:
       - name: build windows image
         commands:
           - ../.semaphore/run-and-monitor build-windows.log make image-windows
-- name: ui-apis
-  run:
-    when: "true or change_in(['/*', '/ui-apis/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd ui-apis
-    jobs:
-      - name: ui-apis tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: ingress-collector
   run:
     when: "true or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1737,6 +1717,26 @@ blocks:
         - cd ts-queryserver
     jobs:
       - name: queryserver tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+- name: ui-apis
+  run:
+    when: "true or change_in(['/*', '/ui-apis/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd ui-apis
+    jobs:
+      - name: ui-apis tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
       - name: Build binary
