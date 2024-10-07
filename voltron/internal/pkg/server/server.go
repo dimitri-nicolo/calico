@@ -516,7 +516,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// If isK8sRequest=true, we do impersonation.
 	// If neither is true, we proxy the request without impersonation. Authn will also be handled there.
 	if (!shouldUseTunnel || !hasClusterHeader) && !isK8sRequest {
-		// This is a request for the backend servers in the management cluster, like es-proxy or compliance.
+		// This is a request for the backend servers in the management cluster, like ui-apis or compliance.
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}

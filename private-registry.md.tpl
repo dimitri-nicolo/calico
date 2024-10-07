@@ -28,7 +28,7 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/dikastes:__CE_VERSION__
     docker pull quay.io/tigera/dex:__CE_VERSION__
     docker pull quay.io/tigera/fluentd:__CE_VERSION__
-    docker pull quay.io/tigera/es-proxy:__CE_VERSION__
+    docker pull quay.io/tigera/ui-apis:__CE_VERSION__
     docker pull quay.io/tigera/kibana:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__-fips
@@ -94,7 +94,7 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/dikastes:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/dikastes:__CE_VERSION__
     docker pull quay.io/tigera/dex:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/dex:__CE_VERSION__
     docker pull quay.io/tigera/fluentd:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/fluentd:__CE_VERSION__
-    docker pull quay.io/tigera/es-proxy:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/es-proxy:__CE_VERSION__
+    docker pull quay.io/tigera/ui-apis:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/ui-apis:__CE_VERSION__
     docker pull quay.io/tigera/kibana:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/kibana:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch:__CE_VERSION__-fips $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__-fips
@@ -159,7 +159,7 @@ registry, and then push the newly tagged images to your own registry.
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/dikastes:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/dex:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/fluentd:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/es-proxy:__CE_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/ui-apis:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/kibana:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch:__CE_VERSION__-fips

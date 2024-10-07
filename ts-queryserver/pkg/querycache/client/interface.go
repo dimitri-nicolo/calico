@@ -140,7 +140,7 @@ type RuleEntity struct {
 // QueryEndpointsReqBody is used to UnMarshal endpoints request body.
 // if any member is added / removed / changed in this struct, also update:
 // 1. QueryEndpointsReq struct defined below
-// 2. getQueryServerRequestParams in es-proxy/pkg/middleware/endpoints_aggregation.go as needed.
+// 2. getQueryServerRequestParams in ui-apis/pkg/middleware/endpoints_aggregation.go as needed.
 // 3. update tests and test function calculateQueryBody in ts-queryserver/tests/fv/query_e2e_test.go
 type QueryEndpointsReqBody struct {
 	// Queries
@@ -166,7 +166,7 @@ type QueryEndpointsReqBody struct {
 // QueryEndpointsReq is the internal struct. Endpoints request.body --> QueryEndpointsReqBody --> QueryEndpointReq
 // if any member is added / removed / changed in this struct, also update:
 // 1. QueryEndpointsRequestBody struct defined above
-// 2. getQueryServerRequestParams in es-proxy/pkg/middleware/endpoints_aggregation.go as needed.
+// 2. getQueryServerRequestParams in ui-apis/pkg/middleware/endpoints_aggregation.go as needed.
 // 3. update tests and test function calculateQueryBody in ts-queryserver/tests/fv/query_e2e_test.go
 type QueryEndpointsReq struct {
 	// Queries

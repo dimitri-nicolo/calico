@@ -242,7 +242,7 @@ func main() {
 			AllowInsecureTLS: true,
 		},
 		{
-			// Define this a separate path because the liveness probe for es-proxy goes through
+			// Define this a separate path because the liveness probe for ui-apis goes through
 			// voltron and does not need to be authenticated but the rest of tigera-elasticsearch
 			// does. With this defined this Path will be matched specifically and we can serve
 			// it unauthenticated.

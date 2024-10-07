@@ -45,7 +45,7 @@ type DeleteHandler[B BulkRequestParams] interface {
 // implementation for listing data in an aggregated form. Aggregation is
 // performed using the underlying fields presents in the raw data that is being
 // queried. This handler is used to provide a backwards compatible API
-// for components like es-proxy and intrusion detection that make aggregated
+// for components like ui-apis and intrusion detection that make aggregated
 // queries in Elastic and should not be used for other further implementations
 type AggregationHandler[A RequestParams] interface {
 	Aggregate() http.HandlerFunc

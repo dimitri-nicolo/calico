@@ -107,8 +107,8 @@ promotions:
     pipeline_file: push-images/es-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push es-proxy images
-    pipeline_file: push-images/es-proxy.yml
+  - name: Push ui-apis images
+    pipeline_file: push-images/ui-apis.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push firewall-integration images
@@ -1198,26 +1198,6 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: es-proxy
-  run:
-    when: "true or change_in(['/*', '/es-proxy/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd es-proxy
-    jobs:
-      - name: es-proxy tests
-        commands:
-          - ../.semaphore/run-and-monitor ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: firewall-integration
   run:
     when: "true or change_in(['/*', '/firewall-integration/', '/api/', '/compliance/', '/kube-controllers/', '/libcalico-go/', '/lma/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1378,6 +1358,26 @@ blocks:
       - name: build windows image
         commands:
           - ../.semaphore/run-and-monitor build-windows.log make image-windows
+- name: ui-apis
+  run:
+    when: "true or change_in(['/*', '/ui-apis/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd ui-apis
+    jobs:
+      - name: ui-apis tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: ingress-collector
   run:
     when: "true or change_in(['/*', '/ingress-collector/', '/libcalico-go/lib/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

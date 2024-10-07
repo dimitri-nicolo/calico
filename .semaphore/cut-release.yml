@@ -96,7 +96,7 @@ promotions:
     auto_promote:
       when: "result = 'passed'"
   - name: Cut ES Proxy Release
-    pipeline_file: ../es-proxy/.semaphore/cut-release.yml
+    pipeline_file: ../ui-apis/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut Firewall Integration Release

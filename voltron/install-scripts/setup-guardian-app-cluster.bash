@@ -2,7 +2,7 @@
 
 # Enable multi cluster client mode for compliance and es proxy
 kubectl patch deployment -n tigera-manager tigera-manager --patch \
-'{"metadata": {"annotations": {"unsupported.operator.tigera.io/ignore": "true"}}, "spec":{"template":{"spec":{"containers":[{"name":"tigera-es-proxy","env":[{"name":"ENABLE_MULTI_CLUSTER_CLIENT","value":"true"}]}]}}}}'
+'{"metadata": {"annotations": {"unsupported.operator.tigera.io/ignore": "true"}}, "spec":{"template":{"spec":{"containers":[{"name":"tigera-ui-apis","env":[{"name":"ENABLE_MULTI_CLUSTER_CLIENT","value":"true"}]}]}}}}'
 kubectl patch deployment -n tigera-compliance compliance-server --patch \
 '{"metadata": {"annotations": {"unsupported.operator.tigera.io/ignore": "true"}}, "spec":{"template":{"spec":{"containers":[{"name":"compliance-server","env":[{"name":"ENABLE_MULTI_CLUSTER_CLIENT","value":"true"}]}]}}}}'
 

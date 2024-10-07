@@ -9,7 +9,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
@@ -17,6 +16,7 @@ import (
 	lsClient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsRest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaV1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	"github.com/projectcalico/calico/ui-apis/pkg/middleware/search"
 )
 
 var securityEventsClient lsClient.EventsInterface

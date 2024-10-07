@@ -128,7 +128,7 @@ var _ = Describe("Query Converter", func() {
 
 		It("should handle a clause to filter DNS queries", func() {
 			// This test simulate a filter query done on the UI to filter alerts related to DNS query.
-			// Currently these are implemented using the "filter" param handled by es-proxy for /events/search
+			// Currently these are implemented using the "filter" param handled by ui-apis for /events/search
 			// and we want to let linseed handle them with a POST /events (List) query using a selector
 			// to capture the same logic.
 			//

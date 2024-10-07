@@ -47,7 +47,7 @@ curl -vvv "https://tigera-linseed.tigera-elasticsearch.svc/api/v1/flows/logs/bul
 --cacert /etc/pki/tls/certs/tigera-ca-bundle.crt
 ```
 
-Simulate a request to read data from ESProxy from a standalone/management cluster
+Simulate a request to read data from the ui-apis backend from a standalone/management cluster
 
 ```bash
 curl -vvv "https://tigera-linseed.tigera-elasticsearch.svc/api/v1/flows/logs/" \
@@ -318,7 +318,7 @@ It establishes connections with the following components:
 
 It has the following clients, via service `tigera-linseed.tigera-elasticsearch.svc`
 
-- `es-proxy` container from `tigera-manager/tigera-manager-*` pod, deployment `tigera-manager/tigera-manager`
+- `ui-apis` container from `tigera-manager/tigera-manager-*` pod, deployment `tigera-manager/tigera-manager`
 - `intrusion-detection-controller` container from `tigera-intrusion-detection/intrusion-detection-controller-*` pod,
   deployment `tigera-intrusion-detection/intrusion-detection-controller`
 - `fluentd-node` container from `tigera-fluentd/fluentd-node-*` pod, daemonset `tigera-fluentd/fluentd-node`

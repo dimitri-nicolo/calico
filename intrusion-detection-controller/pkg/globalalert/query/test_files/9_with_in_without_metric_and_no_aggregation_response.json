@@ -45,7 +45,7 @@
         "-"
       ],
       "process_id": "7546",
-      "process_name": "/es-proxy",
+      "process_name": "/ui-apis",
       "proto": "tcp",
       "reporter": "src",
       "source_ip": null,

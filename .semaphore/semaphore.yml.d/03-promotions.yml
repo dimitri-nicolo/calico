@@ -60,8 +60,8 @@ promotions:
     pipeline_file: push-images/es-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push es-proxy images
-    pipeline_file: push-images/es-proxy.yml
+  - name: Push ui-apis images
+    pipeline_file: push-images/ui-apis.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push firewall-integration images

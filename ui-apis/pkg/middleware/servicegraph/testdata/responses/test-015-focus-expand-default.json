@@ -1,0 +1,336 @@
+{
+  "time_intervals": [
+    {
+      "from": "2021-05-30T21:23:10Z",
+      "to": "2021-05-30T21:38:10Z"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "namespace/default",
+      "type": "namespace",
+      "name": "default",
+      "service_ports": [
+        {
+          "namespace": "default",
+          "name": "kubernetes",
+          "protocol": "tcp",
+          "port_name": "https",
+          "port": 443
+        }
+      ],
+      "stats_ingress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 0,
+              "packet_out": 3,
+              "bytes_in": 0,
+              "bytes_out": 180
+            },
+            "connections": {
+              "total_per_sample_interval": 3,
+              "started": 3,
+              "completed": 3
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 2369,
+              "max_min_rtt": 150,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 2020.5,
+              "mean_min_mss": 137.5,
+              "mean_mss": 1388,
+              "count": 2
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "ui-apis",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "voltron",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "expanded": true,
+      "selectors": {
+        "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
+        "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\"",
+        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+        "alerts": "dest_namespace = \"default\" OR source_namespace = \"default\"",
+        "packet_capture": "all()"
+      }
+    },
+    {
+      "id": "namespace/tigera-manager",
+      "type": "namespace",
+      "name": "tigera-manager",
+      "stats_within": [
+        {
+          "dns": {
+            "mean_request_latency": 645750,
+            "max_request_latency": 919000,
+            "min_request_latency": 550000,
+            "latency_count": 16,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 6,
+                "mean_request_latency": 581000,
+                "max_request_latency": 919000,
+                "min_request_latency": 550000,
+                "latency_count": 6
+              },
+              {
+                "code": "NXDOMAIN",
+                "count": 10,
+                "mean_request_latency": 684600,
+                "max_request_latency": 881000,
+                "min_request_latency": 552000,
+                "latency_count": 10
+              }
+            ]
+          }
+        }
+      ],
+      "stats_egress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 370,
+              "packet_out": 388,
+              "bytes_in": 2682031,
+              "bytes_out": 56374
+            },
+            "connections": {
+              "total_per_sample_interval": 34,
+              "started": 32,
+              "completed": 26
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 10398,
+              "max_min_rtt": 150,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 1883.25,
+              "mean_min_mss": 76.75,
+              "mean_mss": 1388,
+              "count": 4
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "ui-apis",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "voltron",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "follow_egress": true,
+      "selectors": {
+        "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
+        "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR src_namespace = \"tigera-manager\"",
+        "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
+        "alerts": "dest_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
+        "packet_capture": "all()"
+      }
+    },
+    {
+      "id": "svcgp;svc/default/kubernetes",
+      "parent_id": "namespace/default",
+      "type": "svcgp",
+      "namespace": "default",
+      "name": "kubernetes",
+      "service_ports": [
+        {
+          "namespace": "default",
+          "name": "kubernetes",
+          "protocol": "tcp",
+          "port_name": "https",
+          "port": 443
+        }
+      ],
+      "stats_ingress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 0,
+              "packet_out": 3,
+              "bytes_in": 0,
+              "bytes_out": 180
+            },
+            "connections": {
+              "total_per_sample_interval": 3,
+              "started": 3,
+              "completed": 3
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 2369,
+              "max_min_rtt": 150,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 2020.5,
+              "mean_min_mss": 137.5,
+              "mean_mss": 1388,
+              "count": 2
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "ui-apis",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "voltron",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "selectors": {
+        "l3_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\"",
+        "l7_flows": "(dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\")",
+        "alerts": "(dest_name = \"kubernetes\" AND dest_namespace = \"default\") OR (source_name = \"kubernetes\" AND source_namespace = \"default\")"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": {
+        "source_node_id": "namespace/tigera-manager",
+        "dest_node_id": "svcgp;svc/default/kubernetes"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 0,
+              "packet_out": 3,
+              "bytes_in": 0,
+              "bytes_out": 180
+            },
+            "connections": {
+              "total_per_sample_interval": 3,
+              "started": 3,
+              "completed": 3
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 2369,
+              "max_min_rtt": 150,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 2020.5,
+              "mean_min_mss": 137.5,
+              "mean_mss": 1388,
+              "count": 2
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "ui-apis",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "voltron",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND source_namespace = \"tigera-manager\"",
+        "l7_flows": "dest_service_name = \"kubernetes\" AND dest_service_namespace = \"default\" AND src_namespace = \"tigera-manager\"",
+        "dns_logs": "client_namespace = \"tigera-manager\"",
+        "alerts": "dest_name = \"kubernetes\" AND dest_namespace = \"default\" AND source_namespace = \"tigera-manager\""
+      },
+      "service_ports": [
+        {
+          "namespace": "default",
+          "name": "kubernetes",
+          "protocol": "tcp",
+          "port_name": "https",
+          "port": 443
+        }
+      ],
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 6443,
+                "max_port": 6443
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "truncated": false,
+  "selectors": {
+    "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
+    "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\"",
+    "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+    "alerts": "(source_name = \"kubernetes\" AND source_namespace = \"default\") OR source_namespace = \"default\" OR source_namespace = \"tigera-manager\""
+  }
+}

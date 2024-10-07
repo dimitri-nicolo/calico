@@ -1,0 +1,188 @@
+{
+  "total_hits": 2,
+  "items": [
+    {
+      "time": 1645653623,
+      "type": "global_alert",
+      "description": "GlobalAlert eq voltron summary",
+      "severity": 100,
+      "origin": "globalalert-eq",
+      "source_namespace": "tigera-manager",
+      "source_name": "-",
+      "source_name_aggr": "tigera-manager-6cb79878f5-*",
+      "dest_port": 9095,
+      "dest_namespace": "tigera-prometheus",
+      "dest_name": "-",
+      "dest_name_aggr": "prometheus-calico-node-prometheus-*",
+      "host": "jwhuang-bz-j1du-kadm-node-0",
+      "record": {
+        "@timestamp": 1645653442000,
+        "action": "allow",
+        "bytes_in": 2648,
+        "bytes_out": 2680,
+        "dest_ip": null,
+        "dest_labels": {
+          "labels": [
+            "prometheus=calico-node-prometheus",
+            "statefulset.kubernetes.io/pod-name=prometheus-calico-node-prometheus-0",
+            "operator.prometheus.io/name=calico-node-prometheus",
+            "app.kubernetes.io/managed-by=prometheus-operator",
+            "operator.prometheus.io/shard=0",
+            "app.kubernetes.io/version=2.32.0",
+            "app.kubernetes.io/instance=calico-node-prometheus",
+            "app.kubernetes.io/name=prometheus",
+            "controller-revision-hash=prometheus-calico-node-prometheus-79fb84b6b7"
+          ]
+        },
+        "dest_name": "-",
+        "dest_name_aggr": "prometheus-calico-node-prometheus-*",
+        "dest_namespace": "tigera-prometheus",
+        "dest_port": 9095,
+        "dest_service_name": "prometheus-http-api",
+        "dest_service_namespace": "tigera-prometheus",
+        "dest_service_port": "web",
+        "dest_service_port_num": 9090,
+        "dest_type": "wep",
+        "end_time": 1645653442,
+        "host": "jwhuang-bz-j1du-kadm-node-0",
+        "http_requests_allowed_in": 0,
+        "http_requests_denied_in": 0,
+        "nat_outgoing_ports": null,
+        "num_flows": 2,
+        "num_flows_completed": 2,
+        "num_flows_started": 0,
+        "num_original_source_ips": 0,
+        "num_process_args": 0,
+        "num_process_ids": 1,
+        "num_process_names": 1,
+        "original_source_ips": null,
+        "packets_in": 50,
+        "packets_out": 52,
+        "policies": {
+          "all_policies": [
+            "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|6"
+          ]
+        },
+        "process_args": [
+          "-"
+        ],
+        "process_id": "31550",
+        "process_name": "/voltron",
+        "proto": "tcp",
+        "reporter": "src",
+        "source_ip": null,
+        "source_labels": {
+          "labels": [
+            "k8s-app=tigera-manager",
+            "pod-template-hash=6cb79878f5"
+          ]
+        },
+        "source_name": "-",
+        "source_name_aggr": "tigera-manager-6cb79878f5-*",
+        "source_namespace": "tigera-manager",
+        "source_port": null,
+        "source_type": "wep",
+        "start_time": 1645653117,
+        "tcp_lost_packets": 0,
+        "tcp_max_min_rtt": 82,
+        "tcp_max_smooth_rtt": 1257,
+        "tcp_mean_min_rtt": 72,
+        "tcp_mean_mss": 1388,
+        "tcp_mean_send_congestion_window": 10,
+        "tcp_mean_smooth_rtt": 1225,
+        "tcp_min_mss": 1388,
+        "tcp_min_send_congestion_window": 10,
+        "tcp_total_retransmissions": 0,
+        "tcp_unrecovered_to": 0
+      }
+    },
+    {
+      "time": 1645847361,
+      "type": "global_alert",
+      "description": "GlobalAlert IN summary",
+      "severity": 100,
+      "origin": "globalalert-in",
+      "source_namespace": "tigera-manager",
+      "source_name": "-",
+      "source_name_aggr": "tigera-manager-5b6957f6c-*",
+      "dest_port": 53,
+      "dest_namespace": "kube-system",
+      "dest_name": "-",
+      "dest_name_aggr": "coredns-78fcd69978-*",
+      "host": "jwhuang-bz-j1du-kadm-node-1",
+      "record": {
+        "@timestamp": 1645847216000,
+        "action": "allow",
+        "bytes_in": 6395,
+        "bytes_out": 3650,
+        "dest_ip": null,
+        "dest_labels": {
+          "labels": [
+            "pod-template-hash=78fcd69978",
+            "k8s-app=kube-dns"
+          ]
+        },
+        "dest_name": "-",
+        "dest_name_aggr": "coredns-78fcd69978-*",
+        "dest_namespace": "kube-system",
+        "dest_port": 53,
+        "dest_service_name": "kube-dns",
+        "dest_service_namespace": "kube-system",
+        "dest_service_port": "dns",
+        "dest_service_port_num": 53,
+        "dest_type": "wep",
+        "end_time": 1645847216,
+        "host": "jwhuang-bz-j1du-kadm-node-1",
+        "http_requests_allowed_in": 0,
+        "http_requests_denied_in": 0,
+        "nat_outgoing_ports": null,
+        "num_flows": 30,
+        "num_flows_completed": 30,
+        "num_flows_started": 30,
+        "num_original_source_ips": 0,
+        "num_process_args": 0,
+        "num_process_ids": 1,
+        "num_process_names": 1,
+        "original_source_ips": null,
+        "packets_in": 30,
+        "packets_out": 30,
+        "policies": {
+          "all_policies": [
+            "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|5"
+          ]
+        },
+        "process_args": [
+          "-"
+        ],
+        "process_id": "29163",
+        "process_name": "/ui-apis",
+        "proto": "udp",
+        "reporter": "src",
+        "source_ip": null,
+        "source_labels": {
+          "labels": [
+            "k8s-app=tigera-manager",
+            "pod-template-hash=5b6957f6c"
+          ]
+        },
+        "source_name": "-",
+        "source_name_aggr": "tigera-manager-5b6957f6c-*",
+        "source_namespace": "tigera-manager",
+        "source_port": null,
+        "source_type": "wep",
+        "start_time": 1645846916,
+        "tcp_lost_packets": 0,
+        "tcp_max_min_rtt": 0,
+        "tcp_max_smooth_rtt": 0,
+        "tcp_mean_min_rtt": 0,
+        "tcp_mean_mss": 0,
+        "tcp_mean_send_congestion_window": 0,
+        "tcp_mean_smooth_rtt": 0,
+        "tcp_min_mss": 0,
+        "tcp_min_send_congestion_window": 0,
+        "tcp_total_retransmissions": 0,
+        "tcp_unrecovered_to": 0
+      }
+    }
+  ]
+}

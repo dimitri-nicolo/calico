@@ -504,7 +504,7 @@ func TestSelectorMaxLength(t *testing.T) {
 
 		selector := "NOT dismissed = true"
 
-		// Here we simulate the logic implemented in searchEvents() in es-proxy where a selector from a query
+		// Here we simulate the logic implemented in searchEvents() in ui-apis where a selector from a query
 		// is combined with selectors defined in AlertExceptions to form a new selector.
 
 		// We make the ns and pod name parameters close to their limit length to test for worst case scenario.
