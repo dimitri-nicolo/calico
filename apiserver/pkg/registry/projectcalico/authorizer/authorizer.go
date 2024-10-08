@@ -249,7 +249,7 @@ func (a *authorizer) AuthorizeUISettingsOperation(
 	// Request is forbidden.
 	reason := forbiddenMessage(attributes, "uisettingsgroup", uiSettingsGroup, decisionGetUISettingsGroup)
 	klog.V(4).Infof("Operation on UISettings %v is forbidden: %v", uiSettings, reason)
-	return errors.NewForbidden(calico.Resource(attributes.GetResource()), uiSettings, fmt.Errorf(reason))
+	return errors.NewForbidden(calico.Resource(attributes.GetResource()), uiSettings, fmt.Errorf("%s", reason))
 }
 
 // forbiddenMessage crafts the appropriate forbidden message for our special hierarchically owned resource types. This

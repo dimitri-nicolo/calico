@@ -55,7 +55,7 @@ func (p *pingPonger) Ping(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		return errors.NewInternalError(fmt.Errorf(PingChannelBusy))
+		return errors.NewInternalError(fmt.Errorf("%s", PingChannelBusy))
 	}
 
 	// Wait for the pong or return an error if the context finishes before we receive one

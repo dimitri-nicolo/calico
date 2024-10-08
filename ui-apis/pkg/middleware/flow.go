@@ -91,7 +91,7 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 		flowParams.startDateTime, _, err = timeutils.ParseTime(time.Now(), &dateTimeStr)
 		if err != nil {
 			errMsg := fmt.Sprintf("failed to parse 'startDateTime' value '%s' as RFC3339 datetime or relative time", dateTimeStr)
-			return nil, fmt.Errorf(errMsg)
+			return nil, fmt.Errorf("%s", errMsg)
 		}
 	}
 
@@ -99,7 +99,7 @@ func parseAndValidateFlowRequest(req *http.Request) (*flowRequestParams, error) 
 		flowParams.endDateTime, _, err = timeutils.ParseTime(time.Now(), &dateTimeStr)
 		if err != nil {
 			errMsg := fmt.Sprintf("failed to parse 'endDateTime' value '%s' as RFC3339 datetime or relative time", dateTimeStr)
-			return nil, fmt.Errorf(errMsg)
+			return nil, fmt.Errorf("%s", errMsg)
 		}
 	}
 

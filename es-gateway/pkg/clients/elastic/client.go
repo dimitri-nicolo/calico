@@ -86,7 +86,7 @@ func (es *client) GetClusterHealth() error {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf(res.String())
+		return fmt.Errorf("%s", res.String())
 	}
 
 	return nil

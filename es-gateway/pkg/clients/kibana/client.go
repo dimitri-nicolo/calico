@@ -97,7 +97,7 @@ func (c *client) GetKibanaStatus() error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf(string(data))
+		return fmt.Errorf("%s", string(data))
 	}
 
 	return nil

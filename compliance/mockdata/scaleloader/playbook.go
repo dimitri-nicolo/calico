@@ -188,7 +188,7 @@ func (p *Playbook) GetNextStep() Step {
 	nsLen := len(p.nextSteps)
 	if nsLen == 0 {
 		for i := range p.plays {
-			if p.plays[i].steps != nil && len(p.plays[i].steps) > 0 {
+			if len(p.plays[i].steps) > 0 {
 				p.nextSteps = append(p.nextSteps, p.plays[i].GetSteps(p.iteration))
 			}
 		}

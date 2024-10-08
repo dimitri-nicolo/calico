@@ -304,8 +304,8 @@ func (cs *clusters) remove(mc *jclust.ManagedCluster) error {
 	if !ok {
 		cs.Unlock()
 		msg := fmt.Sprintf("Cluster id %q does not exist", mc.ID)
-		logrus.Debugf(msg)
-		return errors.Errorf(msg)
+		logrus.Debug(msg)
+		return errors.Errorf("%s", msg)
 	}
 
 	// remove from the map so nobody can get it, but whoever uses it can

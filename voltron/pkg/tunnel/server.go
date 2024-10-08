@@ -169,7 +169,7 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 					msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
 						tlsc.RemoteAddr().String(), err)
 					_ = ss.Close()
-					return nil, errors.Errorf(msg)
+					return nil, errors.Errorf("%s", msg)
 				}
 				// reset the deadline to no timeout
 				_ = tlsc.SetReadDeadline(time.Time{})

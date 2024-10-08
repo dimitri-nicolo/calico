@@ -158,7 +158,7 @@ type testServer struct {
 
 func (s *testServer) handler(w http.ResponseWriter, r *http.Request) {
 	s.authHeader = r.Header.Get(authentication.AuthorizationHeader)
-	fmt.Fprintf(w, s.msg)
+	fmt.Fprint(w, s.msg)
 }
 
 func describe(name string, testFn func(string, bool)) bool {

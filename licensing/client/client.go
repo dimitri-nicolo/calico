@@ -266,7 +266,7 @@ func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool 
 		return false
 	}
 
-	if c.Features == nil || len(c.Features) == 0 {
+	if len(c.Features) == 0 {
 		return false
 	}
 

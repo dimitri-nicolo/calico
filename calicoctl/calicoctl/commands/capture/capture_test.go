@@ -53,7 +53,7 @@ func TestCommands_Copy(t *testing.T) {
 		{
 			[]capture.Location{
 				{Name: any, CaptureNamespace: ns1, Pod: pod1, Dir: any, Namespace: any, Container: any},
-			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any)},
+			}, map[string]error{pod1: fmt.Errorf("%s", any)}, []error{fmt.Errorf("%s", any)},
 		},
 		// Given a single location, copy does not fail
 		{
@@ -77,7 +77,7 @@ func TestCommands_Copy(t *testing.T) {
 				{Name: any, CaptureNamespace: ns2, Pod: pod1, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns1, Pod: pod2, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns2, Pod: pod2, Dir: any, Namespace: any, Container: any},
-			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any)},
+			}, map[string]error{pod1: fmt.Errorf("%s", any)}, []error{fmt.Errorf("%s", any), fmt.Errorf("%s", any)},
 		},
 		// Given multiple location, copy fails for pod1 and pod2
 		{
@@ -86,7 +86,7 @@ func TestCommands_Copy(t *testing.T) {
 				{Name: any, CaptureNamespace: ns2, Pod: pod1, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns1, Pod: pod2, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns2, Pod: pod2, Dir: any, Namespace: any, Container: any},
-			}, map[string]error{pod1: fmt.Errorf(any), pod2: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any)},
+			}, map[string]error{pod1: fmt.Errorf("%s", any), pod2: fmt.Errorf("%s", any)}, []error{fmt.Errorf("%s", any), fmt.Errorf("%s", any), fmt.Errorf("%s", any), fmt.Errorf("%s", any)},
 		},
 		{
 			// No locations given
@@ -131,7 +131,7 @@ func TestCommands_Clean(t *testing.T) {
 		{
 			[]capture.Location{
 				{Name: any, CaptureNamespace: ns1, Pod: pod1, Dir: any, Namespace: any, Container: any},
-			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any)},
+			}, map[string]error{pod1: fmt.Errorf("%s", any)}, []error{fmt.Errorf("%s", any)},
 		},
 		// Given a single location, clean does not fail
 		{
@@ -155,7 +155,7 @@ func TestCommands_Clean(t *testing.T) {
 				{Name: any, CaptureNamespace: ns2, Pod: pod1, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns1, Pod: pod2, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns2, Pod: pod2, Dir: any, Namespace: any, Container: any},
-			}, map[string]error{pod1: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any)},
+			}, map[string]error{pod1: fmt.Errorf("%s", any)}, []error{fmt.Errorf("%s", any), fmt.Errorf("%s", any)},
 		},
 		// Given multiple location, clean fails for pod1 and pod2
 		{
@@ -164,7 +164,7 @@ func TestCommands_Clean(t *testing.T) {
 				{Name: any, CaptureNamespace: ns2, Pod: pod1, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns1, Pod: pod2, Dir: any, Namespace: any, Container: any},
 				{Name: any, CaptureNamespace: ns2, Pod: pod2, Dir: any, Namespace: any, Container: any},
-			}, map[string]error{pod1: fmt.Errorf(any), pod2: fmt.Errorf(any)}, []error{fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any), fmt.Errorf(any)},
+			}, map[string]error{pod1: fmt.Errorf("%s", any), pod2: fmt.Errorf("%s", any)}, []error{fmt.Errorf("%s", any), fmt.Errorf("%s", any), fmt.Errorf("%s", any), fmt.Errorf("%s", any)},
 		},
 		{
 			// No locations given
@@ -322,7 +322,7 @@ func TestCommands_List(t *testing.T) {
 		}
 		// mock stat command so that it returns a error for nodes marked to fail resolving
 		for _, node := range entry.errOutputForPods {
-			mock.On("Execute", fmt.Sprintf(capture.FindCaptureFileCommand, capture.TigeraFluentDNS, node, capture.TigeraFluentD, any)).Return("", fmt.Errorf(any))
+			mock.On("Execute", fmt.Sprintf(capture.FindCaptureFileCommand, capture.TigeraFluentDNS, node, capture.TigeraFluentD, any)).Return("", fmt.Errorf("%s", any))
 		}
 
 		// Call List

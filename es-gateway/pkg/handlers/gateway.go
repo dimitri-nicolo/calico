@@ -29,7 +29,7 @@ func (t *loggerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 	if err != nil {
 		return nil, err
 	}
-	logrus.Tracef(string(b))
+	logrus.Trace(string(b))
 
 	return t.defaultTransport.RoundTrip(req)
 }

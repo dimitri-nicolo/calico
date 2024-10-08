@@ -152,7 +152,9 @@ var GenerateLicenseCmd = &cobra.Command{
 		fmt.Println("\nIs the license information correct? [y/N]")
 
 		var valid string
-		fmt.Scanf("%s", &valid)
+		if _, err := fmt.Scanf("%s", &valid); err != nil {
+			log.Fatalf("error reading response %q : %v", valid, err)
+		}
 
 		if strings.ToLower(valid) != "y" {
 			os.Exit(1)
@@ -160,27 +162,27 @@ var GenerateLicenseCmd = &cobra.Command{
 
 		absPrivKeyPath, err := filepath.Abs(privKeyPath)
 		if err != nil {
-			log.Fatalf("error getting the absolute path for '%s' : %s", privKeyPath, err)
+			log.Fatalf("error getting the absolute path for %q : %v", privKeyPath, err)
 		}
 
 		absCertPath, err := filepath.Abs(certPath)
 		if err != nil {
-			log.Fatalf("error getting the absolute path for '%s' : %s", certPath, err)
+			log.Fatalf("error getting the absolute path for %q : %v", certPath, err)
 		}
 
 		lic, err := client.GenerateLicenseFromClaims(claims, absPrivKeyPath, absCertPath)
 		if err != nil {
-			log.Fatalf("error generating license from claims: %s", err)
+			log.Fatalf("error generating license from claims: %v", err)
 		}
 
 		if debug {
-			fmt.Printf("Connecting to: '%s'\n", datastore.DSN)
+			fmt.Printf("Connecting to: %q\n", datastore.DSN)
 		}
 
 		// Store the license in the license database.
 		db, err := datastore.NewDB(datastore.DSN)
 		if err != nil {
-			log.Fatalf("error connecting to license database: %s", err)
+			log.Fatalf("error connecting to license database: %v", err)
 		}
 
 		// Find or create the Company entry for the license.
@@ -189,7 +191,9 @@ var GenerateLicenseCmd = &cobra.Command{
 			// Confirm creation of company with the user in case they mistyped.
 			fmt.Printf("Customer '%s' not found in company database.  Create new company? [y/N]\n", claims.Customer)
 			var create string
-			fmt.Scanf("%s", &create)
+			if _, err := fmt.Scanf("%s", &create); err != nil {
+				log.Fatalf("error reading response %q : %v", create, err)
+			}
 
 			if strings.ToLower(create) != "y" {
 				os.Exit(1)
@@ -197,16 +201,16 @@ var GenerateLicenseCmd = &cobra.Command{
 
 			companyID, err = db.CreateCompany(claims.Customer)
 			if err != nil {
-				log.Fatalf("error creating company: %s", err)
+				log.Fatalf("error creating company: %v", err)
 			}
 		} else if err != nil {
-			log.Fatalf("error looking up company: %s", err)
+			log.Fatalf("error looking up company: %v", err)
 		}
 
 		// Save the license in the DB.
 		licenseID, err := db.CreateLicense(lic, companyID, &claims)
 		if err != nil {
-			log.Fatalf("error saving license to database: %s", err)
+			log.Fatalf("error saving license to database: %v", err)
 		}
 
 		// License successfully stored in database: emit yaml file.
@@ -215,12 +219,12 @@ var GenerateLicenseCmd = &cobra.Command{
 			// Remove the license from the database (leave the company around).
 			cleanupErr := db.DeleteLicense(licenseID)
 			if cleanupErr != nil {
-				log.Fatalf("error creating the license file: %s and error cleaning license up from database: %s",
+				log.Fatalf("error creating the license file: %v and error cleaning license up from database: %v",
 					err,
 					cleanupErr,
 				)
 			}
-			log.Fatalf("error creating the license file: %s", err)
+			log.Fatalf("error creating the license file: %v", err)
 		}
 
 		if debug {

@@ -67,7 +67,7 @@ func (k KibanaTenancy) enhanceWithTenancyQuery(w http.ResponseWriter, r *http.Re
 		return err
 	}
 
-	if asyncSearchRequest.Query == nil || len(asyncSearchRequest.Query) == 0 {
+	if len(asyncSearchRequest.Query) == 0 {
 		return fmt.Errorf("query field is empty")
 	}
 

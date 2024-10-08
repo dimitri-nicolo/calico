@@ -584,7 +584,7 @@ func (c *firewallPolicyIntegrationController) insertPolicy(panRule panclient.Rul
 			errMsg := fmt.Sprintf(
 				"failed to generate a valid global network policy name for tier: %s, and name: %s",
 				c.tier, name)
-			log.Errorf(errMsg)
+			log.Error(errMsg)
 			go postEvent(c.eventRecorder, c.ctx, c.k8sClient, c.policyControllerNamespace, errMsg)
 		}
 		key := gnpName

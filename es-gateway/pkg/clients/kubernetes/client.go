@@ -121,7 +121,7 @@ func (c *client) GetK8sReadyz() error {
 
 	contentStr := string(content)
 	if contentStr != "ok" {
-		return fmt.Errorf(contentStr)
+		return fmt.Errorf("%s", contentStr)
 	}
 
 	return nil
