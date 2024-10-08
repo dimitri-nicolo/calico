@@ -200,7 +200,7 @@ func addRoutes(router *mux.Router, routes proxy.Routes, catchAllRoute *proxy.Rou
 	// Set up provided catch-all Route
 	if catchAllRoute != nil {
 		if !catchAllRoute.IsPathPrefix {
-			return errors.Errorf("catch-all route must be marked as a path prefix")
+			return errors.New("catch-all route must be marked as a path prefix")
 		}
 
 		handlerChain := buildMiddlewareChain(catchAllRoute, h, f)

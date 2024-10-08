@@ -4,9 +4,8 @@
 package regex
 
 import (
+	"fmt"
 	"regexp"
-
-	"github.com/pkg/errors"
 )
 
 // CompileRegexStrings takes the given slice of strings and attempts to compile
@@ -17,7 +16,7 @@ func CompileRegexStrings(patterns []string) ([]regexp.Regexp, error) {
 	for _, pattern := range patterns {
 		result, err := regexp.Compile(pattern)
 		if err != nil {
-			return nil, errors.Errorf("PathRegexp failed: %s", err)
+			return nil, fmt.Errorf("PathRegexp failed: %s", err)
 		}
 		regexList = append(regexList, *result)
 	}

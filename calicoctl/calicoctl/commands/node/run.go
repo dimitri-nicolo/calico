@@ -16,6 +16,7 @@ package node
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	gonet "net"
 	"os"
@@ -375,7 +376,7 @@ Description:
 		for _, line := range strings.Split(string(output), "/n") {
 			errStr += fmt.Sprintf(" | %s/n", line)
 		}
-		return fmt.Errorf("%s", errStr)
+		return errors.New(errStr)
 	}
 
 	// Create the command to follow the docker logs for the tigera/cnx-node

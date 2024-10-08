@@ -16,6 +16,7 @@ package perf
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"runtime"
 	"sync/atomic"
@@ -104,7 +105,7 @@ func New(m maps.Map, ringSize int, opts ...Option) (Perf, error) {
 	cpus := numCPUs()
 
 	if m.Size() < cpus {
-		return nil, errors.Errorf("map has less entries %d than number of available CPUs %d", m.Size(), cpus)
+		return nil, fmt.Errorf("map has less entries %d than number of available CPUs %d", m.Size(), cpus)
 	}
 
 	p := &perf{
@@ -165,7 +166,7 @@ func (p *perf) openPerfRings(cpus, ringSize int) ([]*perfRing, error) {
 	pageSize := os.Getpagesize()
 
 	if ringSize%pageSize != 0 {
-		return nil, errors.Errorf("ring size %d not a multiple of page size %d", ringSize, pageSize)
+		return nil, fmt.Errorf("ring size %d not a multiple of page size %d", ringSize, pageSize)
 	}
 
 	pages := ringSize / pageSize
@@ -282,7 +283,7 @@ type perfRing struct {
 
 func newPerfRing(cpu int, pages, pageSize, watermark int, watermarkBytes bool) (*perfRing, error) {
 	if pages&(pages-1) != 0 {
-		return nil, errors.Errorf("ring size in pages %d not a power of 2", pages)
+		return nil, fmt.Errorf("ring size in pages %d not a power of 2", pages)
 	}
 
 	attr := unix.PerfEventAttr{
@@ -370,7 +371,7 @@ func (pr *perfRing) Next() (Event, error) {
 		event, n, err = readSample(pr.ring, head, tail)
 	default:
 		// Just to be sure, it never happens ;-), skip over the event.
-		err = errors.Errorf("unexpected event type %d", perfHeader.typ)
+		err = fmt.Errorf("unexpected event type %d", perfHeader.typ)
 	}
 
 	atomic.StoreUint64(&pr.ctrl.Data_tail, tail+perfEventHeaderSize+n)
@@ -421,7 +422,7 @@ func readLost(ring []byte, head, tail uint64) (Event, uint64, error) {
 
 func readSize(ring []byte, head, tail, size uint64) ([]byte, error) {
 	if head-tail < size {
-		return nil, errors.Errorf("insufficient bytes (%d) for read size %d", head-tail, size)
+		return nil, fmt.Errorf("insufficient bytes (%d) for read size %d", head-tail, size)
 	}
 
 	retBytes := make([]byte, size)

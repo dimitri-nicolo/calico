@@ -60,7 +60,7 @@ func KeyPEMEncode(key crypto.Signer) ([]byte, error) {
 	case *rsa.PrivateKey:
 		block = &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
 	default:
-		return nil, errors.Errorf("unsupported key type")
+		return nil, errors.New("unsupported key type")
 	}
 
 	return pem.EncodeToMemory(block), nil

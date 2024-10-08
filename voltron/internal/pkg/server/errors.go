@@ -2,10 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 

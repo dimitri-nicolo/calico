@@ -60,11 +60,11 @@ func New(tgts []Target) (*Proxy, error) {
 
 	for i, t := range tgts {
 		if t.Dest == nil {
-			return nil, errors.Errorf("bad target %d, no destination", i)
+			return nil, fmt.Errorf("bad target %d, no destination", i)
 		}
 		if len(t.CAPem) != 0 && t.Dest.Scheme != "https" {
 			log.Debugf("Configuring CA cert for secure communication %s for %s", t.CAPem, t.Dest.Scheme)
-			return nil, errors.Errorf("CA configured for url scheme %q", t.Dest.Scheme)
+			return nil, fmt.Errorf("CA configured for url scheme %q", t.Dest.Scheme)
 		}
 		hdlr, err := newTargetHandler(t)
 		if err != nil {
@@ -90,7 +90,7 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 			tlsCfg.InsecureSkipVerify = true
 		} else {
 			if len(tgt.CAPem) == 0 {
-				return nil, errors.Errorf("failed to create target handler for path %s: ca bundle was empty", tgt.Path)
+				return nil, fmt.Errorf("failed to create target handler for path %s: ca bundle was empty", tgt.Path)
 			}
 
 			log.Debugf("Detected secure transport for %s. Will pick up system cert pool", tgt.Dest)

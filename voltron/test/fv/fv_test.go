@@ -28,8 +28,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/pkg/errors"
-
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 
 	logrus "github.com/sirupsen/logrus"
@@ -107,7 +105,7 @@ func (c *testClient) doRequest(clusterID string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return "", errors.Errorf("error status: %d, body: %s", resp.StatusCode, body)
+		return "", fmt.Errorf("error status: %d, body: %s", resp.StatusCode, body)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -129,7 +127,7 @@ func (c *testClient) doHTTPRequest(clusterID string) (string, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return "", errors.Errorf("error status: %d", resp.StatusCode)
+		return "", fmt.Errorf("error status: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)

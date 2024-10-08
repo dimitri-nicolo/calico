@@ -4,6 +4,7 @@ package bootstrap
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,8 +12,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/transport"
-
-	"github.com/pkg/errors"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 )
@@ -90,7 +89,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 		if t.Path == "" {
 			return nil, errors.New("proxy target path cannot be empty")
 		} else if pathSet[t.Path] {
-			return nil, errors.Errorf("duplicate proxy target path %s", t.Path)
+			return nil, fmt.Errorf("duplicate proxy target path %s", t.Path)
 		}
 
 		pt := proxy.Target{
@@ -108,18 +107,18 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 		var err error
 		pt.Dest, err = url.Parse(t.Dest)
 		if err != nil {
-			return nil, errors.Errorf("Incorrect URL %q for path %q: %s", t.Dest, t.Path, err)
+			return nil, fmt.Errorf("Incorrect URL %q for path %q: %s", t.Dest, t.Path, err)
 		}
 
 		if pt.Dest.Scheme == "https" && !t.AllowInsecureTLS && t.CABundlePath == "" {
-			return nil, errors.Errorf("target for path '%s' must specify the ca bundle if AllowInsecureTLS is false when the scheme is https", t.Path)
+			return nil, fmt.Errorf("target for path '%s' must specify the ca bundle if AllowInsecureTLS is false when the scheme is https", t.Path)
 		}
 
 		if t.TokenPath != "" {
 			// Read the token from file to verify the token exists
 			_, err := os.ReadFile(t.TokenPath)
 			if err != nil {
-				return nil, errors.Errorf("Failed reading token from %s: %s", t.TokenPath, err)
+				return nil, fmt.Errorf("Failed reading token from %s: %s", t.TokenPath, err)
 			}
 
 			pt.Token = transport.NewCachedFileTokenSource(t.TokenPath)
@@ -130,13 +129,13 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 		}
 
 		if t.PathReplace != nil && t.PathRegexp == nil {
-			return nil, errors.Errorf("PathReplace specified but PathRegexp is not")
+			return nil, fmt.Errorf("PathReplace specified but PathRegexp is not")
 		}
 
 		if t.PathRegexp != nil {
 			r, err := regexp.Compile(string(t.PathRegexp))
 			if err != nil {
-				return nil, errors.Errorf("PathRegexp failed: %s", err)
+				return nil, fmt.Errorf("PathRegexp failed: %s", err)
 			}
 			pt.PathRegexp = r
 		}
@@ -162,7 +161,7 @@ func TLSTerminatedRoutesFromFile(path string) ([]Target, error) {
 
 	err = json.Unmarshal(contents, &targets)
 	if err != nil {
-		return nil, errors.Errorf("Failed unmarshalling JSON: %s", err)
+		return nil, fmt.Errorf("Failed unmarshalling JSON: %s", err)
 	}
 
 	return targets, nil
@@ -191,7 +190,7 @@ func TLSPassThroughRoutesFromFile(path string) ([]TLSPassThroughRoute, error) {
 
 	err = json.Unmarshal(contents, &routes)
 	if err != nil {
-		return nil, errors.Errorf("Failed unmarshalling JSON: %s", err)
+		return nil, fmt.Errorf("Failed unmarshalling JSON: %s", err)
 	}
 
 	return routes, nil

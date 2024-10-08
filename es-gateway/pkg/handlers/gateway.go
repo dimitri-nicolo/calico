@@ -10,14 +10,13 @@ import (
 	"net/http/httputil"
 	"os"
 
-	"github.com/projectcalico/calico/lma/pkg/logutils"
-
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
+	"github.com/projectcalico/calico/lma/pkg/logutils"
 )
 
 type loggerRoundTripper struct {
@@ -60,7 +59,7 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 			tlsCfg.InsecureSkipVerify = true
 		} else {
 			if len(t.CAPem) == 0 {
-				return nil, errors.Errorf("failed to create target handler for path %s: ca bundle was empty", t.Dest)
+				return nil, fmt.Errorf("failed to create target handler for path %s: ca bundle was empty", t.Dest)
 			}
 
 			logrus.Debugf("Detected secure transport for %s. Will pick up system cert pool", t.Dest)

@@ -4,6 +4,7 @@ package middlewares
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,8 +13,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/cache"
-
-	"github.com/pkg/errors"
 )
 
 type GatewayContextKey string
@@ -91,7 +90,7 @@ func extractCredentials(value string) (string, string, error) {
 	}
 	val := strings.Split(string(b), ":")
 	if len(val) != 2 {
-		return "", "", errors.Errorf("could not extract username & password: invalid format")
+		return "", "", errors.New("could not extract username & password: invalid format")
 	}
 	username := val[0]
 	password := val[1]

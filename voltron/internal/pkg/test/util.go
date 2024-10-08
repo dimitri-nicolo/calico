@@ -11,6 +11,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"math/big"
 	"net"
@@ -67,22 +68,22 @@ Gbs6cLS+CkglnRCvTeWtkqf7SawqfH4eKPu6k6xO1yuL2ylbFp0=
 func loadKeys() (interface{}, interface{}, error) {
 	block, _ := pem.Decode([]byte(pubRSA))
 	if block == nil {
-		return nil, nil, errors.Errorf("no block in public key")
+		return nil, nil, errors.New("no block in public key")
 	}
 
 	pubKey, err := x509.ParsePKCS1PublicKey(block.Bytes)
 	if err != nil {
-		return nil, nil, errors.Errorf("parsing public failed: %s", err)
+		return nil, nil, fmt.Errorf("parsing public failed: %s", err)
 	}
 
 	block, _ = pem.Decode([]byte(PrivateRSA))
 	if block == nil {
-		return nil, nil, errors.Errorf("no block in private key")
+		return nil, nil, errors.New("no block in private key")
 	}
 
 	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, nil, errors.Errorf("parsing private failed: %s", err)
+		return nil, nil, fmt.Errorf("parsing private failed: %s", err)
 	}
 
 	return pubKey, privKey, nil
@@ -143,7 +144,7 @@ func CreateSelfSignedX509CertRandom() (*x509.Certificate, crypto.Signer, error) 
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 
 	if err != nil {
-		return nil, nil, errors.Errorf("generating RSA key: %s", err)
+		return nil, nil, fmt.Errorf("generating RSA key: %s", err)
 	}
 
 	tmpl := &x509.Certificate{
@@ -156,13 +157,13 @@ func CreateSelfSignedX509CertRandom() (*x509.Certificate, crypto.Signer, error) 
 
 	bytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
 	if err != nil {
-		return nil, nil, errors.Errorf("creating X509 cert: %s", err)
+		return nil, nil, fmt.Errorf("creating X509 cert: %s", err)
 	}
 
 	cert, err := x509.ParseCertificate(bytes)
 	if err != nil {
 		// should never happen, we just generated the key
-		return nil, nil, errors.Errorf("parsing X509 cert: %s", err)
+		return nil, nil, fmt.Errorf("parsing X509 cert: %s", err)
 	}
 
 	return cert, key, nil
@@ -181,7 +182,7 @@ func PemEncodeCert(cert *x509.Certificate) []byte {
 // DataFlow sends a message from the io Reader to the io Writer. Returns the sent message.
 func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	if r == nil || w == nil {
-		return nil, errors.Errorf("Invalid parameters")
+		return nil, errors.New("Invalid parameters")
 	}
 	var wg sync.WaitGroup
 

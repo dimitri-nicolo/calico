@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"os"
 
@@ -129,7 +129,7 @@ func (d *DockerRunner) PushImage(img string) error {
 		}
 		if errorMessage.Error != "" {
 			logrus.WithField("error", errorMessage).Error("failed to push image")
-			return fmt.Errorf("%s", errorMessage.Error)
+			return errors.New(errorMessage.Error)
 		}
 	}
 	logrus.WithField("image", img).Debug("Image pushed")

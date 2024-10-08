@@ -4,10 +4,10 @@ package health
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -44,7 +44,7 @@ func (p *pingPonger) Ping(ctx context.Context) error {
 		if !ok {
 			log.Warnf("closing the pings channel for expired pingPonger %+v", p)
 			close(p.pings)
-			return errors.NewResourceExpired(PingChannelClosed)
+			return k8serrors.NewResourceExpired(PingChannelClosed)
 		}
 	default:
 	}
@@ -55,7 +55,7 @@ func (p *pingPonger) Ping(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		return errors.NewInternalError(fmt.Errorf("%s", PingChannelBusy))
+		return k8serrors.NewInternalError(errors.New(PingChannelBusy))
 	}
 
 	// Wait for the pong or return an error if the context finishes before we receive one

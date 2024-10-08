@@ -5,6 +5,7 @@ package kibana
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -97,7 +98,7 @@ func (c *client) GetKibanaStatus() error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("%s", string(data))
+		return errors.New(string(data))
 	}
 
 	return nil

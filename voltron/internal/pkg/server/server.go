@@ -283,7 +283,7 @@ func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
 	defer logrus.Debugf("ServeTunnelsTLS exited")
 
 	if s.tunSrv == nil {
-		return errors.Errorf("No tunnel server was initiated")
+		return errors.New("No tunnel server was initiated")
 	}
 	err := s.tunSrv.ServeTLS(lis)
 	if err != nil {
@@ -635,7 +635,7 @@ func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
 	defer logrus.Debug("WatchK8sWithSync done")
 
 	if s.k8s == nil {
-		return errors.Errorf("no k8s interface")
+		return errors.New("no k8s interface")
 	}
 
 	return s.clusters.watchK8s(s.ctx, syncC)

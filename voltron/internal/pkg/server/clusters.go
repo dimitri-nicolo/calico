@@ -17,9 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/lma/pkg/logutils"
-
 	"github.com/pkg/errors"
+
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 
@@ -29,6 +28,7 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/lma/pkg/logutils"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/config"
@@ -149,7 +149,7 @@ func (cs *clusters) makeInnerTLSConfig() error {
 
 func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 	if cs.clusters[mc.ID] != nil {
-		return nil, errors.Errorf("cluster id %q already exists", mc.ID)
+		return nil, fmt.Errorf("cluster id %q already exists", mc.ID)
 	}
 
 	c := &cluster{
@@ -305,7 +305,7 @@ func (cs *clusters) remove(mc *jclust.ManagedCluster) error {
 		cs.Unlock()
 		msg := fmt.Sprintf("Cluster id %q does not exist", mc.ID)
 		logrus.Debug(msg)
-		return errors.Errorf("%s", msg)
+		return errors.New(msg)
 	}
 
 	// remove from the map so nobody can get it, but whoever uses it can
@@ -328,14 +328,14 @@ func (cs *clusters) get(id string) *cluster {
 func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
 	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{}, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
-		return errors.Errorf("failed to create k8s watch: %s", err)
+		return fmt.Errorf("failed to create k8s watch: %s", err)
 	}
 
 	for {
 		select {
 		case r, ok := <-watcher.ResultChan():
 			if !ok {
-				return errors.Errorf("watcher stopped unexpectedly")
+				return fmt.Errorf("watcher stopped unexpectedly")
 			}
 			mcResource, ok := r.Object.(*v3.ManagedCluster)
 			if !ok {
@@ -361,7 +361,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				logrus.Infof("Deleting %s", mc.ID)
 				err = cs.remove(mc)
 			default:
-				err = errors.Errorf("Watch event %s unsupported", r.Type)
+				err = fmt.Errorf("Watch event %s unsupported", r.Type)
 			}
 
 			if err != nil {
@@ -373,12 +373,12 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				case syncC <- err:
 				case <-ctx.Done():
 					watcher.Stop()
-					return errors.Errorf("watcher exiting: %s", ctx.Err())
+					return fmt.Errorf("watcher exiting: %s", ctx.Err())
 				}
 			}
 		case <-ctx.Done():
 			watcher.Stop()
-			return errors.Errorf("watcher exiting: %s", ctx.Err())
+			return fmt.Errorf("watcher exiting: %s", ctx.Err())
 		}
 	}
 }
@@ -387,7 +387,7 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 	list := &v3.ManagedClusterList{}
 	err := cs.client.List(ctx, list, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
 	if err != nil {
-		return "", errors.Errorf("failed to get k8s list: %s", err)
+		return "", fmt.Errorf("failed to get k8s list: %s", err)
 	}
 
 	known := make(map[string]struct{})
@@ -450,7 +450,7 @@ func (cs *clusters) watchK8s(ctx context.Context, syncC chan<- error) error {
 		logrus.Debugf("ManagedClusters: could not sync watch due to %s", err)
 		select {
 		case <-ctx.Done():
-			return errors.Errorf("watcher exiting: %s", ctx.Err())
+			return fmt.Errorf("watcher exiting: %s", ctx.Err())
 		default:
 		}
 	}

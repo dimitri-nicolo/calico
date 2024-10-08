@@ -3,7 +3,7 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -121,7 +121,7 @@ func (c *client) GetK8sReadyz() error {
 
 	contentStr := string(content)
 	if contentStr != "ok" {
-		return fmt.Errorf("%s", contentStr)
+		return errors.New(contentStr)
 	}
 
 	return nil
