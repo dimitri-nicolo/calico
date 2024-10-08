@@ -147,7 +147,7 @@ func EndpointsAggregationHandler(authz lmaauth.RBACAuthorizer, authreview Author
 			logrus.WithError(err).Error("call to getEndpointsFromQueryServer failed.")
 			if strings.ContainsAny(strings.ToLower(err.Error()), "not authorized") {
 				httputils.EncodeError(w, &httputils.HttpStatusError{
-					Status: http.StatusUnauthorized,
+					Status: http.StatusForbidden,
 					Msg:    "failed authorization to queryserver/endpoints",
 					Err:    err,
 				})
