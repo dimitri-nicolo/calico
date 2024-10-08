@@ -1009,9 +1009,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter))
 		// Cleanup any tcp stats program attached in IPTables mode. In eBPF mode, tcp stats program is part of
 		// the main Tc program.
-		if config.FlowLogsCollectTcpStats {
-			tc.CleanUpTcpStatsPrograms()
-		}
+		tc.CleanUpTcpStatsPrograms()
 	}
 
 	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
