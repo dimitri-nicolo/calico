@@ -497,8 +497,8 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		NatOut:        ap.NATout,
 		EgwVxlanPort:  ap.EGWVxlanPort,
 		EgwHealthPort: ap.EgressGatewayHealthPort,
-
-		LogFilterJmp: uint32(ap.LogFilterIdx),
+		VethNS:        ap.VethNS,
+		LogFilterJmp:  uint32(ap.LogFilterIdx),
 	}
 
 	copy(globalData.HostIPv4[0:4], ap.HostIPv4.To4())

@@ -29,6 +29,64 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 )
 
+func CleanUpTcpStatsPrograms() {
+	bpftool := exec.Command("bpftool", "prog", "list", "--json")
+	progsJSON, err := bpftool.Output()
+	if err != nil {
+		log.WithError(err).Info("Failed to list TCP stats BPF programs, assuming there's nothing to clean up.")
+		return
+	}
+
+	var progs []struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+		Maps []int  `json:"map_ids"`
+	}
+
+	err = json.Unmarshal(progsJSON, &progs)
+	if err != nil {
+		log.WithError(err).Info("Failed to parse bpftool output.  Assuming nothing to clean up.")
+		return
+	}
+
+	calicoProgIDs := set.New[int]()
+	for _, p := range progs {
+		if strings.HasPrefix(p.Name, "calico_tcp") {
+			log.WithField("id", p.ID).Debug("Found calico program (by name)")
+			calicoProgIDs.Add(p.ID)
+			continue
+		}
+	}
+	// Find all the interfaces with a clsact qdisc and examine the attached filters to see if any belong to
+	// us.
+	calicoIfaces := set.New[string]()
+	for _, iface := range ifacesWithClsact() {
+		for _, dir := range []string{"ingress", "egress"} {
+			tc := exec.Command("tc", "filter", "show", dir, "dev", iface)
+			out, err := tc.Output()
+			if err != nil {
+				log.WithError(err).Debugf("Cleanup failed for interface %s; ignoring", iface)
+			}
+			for _, id := range findBPFProgIDs(out) {
+				if calicoProgIDs.Contains(id) {
+					log.Infof("Found calico program on interface %s", iface)
+					calicoIfaces.Add(iface)
+				}
+			}
+		}
+	}
+
+	calicoIfaces.Iter(func(iface string) error {
+		cmd := exec.Command("tc", "qdisc", "del", "dev", iface, "clsact")
+		err = cmd.Run()
+		if err != nil {
+			log.WithError(err).WithField("iface", iface).Info(
+				"Failed to remove BPF program from interface, maybe interface has gone?")
+		}
+		return nil
+	})
+}
+
 // CleanUpProgramsAndPins makes a best effort to remove all our TC BPF programs.
 func CleanUpProgramsAndPins() {
 	log.Debug("Trying to clean up any left-over BPF state from a previous run.")
