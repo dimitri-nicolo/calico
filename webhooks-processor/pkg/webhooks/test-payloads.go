@@ -8,7 +8,7 @@ import (
 
 var (
 	webhookTestPayloads = map[string]lsApi.Event{
-		"ga": {
+		"global_alert": {
 			ID:          "test-event-id",
 			Description: "[TEST] The GlobalAlert description",
 			Time:        lsApi.TimestampOrDate{},
@@ -24,7 +24,7 @@ var (
 				"sum":              122,
 			},
 		},
-		"dpi": {
+		"deep_packet_inspection": {
 			ID:           "test-event-id",
 			Description:  "[TEST] Deep Packet Inspection found a matching snort rule(s) for some packets in your network",
 			Time:         lsApi.TimestampOrDate{},
@@ -95,7 +95,7 @@ var (
 				},
 			},
 		},
-		"gtf": {
+		"gtf_suspicious_*": {
 			ID:           "test-event-id",
 			Description:  "[TEST] A pod made a DNS lookup for a domain name that appears to be algorithm-generated. This may indicate malware connecting out to a control server for exfiltration or further instructions.",
 			Time:         lsApi.TimestampOrDate{},
