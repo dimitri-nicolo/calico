@@ -3,6 +3,7 @@ package fv
 
 import (
 	"context"
+	"strings"
 
 	. "github.com/onsi/gomega"
 
@@ -522,6 +523,17 @@ var (
 		Spec: apiv3.TierSpec{
 			Order: &order1,
 		},
+	}
+
+	tier_default = &apiv3.Tier{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindTier,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: names.DefaultTierName,
+		},
+		Spec: apiv3.TierSpec{},
 	}
 
 	np1_t1_o1_ns1 = &apiv3.NetworkPolicy{
@@ -1163,6 +1175,20 @@ var (
 		},
 	}
 
+	np2_t1_o4_rack2_no_tier = &apiv3.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindNetworkPolicy,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "policy-no-tier-set",
+			Namespace: "ns1",
+		},
+		Spec: apiv3.NetworkPolicySpec{
+			Tier: "",
+		},
+	}
+
 	sknp1_t2_o1_ns1_rack2_only = &apiv3.StagedKubernetesNetworkPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
@@ -1726,19 +1752,34 @@ func qcEndpoint(r api.Resource, numGNP, numNP int) client.Endpoint {
 	return e
 }
 
-// Staged policies are converted to Enforced. So adjust original resource
-// to match query result
-func qcStagedAdjustment(p *client.Policy) {
+// qcStagedAdnDefaultTierAdjustment adjusts policy name considering two conversions:
+// 1. Staged policies are converted to Enforced. So adjust original resource
+// 2. Tier should be set to "default" if empty and thus policy name should be updated accordingly.
+func qcStagedAdnDefaultTierAdjustment(p *client.Policy) {
+	if p.Tier == "" {
+		p.Tier = names.DefaultTierName
+	}
+
 	switch p.Kind {
 	case apiv3.KindStagedNetworkPolicy:
+		if p.Tier == names.DefaultTierName && !strings.HasPrefix(p.Name, names.DefaultTierName) {
+			p.Name = strings.Join([]string{names.DefaultTierName, p.Name}, ".")
+		}
 		p.Name = model.PolicyNamePrefixStaged + p.Name
 		p.Kind = apiv3.KindNetworkPolicy
 	case apiv3.KindStagedGlobalNetworkPolicy:
+		if p.Tier == names.DefaultTierName && !strings.HasPrefix(p.Name, names.DefaultTierName) {
+			p.Name = strings.Join([]string{names.DefaultTierName, p.Name}, ".")
+		}
 		p.Name = model.PolicyNamePrefixStaged + p.Name
 		p.Kind = apiv3.KindGlobalNetworkPolicy
 	case apiv3.KindStagedKubernetesNetworkPolicy:
 		p.Name = model.PolicyNamePrefixStaged + names.K8sNetworkPolicyNamePrefix + p.Name
 		p.Kind = apiv3.KindNetworkPolicy
+	default:
+		if p.Tier == names.DefaultTierName && !strings.HasPrefix(p.Name, names.DefaultTierName) {
+			p.Name = strings.Join([]string{names.DefaultTierName, p.Name}, ".")
+		}
 	}
 }
 
@@ -1753,8 +1794,6 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		NumWorkloadEndpoints: numWEP,
 		NumHostEndpoints:     numHEP,
 	}
-
-	qcStagedAdjustment(&p)
 
 	createRulesFn := func(num int) []client.RuleDirection {
 		if num == 0 {
@@ -1812,6 +1851,8 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		p.Selector = &er.Spec.Selector
 	}
 
+	qcStagedAdnDefaultTierAdjustment(&p)
+
 	return p
 }
 
@@ -1850,6 +1891,10 @@ func createResources(
 			if _, ok := unhandled[key]; ok {
 				// This resource is in our unhandled map so we'll be creating or updating it
 				// later - no need to delete.
+				continue
+			}
+			if key.Kind == apiv3.KindTier && key.Name == names.DefaultTierName {
+				// Skip deleting "default" tier
 				continue
 			}
 			if i == 0 && key.Kind == apiv3.KindTier {

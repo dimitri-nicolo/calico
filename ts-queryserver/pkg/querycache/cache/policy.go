@@ -10,6 +10,7 @@ import (
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
@@ -556,13 +557,25 @@ func (d *policyData) GetResource() api.Resource {
 	return d.resource
 }
 
+// GetTier returns the tier of the policy
+// if tier is empty, it is defaulted to "default"
 func (d *policyData) GetTier() string {
 	switch r := d.resource.(type) {
 	case *apiv3.NetworkPolicy:
-		return r.Spec.Tier
+		tier := r.Spec.Tier
+		if r.Spec.Tier == "" {
+			tier = names.DefaultTierName
+		}
+		return tier
+
 	case *apiv3.GlobalNetworkPolicy:
-		return r.Spec.Tier
+		tier := r.Spec.Tier
+		if r.Spec.Tier == "" {
+			tier = names.DefaultTierName
+		}
+		return tier
 	}
+
 	return ""
 }
 

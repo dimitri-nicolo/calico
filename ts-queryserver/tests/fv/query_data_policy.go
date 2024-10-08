@@ -124,9 +124,22 @@ func policyTestQueryData() []testQueryData {
 	qcpolicy_sgnp2_t1_o4_rack2_only_networkset.EgressRules[1].Destination.NumHostEndpoints = 0
 	qcpolicy_sgnp2_t1_o4_rack2_only_networkset.EgressRules[1].Destination.NumWorkloadEndpoints = 0
 
+	qcpolicy_np2_t1_o4_rack2_no_tier := qcPolicy(np2_t1_o4_rack2_no_tier, 0, 0, 0, 0)
+
 	// Define a bunch of test query data for policies that test results returned in the policy appication index order.
 	// We tweak this data after to assign the policy index so that we don't have to specify it in every test here.
 	tqds := []testQueryData{
+		{
+			description: "no tier is set in the policy - it should return \"default\" as the tier",
+			resources: []resourcemgr.ResourceObject{
+				tier_default, np2_t1_o4_rack2_no_tier,
+			},
+			query: client.QueryPoliciesReq{},
+			response: &client.QueryPoliciesResp{
+				Count: 1,
+				Items: []client.Policy{qcpolicy_np2_t1_o4_rack2_no_tier},
+			},
+		},
 		{
 			"multiple gnps and nps, no endpoints - query exact np, does not exist",
 			[]resourcemgr.ResourceObject{
