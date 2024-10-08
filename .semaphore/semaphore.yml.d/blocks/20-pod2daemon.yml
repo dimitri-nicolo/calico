@@ -11,6 +11,7 @@
       - name: pod2daemon tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+          - test-results publish ./report/*.xml --name "pod2daemon-ut-tests" || true
       - name: Build binary
         matrix:
           - env_var: ARCH
@@ -18,3 +19,4 @@
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+>>>>>>> 1600ac9bc6
