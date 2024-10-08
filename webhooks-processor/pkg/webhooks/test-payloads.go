@@ -9,6 +9,7 @@ import (
 var (
 	webhookTestPayloads = map[string]lsApi.Event{
 		"ga": {
+			ID:          "test-event-id",
 			Description: "[TEST] The GlobalAlert description",
 			Time:        lsApi.TimestampOrDate{},
 			Origin:      "your-global-alert",
@@ -16,6 +17,7 @@ var (
 			MitreIDs:    &[]string{"n/a"},
 			MitreTactic: "n/a",
 			Mitigations: &[]string{"n/a"},
+			Type:        "global_alert",
 			Record: map[string]any{
 				"source_name_aggr": "jump-pod",
 				"source_namespace": "default",
@@ -23,11 +25,13 @@ var (
 			},
 		},
 		"dpi": {
+			ID:           "test-event-id",
 			Description:  "[TEST] Deep Packet Inspection found a matching snort rule(s) for some packets in your network",
 			Time:         lsApi.TimestampOrDate{},
 			Origin:       "dpi.default/default-namespace-all-endpoints",
 			AttackVector: "Network",
 			Severity:     100,
+			Type:         "deep_packet_inspection",
 			Record: map[string]any{
 				"snort_alert":              "24/09/27-08:24:10.080704 [**] [1:408:8] \"PROTOCOL-ICMP Echo Reply\" [**] [Classification: Misc activity] [Priority: 3] {ICMP} 8.8.8.8 -\u003e 192.168.142.9",
 				"snort_signature_id":       "408",
@@ -35,6 +39,7 @@ var (
 			},
 		},
 		"waf": {
+			ID:           "test-event-id",
 			Description:  "[TEST] Traffic inside your cluster triggered Web Application Firewall rules.",
 			Time:         lsApi.TimestampOrDate{},
 			Origin:       "Web Application Firewall",
@@ -46,8 +51,9 @@ var (
 				"This Web Application Firewall event is generated for the purpose of webhook testing, no action is required.",
 				"Payload of this event is consistent with actual expected payload when a similar event happens in your cluster.",
 			},
+			Type: "waf",
 			Record: map[string]any{
-				"@timestamp": "2024-01-01T12:00:00.000000000Z",
+				"@timestamp": "2024-10-10T12:00:00.000000000Z",
 				"destination": map[string]string{
 					"hostname":  "",
 					"ip":        "10.244.151.190",
@@ -90,6 +96,7 @@ var (
 			},
 		},
 		"gtf": {
+			ID:           "test-event-id",
 			Description:  "[TEST] A pod made a DNS lookup for a domain name that appears to be algorithm-generated. This may indicate malware connecting out to a control server for exfiltration or further instructions.",
 			Time:         lsApi.TimestampOrDate{},
 			Origin:       "Domain Generation Algorithm",
@@ -101,6 +108,7 @@ var (
 				"This Global Threat Feeds event is generated for the purpose of webhook testing, no action is required.",
 				"Payload of this event is consistent with actual expected payload when a similar event happens in your cluster.",
 			},
+			Type: "gtf_suspicious_dns_query",
 			Record: map[string]any{
 				"client_ip": "null",
 				"client_labels": map[string]string{
@@ -113,9 +121,9 @@ var (
 				"client_name_aggr": "test-evil-sim-pod",
 				"client_namespace": "default",
 				"count":            1,
-				"end_time":         "2024-07-09T18:07:01.210455014Z",
-				"generated_time":   "2024-07-09T18:07:06.286119215Z",
-				"host":             "antony-bz-0l7r-kadm-node-0",
+				"end_time":         "2024-10-10T12:00:00.000000000Z",
+				"generated_time":   "2024-10-10T12:00:00.000000000Z",
+				"host":             "node-name",
 				"id":               "oXOtmJABiNH1R3Pmgr0x",
 				"latency": map[string]int{
 					"count": 1,
@@ -154,7 +162,7 @@ var (
 						"namespace": "kube-system",
 					},
 				},
-				"start_time": "2024-07-09T18:01:31.604356499Z",
+				"start_time": "2024-10-10T12:00:00.000000000Z",
 				"type":       "log",
 			},
 		},
