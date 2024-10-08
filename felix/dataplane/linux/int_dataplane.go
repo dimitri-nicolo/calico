@@ -528,9 +528,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 		}
-	} else if !dataplaneFeatures.DNSPolicyInlineMode {
-		config.BPFDNSPolicyMode = apiv3.BPFDNSPolicyModeNoDelay
-		log.Warning("Kernel is too old to support BPFDNSPolicyModeInline. Requires at least 5.17")
 	}
 
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
