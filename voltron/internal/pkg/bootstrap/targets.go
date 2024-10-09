@@ -107,7 +107,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 		var err error
 		pt.Dest, err = url.Parse(t.Dest)
 		if err != nil {
-			return nil, fmt.Errorf("Incorrect URL %q for path %q: %s", t.Dest, t.Path, err)
+			return nil, fmt.Errorf("incorrect URL %q for path %q: %s", t.Dest, t.Path, err)
 		}
 
 		if pt.Dest.Scheme == "https" && !t.AllowInsecureTLS && t.CABundlePath == "" {
@@ -118,7 +118,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 			// Read the token from file to verify the token exists
 			_, err := os.ReadFile(t.TokenPath)
 			if err != nil {
-				return nil, fmt.Errorf("Failed reading token from %s: %s", t.TokenPath, err)
+				return nil, fmt.Errorf("failed reading token from %s: %s", t.TokenPath, err)
 			}
 
 			pt.Token = transport.NewCachedFileTokenSource(t.TokenPath)
@@ -161,7 +161,7 @@ func TLSTerminatedRoutesFromFile(path string) ([]Target, error) {
 
 	err = json.Unmarshal(contents, &targets)
 	if err != nil {
-		return nil, fmt.Errorf("Failed unmarshalling JSON: %s", err)
+		return nil, fmt.Errorf("failed unmarshalling JSON: %s", err)
 	}
 
 	return targets, nil
@@ -190,7 +190,7 @@ func TLSPassThroughRoutesFromFile(path string) ([]TLSPassThroughRoute, error) {
 
 	err = json.Unmarshal(contents, &routes)
 	if err != nil {
-		return nil, fmt.Errorf("Failed unmarshalling JSON: %s", err)
+		return nil, fmt.Errorf("failed unmarshalling JSON: %s", err)
 	}
 
 	return routes, nil

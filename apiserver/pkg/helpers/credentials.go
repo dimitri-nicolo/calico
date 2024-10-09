@@ -62,7 +62,7 @@ func DecodeCertAndKey(caCert, key []byte) (*x509.Certificate, *rsa.PrivateKey, e
 // Generate generates a x509 client certificate and its private key
 func Generate(caCert *x509.Certificate, caPrivateKey crypto.Signer, clusterName string) (*x509.Certificate, crypto.Signer, error) {
 	if len(clusterName) == 0 {
-		return nil, nil, errors.New("Cluster name cannot be empty")
+		return nil, nil, errors.New("cluster name cannot be empty")
 	}
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 

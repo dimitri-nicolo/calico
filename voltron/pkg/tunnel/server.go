@@ -249,7 +249,7 @@ func (ss *ServerStream) Identity() Identity {
 // call Read simultaneously from different threads.
 func (ss *ServerStream) Read(dst []byte) (int, error) {
 	if ss.closed.get() {
-		return 0, errors.New("Read on a closed stream")
+		return 0, errors.New("read on a closed stream")
 	}
 
 	return ss.Conn.Read(dst)
@@ -261,7 +261,7 @@ func (ss *ServerStream) Read(dst []byte) (int, error) {
 // not ok to call Write simultaneously from different threads.
 func (ss *ServerStream) Write(data []byte) (int, error) {
 	if ss.closed.get() {
-		return 0, errors.New("Write on a closed stream")
+		return 0, errors.New("write on a closed stream")
 	}
 
 	return ss.Conn.Write(data)

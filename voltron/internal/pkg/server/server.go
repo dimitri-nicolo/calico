@@ -283,7 +283,7 @@ func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
 	defer logrus.Debugf("ServeTunnelsTLS exited")
 
 	if s.tunSrv == nil {
-		return errors.New("No tunnel server was initiated")
+		return errors.New("no tunnel server was initiated")
 	}
 	err := s.tunSrv.ServeTLS(lis)
 	if err != nil {

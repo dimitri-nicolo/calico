@@ -361,7 +361,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				logrus.Infof("Deleting %s", mc.ID)
 				err = cs.remove(mc)
 			default:
-				err = fmt.Errorf("Watch event %s unsupported", r.Type)
+				err = fmt.Errorf("watch event %s unsupported", r.Type)
 			}
 
 			if err != nil {
