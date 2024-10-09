@@ -21,3 +21,6 @@ echo "Then open a browser and go to grafana at https://127.0.0.1:3000"
 echo "Use these credentials to login to grafana:"
 echo "User: admin"
 echo "Password: ${PASSWORD}"
+
+# Uninstalling
+# helm uninstall prometheus -n monitoring
