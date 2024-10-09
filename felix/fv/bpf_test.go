@@ -4580,6 +4580,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 			BeforeEach(func() {
 				options.TestManagesBPF = true
+				options.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTTCPSTATS"] = "true"
 				setupCluster()
 
 				// Default to Allow...

@@ -24,7 +24,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 )
 
-var _ = infrastructure.DatastoreDescribe("flow log with TCP stats", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 	var (
 		infra           infrastructure.DatastoreInfra
 		opts            infrastructure.TopologyOptions

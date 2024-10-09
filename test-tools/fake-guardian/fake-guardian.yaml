@@ -64,7 +64,7 @@ metadata:
     k8s-app: fake-guardian
 spec:
   serviceName: fake-guardian
-  #  replicas: 1
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: fake-guardian
@@ -92,12 +92,9 @@ spec:
         image: gcr.io/unique-caldron-775/cnx/tigera/fake-guardian:master
         imagePullPolicy: IfNotPresent
         resources:
-          limits:
-            cpu: 200m
-            memory: 400Mi
           requests:
             cpu: 100m
-            memory: 200Mi
+            memory: 250Mi
         volumeMounts:
         - mountPath: /etc/pki/tls/certs
           name: tigera-ca-bundle

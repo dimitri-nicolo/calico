@@ -195,6 +195,7 @@ type Config struct {
 	DeviceRouteSourceAddressIPv6   net.IP
 	DeviceRouteProtocol            netlink.RouteProtocol
 	RemoveExternalRoutes           bool
+	IPForwarding                   string
 	TableRefreshInterval           time.Duration
 	IPSecPolicyRefreshInterval     time.Duration
 	IptablesPostWriteCheckInterval time.Duration
@@ -1007,6 +1008,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// filter now so that the IP sets driver does a lot less logging.
 		ipSetsV4.SetFilter(set.New[string]())
 		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter))
+		// Cleanup any tcp stats program attached in IPTables mode. In eBPF mode, tcp stats program is part of
+		// the main Tc program.
+		tc.CleanUpTcpStatsPrograms()
 	}
 
 	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
@@ -2909,18 +2913,22 @@ func (d *InternalDataplane) configureKernel() {
 	out, err := mp.Exec()
 	log.WithError(err).WithField("output", out).Infof("attempted to modprobe %s", moduleConntrackSCTP)
 
-	log.Info("Making sure IPv4 forwarding is enabled.")
-	err = writeProcSys("/proc/sys/net/ipv4/ip_forward", "1")
-	if err != nil {
-		log.WithError(err).Error("Failed to set IPv4 forwarding sysctl")
-	}
-
-	if d.config.IPv6Enabled {
-		log.Info("Making sure IPv6 forwarding is enabled.")
-		err = writeProcSys("/proc/sys/net/ipv6/conf/all/forwarding", "1")
+	if d.config.IPForwarding == "Enabled" {
+		log.Info("Making sure IPv4 forwarding is enabled.")
+		err = writeProcSys("/proc/sys/net/ipv4/ip_forward", "1")
 		if err != nil {
-			log.WithError(err).Error("Failed to set IPv6 forwarding sysctl")
+			log.WithError(err).Error("Failed to set IPv4 forwarding sysctl")
 		}
+
+		if d.config.IPv6Enabled {
+			log.Info("Making sure IPv6 forwarding is enabled.")
+			err = writeProcSys("/proc/sys/net/ipv6/conf/all/forwarding", "1")
+			if err != nil {
+				log.WithError(err).Error("Failed to set IPv6 forwarding sysctl")
+			}
+		}
+	} else {
+		log.Info("IPv4 forwarding disabled by config, leaving sysctls untouched.")
 	}
 
 	// Enable conntrack packet and byte accounting.
