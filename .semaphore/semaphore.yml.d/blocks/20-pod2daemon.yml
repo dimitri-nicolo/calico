@@ -19,4 +19,3 @@
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
->>>>>>> 1600ac9bc6
