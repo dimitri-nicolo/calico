@@ -25,7 +25,7 @@ export KUBECONFIG=~/.kube/kind-config-kind
 # URL for an operator install. We will build the local code and load the images so
 # that the operator will use thoso images with local changes instead of pulling
 # images.
-: ${OPERATOR_URL:=https://docs.tigera.io/master/manifests/tigera-operator.yaml}
+: ${OPERATOR_URL:=../manifests/tigera-operator.yaml}
 
 tmpd=$(mktemp -d -t calico.XXXXXX)
 

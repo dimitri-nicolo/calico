@@ -1008,6 +1008,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// filter now so that the IP sets driver does a lot less logging.
 		ipSetsV4.SetFilter(set.New[string]())
 		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter))
+		// Cleanup any tcp stats program attached in IPTables mode. In eBPF mode, tcp stats program is part of
+		// the main Tc program.
+		tc.CleanUpTcpStatsPrograms()
 	}
 
 	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
