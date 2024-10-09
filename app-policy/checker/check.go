@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/types"
@@ -282,12 +284,15 @@ func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, req 
 				return
 			}
 		}
-		// Done evaluating policies in the tier. If no policy rules have matched, there is an implicit default deny
-		// at the end of the tier.
+		// Done evaluating policies in the tier. If no policy rules have matched, apply tier's default action.
 		if action == NO_MATCH {
-			log.Debug("No policy matched. Tier default DENY applies.")
-			s.Code = PERMISSION_DENIED
-			return
+			log.Debugf("No policy matched. Tier default action %v applies.", tier.DefaultAction)
+			// If the default action is anything beside Pass, then apply tier default deny action.
+			// Otherwise, continue to next tier or profiles.
+			if tier.DefaultAction != string(v3.Pass) {
+				s.Code = PERMISSION_DENIED
+				return
+			}
 		}
 	}
 	// If we reach here, there were either no tiers, or a policy PASSed the request.

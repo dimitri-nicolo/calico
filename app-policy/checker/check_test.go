@@ -507,7 +507,8 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 	Expect(status.Code).To(Equal(OK))
 }
 
-// Check multiple tiers with next-tier (pass) to next tier and match the action on the matched rule in the next tier is the result.
+// Check multiple tiers with next-tier (pass) to next tier and match the action on the matched rule in the next tier is
+// the result. For one path, /bar, matching hits tier2 default pass action, and result is based on a matched rule in tier3.
 func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -521,6 +522,11 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 			{
 				Name:            "tier2",
 				IngressPolicies: []string{"policy2", "policy3"},
+				DefaultAction:   "Pass",
+			},
+			{
+				Name:            "tier3",
+				IngressPolicies: []string{"policy4"},
 			},
 		},
 	}
@@ -548,6 +554,16 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 				Action: "allow",
 				HttpMatch: &proto.HTTPMatch{
 					Paths: []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/foo"}}},
+				},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier3", Name: "policy4"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+				HttpMatch: &proto.HTTPMatch{
+					Paths: []*proto.HTTPMatch_PathMatch{{PathMatch: &proto.HTTPMatch_PathMatch_Exact{Exact: "/bar"}}},
 				},
 			},
 		},
@@ -595,6 +611,25 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	store.DropActionOverride = policystore.LOG_AND_DROP
 	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
+
+	store.DropActionOverride = policystore.ACCEPT
+	status = checkStore(store, store.Endpoint, req)
+	Expect(status.Code).To(Equal(OK))
+
+	store.DropActionOverride = policystore.LOG_AND_ACCEPT
+	status = checkStore(store, store.Endpoint, req)
+	Expect(status.Code).To(Equal(OK))
+
+	// Change to a path that hits tier2 default Pass action, and then is allowed in tier3
+	http.Path = "/bar"
+
+	store.DropActionOverride = policystore.DROP
+	status = checkStore(store, store.Endpoint, req)
+	Expect(status.Code).To(Equal(OK))
+
+	store.DropActionOverride = policystore.LOG_AND_DROP
+	status = checkStore(store, store.Endpoint, req)
+	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.ACCEPT
 	status = checkStore(store, store.Endpoint, req)
