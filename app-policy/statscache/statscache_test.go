@@ -42,9 +42,6 @@ var (
 )
 
 func TestFlushCallback(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	var actual map[statscache.Tuple]statscache.Values
 	interval := 50 * time.Millisecond
 	mt := newMockTicker().(*mockTickerImpl)
@@ -53,7 +50,6 @@ func TestFlushCallback(t *testing.T) {
 		actual = callbackValue
 	}
 	sc.RegisterFlushCallback(cb)
-	go sc.Start(ctx)
 	sc.Add(statscache.DPStats{
 		Tuple: tuple1,
 		Values: statscache.Values{
@@ -61,7 +57,7 @@ func TestFlushCallback(t *testing.T) {
 			HTTPRequestsDenied:  3,
 		},
 	})
-	mt.tick()
+	sc.Flush()
 	expected := map[statscache.Tuple]statscache.Values{
 		tuple1: {
 			HTTPRequestsAllowed: 1,
