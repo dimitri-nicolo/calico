@@ -4,6 +4,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -122,13 +123,13 @@ Description:
 	}
 
 	var results int
-	var errors []error
+	var errs []error
 
 	// Run copy or clean
 	if isCopyCommand {
-		results, errors = captureCmd.Copy(locations, destination)
+		results, errs = captureCmd.Copy(locations, destination)
 	} else if isCleanCommand {
-		results, errors = captureCmd.Clean(locations)
+		results, errs = captureCmd.Clean(locations)
 	}
 
 	// in case --all-namespaces is used and we have at least 1 successful result
@@ -139,12 +140,12 @@ Description:
 		}
 	}
 
-	if errors != nil {
+	if errs != nil {
 		var result []string
-		for _, e := range errors {
+		for _, e := range errs {
 			result = append(result, e.Error())
 		}
-		return fmt.Errorf("%s", strings.Join(result, ";"))
+		return errors.New(strings.Join(result, ";"))
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -18,7 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/packetcapture/pkg/cache"
 	"github.com/projectcalico/calico/packetcapture/pkg/capture"
 	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
@@ -67,7 +68,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).Errorf("failed to get packet capture %s/%s", namespace, captureName)
 		switch err.(type) {
-		case errors.ErrorResourceDoesNotExist:
+		case cerrors.ErrorResourceDoesNotExist:
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		default:
@@ -196,7 +197,7 @@ func readErrorFromStream(errorReader io.Reader) error {
 	}
 
 	if len(errorBuffer.String()) != 0 {
-		return fmt.Errorf("%s", errorBuffer.String())
+		return errors.New(errorBuffer.String())
 	}
 	return nil
 }
@@ -217,7 +218,7 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get packet capture %s/%s", namespace, captureName)
 		switch err.(type) {
-		case errors.ErrorResourceDoesNotExist:
+		case cerrors.ErrorResourceDoesNotExist:
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		default:
@@ -286,7 +287,7 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 	err = f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
 	if err != nil {
 		switch err.(type) {
-		case errors.ErrorResourceUpdateConflict:
+		case cerrors.ErrorResourceUpdateConflict:
 			var ctx = context.Background()
 			var err = retryFor(ctx, 3, 500*time.Millisecond, 2*time.Second, func() error {
 				return f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)

@@ -91,7 +91,7 @@ func New(src Source, size int) (Events, error) {
 		return newPerfEvents(size)
 	}
 
-	return nil, errors.Errorf("unknown events source: %s", src)
+	return nil, fmt.Errorf("unknown events source: %s", src)
 }
 
 type perfEventsReader struct {
@@ -103,7 +103,7 @@ type perfEventsReader struct {
 
 func newPerfEvents(size int) (Events, error) {
 	if runtime.NumCPU() > MaxCPUs {
-		return nil, errors.Errorf("more cpus (%d) than the max supported (%d)", runtime.NumCPU(), 128)
+		return nil, fmt.Errorf("more cpus (%d) than the max supported (%d)", runtime.NumCPU(), 128)
 	}
 
 	perfMap := perf.Map("perf_evnt", MaxCPUs)
@@ -169,7 +169,7 @@ func ParseEvent(raw eventRaw) (Event, error) {
 	consumed := copy(hdrBytes[:], data)
 	l := len(data)
 	if int(hdr.Len) > l {
-		return Event{}, errors.Errorf("mismatched length %d vs data length %d", hdr.Len, l)
+		return Event{}, fmt.Errorf("mismatched length %d vs data length %d", hdr.Len, l)
 	}
 	return Event{
 		typ:  Type(hdr.Type),

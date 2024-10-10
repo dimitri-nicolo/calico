@@ -127,7 +127,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		It("Does not initiate a tunnel server when the tunnel destination doesn't have tls certificates", func() {
 			err := srv.ServeTunnelsTLS(listener)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("No tunnel server was initiated"))
+			Expect(err.Error()).To(Equal("no tunnel server was initiated"))
 		})
 
 		It("Receives 200 OK when reaching the proxy server using HTTPS using the external server name", func() {

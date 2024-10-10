@@ -4,6 +4,7 @@ package elastic
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -86,7 +87,7 @@ func (es *client) GetClusterHealth() error {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s", res.String())
+		return errors.New(res.String())
 	}
 
 	return nil

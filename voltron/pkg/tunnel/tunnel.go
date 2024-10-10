@@ -17,17 +17,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/lma/pkg/logutils"
+	"github.com/hashicorp/yamux"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"golang.org/x/net/http/httpproxy"
 
 	calicoTLS "github.com/projectcalico/calico/crypto/pkg/tls"
-
+	"github.com/projectcalico/calico/lma/pkg/logutils"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
-
-	"github.com/hashicorp/yamux"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // ErrTunnelClosed is used to notify a caller that an action can't proceed because the tunnel is closed
@@ -178,7 +176,7 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 	}
 
 	if err != nil {
-		return nil, errors.Errorf("New failed creating muxer: %s", err)
+		return nil, fmt.Errorf("new failed creating muxer: %s", err)
 	}
 
 	t.mux = mux
@@ -338,7 +336,7 @@ type serverCloser struct {
 }
 
 func (sc *serverCloser) Close() error {
-	sc.t.checkErr(errors.Errorf("closed by multiplexer"))
+	sc.t.checkErr(errors.New("closed by multiplexer"))
 	return sc.ReadWriteCloser.Close()
 }
 
@@ -359,7 +357,7 @@ func (a addr) String() string {
 func Dial(target string, opts ...Option) (*Tunnel, error) {
 	c, err := net.Dial("tcp", target)
 	if err != nil {
-		return nil, errors.Errorf("tcp.Dial failed: %v", err)
+		return nil, fmt.Errorf("tcp.Dial failed: %v", err)
 	}
 
 	return NewClientTunnel(c, opts...)
@@ -368,7 +366,7 @@ func Dial(target string, opts ...Option) (*Tunnel, error) {
 // DialTLS creates a TLS connection based on the config, must not be nil.
 func DialTLS(target string, tunnelTLSConfig *tls.Config, timeout time.Duration, httpProxyURL *url.URL, opts ...Option) (*Tunnel, error) {
 	if tunnelTLSConfig == nil {
-		return nil, errors.Errorf("nil config")
+		return nil, errors.New("nil config")
 	}
 	logrus.Infof("Starting TLS dial to %s with a timeout of %v", target, timeout)
 

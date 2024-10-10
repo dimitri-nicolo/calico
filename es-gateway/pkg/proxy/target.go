@@ -3,10 +3,10 @@
 package proxy
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
-
-	"github.com/pkg/errors"
 )
 
 // Route represents one (of possibly many) route paths that a Target will be matched for. This means
@@ -89,11 +89,11 @@ func CreateTarget(catchAllRoute *Route, routes Routes, dest, caCertPath, clientC
 
 	target.Dest, err = url.Parse(dest)
 	if err != nil {
-		return nil, errors.Errorf("could not parse destination URL %q with associcated routes %+v: %s", dest, routes, err)
+		return nil, fmt.Errorf("could not parse destination URL %q with associcated routes %+v: %s", dest, routes, err)
 	}
 
 	if target.Dest.Scheme == "https" && !allowInsecureTLS && caCertPath == "" {
-		return nil, errors.Errorf("target for '%s' must specify the CA bundle if AllowInsecureTLS is false when the scheme is https", dest)
+		return nil, fmt.Errorf("target for '%s' must specify the CA bundle if AllowInsecureTLS is false when the scheme is https", dest)
 	}
 
 	if caCertPath != "" {

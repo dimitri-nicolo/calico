@@ -161,7 +161,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 				// present both.
 				msg = fmt.Sprintf("%s: error=%s", msg, err)
 			}
-			err = fmt.Errorf("%s", msg)
+			err = errors.New(msg)
 		}
 		if err != nil {
 			logrus.WithError(err).Error("Final result of CNI ADD was an error.")
@@ -610,7 +610,7 @@ func cmdDel(args *skel.CmdArgs) (err error) {
 				// present both.
 				msg = fmt.Sprintf("%s: error=%s", msg, err)
 			}
-			err = fmt.Errorf("%s", msg)
+			err = errors.New(msg)
 		}
 		if err != nil {
 			logrus.WithError(err).Error("Final result of CNI DEL was an error.")

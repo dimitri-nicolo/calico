@@ -65,7 +65,7 @@ func WithClientCert(cert *x509.Certificate) ServerOption {
 
 			xCert, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return errors.Errorf("parsing cert PEM failed: %s", err)
+				return fmt.Errorf("parsing cert PEM failed: %s", err)
 			}
 			// s.certManager.AddCert(fmt.Sprintf("%x", sha256.Sum256(xCert.Raw)), xCert)
 			s.clientCertPool.AddCert(xCert)
@@ -73,7 +73,7 @@ func WithClientCert(cert *x509.Certificate) ServerOption {
 		}
 		//nolint:staticcheck // Ignore SA1019 deprecated
 		if len(s.clientCertPool.Subjects()) < 1 {
-			return errors.Errorf("no block in cert key")
+			return fmt.Errorf("no block in cert key")
 		}
 
 		log.Debug("tunnel.Server: TLS client creds set")
@@ -139,7 +139,7 @@ func (s *Server) Serve(lis net.Listener) error {
 		select {
 		case s.streamC <- ss:
 		case <-s.ctx.Done():
-			return errors.Errorf("server stopped")
+			return errors.New("server stopped")
 		}
 	}
 }
@@ -169,7 +169,7 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 					msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
 						tlsc.RemoteAddr().String(), err)
 					_ = ss.Close()
-					return nil, errors.Errorf("%s", msg)
+					return nil, errors.New(msg)
 				}
 				// reset the deadline to no timeout
 				_ = tlsc.SetReadDeadline(time.Time{})
@@ -183,7 +183,7 @@ func (s *Server) Accept() (io.ReadWriteCloser, error) {
 		log.Debugf("tunnel.Server accepted %s connection from %s", ctyp, ss.Conn.RemoteAddr().String())
 		return ss, nil
 	case <-s.ctx.Done():
-		return nil, errors.Errorf("server is exiting")
+		return nil, errors.New("server is exiting")
 	}
 }
 
@@ -249,7 +249,7 @@ func (ss *ServerStream) Identity() Identity {
 // call Read simultaneously from different threads.
 func (ss *ServerStream) Read(dst []byte) (int, error) {
 	if ss.closed.get() {
-		return 0, errors.Errorf("Read on a closed stream")
+		return 0, errors.New("read on a closed stream")
 	}
 
 	return ss.Conn.Read(dst)
@@ -261,7 +261,7 @@ func (ss *ServerStream) Read(dst []byte) (int, error) {
 // not ok to call Write simultaneously from different threads.
 func (ss *ServerStream) Write(data []byte) (int, error) {
 	if ss.closed.get() {
-		return 0, errors.Errorf("Write on a closed stream")
+		return 0, errors.New("write on a closed stream")
 	}
 
 	return ss.Conn.Write(data)

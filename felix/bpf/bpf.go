@@ -527,7 +527,7 @@ func getMapStructGeneral(mapDesc []string) (*mapInfo, error) {
 		return nil, fmt.Errorf("cannot parse json output: %v\n%s", err, output)
 	}
 	if m.Err != "" {
-		return nil, fmt.Errorf("%s", m.Err)
+		return nil, errors.New(m.Err)
 	}
 	return &m, nil
 }
@@ -1053,7 +1053,7 @@ func (b *BPFLib) GetXDPTag(ifName string) (string, error) {
 		return "", fmt.Errorf("cannot parse json output: %v\n%s", err, output)
 	}
 	if p.Err != "" {
-		return "", fmt.Errorf("%s", p.Err)
+		return "", errors.New(p.Err)
 	}
 
 	return p.Tag, nil
@@ -1143,7 +1143,7 @@ func (b *BPFLib) GetMapsFromXDP(ifName string) ([]int, error) {
 		return nil, fmt.Errorf("cannot parse json output: %v\n%s", err, output)
 	}
 	if p.Err != "" {
-		return nil, fmt.Errorf("%s", p.Err)
+		return nil, errors.New(p.Err)
 	}
 
 	return p.MapIds, nil
@@ -1668,7 +1668,7 @@ func (b *BPFLib) getSockMapID(progID int) (int, error) {
 		return -1, fmt.Errorf("cannot parse json output: %v\n%s", err, output)
 	}
 	if p.Err != "" {
-		return -1, fmt.Errorf("%s", p.Err)
+		return -1, errors.New(p.Err)
 	}
 
 	for _, mapID := range p.MapIds {
@@ -1719,7 +1719,7 @@ func clearSockmap(mapArgs []string) error {
 		}
 
 		if e.Err != "" {
-			return fmt.Errorf("%s", e.Err)
+			return errors.New(e.Err)
 		}
 
 		keyArgs := jsonKeyToArgs(e.NextKey)

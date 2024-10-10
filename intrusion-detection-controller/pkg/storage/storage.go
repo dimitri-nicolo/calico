@@ -5,13 +5,14 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
@@ -68,7 +69,7 @@ func (e *Service) Close() {
 
 func (e *Service) ListIPSets(ctx context.Context) ([]Meta, error) {
 	pager := client.NewListPager[lsv1.IPSetThreatFeed](&lsv1.IPSetThreatFeedParams{})
-	pages, errors := pager.Stream(ctx, e.lsClient.ThreatFeeds(e.clusterName).IPSet().List)
+	pages, errs := pager.Stream(ctx, e.lsClient.ThreatFeeds(e.clusterName).IPSet().List)
 
 	var ids []Meta
 	for page := range pages {
@@ -81,7 +82,7 @@ func (e *Service) ListIPSets(ctx context.Context) ([]Meta, error) {
 		}
 	}
 
-	if err, ok := <-errors; ok {
+	if err, ok := <-errs; ok {
 		log.WithError(err).Error("failed to read threat feeds")
 		return nil, err
 	}
@@ -91,7 +92,7 @@ func (e *Service) ListIPSets(ctx context.Context) ([]Meta, error) {
 
 func (e *Service) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
 	pager := client.NewListPager[lsv1.DomainNameSetThreatFeed](&lsv1.DomainNameSetThreatFeedParams{})
-	pages, errors := pager.Stream(ctx, e.lsClient.ThreatFeeds(e.clusterName).DomainNameSet().List)
+	pages, errs := pager.Stream(ctx, e.lsClient.ThreatFeeds(e.clusterName).DomainNameSet().List)
 
 	var ids []Meta
 	for page := range pages {
@@ -104,7 +105,7 @@ func (e *Service) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
 		}
 	}
 
-	if err, ok := <-errors; ok {
+	if err, ok := <-errs; ok {
 		log.WithError(err).Error("failed to read threat feeds")
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func (e *Service) checkBulkError(err error, response *lsv1.BulkResponse) error {
 			errorMsg = append(errorMsg, msg.Error())
 		}
 
-		return fmt.Errorf("%s", strings.Join(errorMsg, " and "))
+		return errors.New(strings.Join(errorMsg, " and "))
 	}
 	return nil
 }
@@ -442,7 +443,7 @@ func (e *Service) GetSecurityEvents(ctx context.Context, pager client.ListPager[
 	go func() {
 		defer close(results)
 
-		pages, errors := pager.Stream(ctx, e.lsClient.Events(e.clusterName).List)
+		pages, errs := pager.Stream(ctx, e.lsClient.Events(e.clusterName).List)
 
 		for page := range pages {
 			for _, item := range page.Items {
@@ -475,7 +476,7 @@ func (e *Service) GetSecurityEvents(ctx context.Context, pager client.ListPager[
 			}
 		}
 
-		if err, ok := <-errors; ok {
+		if err, ok := <-errs; ok {
 			results <- &lmaAPI.EventResult{Err: err}
 		}
 	}()
@@ -489,7 +490,7 @@ func (e *Service) PutForwarderConfig(ctx context.Context, f *ForwarderConfig) er
 
 	// Get the existing configmap, if it exists. If it doesn't, we'll create it.
 	err := e.client.Get(ctx, types.NamespacedName{Name: forwarderConfigConfigMapName, Namespace: forwarderConfigMapNamespace}, cm)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
 
@@ -516,7 +517,7 @@ func (e *Service) GetForwarderConfig(ctx context.Context) (*ForwarderConfig, err
 	cm := &v1.ConfigMap{}
 	err := e.client.Get(ctx, types.NamespacedName{Name: forwarderConfigConfigMapName, Namespace: forwarderConfigMapNamespace}, cm)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err

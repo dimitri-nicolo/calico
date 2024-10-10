@@ -9,11 +9,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"os"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // ReadCredentials reads from an absolute path a certificate and key as byte arrays
@@ -40,7 +39,7 @@ func ReadCredentials(certPath, keyPath string) (cert []byte, key []byte, err err
 func DecodeCertAndKey(caCert, key []byte) (*x509.Certificate, *rsa.PrivateKey, error) {
 	keyPEM, _ := pem.Decode(key)
 	if keyPEM == nil || keyPEM.Type != "RSA PRIVATE KEY" {
-		return nil, nil, errors.Errorf("provided key does not have PKCS#1 format")
+		return nil, nil, errors.New("provided key does not have PKCS#1 format")
 	}
 
 	rsaKey, err := x509.ParsePKCS1PrivateKey(keyPEM.Bytes)
@@ -50,7 +49,7 @@ func DecodeCertAndKey(caCert, key []byte) (*x509.Certificate, *rsa.PrivateKey, e
 
 	block, _ := pem.Decode(caCert)
 	if block == nil {
-		return nil, nil, errors.Errorf("provided cert is not in PEM format")
+		return nil, nil, errors.New("provided cert is not in PEM format")
 	}
 	x509Cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
@@ -63,7 +62,7 @@ func DecodeCertAndKey(caCert, key []byte) (*x509.Certificate, *rsa.PrivateKey, e
 // Generate generates a x509 client certificate and its private key
 func Generate(caCert *x509.Certificate, caPrivateKey crypto.Signer, clusterName string) (*x509.Certificate, crypto.Signer, error) {
 	if len(clusterName) == 0 {
-		return nil, nil, errors.Errorf("Cluster name cannot be empty")
+		return nil, nil, errors.New("cluster name cannot be empty")
 	}
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 

@@ -5,12 +5,11 @@ package client
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"time"
 
 	"github.com/projectcalico/calico/test-tools/fake-guardian/pkg/voltron/proxy"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-
-	"github.com/pkg/errors"
 )
 
 // Option is a common format for New() options
@@ -38,12 +37,12 @@ func WithDefaultAddr(addr string) Option {
 func WithTunnelCreds(certPEM []byte, keyPEM []byte) Option {
 	return func(c *Client) error {
 		if certPEM == nil || keyPEM == nil {
-			return errors.Errorf("WithTunnelCreds: cert and key are required")
+			return fmt.Errorf("WithTunnelCreds: cert and key are required")
 		}
 
 		cert, err := tls.X509KeyPair(certPEM, keyPEM)
 		if err != nil {
-			return errors.Errorf("tls.X509KeyPair: %s", err.Error())
+			return fmt.Errorf("tls.X509KeyPair: %s", err.Error())
 		}
 
 		c.tunnelCert = &cert
