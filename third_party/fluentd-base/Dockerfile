@@ -17,7 +17,7 @@ RUN gem install async-http -v 0.60.2 && \
        gem install fluentd -v ${FLUENTD_VERSION} && \
        gem install json -v 2.6.3 && \
        gem install oj -v 3.16.1 && \
-       gem install rexml -v 3.2.6
+       gem install rexml -v 3.2.7
 
 # Calico Enterprise dependencies
 RUN gem install elasticsearch-api -v 7.17.11 && \
