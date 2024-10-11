@@ -280,7 +280,7 @@ func (cfg *sidecarCfg) envoyOptionalAttributes() (map[string]interface{}, error)
 	return res, nil
 }
 
-func (cfg *sidecarCfg) patchBytes() ([]byte, error) {
+func (cfg *sidecarCfg) patchBytes(additionalPatches ...patchOp) ([]byte, error) {
 	if !(cfg.logging || cfg.policy || cfg.waf) {
 		return nil, nil
 	}
@@ -296,6 +296,7 @@ func (cfg *sidecarCfg) patchBytes() ([]byte, error) {
 
 	// build patch with volumes and initContainers
 	var patch patchOps
+	patch = append(patch, additionalPatches...)
 	for _, vol := range cfg.volumes() {
 		patch = append(patch, patchOp{
 			Op:    "add",
@@ -313,6 +314,27 @@ func (cfg *sidecarCfg) patchBytes() ([]byte, error) {
 	})
 
 	return patch.MarshalJSON()
+}
+
+func relocateRunAsNonRoot(p *corev1.Pod) []patchOp {
+	res := make([]patchOp, 0)
+
+	if p.Spec.SecurityContext != nil && p.Spec.SecurityContext.RunAsNonRoot != nil && *p.Spec.SecurityContext.RunAsNonRoot {
+		res = append(res, patchOp{
+			Op:   "remove",
+			Path: "/spec/securityContext/runAsNonRoot",
+		})
+
+		for i := range p.Spec.Containers {
+			res = append(res, patchOp{
+				Op:    "add",
+				Path:  fmt.Sprintf("/spec/containers/%d/securityContext", i),
+				Value: map[string]interface{}{"runAsNonRoot": true},
+			})
+		}
+	}
+
+	return res
 }
 
 func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissionv1.AdmissionRequest) error {
@@ -333,7 +355,9 @@ func (s *sidecarWebhook) patch(res *admissionv1.AdmissionResponse, req *admissio
 	pt := admissionv1.PatchTypeJSONPatch
 	res.PatchType = &pt
 
-	patchBytes, err := cfg.patchBytes()
+	additionalPatches := relocateRunAsNonRoot(&pod)
+
+	patchBytes, err := cfg.patchBytes(additionalPatches...)
 	if err != nil {
 		return err
 	}
