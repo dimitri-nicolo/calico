@@ -82,7 +82,6 @@ generate:
 	$(MAKE) -C api gen-files
 	$(MAKE) -C libcalico-go gen-files
 	$(MAKE) -C felix gen-files
-	$(MAKE) -C calicoctl gen-crds
 	$(MAKE) -C app-policy protobuf
 	$(MAKE) -C egress-gateway protobuf
 	$(MAKE) gen-manifests
