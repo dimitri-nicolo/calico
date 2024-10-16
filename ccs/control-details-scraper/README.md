@@ -1,5 +1,8 @@
 ## CCS Control Details Scraper
 
+The CCS Control Details Scraper scrapes information from [regoLibrary](https://github.com/kubescape/regolibrary). 
+It then generates a list of controlDetails and writes it into a file to be embedded into the main CCS API application.
+
 This application is run by running: `make gen-controls` in the root directory of the CCS application.
 
 The scraper generates a list of control details that looks like:
@@ -43,4 +46,5 @@ The scraper generates a list of control details that looks like:
   "example": "Example of failure scenario"
 }...]
 ```
-This json list is used by the CCS Control Details Indexer to be inserted into Elasticsearch.
+
+The Makefile target above clones the regoLibrary repository, runs the scraper, then deletes the repository.
