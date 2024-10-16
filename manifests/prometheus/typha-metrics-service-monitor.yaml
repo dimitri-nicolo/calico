@@ -8,7 +8,7 @@ spec:
   endpoints:
     - honorLabels: true
       interval: 5s
-      port: metrics-port
+      port: calico-typha-metrics
       scheme: http
       scrapeTimeout: 5s
   namespaceSelector:
@@ -16,4 +16,4 @@ spec:
       - calico-system
   selector:
     matchLabels:
-      k8s-app: typha-metrics
+      k8s-app: calico-typha
