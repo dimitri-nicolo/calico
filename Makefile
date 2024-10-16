@@ -40,6 +40,7 @@ clean:
 	$(MAKE) -C node clean
 	$(MAKE) -C pod2daemon clean
 	$(MAKE) -C typha clean
+	$(MAKE) -C release clean
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 	rm -rf _release_archive
