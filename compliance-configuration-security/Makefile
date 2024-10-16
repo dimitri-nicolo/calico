@@ -1,7 +1,7 @@
 # Copyright 2024 Tigera Inc. All rights reserved.
 include ../metadata.mk
 
-PACKAGE_NAME   ?= github.com/projectcalico/calico/ccs
+PACKAGE_NAME   ?= github.com/projectcalico/calico/compliance-configuration-security
 
 REGO_LIBRARY_RELEASE_VER = v2.0.11
 KUBESCAPE_VER = v3.0.15

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/projectcalico/calico/ccs/control-details-scraper/pkg/models/ccsmodel"
-	"github.com/projectcalico/calico/ccs/control-details-scraper/pkg/models/regolib"
+	"github.com/projectcalico/calico/compliance-configuration-security/control-details-scraper/pkg/models/ccsmodel"
+	"github.com/projectcalico/calico/compliance-configuration-security/control-details-scraper/pkg/models/regolib"
 )
 
 type contolGenerator struct {

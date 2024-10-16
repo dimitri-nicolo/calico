@@ -5,7 +5,7 @@ package main
 import (
 	"flag"
 
-	"github.com/projectcalico/calico/ccs/control-details-scraper/pkg/controlgen"
+	"github.com/projectcalico/calico/compliance-configuration-security/control-details-scraper/pkg/controlgen"
 	"github.com/sirupsen/logrus"
 )
 
