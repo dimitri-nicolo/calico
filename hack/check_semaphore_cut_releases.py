@@ -23,7 +23,8 @@ SKIP_SUBDIRS = [
     "lma",
     "networking-calico",
     "selinux",
-    "release"
+    "release",
+    "ccs" #TODO Delete this when ccs is ready.
 ]
 
 if sys.stdout.isatty():
