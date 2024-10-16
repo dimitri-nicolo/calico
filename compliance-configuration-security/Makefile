@@ -20,6 +20,6 @@ include ../lib.Makefile
 
 .PHONY: gen-controls
 gen-controls:
-	git clone --branch $(REGO_LIBRARY_RELEASE_VER) --single-branch https://github.com/kubescape/regolibrary.git
+	mkdir -p regolibrary && curl -sfL https://github.com/kubescape/regolibrary/archive/refs/tags/$(REGO_LIBRARY_RELEASE_VER).tar.gz | tar xz --strip-components 1 -C regolibrary
 	$(DOCKER_RUN) $(CALICO_BUILD) go run control-details-scraper/cmd/main.go -writeToPath=./docker-image/control-details-indexer/controls/ -regoPath=./regolibrary 
 	rm -rf ./regolibrary
