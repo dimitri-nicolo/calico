@@ -52,7 +52,6 @@ const (
 	NO_MATCH // Indicates policy did not match request. Cannot be assigned to rule.
 )
 
-<<<<<<< HEAD
 var (
 	rlog = logutils.NewRateLimitedLogger()
 )

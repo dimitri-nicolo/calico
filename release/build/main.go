@@ -336,7 +336,7 @@ func hashreleaseSubCommands(cfg *config.Config) []*cli.Command {
 			},
 			Action: func(c *cli.Context) error {
 				configureLogging("hashrelease-metadata.log")
-				versions, err := hashrelease.LoadPinnedVersionFile(c.String("versions-file"))
+				versions, err := pinnedversion.LoadPinnedVersionFile(c.String("versions-file"))
 				if err != nil {
 					return err
 				}
