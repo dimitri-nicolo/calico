@@ -233,8 +233,7 @@ func TestRunServeNoPolicySync(t *testing.T) {
 		}
 		entries = append(entries, log)
 	}
-	// same destination for both 2 requests, so we expect 1 log entry only
-	assert.Equal(t, 1, len(entries), "expected 1 logs")
+	assert.Equal(t, 2, len(entries), "expected 2 logs")
 }
 
 func NewExtAuthzClient(ctx context.Context, addr string) (authzv3.AuthorizationClient, error) {
