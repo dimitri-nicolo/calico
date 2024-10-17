@@ -47,7 +47,7 @@ var (
 	}, []string{"groupNum"})
 	counterVecBufferOverruns = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "felix_nflog_buffer_overruns",
-		Help: "Total number of times that the kernel's NFLOG bugger overran causing NFLOGs to be dropped.",
+		Help: "Total number of times that the kernel's NFLOG buffer overran causing NFLOGs to be dropped.",
 	}, []string{"groupNum"})
 	counterVecChanWaitTime = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "felix_nflog_block_time_seconds",
