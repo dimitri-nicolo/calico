@@ -14,8 +14,8 @@ import (
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/spyutil"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 

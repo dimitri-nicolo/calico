@@ -15,7 +15,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 )
@@ -84,4 +84,8 @@ func (c *globalAlertController) Close() {
 	if c.cancel != nil {
 		c.cancel()
 	}
+}
+
+func (c *globalAlertController) Ping(ctx context.Context) error {
+	return nil
 }

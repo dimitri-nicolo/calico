@@ -34,6 +34,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 	geo "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/rbac"
@@ -42,7 +43,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/forwarder"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/anomalydetection"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/managedcluster"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"

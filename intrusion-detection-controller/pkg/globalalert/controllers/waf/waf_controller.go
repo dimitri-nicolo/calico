@@ -12,7 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 )
 
 const (
@@ -144,6 +144,10 @@ func (c *wafAlertController) Close() {
 	if c.cancel != nil {
 		c.cancel()
 	}
+}
+
+func (c *wafAlertController) Ping(ctx context.Context) error {
+	return nil
 }
 
 func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {

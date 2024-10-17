@@ -17,13 +17,13 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
+	cont "github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/controller"
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/puller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/searcher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 
@@ -32,16 +32,6 @@ import (
 )
 
 const DefaultResyncPeriod = 0
-
-// Watcher accepts updates from threat pullers and synchronizes them to the
-// database
-type Watcher interface {
-	health.Pinger
-
-	// Run starts the feed synchronization.
-	Run(ctx context.Context)
-	Close()
-}
 
 type watcher struct {
 	configMapClient        v1.ConfigMapInterface
@@ -97,7 +87,7 @@ func NewWatcher(
 	events storage.Events,
 	geodb geodb.GeoDatabase,
 	maxLinseedTimeSkew time.Duration,
-) Watcher {
+) cont.Controller {
 	feedWatchers := map[string]*feedWatcher{}
 
 	lw := &cache.ListWatch{

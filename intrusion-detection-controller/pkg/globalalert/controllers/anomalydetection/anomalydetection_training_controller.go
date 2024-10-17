@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
@@ -51,6 +51,10 @@ func (c *adJobTrainingController) Close() {
 	if c.ctx != nil {
 		c.cancel()
 	}
+}
+
+func (c *adJobTrainingController) Ping(ctx context.Context) error {
+	return nil
 }
 
 // Cleanup AD training cron jobs.

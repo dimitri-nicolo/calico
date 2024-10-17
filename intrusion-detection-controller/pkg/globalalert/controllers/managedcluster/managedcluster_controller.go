@@ -16,7 +16,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
@@ -78,4 +78,8 @@ func (m *managedClusterController) Close() {
 	log.Infof("closing a managed cluster controller %+v", m)
 	m.worker.Close()
 	m.cancel()
+}
+
+func (m *managedClusterController) Ping(ctx context.Context) error {
+	return nil
 }
