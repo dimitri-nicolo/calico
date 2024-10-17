@@ -116,12 +116,11 @@ func (m *mockDataplane) loadDefaultPolicies() error {
 }
 
 func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (qDiscInfo, error) {
-	var qdisc qDiscInfo
-	key := ap.IfaceName() + ":" + ap.HookName().String()
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	key := ap.IfaceName() + ":" + ap.HookName().String()
 	m.numAttaches[key] = m.numAttaches[key] + 1
-	return qdisc, nil
+	return qDiscInfo{valid: true, prio: 49152, handle: 1}, nil
 }
 
 func (m *mockDataplane) ensureProgramLoaded(ap attachPoint, ipFamily proto.IPVersion) error {
