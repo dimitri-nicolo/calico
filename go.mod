@@ -187,6 +187,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
+require github.com/projectcalico/api v0.0.0-20240708202104-e3f70b269c2c
+
 require (
 	cloud.google.com/go/auth v0.4.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
