@@ -18,3 +18,10 @@ prometheusOperator:
 prometheusConfigReloader:
   image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader
   tag: master
+# Tolerations for the tigera/prometheus-operator pod to be scheduled on GKE Arm64 nodes.
+# See: https://cloud.google.com/kubernetes-engine/docs/how-to/prepare-arm-workloads-for-deployment#multi-arch-schedule-any-arch
+tolerations:
+  - key: kubernetes.io/arch
+    operator: Equal
+    value: arm64
+    effect: NoSchedule
