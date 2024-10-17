@@ -515,7 +515,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Info("Timestamping enabled, so DNS latency will be measured")
 		}
 	}
-	
+
 	if config.BPFLogLevel == "info" {
 		config.BPFLogLevel = "off"
 	}
