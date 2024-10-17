@@ -16,7 +16,7 @@ import (
 )
 
 type Permission interface {
-	IsAuthorized(res api.Resource, verb, tier string) bool
+	IsAuthorized(res api.Resource, tier *string, verbs []string) bool
 }
 type permission struct {
 	APIGroupsPermissions map[string]ResourcePermissions // apiGroup string --> ResourcePermission
@@ -24,17 +24,45 @@ type permission struct {
 
 type ResourcePermissions map[string]VerbPermissions          // resource name string -->
 type VerbPermissions map[string][]v3.AuthorizedResourceGroup // verb string --> []ResourceGroup
+type AuthorizationVerb string
+type APIGroupResourceName string
+
+func getCombinedName(apiGroup string, resourceName string) APIGroupResourceName {
+	return APIGroupResourceName(strings.Join([]string{apiGroup, resourceName}, "/"))
+}
 
 // IsAuthorized is checking if current users' permissions allows either of the verbs passed in the param on the resource passed in.
-func (p *permission) IsAuthorized(res api.Resource, verb, tier string) bool {
-	if rscMap, ok := p.APIGroupsPermissions[getAPIGroup(res.GetObjectKind().GroupVersionKind().Group)]; ok {
-		if verbsMap, ok := rscMap[convertV1KindToResourceType(res.GetObjectKind().GroupVersionKind().Kind,
-			res.GetObjectMeta().GetName())]; ok {
-			if authorizedRscGrps, ok := verbsMap[verb]; ok {
-				for _, r := range authorizedRscGrps {
-					// check namespace and tier
-					if isNamespaceAllowed(r, res) && isTierAllowed(r, tier) {
+func (p *permission) IsAuthorized(res api.Resource, tier *string, verbs []string) bool {
+	combinedName := getCombinedName(
+		getAPIGroup(res.GetObjectKind().GroupVersionKind().Group),
+		convertV1KindToResourceType(res.GetObjectKind().GroupVersionKind().Kind, res.GetObjectMeta().GetName()))
+
+	if verbsMap, ok := p.APIGroupsResourceNamePermissions[combinedName]; ok {
+		for _, v := range verbs {
+			if resourceGrps, ok := verbsMap[AuthorizationVerb(v)]; ok {
+				for _, resourceGrp := range resourceGrps {
+					if resourceGrp.Namespace == "" && resourceGrp.Tier == "" {
 						return true
+					}
+					if resourceGrp.Namespace != "" && resourceGrp.Tier == "" {
+						if namespaceMatch(res.GetObjectMeta().GetNamespace(), resourceGrp.Namespace) {
+							return true
+						}
+					}
+					if resourceGrp.Namespace == "" && resourceGrp.Tier != "" {
+						if tier != nil {
+							if tierMatch(*tier, resourceGrp.Tier) {
+								return true
+							}
+						}
+					}
+					if resourceGrp.Namespace != "" && resourceGrp.Tier != "" {
+						if tier != nil {
+							if namespaceMatch(res.GetObjectMeta().GetNamespace(), resourceGrp.Namespace) &&
+								tierMatch(*tier, resourceGrp.Tier) {
+								return true
+							}
+						}
 					}
 				}
 			}
@@ -43,14 +71,12 @@ func (p *permission) IsAuthorized(res api.Resource, verb, tier string) bool {
 	return false
 }
 
-func isNamespaceAllowed(authorizedRscGrp v3.AuthorizedResourceGroup, res api.Resource) bool {
-
-	return authorizedRscGrp.Namespace == "" || (authorizedRscGrp.Namespace == res.GetObjectMeta().GetNamespace())
-
+func namespaceMatch(ns1, ns2 string) bool {
+	return ns1 == ns2
 }
 
-func isTierAllowed(authorizedRscGrp v3.AuthorizedResourceGroup, tier string) bool {
-	return authorizedRscGrp.Tier == "" || authorizedRscGrp.Tier == tier
+func tierMatch(tier1, tier2 string) bool {
+	return tier1 == tier2
 }
 
 func getAPIGroup(apigroup string) string {
@@ -78,12 +104,14 @@ func convertV1KindToResourceType(kind string, name string) string {
 		return "globalnetworkpolicies"
 	case "networkpolicies", "networkpolicy":
 		return "networkpolicies"
-	case "globalnetworsets", "globalnetworset":
-		return "globalnetworsets"
+	case "globalnetworksets", "globalnetworkset":
+		return "globalnetworksets"
 	case "networksets", "networkset":
 		return "networksets"
 	case "tiers", "tier":
 		return "tiers"
+	case "pods", "pod":
+		return "pods"
 	default:
 		return kind
 	}
@@ -145,26 +173,24 @@ func (authz *authorizer) PerformUserAuthorizationReview(ctx context.Context,
 	return convertAuthorizationReviewStatusToPermissions(authorizedResourceVerbs)
 }
 
+// function convertAuthorizationReviewStatusToPermissions converts AuthorizedResourceVerbs to Permission (map of resource groups / name -> verb -> authorizedResourceGroup) for
+// faster lookup.
 func convertAuthorizationReviewStatusToPermissions(authorizedResourceVerbs []v3.AuthorizedResourceVerbs) (Permission, error) {
 	permMap := permission{
-		APIGroupsPermissions: map[string]ResourcePermissions{},
+		APIGroupsResourceNamePermissions: map[APIGroupResourceName]map[AuthorizationVerb][]v3.AuthorizedResourceGroup{},
 	}
 	for _, rAtt := range authorizedResourceVerbs {
-		if _, ok := permMap.APIGroupsPermissions[rAtt.APIGroup]; !ok {
-			permMap.APIGroupsPermissions[rAtt.APIGroup] = ResourcePermissions{}
-		}
-		if _, ok := permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource]; !ok {
-			permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource] = map[string][]v3.AuthorizedResourceGroup{}
+		combinedName := getCombinedName(rAtt.APIGroup, rAtt.Resource)
+		if _, ok := permMap.APIGroupsResourceNamePermissions[combinedName]; !ok {
+			permMap.APIGroupsResourceNamePermissions[combinedName] = map[AuthorizationVerb][]v3.AuthorizedResourceGroup{}
 		}
 		for _, verb := range rAtt.Verbs {
-			for _, rg := range verb.ResourceGroups {
-				if _, ok := permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb]; !ok {
-					permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb] = make([]v3.AuthorizedResourceGroup, 0)
-				}
-				resourceGroups := permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb]
-				resourceGroups = append(resourceGroups, rg)
-				permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb] = resourceGroups
+			resourceGroups := []v3.AuthorizedResourceGroup{}
+			if _, ok := permMap.APIGroupsResourceNamePermissions[combinedName][AuthorizationVerb(verb.Verb)]; ok {
+				resourceGroups = permMap.APIGroupsResourceNamePermissions[combinedName][AuthorizationVerb(verb.Verb)]
 			}
+			resourceGroups = append(resourceGroups, verb.ResourceGroups...)
+			permMap.APIGroupsResourceNamePermissions[combinedName][AuthorizationVerb(verb.Verb)] = resourceGroups
 		}
 	}
 

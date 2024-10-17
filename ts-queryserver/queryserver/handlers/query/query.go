@@ -21,6 +21,7 @@ import (
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
@@ -579,6 +580,8 @@ func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}
 		// This is an exact get and the resource does not exist. Return a 404 not found.
 		q.writeError(w, err, http.StatusNotFound)
 		return
+	} else if _, ok := err.(*httputils.HttpStatusError); ok {
+		q.writeError(w, err, err.(*httputils.HttpStatusError).Status)
 	} else if err != nil {
 		// All other errors return as a 400 Bad request.
 		q.writeError(w, err, http.StatusBadRequest)

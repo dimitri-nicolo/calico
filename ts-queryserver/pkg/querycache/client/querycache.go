@@ -653,27 +653,27 @@ func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*Qu
 func (c *cachedQuery) runQueryLabels(cxt context.Context, req QueryLabelsReq) (*QueryLabelsResp, error) {
 	var allLabels *api.LabelsMap
 	var err error
+	var warning []string
 	switch req.ResourceType {
 	case api.LabelsResourceTypePods:
-		allLabels, err = c.labelAggregator.GetPodsLabels(req.Permission, c.endpoints)
+		allLabels, warning, err = c.labelAggregator.GetPodsLabels(req.Permission, c.endpoints)
 	case api.LabelsResourceTypeNamespaces:
-		allLabels, err = c.labelAggregator.GetNamespacesLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetNamespacesLabels(req.Permission, cxt)
 	case api.LabelsResourceTypeServiceAccounts:
-		allLabels, err = c.labelAggregator.GetServiceAccountsLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetServiceAccountsLabels(req.Permission, cxt)
 	case api.LabelsResourceTypeManagedClusters:
-		allLabels, err = c.labelAggregator.GetManagedClustersLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetManagedClustersLabels(req.Permission, cxt)
 	case api.LabelsResourceTypeGlobalThreatFeeds:
-		allLabels, err = c.labelAggregator.GetGlobalThreatfeedsLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetGlobalThreatfeedsLabels(req.Permission, cxt)
 	// returns combined policy labels in one response
 	case api.LabelsResourceTypeAllPolicies:
-		allLabels, err = c.labelAggregator.GetAllPoliciesLabels(req.Permission, c.policies)
+		allLabels, warning, err = c.labelAggregator.GetAllPoliciesLabels(req.Permission, c.policies)
 	// returns combined networkset / globalnetworkset labels in one response
 	case api.LabelsResourceTypeAllNetworkSets:
-		allLabels, err = c.labelAggregator.GetAllNetworksetsLabels(req.Permission, c.networksets)
+		allLabels, warning, err = c.labelAggregator.GetAllNetworksetsLabels(req.Permission, c.networksets)
 	}
 
 	if err != nil {
-		log.WithError(err).Debug("failed to get labels from Labels.")
 		return nil, err
 	}
 
@@ -683,12 +683,18 @@ func (c *cachedQuery) runQueryLabels(cxt context.Context, req QueryLabelsReq) (*
 		},
 	}
 
-	for k, v := range allLabels.GetLabels() {
-		response.ResourceTypeLabelMap[req.ResourceType] = append(response.ResourceTypeLabelMap[req.ResourceType],
-			LabelKeyValuePair{
-				LabelKey:    k,
-				LabelValues: v.Slice(),
-			})
+	if allLabels != nil {
+		for k, v := range allLabels.GetLabels() {
+			response.ResourceTypeLabelMap[req.ResourceType] = append(response.ResourceTypeLabelMap[req.ResourceType],
+				LabelKeyValuePair{
+					LabelKey:    k,
+					LabelValues: v.Slice(),
+				})
+		}
+	}
+
+	if warning != nil {
+		response.RBACWarnings = warning
 	}
 
 	return response, nil

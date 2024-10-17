@@ -414,7 +414,7 @@ type mockAuthorizer struct {
 type mockPermissions struct {
 }
 
-func (p *mockPermissions) IsAuthorized(res api.Resource, verb, tier string) bool {
+func (p *mockPermissions) IsAuthorized(res api.Resource, tier *string, verbs []string) bool {
 	return true
 }
 

@@ -1,8 +1,6 @@
 package api
 
 import (
-	"sync"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -20,7 +18,6 @@ const (
 
 // LabelsMap keeps a map from keys to unique values.
 type LabelsMap struct {
-	mu     sync.RWMutex
 	labels map[string]set.Set[string]
 }
 
@@ -31,22 +28,15 @@ type LabelsMapInterface interface {
 
 func NewLabelsMap() *LabelsMap {
 	return &LabelsMap{
-		mu:     sync.RWMutex{},
 		labels: map[string]set.Set[string]{},
 	}
 }
 
 func (lm *LabelsMap) GetLabels() map[string]set.Set[string] {
-	lm.mu.RLock()
-	defer lm.mu.RUnlock()
-
 	return lm.labels
 }
 
 func (lm *LabelsMap) SetLabels(key string, value ...string) map[string]set.Set[string] {
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
 	// add new key to the map
 	if lm.labels == nil {
 		lm.labels = map[string]set.Set[string]{}

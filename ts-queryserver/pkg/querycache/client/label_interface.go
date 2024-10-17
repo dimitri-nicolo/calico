@@ -12,6 +12,7 @@ type QueryLabelsReq struct {
 
 type QueryLabelsResp struct {
 	ResourceTypeLabelMap map[api.ResourceType][]LabelKeyValuePair `json:"resourceTypeLabelMap"`
+	RBACWarnings         []string                                 `json:"RBACWarnings,omitempty"`
 }
 
 type LabelKeyValuePair struct {

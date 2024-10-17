@@ -7,11 +7,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	v1 "k8s.io/api/networking/v1"
+
 	"github.com/projectcalico/calico/felix/calc"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
@@ -628,6 +631,59 @@ func (d *policyData) getKey() model.Key {
 		Name:      d.resource.GetObjectMeta().GetName(),
 		Namespace: d.resource.GetObjectMeta().GetNamespace(),
 	}
+}
+
+func (d *policyData) GetResourceType() api.Resource {
+	cachedResource := d.resource
+	var isStaged, isK8s, isGlobal bool
+	if model.PolicyIsStaged(cachedResource.GetObjectMeta().GetName()) {
+		isStaged = true
+	}
+	if strings.Contains(cachedResource.GetObjectMeta().GetName(), "knp") {
+		isK8s = true
+	}
+	if cachedResource.GetObjectKind().GroupVersionKind().Kind == apiv3.KindGlobalNetworkPolicy {
+		isGlobal = true
+	}
+
+	if isK8s {
+		if isStaged {
+			return &apiv3.StagedKubernetesNetworkPolicy{
+				TypeMeta: resources.TypeCalicoStagedKubernetesNetworkPolicies,
+			}
+		} else {
+			return &v1.NetworkPolicy{
+				TypeMeta: resources.TypeK8sNetworkPolicies,
+			}
+		}
+
+	} else {
+		if isStaged {
+			if isGlobal {
+				return &apiv3.StagedGlobalNetworkPolicy{
+					TypeMeta: resources.TypeCalicoStagedGlobalNetworkPolicies,
+				}
+			} else {
+				return &apiv3.StagedNetworkPolicy{
+					TypeMeta: resources.TypeCalicoStagedNetworkPolicies,
+				}
+			}
+		} else {
+			if isGlobal {
+				return &apiv3.GlobalNetworkPolicy{
+					TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+				}
+			} else {
+				return &apiv3.NetworkPolicy{
+					TypeMeta: resources.TypeCalicoNetworkPolicies,
+				}
+			}
+		}
+	}
+}
+
+func (d *policyData) IsKubernetesType() bool {
+	return strings.ContainsAny(d.GetResource().GetObjectKind().GroupVersionKind().Kind, "kubernetes")
 }
 
 // tierData is used to hold policy data in the cache, and also implements the Policy interface

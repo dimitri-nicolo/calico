@@ -6,13 +6,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 var _ = Describe("queryserver resource authorizer tests", func() {
@@ -84,7 +85,7 @@ var _ = Describe("queryserver resource authorizer tests", func() {
 				Tier: "default",
 			}
 
-			Expect(permissions.IsAuthorized(networkpolicy1, "get", "default")).To(BeTrue())
+			Expect(permissions.IsAuthorized(networkpolicy1, nil, []string{"get"})).To(BeTrue())
 
 			networkpolicy1 = v3.NewNetworkPolicy()
 			networkpolicy1.ObjectMeta = metav1.ObjectMeta{
@@ -94,7 +95,7 @@ var _ = Describe("queryserver resource authorizer tests", func() {
 			networkpolicy1.Spec = v3.NetworkPolicySpec{
 				Tier: "default",
 			}
-			Expect(permissions.IsAuthorized(networkpolicy1, "get", "default")).To(BeFalse())
+			Expect(permissions.IsAuthorized(networkpolicy1, "default", []string{"get"})).To(BeFalse())
 		})
 	})
 
