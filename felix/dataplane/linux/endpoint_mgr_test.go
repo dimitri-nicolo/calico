@@ -1000,7 +1000,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				common.NewCallbacks(),
 				nlHandle,
 				false,
-				"info",
+				"debug",
 				true,
 				false,
 			)

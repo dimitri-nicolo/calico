@@ -39,7 +39,7 @@ func TestTcpStatsBinaryIsLoadable(t *testing.T) {
 	bpffs, err := utils.MaybeMountBPFfs()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(bpffs).To(Equal("/sys/fs/bpf"))
-	for _, logLevel := range []string{"no_log", "info", "debug"} {
+	for _, logLevel := range []string{"no_log", "debug"} {
 		t.Run(logLevel, func(t *testing.T) {
 			RegisterTestingT(t)
 			vethName, veth := createVeth()
