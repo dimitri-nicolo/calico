@@ -47,6 +47,8 @@ require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/elastic/cloud-on-k8s/v2 v2.13.0
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
+	github.com/elazarl/goproxy v0.0.0-20240719135048-6ca80f564554
+	github.com/elazarl/goproxy/ext v0.0.0-20240719135048-6ca80f564554
 	github.com/envoyproxy/go-control-plane v0.13.0
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/florianl/go-nfqueue v1.3.2
@@ -257,8 +259,6 @@ require (
 	github.com/elastic/go-sysinfo v1.13.1 // indirect
 	github.com/elastic/go-ucfg v0.8.8 // indirect
 	github.com/elastic/go-windows v1.0.1 // indirect
-	github.com/elazarl/goproxy v0.0.0-20240719135048-6ca80f564554 // indirect
-	github.com/elazarl/goproxy/ext v0.0.0-20240719135048-6ca80f564554 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
 	github.com/euank/go-kmsg-parser v2.0.0+incompatible // indirect

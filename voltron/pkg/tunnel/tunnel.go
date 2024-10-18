@@ -9,11 +9,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -450,8 +452,19 @@ func tlsDialViaHTTPProxy(d *net.Dialer, destination string, proxyTargetURL *url.
 		return nil, fmt.Errorf("dialing proxy %q failed: %v", proxyTargetURL.Host, err)
 	}
 
-	// Send an HTTP CONNECT to the proxy.
-	_, err = fmt.Fprintf(c, "CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", destination, destination)
+	// Build the HTTP CONNECT request.
+	var requestBuilder strings.Builder
+	requestBuilder.WriteString(fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\n", destination, destination))
+	if proxyTargetURL.User != nil {
+		username := proxyTargetURL.User.Username()
+		password, _ := proxyTargetURL.User.Password()
+		encodedCredentials := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+		requestBuilder.WriteString(fmt.Sprintf("Proxy-Authorization: Basic %s\r\n", encodedCredentials))
+	}
+	requestBuilder.WriteString("\r\n")
+
+	// Send the HTTP CONNECT request to the proxy.
+	_, err = fmt.Fprint(c, requestBuilder.String())
 	if err != nil {
 		return nil, fmt.Errorf("writing HTTP CONNECT to proxy %s failed: %v", proxyTargetURL.Host, err)
 	}
