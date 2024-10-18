@@ -13,10 +13,11 @@ RUN dnf upgrade -y && dnf install -y \
 # From upstream fluentd Dockerfile and update them when upgrading fluentd
 # https://github.com/fluent/fluentd-docker-image/blob/master/v1.16/debian/Dockerfile
 RUN gem install async-http -v 0.60.2 && \
-       gem install async -v 1.31.0 && \
+       gem install async -v 1.32.1 && \
+       gem install async-http -v 0.64.2 && \
        gem install fluentd -v ${FLUENTD_VERSION} && \
-       gem install json -v 2.6.3 && \
-       gem install oj -v 3.16.1 && \
+       gem install json -v 2.7.2 && \
+       gem install oj -v 3.16.6 && \
        gem install rexml -v 3.3.8
 
 # Calico Enterprise dependencies
@@ -26,11 +27,11 @@ RUN gem install elasticsearch-api -v 7.17.11 && \
        gem install elasticsearch -v 7.17.11 && \
        gem install fluent-plugin-cloudwatch-logs -v 0.14.3 && \
        gem install fluent-plugin-elasticsearch -v 5.4.3 && \
-       gem install fluent-plugin-prometheus -v 2.1.0 && \
+       gem install fluent-plugin-prometheus -v 2.2.0 && \
        gem install fluent-plugin-remote_syslog -v 1.1.0 && \
        gem install fluent-plugin-s3 -v 1.7.2 && \
        gem install fluent-plugin-splunk-hec -v 1.3.3 && \
-       gem install fluent-plugin-sumologic_output -v 1.9.0
+       gem install fluent-plugin-sumologic_output -v 1.10.0
 
 # cleanup
 RUN gem sources --clear-all
