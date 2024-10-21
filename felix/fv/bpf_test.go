@@ -5713,6 +5713,44 @@ func checkServiceRoute(felix *infrastructure.Felix, ip string) bool {
 	return false
 }
 
+func bpfCheckIfDefaultRuleProgrammed(felix *infrastructure.Felix, iface, hook, action string, isWorkload bool) bool {
+	actionStr := fmt.Sprintf("Start of rule default action:\"%s\"", action)
+	var policyDbg bpf.PolicyDebugInfo
+	out, err := felix.ExecOutput("cat", bpf.PolicyDebugJSONFileName(iface, hook, proto.IPVersion_IPV4))
+	if err != nil {
+		return false
+	}
+	dec := json.NewDecoder(strings.NewReader(string(out)))
+	err = dec.Decode(&policyDbg)
+	if err != nil {
+		return false
+	}
+
+	hookStr := "tc ingress"
+	if isWorkload {
+		if hook == "ingress" {
+			hookStr = "tc egress"
+		}
+	} else {
+		if hook == "egress" {
+			hookStr = "tc egress"
+		}
+	}
+	if policyDbg.IfaceName != iface || policyDbg.Hook != hookStr || policyDbg.Error != "" {
+		return false
+	}
+
+	for _, insn := range policyDbg.PolicyInfo {
+		for _, comment := range insn.Comments {
+			if strings.Contains(comment, actionStr) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func bpfCheckIfPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
 	startStr := fmt.Sprintf("Start of policy %s", polName)
 	endStr := fmt.Sprintf("End of policy %s", polName)
