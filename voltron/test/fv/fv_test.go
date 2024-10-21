@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/elazarl/goproxy.v1"
-
+	"github.com/elazarl/goproxy"
+	pauth "github.com/elazarl/goproxy/ext/auth"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 
@@ -62,6 +62,8 @@ var (
 	// testServerName is the hostname to use for the test server.
 	// Voltron will proxy connections to this hostname to the test server using SNI.
 	testServerName = "test-server-name"
+	proxyUser      = "username"
+	proxyPassword  = "password"
 )
 
 func init() {
@@ -89,6 +91,14 @@ type testClient struct {
 	voltronHTTPS string
 	voltronHTTP  string
 }
+
+type proxyMode string
+
+const (
+	proxyModeDisabled        proxyMode = "disabled"
+	proxyModeEnabledNoAuth   proxyMode = "enabled"
+	proxyModeEnabledWithAuth proxyMode = "enabledWithAuth"
+)
 
 func (c *testClient) doRequest(clusterID string) (string, error) {
 	req, err := c.request(clusterID, "https", c.voltronHTTPS)
@@ -159,15 +169,17 @@ func (s *testServer) handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, s.msg)
 }
 
-func describe(name string, testFn func(string, bool)) bool {
-	Describe(name+" cluster-scoped", func() { testFn("", false) })
-	Describe(name+" namespace-scoped", func() { testFn("resource-ns", false) })
-	Describe(name+" cluster-scoped (proxied)", func() { testFn("", true) })
-	Describe(name+" namespace-scoped (proxied)", func() { testFn("resource-ns", true) })
+func describe(name string, testFn func(string, proxyMode)) bool {
+	Describe(name+" cluster-scoped", func() { testFn("", proxyModeDisabled) })
+	Describe(name+" namespace-scoped", func() { testFn("resource-ns", proxyModeDisabled) })
+	Describe(name+" cluster-scoped (proxied)", func() { testFn("", proxyModeEnabledNoAuth) })
+	Describe(name+" namespace-scoped (proxied)", func() { testFn("resource-ns", proxyModeEnabledNoAuth) })
+	Describe(name+" cluster-scoped (proxied w/ auth)", func() { testFn("", proxyModeEnabledWithAuth) })
+	Describe(name+" namespace-scoped (proxied w/ auth)", func() { testFn("resource-ns", proxyModeEnabledWithAuth) })
 	return true
 }
 
-var _ = describe("basic functionality", func(clusterNamespace string, proxied bool) {
+var _ = describe("basic functionality", func(clusterNamespace string, proxyMode proxyMode) {
 	var (
 		voltron   *server.Server
 		lisHTTP11 net.Listener
@@ -212,7 +224,7 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxied bo
 		_ = guardian2.Close()
 		_ = ts.http.Close()
 		_ = ts2.http.Close()
-		if proxied {
+		if proxyMode != proxyModeDisabled {
 			// Cleanup.
 			_ = proxyServer.Close()
 
@@ -284,12 +296,23 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxied bo
 			}()
 		})
 
-		if proxied {
+		if proxyMode != proxyModeDisabled {
 			By("starting the HTTP proxy", func() {
 				httpProxy := goproxy.NewProxyHttpServer()
 
 				// Count the amount of CONNECT requests made to the proxy.
 				httpProxy.OnRequest().HandleConnect(goproxy.FuncHttpsHandler(func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
+					// If we are in auth mode, authenticate and reject if the credentials are not valid.
+					if proxyMode == proxyModeEnabledWithAuth {
+						authHandler := pauth.BasicConnect("test", func(user, passwd string) bool {
+							return user == proxyUser && passwd == proxyPassword
+						})
+						action, host := authHandler.HandleConnect(host, ctx)
+						if action == goproxy.RejectConnect {
+							return action, host
+						}
+					}
+
 					proxiedRequestCount++
 					return goproxy.OkConnect, host
 				}))
@@ -308,6 +331,9 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxied bo
 				proxyURL = &url.URL{
 					Scheme: "http",
 					Host:   proxyServer.Addr,
+				}
+				if proxyMode == proxyModeEnabledWithAuth {
+					proxyURL.User = url.UserPassword(proxyUser, proxyPassword)
 				}
 
 				// Start the proxy.

@@ -13,6 +13,7 @@ def get_configured_promotions():
 
 SKIP_SUBDIRS = [
     "api",
+    "compliance-configuration-security", #TODO Delete this when ccs is ready.
     "confd",
     "crypto",
     "e2e",
@@ -23,7 +24,7 @@ SKIP_SUBDIRS = [
     "lma",
     "networking-calico",
     "selinux",
-    "release"
+    "release",
 ]
 
 if sys.stdout.isatty():

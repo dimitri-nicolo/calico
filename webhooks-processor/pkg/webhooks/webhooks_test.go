@@ -284,6 +284,7 @@ func TestWebhookTestEventSent(t *testing.T) {
 
 	wh := testutils.NewTestWebhook("test-wh")
 	wh.Spec.State = api.SecurityEventWebhookStateTest
+	wh.Annotations["webhooks.projectcalico.org/testEvent"] = "runtime_security"
 	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
 	require.NoError(t, err)
 
@@ -291,6 +292,9 @@ func TestWebhookTestEventSent(t *testing.T) {
 	require.Eventually(t, hasOneRequest(testState.TestSlackProvider()), time.Second, 100*time.Millisecond)
 	require.Equal(t, wh.Spec.Config[0].Name, "url")
 	require.Equal(t, wh.Spec.Config[0].Value, testState.TestSlackProvider().Requests[0].Config["url"])
+
+	// Make sure that the test event is of the correct type
+	require.Equal(t, "runtime_security", testState.TestSlackProvider().Requests[0].Event.Type)
 
 	// Make sure labels annotation is correctly processed
 	require.Eventually(t,

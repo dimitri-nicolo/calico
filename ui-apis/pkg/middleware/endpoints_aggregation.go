@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -24,6 +23,10 @@ import (
 	qsutils "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
 	queryserverclient "github.com/projectcalico/calico/ts-queryserver/queryserver/client"
 	esauth "github.com/projectcalico/calico/ui-apis/pkg/auth"
+)
+
+const (
+	TimeRangeError = "missing parameter: \"time_range.from\" and / or \"time_range.to\" is empty"
 )
 
 type EndpointsAggregationRequest struct {
@@ -279,18 +282,14 @@ func validateEndpointsAggregationRequest(r *http.Request, endpointReq *Endpoints
 		endpointReq.Timeout = &metav1.Duration{Duration: DefaultRequestTimeout}
 	}
 
-	// validate time range and only allow "from"
-	// We want to allow user to be able to select using only From the UI
-	if endpointReq.TimeRange != nil {
-		if endpointReq.TimeRange.To.IsZero() && !endpointReq.TimeRange.From.IsZero() {
-			endpointReq.TimeRange.To = time.Now().UTC()
-		} else if !endpointReq.TimeRange.To.IsZero() {
-			return &httputils.HttpStatusError{
-				Status: http.StatusBadRequest,
-				Msg:    "time_range \"to\" should not be provided",
-				Err:    errors.New("prohibited parameter is set: \"time_range\".\"to\""),
-			}
+	// validate time range to not be empty
+	if endpointReq.TimeRange == nil || endpointReq.TimeRange.From.IsZero() || endpointReq.TimeRange.To.IsZero() {
+		return &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Msg:    "time_range should not be empty",
+			Err:    errors.New(TimeRangeError),
 		}
+
 	}
 
 	return nil

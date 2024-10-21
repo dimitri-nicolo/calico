@@ -65693,6 +65693,11 @@ spec:
       automountServiceAccountToken: true
       nodeSelector:
         kubernetes.io/os: linux
+      tolerations:
+        - effect: NoSchedule
+          key: kubernetes.io/arch
+          operator: Equal
+          value: arm64
       serviceAccountName: calico-prometheus-operator
       imagePullSecrets:
       - name: tigera-pull-secret

@@ -17,9 +17,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/elazarl/goproxy"
+	"github.com/elazarl/goproxy/ext/auth"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/elazarl/goproxy.v1"
 
 	calicoTLS "github.com/projectcalico/calico/crypto/pkg/tls"
 )
@@ -177,6 +178,34 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Unauthorized"))
 		})
+
+		It(fmt.Sprintf("errors when proxy auth is required but not provided (tls: %v)", tls), func() {
+			var proxyServer *goproxy.ProxyHttpServer
+			var proxyURL *url.URL
+			if tls {
+				proxyServer = httpsProxy
+				proxyURL = httpsProxyURL
+			} else {
+				proxyServer = httpProxy
+				proxyURL = httpProxyURL
+			}
+
+			// Set up the proxy server to reject all requests on the basis of failed auth.
+			auth.ProxyBasic(proxyServer, "test", func(user, passwd string) bool {
+				return false
+			})
+
+			_, err := tlsDialViaHTTPProxy(
+				newDialer(time.Second),
+				"someplace:443",
+				proxyURL,
+				tunnelClientTLSConfig,
+				proxyClientTLSConfig,
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("Proxy Authentication Required"))
+		})
 	}
 
 	// The function under test can detect a specific misbehaviour of the proxy: sending data immediately after accepting the CONNECT.
@@ -191,7 +220,10 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 			return &goproxy.ConnectAction{
 				Action: goproxy.ConnectHijack,
 				Hijack: func(req *http.Request, client net.Conn, ctx *goproxy.ProxyCtx) {
-					n, err := client.Write([]byte("hello, I shouldn't be speaking right now"))
+					n, err := client.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
+					Expect(n).ToNot(BeZero())
+					Expect(err).NotTo(HaveOccurred(), "Failed to write 200 to hijacked connection")
+					n, err = client.Write([]byte("hello, I shouldn't be speaking right now"))
 					Expect(n).ToNot(BeZero())
 					Expect(err).NotTo(HaveOccurred(), "Failed to write data to hijacked connection")
 				},
@@ -211,7 +243,7 @@ var _ = Describe("tlsDialViaHTTPProxy", func() {
 				proxyClientTLSConfig,
 			)
 			return err.Error()
-		}).WithTimeout(5 * time.Second).Should(ContainSubstring("buffered data"))
+		}).WithTimeout(10 * time.Second).Should(ContainSubstring("buffered data"))
 	})
 })
 

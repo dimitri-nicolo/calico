@@ -63,8 +63,6 @@ var (
 	// kernel 4.18.0 (v4Dot18Dot0_330) is the first one with this behavior.
 	v5Dot14Dot0     = MustParseVersion("5.14.0")
 	v4Dot18Dot0_330 = MustParseVersion("4.18.0-330")
-	// 5.17 is the least required version for DNS Inline policy mode.
-	v5Dot17Dot0 = MustParseVersion("5.17.0")
 )
 
 type FeatureDetector struct {
@@ -146,8 +144,6 @@ func (d *FeatureDetector) refreshFeaturesLockHeld() {
 		NFLogSize:                kerV.Compare(v4Dot8Dot0) >= 0,
 		NFQueueBypass:            kerV.Compare(v3Dot13Dot0) >= 0,
 		BPFKprobes:               kerV.Compare(v4Dot4Dot0) >= 0,
-
-		DNSPolicyInlineMode: kerV.Compare(v5Dot17Dot0) >= 0,
 	}
 
 	for k, v := range d.featureOverride {

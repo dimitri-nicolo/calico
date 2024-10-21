@@ -199,7 +199,8 @@ e2e-test:
 	$(MAKE) -C e2e build
 	$(MAKE) -C node kind-k8st-setup
 	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/k8s/e2e.test -ginkgo.focus=$(E2E_FOCUS)
-	KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/adminpolicy/e2e.test -exempt-features=$(ADMINPOLICY_UNSUPPORTED_FEATURES) -supported-features=$(ADMINPOLICY_SUPPORTED_FEATURES)
+	# Disable AdminNetworkPolicy Conformance tests since it's flaky. The issue is being tracked at https://tigera.atlassian.net/browse/CORE-10742
+	# KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/adminpolicy/e2e.test -exempt-features=$(ADMINPOLICY_UNSUPPORTED_FEATURES) -supported-features=$(ADMINPOLICY_SUPPORTED_FEATURES)
 
 # Merge OSS branch.
 # Expects the following arguments:

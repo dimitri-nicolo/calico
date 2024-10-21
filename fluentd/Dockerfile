@@ -14,7 +14,7 @@
 
 ARG THIRD_PARTY_REGISTRY
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.16.5 AS fluentd
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.17.1 AS fluentd
 
 FROM scratch AS source
 

@@ -3,6 +3,7 @@ package waf
 import (
 	"context"
 	"fmt"
+	"hash/crc64"
 	"sync"
 	"time"
 
@@ -15,24 +16,32 @@ import (
 	linseedv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-type cacheKey struct {
-	destIP string
-}
-
 type cacheEntry struct {
 	transactionID         string
 	destIP, srcIP         string
 	method, protocol      string
+	host, path            string
+	headers               map[string]string
+	timestamp             time.Time
 	srcPort, dstPort      uint32
-	uri                   map[string]int
-	rules                 map[int]linseedv1.WAFRuleHit
+	rules                 []linseedv1.WAFRuleHit
 	count                 int
 	action                string
 	srcName, srcNamespace string
+	finished              bool
+}
+
+type aggregationKey struct {
+	method,
+	host,
+	path string
+	rulesKey uint64
 }
 
 type wafEventsPipeline struct {
-	cache         map[cacheKey]*cacheEntry
+	cache         map[string]*cacheEntry
+	aggregation   map[aggregationKey][]*cacheEntry
+	aggMu         sync.Mutex
 	flushCallback eventCallbackFn
 	mu            sync.Mutex
 	events        []interface{}
@@ -41,16 +50,19 @@ type wafEventsPipeline struct {
 }
 
 type txHttpInfo struct {
-	txID, destIP          string
-	uri, method, protocol string
-	srcPort, dstPort      uint32
-	action                string
-	srcName, srcNamespace string
+	txID, destIP, host     string
+	path, method, protocol string
+	headers                map[string]string
+	timestamp              time.Time
+	srcPort, dstPort       uint32
+	action                 string
+	srcName, srcNamespace  string
 }
 
 func NewEventsPipeline(cb eventCallbackFn) *wafEventsPipeline {
 	return &wafEventsPipeline{
-		cache:         make(map[cacheKey]*cacheEntry),
+		cache:         make(map[string]*cacheEntry),
+		aggregation:   map[aggregationKey][]*cacheEntry{},
 		flushCallback: cb,
 	}
 }
@@ -80,27 +92,32 @@ func (p *wafEventsPipeline) processMatchedRule(matchedRule corazatypes.MatchedRu
 		"audit": matchedRule.AuditLog(),
 	}).Debug("Processing matched rule")
 
-	key := cacheKey{matchedRule.ServerIPAddress()}
+	key := matchedRule.TransactionID()
 	entry, ok := p.cache[key]
 	if !ok {
 		entry = &cacheEntry{
 			transactionID: matchedRule.TransactionID(),
 			destIP:        matchedRule.ServerIPAddress(),
 			srcIP:         matchedRule.ClientIPAddress(),
-			uri:           make(map[string]int),
-			rules:         make(map[int]linseedv1.WAFRuleHit),
+			rules:         []linseedv1.WAFRuleHit{},
 		}
 		p.cache[key] = entry
 	}
 
 	entry.count++
-	entry.uri[matchedRule.URI()]++
-	entry.rules = mergeHits(entry.rules, corazaRulesToLinseedWAFRuleHit(matchedRule))
-
+	ruleInfo := matchedRule.Rule()
+	entry.rules = append(entry.rules, linseedv1.WAFRuleHit{
+		Message:    matchedRule.Message(),
+		Disruptive: matchedRule.Disruptive(),
+		Id:         fmt.Sprint(ruleInfo.ID()),
+		Severity:   ruleInfo.Severity().String(),
+		File:       ruleInfo.File(),
+		Line:       fmt.Sprint(ruleInfo.Line()),
+	})
 }
 
 func (p *wafEventsPipeline) processTxHttpInfo(info *txHttpInfo) {
-	key := cacheKey{info.destIP}
+	key := info.txID
 	entry, ok := p.cache[key]
 	if !ok {
 		// only update the cache if we have a matching entry
@@ -109,12 +126,20 @@ func (p *wafEventsPipeline) processTxHttpInfo(info *txHttpInfo) {
 
 	// fill in missing info
 	entry.method = info.method
+	entry.path = info.path
+	entry.host = info.host
 	entry.protocol = info.protocol
+	entry.headers = info.headers
+	entry.timestamp = info.timestamp
 	entry.srcPort = info.srcPort
 	entry.dstPort = info.dstPort
 	entry.action = info.action
 	entry.srcName = info.srcName
 	entry.srcNamespace = info.srcNamespace
+	// insert into aggregation map
+	p.aggregationAdd(entry)
+	// mark as finished transaction
+	entry.finished = true
 }
 
 func firstNonEmpty(v ...string) string {
@@ -172,17 +197,24 @@ func lookupSrcDstEps(entry *cacheEntry, ps *policystore.PolicyStore) (srcEp, dst
 	return
 }
 
-func (p *wafEventsPipeline) cacheEntryToLog(entry *cacheEntry) *linseedv1.WAFLog {
+func (p *wafEventsPipeline) cacheEntriesToLog(entries []*cacheEntry) *linseedv1.WAFLog {
+	// XXX We are receiving the proper values here, but taking just the
+	// first one for sending then through linseed.
+	// This index should be restructured with a "Requests" field, that
+	// proper bring the time and info of the others request fields of the
+	// single requests that were resulting the same Threat
+	entry := entries[0]
+
 	srcEp, dstEp := lookupSrcDstEps(entry, p.currPolicyStore)
 
 	log := &linseedv1.WAFLog{
 		RequestId:   entry.transactionID,
 		Source:      srcEp,
 		Destination: dstEp,
-		Rules:       unMapHits(entry.rules),
+		Rules:       entry.rules,
 		Msg:         fmt.Sprintf("WAF detected %d violations %s", entry.count, bracket(entry.action)),
 		// path needs to be aggregated in the future
-		Path: mostFrequentURI(entry.uri),
+		Path: entry.path,
 		// we can't exactly source these from the matched rule alone
 		// so we're hardcoding a value for now
 		// these will get filled by processTxHttpInfo
@@ -217,15 +249,43 @@ func (p *wafEventsPipeline) processEvents() {
 }
 
 func (p *wafEventsPipeline) Flush() {
+	// Gets the finished events on mutex and Unlock
 	p.mu.Lock()
-	defer p.mu.Unlock()
+	finished := map[string]*cacheEntry{}
 
 	p.processEvents()
-
-	for _, v := range p.cache {
-		p.flushCallback(p.cacheEntryToLog(v))
+	for k, v := range p.cache {
+		if v.finished {
+			finished[k] = v
+			delete(p.cache, k)
+		}
 	}
-	p.cache = map[cacheKey]*cacheEntry{}
+	defer p.mu.Unlock()
+
+	// removes finished ones for each aggregation key on mutex and Unlock
+	readyAggregation := [][]*cacheEntry{}
+	p.aggMu.Lock()
+	for k, v := range p.aggregation {
+		ready := []*cacheEntry{}
+		unfinished := []*cacheEntry{}
+		for _, v := range v {
+			if _, ok := finished[v.transactionID]; ok {
+				ready = append(ready, v)
+			} else {
+				unfinished = append(unfinished, v)
+			}
+		}
+		if len(ready) != 0 {
+			readyAggregation = append(readyAggregation, ready)
+		}
+		p.aggregation[k] = unfinished
+	}
+	p.aggMu.Unlock()
+
+	// Finally send the events
+	for _, v := range readyAggregation {
+		p.flushCallback(p.cacheEntriesToLog(v))
+	}
 }
 
 func (p *wafEventsPipeline) Start(ctx context.Context, interval time.Duration) {
@@ -242,42 +302,32 @@ func (p *wafEventsPipeline) Start(ctx context.Context, interval time.Duration) {
 	}
 }
 
-func corazaRulesToLinseedWAFRuleHit(matchedRule corazatypes.MatchedRule) (hits map[int]linseedv1.WAFRuleHit) {
-	ruleInfo := matchedRule.Rule()
-	return map[int]linseedv1.WAFRuleHit{
-		ruleInfo.ID(): {
-			Message:    matchedRule.Message(),
-			Disruptive: matchedRule.Disruptive(),
-			Id:         fmt.Sprint(ruleInfo.ID()),
-			Severity:   ruleInfo.Severity().String(),
-			File:       ruleInfo.File(),
-			Line:       fmt.Sprint(ruleInfo.Line()),
-		},
+func (p *wafEventsPipeline) aggregationAdd(entry *cacheEntry) {
+	p.aggMu.Lock()
+	defer p.aggMu.Unlock()
+
+	key := aggregationKey{
+		method:   entry.method,
+		host:     entry.host,
+		path:     entry.path,
+		rulesKey: createRulesKey(entry),
 	}
+	entries, ok := p.aggregation[key]
+	if !ok {
+		entries = []*cacheEntry{}
+	}
+	entries = append(entries, entry)
+	p.aggregation[key] = entries
 }
 
-func mergeHits(a, b map[int]linseedv1.WAFRuleHit) map[int]linseedv1.WAFRuleHit {
-	for k, v := range b {
-		a[k] = v
+func createRulesKey(entry *cacheEntry) uint64 {
+	nonRulesHash := crc64.New(crc64.MakeTable(0))
+	nonRulesHash.Write([]byte(entry.method))
+	nonRulesHash.Write([]byte(entry.host))
+	nonRulesHash.Write([]byte(entry.path))
+	rulesHash := crc64.New(crc64.MakeTable(nonRulesHash.Sum64()))
+	for _, rule := range entry.rules {
+		rulesHash.Write([]byte(rule.Id))
 	}
-	return a
-}
-
-func unMapHits(hits map[int]linseedv1.WAFRuleHit) (hitList []linseedv1.WAFRuleHit) {
-	for _, v := range hits {
-		hitList = append(hitList, v)
-	}
-	return hitList
-}
-
-func mostFrequentURI(uri map[string]int) string {
-	var max int
-	var maxURI string
-	for k, v := range uri {
-		if v > max {
-			max = v
-			maxURI = k
-		}
-	}
-	return maxURI
+	return rulesHash.Sum64()
 }

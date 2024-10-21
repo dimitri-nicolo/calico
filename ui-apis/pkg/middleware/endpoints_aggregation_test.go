@@ -5,6 +5,7 @@ package middleware
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -60,7 +61,12 @@ var _ = Describe("", func() {
 	Context("test validateEndpointsAggregationRequest", func() {
 		DescribeTable("validate ClusterName",
 			func(clusterName, clusterIdHeader, expectedCluster string) {
-				endpointReq := &EndpointsAggregationRequest{}
+				endpointReq := &EndpointsAggregationRequest{
+					TimeRange: &lmaapi.TimeRange{
+						From: time.Now(),
+						To:   time.Now(),
+					},
+				}
 
 				if len(clusterName) > 0 {
 					endpointReq.ClusterName = clusterName
@@ -91,8 +97,11 @@ var _ = Describe("", func() {
 
 				epReq := EndpointsAggregationRequest{
 					ClusterName: "",
-					TimeRange:   nil,
-					Timeout:     nil,
+					TimeRange: &lmaapi.TimeRange{
+						From: time.Now(),
+						To:   time.Now(),
+					},
+					Timeout: nil,
 				}
 
 				epReq.ShowDeniedEndpoints = filterDeniedEndpoints
@@ -129,7 +138,12 @@ var _ = Describe("", func() {
 
 		DescribeTable("validate TimeOut",
 			func(timeout, expectedTimeout *v1.Duration) {
-				endpointReq := &EndpointsAggregationRequest{}
+				endpointReq := &EndpointsAggregationRequest{
+					TimeRange: &lmaapi.TimeRange{
+						From: time.Now(),
+						To:   time.Now(),
+					},
+				}
 
 				if timeout != nil {
 					endpointReq.Timeout = timeout
@@ -170,23 +184,22 @@ var _ = Describe("", func() {
 
 				if expectErr {
 					Expect(err).Should(HaveOccurred())
-					Expect(err.(*httputils.HttpStatusError).Msg).To(Equal("time_range \"to\" should not be provided"))
+					Expect(err.(*httputils.HttpStatusError).Err).To(Equal(errors.New(errMsg)))
 				} else {
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(endpointReq.TimeRange.To).ToNot(BeNil())
-
-					if expectedFrom != nil {
-						Expect(endpointReq.TimeRange.From).To(Equal(*expectedFrom))
-					}
+					Expect(endpointReq.TimeRange.From).ToNot(BeNil())
 				}
 
 			},
-			Entry("should fail if timeRange.To is set",
-				&lmaapi.TimeRange{To: time.Now().UTC()}, nil, true, "time_range \"to\" should not be provided"),
-			Entry("should set timeRange.To to Now if timeRange.From is set",
-				&lmaapi.TimeRange{From: testTime}, &testTime, false, ""),
-			Entry("should not set timeRange.To if timeRange.From is not set",
-				&lmaapi.TimeRange{}, nil, false, ""),
+			Entry("should fail if timeRange.To is not set",
+				&lmaapi.TimeRange{From: time.Now().UTC()}, nil, true, TimeRangeError),
+			Entry("should fail if timeRange.From is not set",
+				&lmaapi.TimeRange{From: testTime}, &testTime, true, TimeRangeError),
+			Entry("should not set timeRange if timeRange in empty",
+				&lmaapi.TimeRange{}, nil, true, TimeRangeError),
+			Entry("should not fail if both timeRange.From and timeRange.To are set",
+				&lmaapi.TimeRange{From: testTime, To: time.Now()}, &testTime, false, ""),
 		)
 	})
 

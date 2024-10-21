@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,6 +21,7 @@ import (
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	v1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/client"
@@ -155,6 +157,10 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			// prepare request
 			endpointReq := &middleware.EndpointsAggregationRequest{
 				ShowDeniedEndpoints: true,
+				TimeRange: &v1.TimeRange{
+					From: time.Now(),
+					To:   time.Now(),
+				},
 			}
 
 			reqBodyBytes, err := json.Marshal(endpointReq)
@@ -223,6 +229,10 @@ var _ = Describe("Test EndpointsAggregation handler", func() {
 			// prepare request
 			endpointReq := &middleware.EndpointsAggregationRequest{
 				ShowDeniedEndpoints: false,
+				TimeRange: &v1.TimeRange{
+					From: time.Now(),
+					To:   time.Now(),
+				},
 			}
 
 			reqBodyBytes, err := json.Marshal(endpointReq)
