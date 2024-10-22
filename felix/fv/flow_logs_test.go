@@ -316,11 +316,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			}
 
 			Eventually(func() bool {
-				return bpfCheckIfDefaultRuleProgrammed(tc.Felixes[0], wlHost1[0].InterfaceName, "ingress", "allow", true)
+				return bpfCheckIfRuleProgrammed(tc.Felixes[0], wlHost1[0].InterfaceName, "ingress", "default", "allow", true)
 			}, "15s", "200ms").Should(BeTrue())
 
 			Eventually(func() bool {
-				return bpfCheckIfDefaultRuleProgrammed(tc.Felixes[0], wlHost1[0].InterfaceName, "egress", "allow", true)
+				return bpfCheckIfRuleProgrammed(tc.Felixes[0], wlHost1[0].InterfaceName, "egress", "default", "allow", true)
 			}, "15s", "200ms").Should(BeTrue())
 		}
 
