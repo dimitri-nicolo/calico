@@ -29,6 +29,7 @@ private-registry.md
 builder.coverprofile
 hack/release/ghr
 manifests/*.*gz
+*.log
 
 # Created by local kind cluster
 hack/test/kind/kind

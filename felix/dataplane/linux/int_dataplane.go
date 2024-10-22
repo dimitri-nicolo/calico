@@ -516,6 +516,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
+	if config.BPFLogLevel == "info" {
+		config.BPFLogLevel = "off"
+	}
+
 	// Get the feature detector and feature set upfront.
 	featureDetector := environment.NewFeatureDetector(
 		config.FeatureDetectOverrides,

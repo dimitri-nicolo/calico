@@ -40,6 +40,7 @@ clean:
 	$(MAKE) -C node clean
 	$(MAKE) -C pod2daemon clean
 	$(MAKE) -C typha clean
+	$(MAKE) -C release clean
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 	rm -rf _release_archive
@@ -82,7 +83,6 @@ generate:
 	$(MAKE) -C api gen-files
 	$(MAKE) -C libcalico-go gen-files
 	$(MAKE) -C felix gen-files
-	$(MAKE) -C calicoctl gen-crds
 	$(MAKE) -C app-policy protobuf
 	$(MAKE) -C egress-gateway protobuf
 	$(MAKE) gen-manifests

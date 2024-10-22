@@ -1265,6 +1265,9 @@ func (m *bpfEndpointManager) onInterfaceUpdate(update *ifaceStateUpdate) {
 			iface.info.isUP = false
 			m.updateIfaceStateMap(update.Name, iface)
 			iface.info.ifIndex = 0
+			iface.info.masterIfIndex = 0
+			iface.info.ifaceType = 0
+			iface.dpState.qdisc = qDiscInfo{}
 		}
 		return true // Force interface to be marked dirty in case we missed a transition during a resync.
 	})
@@ -4285,6 +4288,10 @@ func (m *bpfEndpointManager) getIfaceLink(name string) (netlink.Link, error) {
 		return nil, err
 	}
 	return link, nil
+}
+
+func (m *bpfEndpointManager) getNumEPs() int {
+	return len(m.nameToIface)
 }
 
 func (m *bpfEndpointManager) getIfaceTypeFromLink(link netlink.Link) IfaceType {

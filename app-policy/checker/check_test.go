@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -581,61 +581,19 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 		},
 	}}
 
-	// Check request is OK for all values of DropActionOverride.
-	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
 	status := checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 
-	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
-
-	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
-
-	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
-
-	// Change to a bad path, and check that we get PERMISSION_DENIED for
-	// DROP and LOG_AND_DROP values for DropActionOverride, and OK for
-	// ACCEPT and LOG_AND_ACCEPT.
+	// Change to a bad path, and check that we get PERMISSION_DENIED
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Path = "/bad"
 
-	store.DropActionOverride = policystore.DROP
 	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
-
-	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(PERMISSION_DENIED))
-
-	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
-
-	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
 
 	// Change to a path that hits tier2 default Pass action, and then is allowed in tier3
 	http.Path = "/bar"
 
-	store.DropActionOverride = policystore.DROP
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
-
-	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
-
-	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, store.Endpoint, req)
-	Expect(status.Code).To(Equal(OK))
-
-	store.DropActionOverride = policystore.LOG_AND_ACCEPT
 	status = checkStore(store, store.Endpoint, req)
 	Expect(status.Code).To(Equal(OK))
 }
@@ -650,6 +608,7 @@ func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
 			{
 				Name:            "tier1",
 				IngressPolicies: []string{"policy1", "policy2"},
+				DefaultAction:   "Deny",
 			},
 			{
 				Name:            "tier2",
