@@ -130,7 +130,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 	})
 
 	JustBeforeEach(func() {
-		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
+		numNodes := 2
+		tc, client = infrastructure.StartNNodeTopology(numNodes, opts, infra)
 
 		if useInvalidLicense {
 			var felixPIDs []int
@@ -248,6 +249,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			ensureAllNodesBPFProgramsAttached(tc.Felixes)
 		}
 
+		count := func() int {
+			return countNodesWithNodeIP(client)
+		}
+		Eventually(count, "1m").Should(BeEquivalentTo(numNodes), "Not all nodes got a NodeIP")
+
 		hostEndpointProgrammed := func() bool {
 			if BPFMode() {
 				return tc.Felixes[1].NumTCBPFProgsEth0() == 2
@@ -308,6 +314,14 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 					return bpfCheckIfPolicyProgrammed(tc.Felixes[1], wlHost2[1].InterfaceName, "ingress", "default/default.np-1", "deny", true)
 				}, "5s", "200ms").Should(BeTrue())
 			}
+
+			Eventually(func() bool {
+				return bpfCheckIfRuleProgrammed(tc.Felixes[0], wlHost1[0].InterfaceName, "ingress", "default", "allow", true)
+			}, "15s", "200ms").Should(BeTrue())
+
+			Eventually(func() bool {
+				return bpfCheckIfRuleProgrammed(tc.Felixes[0], wlHost1[0].InterfaceName, "egress", "default", "allow", true)
+			}, "15s", "200ms").Should(BeTrue())
 		}
 
 		// Describe the connectivity that we now expect.
@@ -1262,3 +1276,20 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 		Expect(numExpectedFlows).Should(Equal(2))
 	})
 })
+
+func countNodesWithNodeIP(c client.Interface) int {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	nodeList, err := c.Nodes().List(ctx, options.ListOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	count := 0
+	for _, n := range nodeList.Items {
+		if n.Spec.BGP.IPv4Address != "" {
+			count++
+		}
+	}
+
+	return count
+}

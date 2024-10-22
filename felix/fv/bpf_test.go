@@ -5713,9 +5713,13 @@ func checkServiceRoute(felix *infrastructure.Felix, ip string) bool {
 	return false
 }
 
-func bpfCheckIfPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
-	startStr := fmt.Sprintf("Start of policy %s", polName)
-	endStr := fmt.Sprintf("End of policy %s", polName)
+func checkIfPolicyOrRuleProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload, isPolicy bool) bool {
+	startStr := ""
+	endStr := ""
+	if isPolicy {
+		startStr = fmt.Sprintf("Start of policy %s", polName)
+		endStr = fmt.Sprintf("End of policy %s", polName)
+	}
 	actionStr := fmt.Sprintf("Start of rule %s action:\"%s\"", polName, action)
 	var policyDbg bpf.PolicyDebugInfo
 	out, err := felix.ExecOutput("cat", bpf.PolicyDebugJSONFileName(iface, hook, proto.IPVersion_IPV4))
@@ -5745,6 +5749,7 @@ func bpfCheckIfPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polNam
 	startOfPolicy := false
 	endOfPolicy := false
 	actionMatch := false
+
 	for _, insn := range policyDbg.PolicyInfo {
 		for _, comment := range insn.Comments {
 			if strings.Contains(comment, startStr) {
@@ -5753,13 +5758,21 @@ func bpfCheckIfPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polNam
 			if strings.Contains(comment, actionStr) && startOfPolicy && !endOfPolicy {
 				actionMatch = true
 			}
-			if startOfPolicy && strings.Contains(comment, endStr) {
+			if startOfPolicy && actionMatch && strings.Contains(comment, endStr) {
 				endOfPolicy = true
 			}
 		}
 	}
 
 	return (startOfPolicy && endOfPolicy && actionMatch)
+}
+
+func bpfCheckIfRuleProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
+	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, false)
+}
+
+func bpfCheckIfPolicyProgrammed(felix *infrastructure.Felix, iface, hook, polName, action string, isWorkload bool) bool {
+	return checkIfPolicyOrRuleProgrammed(felix, iface, hook, polName, action, isWorkload, true)
 }
 
 func bpfDumpPolicy(felix *infrastructure.Felix, iface, hook string) string {
