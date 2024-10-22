@@ -121,7 +121,7 @@ var (
 		},
 		"runtime_security": {
 			ID:           "test-event-id",
-			Description:  "[TEST]A pod was detected executing a process with a known malicious hash signature.",
+			Description:  "[TEST] A pod was detected executing a process with a known malicious hash signature.",
 			Time:         lsApi.TimestampOrDate{},
 			Origin:       "Malware",
 			AttackVector: "Process",
