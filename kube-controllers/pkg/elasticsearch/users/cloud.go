@@ -52,24 +52,30 @@ func formatName(name ElasticsearchUserName, clusterName string, management, secu
 }
 
 func GetGlobalAuthorizationRoles() []elasticsearch.Role {
+	// For internal ES clusters the kibana role uses the default space
+	space := "space:default"
+	name := ElasticsearchRoleNameKibanaViewer
 	if tenantID != "" {
-		return []elasticsearch.Role{{
-			Name: fmt.Sprintf("%s_%s", ElasticsearchRoleNameKibanaViewer, tenantID),
-			Definition: &elasticsearch.RoleDefinition{
-				Indices: []elasticsearch.RoleIndex{},
-				Applications: []elasticsearch.Application{{
-					Application: "kibana-.kibana",
-					Privileges: []string{
-						"feature_discover.read",
-						"feature_visualize.read",
-						"feature_dashboard.read",
-						"space_all",
-					},
-					Resources: []string{fmt.Sprintf("space:%s", tenantID)},
-				}},
-			},
-		}}
+		// For external ES clusters the kibana role uses the tenant specific space
+		space = fmt.Sprintf("space:%s", tenantID)
+		name = fmt.Sprintf("%s_%s", ElasticsearchRoleNameKibanaViewer, tenantID)
 	}
-
-	return eeGetGlobalAuthorizationRoles()
+	return []elasticsearch.Role{{
+		Name: name,
+		Definition: &elasticsearch.RoleDefinition{
+			Indices: []elasticsearch.RoleIndex{},
+			Applications: []elasticsearch.Application{{
+				Application: "kibana-.kibana",
+				Privileges: []string{
+					"feature_discover.all",
+					"feature_visualize.all",
+					"feature_dashboard.all",
+					"feature_dev_tools.all",
+					"feature_savedObjectsManagement.all",
+					"feature_savedObjectsTagging.all",
+				},
+				Resources: []string{space},
+			}},
+		},
+	}}
 }
