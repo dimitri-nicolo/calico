@@ -9,6 +9,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
@@ -28,6 +29,9 @@ type adJobTrainingController struct {
 	namespace     string
 	ctx           context.Context
 	cancel        context.CancelFunc
+
+	fifo *cache.DeltaFIFO
+	ping chan struct{}
 }
 
 // NewADJobTrainingController creates a controller that cleans up any AD training cron jobs.
@@ -54,7 +58,31 @@ func (c *adJobTrainingController) Close() {
 }
 
 func (c *adJobTrainingController) Ping(ctx context.Context) error {
-	return nil
+	// Enqueue a ping
+	err := c.fifo.Update(util.Ping{})
+	if err != nil {
+		// Local fifo & cache should never error.
+		panic(err)
+	}
+
+	// Wait for the ping to be processed, or context to expire.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+
+	// Since this channel is unbuffered, this will block if the main loop is not
+	// running, or has itself blocked.
+	case <-c.ping:
+		return nil
+	}
+}
+
+// pong is called from the main processing loop to reply to a ping.
+func (c *adJobTrainingController) pong() {
+	// Nominally, a sync.Cond would work nicely here rather than a channel,
+	// which would allow us to wake up all pingers at once. However, sync.Cond
+	// doesn't allow timeouts, so we stick with channels and one pong() per ping.
+	c.ping <- struct{}{}
 }
 
 // Cleanup AD training cron jobs.

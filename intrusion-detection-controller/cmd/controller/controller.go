@@ -250,6 +250,7 @@ func main() {
 
 			// This will manage all waf logs inside the management cluster
 			wafEventController = waf.NewWafAlertController(linseedClient, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace)
+			healthPingers = append(healthPingers, wafEventController)
 		}
 
 		// Initialize the client factory. If the tenant namespace is set, we need to impersonate the
