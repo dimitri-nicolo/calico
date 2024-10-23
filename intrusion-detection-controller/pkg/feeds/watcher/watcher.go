@@ -57,12 +57,12 @@ type watcher struct {
 	// to Pullers & Searchers we create.
 	ctx context.Context
 
-	once       sync.Once
-	ping       chan struct{}
-	watching   bool
-	controller cache.Controller
-	fifo       *cache.DeltaFIFO
-	feeds      cache.Store
+	once            sync.Once
+	ping            chan struct{}
+	watching        bool
+	cacheController cache.Controller
+	fifo            *cache.DeltaFIFO
+	feeds           cache.Store
 }
 
 type feedWatcher struct {
@@ -127,7 +127,7 @@ func NewWatcher(
 		RetryOnError:     false,
 		Process:          w.processQueue,
 	}
-	w.controller = cache.New(cfg)
+	w.cacheController = cache.New(cfg)
 
 	return w
 }
@@ -143,7 +143,7 @@ func (s *watcher) Run(ctx context.Context) {
 			// bother with a lock because updates to booleans are always atomic.
 			s.watching = true
 			defer func() { s.watching = false }()
-			s.controller.Run(s.ctx.Done())
+			s.cacheController.Run(s.ctx.Done())
 		}()
 
 		// The ipsController/dnsController can start running right away. It waits for
@@ -159,7 +159,7 @@ func (s *watcher) Run(ctx context.Context) {
 		// before syncing all threat feeds, we might delete state associated
 		// with an active threat feed.
 		go func() {
-			if !cache.WaitForCacheSync(s.ctx.Done(), s.controller.HasSynced) {
+			if !cache.WaitForCacheSync(s.ctx.Done(), s.cacheController.HasSynced) {
 				// WaitForCacheSync returns false if the context expires before sync is successful.
 				// If that happens, the controller is no longer needed, so just log the error.
 				log.Error("[Global Threat Feeds] Failed to sync GlobalThreatFeed controller")
