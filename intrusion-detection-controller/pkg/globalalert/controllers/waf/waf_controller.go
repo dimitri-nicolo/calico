@@ -6,10 +6,11 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/client-go/tools/cache"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"k8s.io/client-go/tools/cache"
 
 	log "github.com/sirupsen/logrus"
 
