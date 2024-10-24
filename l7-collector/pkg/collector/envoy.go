@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
@@ -23,11 +24,35 @@ import (
 
 const DestinationEnvoyReporter = "destination"
 
+type connectionCounter struct {
+	connectionCounts map[TupleKey]int
+	mu               sync.Locker
+}
+
+func newConnectionCounter() *connectionCounter {
+	return &connectionCounter{
+		connectionCounts: make(map[TupleKey]int),
+		mu:               &sync.Mutex{},
+	}
+}
+
+func (instance *connectionCounter) incr(key TupleKey) {
+	instance.mu.Lock()
+	defer instance.mu.Unlock()
+	instance.connectionCounts[key] = instance.connectionCounts[key] + 1
+}
+
+func (instance *connectionCounter) val() map[TupleKey]int {
+	instance.mu.Lock()
+	defer instance.mu.Unlock()
+	return instance.connectionCounts
+}
+
 type envoyCollector struct {
 	collectedLogs    chan EnvoyInfo
 	config           *config.Config
 	batch            *BatchEnvoyLog
-	connectionCounts map[TupleKey]int
+	connectionCounts *connectionCounter
 }
 
 func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
@@ -35,7 +60,7 @@ func EnvoyCollectorNew(cfg *config.Config, ch chan EnvoyInfo) EnvoyCollector {
 		collectedLogs:    ch,
 		config:           cfg,
 		batch:            NewBatchEnvoyLog(cfg.EnvoyRequestsPerInterval),
-		connectionCounts: make(map[TupleKey]int),
+		connectionCounts: newConnectionCounter(),
 	}
 }
 
@@ -130,20 +155,7 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 			ec.ingestLogs()
 			continue
 		case line := <-t.Lines:
-			envoyLog, err := ec.ParseRawLogs(line.Text)
-			if err != nil {
-				log.Error("error in parsing raw logs", err)
-				// Log line does not have properly formatted envoy info
-				// Skip writing a lot to record this error because it is too noisy.
-				continue
-			}
-			// Add this log to the batch
-			ec.batch.Insert(envoyLog)
-
-			// count connection statistics, this will contain connection counts even when batch is full
-			tupleKey := TupleKeyFromEnvoyLog(envoyLog)
-			ec.connectionCounts[tupleKey] = ec.connectionCounts[tupleKey] + 1
-
+			ec.processLine(line)
 		case <-ctx.Done():
 			log.Info("Collector shut down")
 			return
@@ -151,16 +163,32 @@ func (ec *envoyCollector) ReadLogs(ctx context.Context) {
 	}
 }
 
+func (ec *envoyCollector) processLine(line *tail.Line) {
+	envoyLog, err := ec.ParseRawLogs(line.Text)
+	if err != nil {
+		log.Error("error in parsing raw logs", err)
+		// Log line does not have properly formatted envoy info
+		// Skip writing a lot to record this error because it is too noisy.
+		return
+	}
+	// Add this log to the batch
+	ec.batch.Insert(envoyLog)
+
+	// count connection statistics, this will contain connection counts even when batch is full
+	tupleKey := TupleKeyFromEnvoyLog(envoyLog)
+	ec.connectionCounts.incr(tupleKey)
+}
+
 func (ec *envoyCollector) ingestLogs() {
-	intervalBatch := ec.batch
-	intervalCounts := ec.connectionCounts
+	intervalBatch := ec.batch.GetLogs()
+	intervalCounts := ec.connectionCounts.val()
 	ec.batch = NewBatchEnvoyLog(ec.config.EnvoyRequestsPerInterval)
-	ec.connectionCounts = make(map[TupleKey]int)
+	ec.connectionCounts = newConnectionCounter()
 
 	// Send a batch if there is data.
-	logs := intervalBatch.logs
-	if len(logs) != 0 {
-		ec.collectedLogs <- EnvoyInfo{Logs: logs, Connections: intervalCounts}
+	if len(intervalBatch) != 0 {
+		log.Debugf("Sending batch of logs to the channel: %v, %v", intervalBatch, intervalCounts)
+		ec.collectedLogs <- EnvoyInfo{Logs: intervalBatch, Connections: intervalCounts}
 	}
 }
 
@@ -225,9 +253,6 @@ func ParseFiveTupleInformation(envoyLog EnvoyLog) (EnvoyLog, error) {
 
 }
 
-// gRPC functions
-//
-
 func (ec *envoyCollector) Start(ctx context.Context) {
 	t := time.NewTicker(time.Second * time.Duration(ec.config.EnvoyLogIntervalSecs))
 	defer t.Stop()
@@ -241,6 +266,7 @@ func (ec *envoyCollector) Start(ctx context.Context) {
 	}
 }
 
+// gRPC functions
 func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithField("log", logMsg).Debug("Log received from envoy via gRPC")
@@ -286,5 +312,5 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	}
 	ec.batch.Insert(entry)
 	key := TupleKeyFromEnvoyLog(entry)
-	ec.connectionCounts[key] = ec.connectionCounts[key] + 1
+	ec.connectionCounts.incr(key)
 }

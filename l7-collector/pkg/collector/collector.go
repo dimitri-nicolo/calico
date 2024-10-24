@@ -4,6 +4,9 @@ package collector
 
 import (
 	"context"
+	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
 
@@ -97,70 +100,84 @@ type EnvoyLogKey struct {
 type BatchEnvoyLog struct {
 	logs map[EnvoyLogKey]EnvoyLog
 	size int
+	mu   sync.Locker
 }
 
 func NewBatchEnvoyLog(size int) *BatchEnvoyLog {
 	return &BatchEnvoyLog{
 		logs: make(map[EnvoyLogKey]EnvoyLog),
 		size: size,
+		mu:   &sync.Mutex{},
 	}
 }
 
-func (b BatchEnvoyLog) Insert(log EnvoyLog) {
-	logKey := GetEnvoyLogKey(log)
+func (b *BatchEnvoyLog) Insert(entry EnvoyLog) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	log.Debugf("Inserting log into batch: %v", entry)
+
+	logKey := GetEnvoyLogKey(entry)
 	// for tcp and tls types we don't get much information so we treat this as a single connection and
 	// add the duration, bytes_sent, bytes_received.
 	// same goes for cases where http logs comes with same EnvoyLogKey (same l7 fields) for multiple requests
 	// this happens even when the batch is full
 	if val, ok := b.logs[logKey]; ok {
 		// set max duration per request level
-		if log.Duration > val.DurationMax {
-			val.DurationMax = log.Duration
+		if entry.Duration > val.DurationMax {
+			val.DurationMax = entry.Duration
 		}
 
-		val.Duration = val.Duration + log.Duration
-		val.Latency = val.Latency + log.Latency
-		val.BytesReceived = val.BytesReceived + log.BytesReceived
-		val.BytesSent = val.BytesSent + log.BytesSent
+		val.Duration = val.Duration + entry.Duration
+		val.Latency = val.Latency + entry.Latency
+		val.BytesReceived = val.BytesReceived + entry.BytesReceived
+		val.BytesSent = val.BytesSent + entry.BytesSent
 		val.Count++
 		b.logs[logKey] = val
 	} else {
 		// add unique logs ony to the batch, if there is space otherwise we drop it
-		if !b.Full() {
-			log.Count = 1
-			log.DurationMax = log.Duration
-			b.logs[logKey] = log
+		if !b.full() {
+			entry.Count = 1
+			entry.DurationMax = entry.Duration
+			b.logs[logKey] = entry
 		}
 	}
 }
 
-func GetEnvoyLogKey(log EnvoyLog) EnvoyLogKey {
+func (b *BatchEnvoyLog) GetLogs() map[EnvoyLogKey]EnvoyLog {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.logs
+}
+
+func GetEnvoyLogKey(entry EnvoyLog) EnvoyLogKey {
 	// We create a key using all the distinct values we get for each type
 	// for TCP it's just the 5 tuple information, for http we include all the other l7 info fields
 	return EnvoyLogKey{
-		TupleKey:      TupleKeyFromEnvoyLog(log),
-		UserAgent:     log.UserAgent,
-		RequestPath:   log.RequestPath,
-		RequestMethod: log.RequestMethod,
-		ResponseCode:  log.ResponseCode,
-		Domain:        log.Domain,
+		TupleKey:      TupleKeyFromEnvoyLog(entry),
+		UserAgent:     entry.UserAgent,
+		RequestPath:   entry.RequestPath,
+		RequestMethod: entry.RequestMethod,
+		ResponseCode:  entry.ResponseCode,
+		Domain:        entry.Domain,
 	}
 }
 
-func (b BatchEnvoyLog) Full() bool {
+func (b *BatchEnvoyLog) full() bool {
 	if b.size < 0 {
 		return false
 	}
 	return len(b.logs) == b.size
 }
 
-func TupleKeyFromEnvoyLog(log EnvoyLog) TupleKey {
+func TupleKeyFromEnvoyLog(entry EnvoyLog) TupleKey {
 	return TupleKey{
-		SrcIp:   log.SrcIp,
-		DstIp:   log.DstIp,
-		SrcPort: log.SrcPort,
-		DstPort: log.DstPort,
-		Type:    log.Type,
+		SrcIp:   entry.SrcIp,
+		DstIp:   entry.DstIp,
+		SrcPort: entry.SrcPort,
+		DstPort: entry.DstPort,
+		Type:    entry.Type,
 	}
 }
 
