@@ -404,6 +404,29 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("policies should not exist on start, had %v policies", len(policies.Items))
 	}
 
+	// Test that we can create / update / delete policies using the non-tier prefixed name.
+	stagedNetworkPolicy2 := &v3.StagedNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	stagedNetworkPolicyServer, err := policyClient.Create(ctx, stagedNetworkPolicy2, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating the staged network policy '%v' (%v)", stagedNetworkPolicy2, err)
+	}
+	if defaultTierPolicyName != stagedNetworkPolicyServer.Name {
+		return fmt.Errorf("policy name prefix wasn't defaulted by the apiserver on create: %v", stagedNetworkPolicyServer)
+	}
+	stagedNetworkPolicyServer.Name = name
+	stagedNetworkPolicyServer.Labels = map[string]string{"foo": "bar"}
+	stagedNetworkPolicyServer, err = policyClient.Update(ctx, stagedNetworkPolicyServer, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating the policy '%v' (%v)", stagedNetworkPolicyServer, err)
+	}
+	if defaultTierPolicyName != stagedNetworkPolicyServer.Name {
+		return fmt.Errorf("policy name prefix wasn't defaulted by the apiserver on update: %v", stagedNetworkPolicyServer)
+	}
+	err = policyClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("error deleting the policy '%v' (%v)", name, err)
+	}
+
 	policyServer, err := policyClient.Create(ctx, policy, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
@@ -1014,7 +1037,30 @@ func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name str
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	stagedGlobalNetworkPolicyServer, err := stagedGlobalNetworkPolicyClient.Create(ctx, stagedGlobalNetworkPolicy, metav1.CreateOptions{})
+	// Test that we can create / update / delete policies using the non-tier prefixed name.
+	stagedGlobalNetworkPolicy2 := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	stagedGlobalNetworkPolicyServer, err := stagedGlobalNetworkPolicyClient.Create(ctx, stagedGlobalNetworkPolicy2, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating the staged globalNetworkPolicy '%v' (%v)", stagedGlobalNetworkPolicy2, err)
+	}
+	if defaultTierPolicyName != stagedGlobalNetworkPolicyServer.Name {
+		return fmt.Errorf("policy name prefix wasn't defaulted by the apiserver on create: %v", stagedGlobalNetworkPolicyServer)
+	}
+	stagedGlobalNetworkPolicyServer.Name = name
+	stagedGlobalNetworkPolicyServer.Labels = map[string]string{"foo": "bar"}
+	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Update(ctx, stagedGlobalNetworkPolicyServer, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating the policy '%v' (%v)", stagedGlobalNetworkPolicyServer, err)
+	}
+	if defaultTierPolicyName != stagedGlobalNetworkPolicyServer.Name {
+		return fmt.Errorf("policy name prefix wasn't defaulted by the apiserver on update: %v", stagedGlobalNetworkPolicyServer)
+	}
+	err = stagedGlobalNetworkPolicyClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("error deleting the policy '%v' (%v)", name, err)
+	}
+
+	stagedGlobalNetworkPolicyServer, err = stagedGlobalNetworkPolicyClient.Create(ctx, stagedGlobalNetworkPolicy, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("error creating the stagedGlobalNetworkPolicy '%v' (%v)", stagedGlobalNetworkPolicy, err)
 	}
