@@ -1,6 +1,6 @@
 ARG THIRD_PARTY_REGISTRY
 
-FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v7.17.24 AS elastic
+FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v7.17.25 AS elastic
 
 FROM scratch AS source
 
