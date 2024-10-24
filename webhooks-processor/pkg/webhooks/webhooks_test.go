@@ -476,6 +476,67 @@ this line will be ignored
 	require.Equal(t, fetchedEvents[0], whEvent)
 }
 
+func TestGenericProviderWithTemplate(t *testing.T) {
+	requests := []testutils.HttpRequest{}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Does anyone read this?")
+		request := testutils.HttpRequest{
+			Method: r.Method,
+			URL:    r.URL.String(),
+			Header: r.Header,
+		}
+		var err error
+		request.Body, err = io.ReadAll(r.Body)
+		require.NoError(t, err)
+		requests = append(requests, request)
+	}))
+	defer ts.Close()
+
+	fetchedEvents := []lsApi.Event{newEvent(1)}
+	testState := NewTestState(func(context.Context, *query.Query, time.Time, time.Time) ([]lsApi.Event, error) {
+		return fetchedEvents, nil
+	}, DefaultProviders())
+
+	SetupWithTestState(t, testState)
+
+	whUrl := fmt.Sprintf("%s/test-hook", ts.URL)
+	wh := testutils.NewTestWebhook("test-generic-webhook")
+	// Set the Webhook consumer to Generic
+	wh.Spec.Consumer = api.SecurityEventWebhookConsumerGeneric
+	// Making sure we'll update the right config...
+	require.Equal(t, wh.Spec.Config[0].Name, "url")
+	// Updating URL to point to the test server
+	wh.Spec.Config[0].Value = whUrl
+	// Adding arbitrary headers:
+	wh.Spec.Config = append(wh.Spec.Config, api.SecurityEventWebhookConfigVar{
+		Name: "template",
+		Value: `{
+	"message": "We got a security event from Tigera",
+	"event": "{{.description}}",
+	"event_type": "{{.type}}",
+	"missing_data": "{{.this_field_does_not_exists}}"
+}`,
+	})
+	_, err := testState.WebHooksAPI.Update(context.Background(), wh, options.SetOptions{})
+	require.NoError(t, err)
+
+	// Make sure the webhook eventually hits the test provider
+	require.Eventually(t, func() bool { return len(requests) == 1 }, 5*time.Second, 10*time.Millisecond)
+
+	// We got the webhook as expected
+	require.Equal(t, "POST", requests[0].Method)
+	require.Equal(t, "/test-hook", requests[0].URL)
+
+	// And check that we get a templated JSON with the values from the original event
+	var whJson map[string]string
+	err = json.Unmarshal(requests[0].Body, &whJson)
+	require.NoError(t, err)
+	require.Equal(t, "We got a security event from Tigera", whJson["message"])
+	require.Equal(t, fetchedEvents[0].Description, whJson["event"])
+	require.Equal(t, fetchedEvents[0].Type, whJson["event_type"])
+	require.Equal(t, "", whJson["missing_data"])
+}
+
 func TestBackoffOnInitialFailure(t *testing.T) {
 	const retryTimes int = 3
 	requests := []testutils.HttpRequest{}

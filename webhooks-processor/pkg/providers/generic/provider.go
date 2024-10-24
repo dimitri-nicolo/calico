@@ -38,8 +38,13 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 	if _, urlPresent := config["url"]; !urlPresent {
 		return errors.New("url field is not present in webhook configuration")
 	}
-	if _, hasHeaders := config["headers"]; hasHeaders {
-		if _, err := helpers.ProcessHeaders(config["headers"]); err != nil {
+	if headers, hasHeaders := config["headers"]; hasHeaders {
+		if _, err := helpers.ProcessHeaders(headers); err != nil {
+			return err
+		}
+	}
+	if template, hasTemplate := config["template"]; hasTemplate {
+		if _, err := helpers.ParseTemplate(template); err != nil {
 			return err
 		}
 	}
@@ -55,6 +60,21 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 	retryFunc := func() (err error) {
 		requestCtx, requestCtxCancel := context.WithTimeout(ctx, p.Config().RequestTimeout)
 		defer requestCtxCancel()
+
+		// If template config is set, we will interpret its content as a go-template and use it
+		// to transform the event to match whatever format is defined in the template.
+		if templateData, ok := config["template"]; ok {
+			tmpl, err := helpers.ParseTemplate(templateData)
+			if err != nil {
+				// this is just defensive coding, we should never get here because the validation happens first:
+				return helpers.NewNoRetryError(err)
+			}
+			result, err := helpers.ProcessTemplate(tmpl, payload)
+			if err != nil {
+				return err
+			}
+			payload = result
+		}
 
 		request, err := http.NewRequestWithContext(requestCtx, "POST", config["url"], bytes.NewReader(payload))
 		if err != nil {
