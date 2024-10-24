@@ -3,6 +3,10 @@ package rbac_test
 
 import (
 	"encoding/json"
+	"errors"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 
 	. "github.com/projectcalico/calico/apiserver/pkg/rbac"
 
@@ -1105,6 +1109,43 @@ var _ = Describe("RBAC calculator tests", func() {
 		err = json.Unmarshal(v, &p2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p2).To(Equal(p))
+	})
+
+	It("should not fail if non-projectcalico.org discovery fails", func() {
+		resourceListerErr := discovery.ErrGroupDiscoveryFailed{Groups: map[schema.GroupVersion]error{
+			{Group: "metrics.k8s.io", Version: "v1beta1"}: errors.New("this should be ignored"),
+		}}
+		resourceLister := rbacmock.NewFailingResourceLister(
+			&resourceListerErr,
+		)
+		calc = NewCalculator(resourceLister, mock, mock, mock, mock, mock, mock, 0)
+		_, err := calc.CalculatePermissions(myUser, allResourceVerbs)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("should fail if projectcalico.org discovery fails", func() {
+		resourceListerErr := discovery.ErrGroupDiscoveryFailed{Groups: map[schema.GroupVersion]error{
+			{Group: "metrics.k8s.io", Version: "v1beta1"}: errors.New("this should be ignored"),
+			{Group: "projectcalico.org", Version: "v3"}:   errors.New("this should not be ignored"),
+		}}
+		resourceLister := rbacmock.NewFailingResourceLister(
+			&resourceListerErr,
+		)
+		calc = NewCalculator(resourceLister, mock, mock, mock, mock, mock, mock, 0)
+		_, err := calc.CalculatePermissions(myUser, allResourceVerbs)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(Equal(resourceListerErr.Error()))
+	})
+
+	It("should fail if the resourceLister fails for any other reason", func() {
+		resourceListerErr := errors.New("some other error")
+		resourceLister := rbacmock.NewFailingResourceLister(
+			resourceListerErr,
+		)
+		calc = NewCalculator(resourceLister, mock, mock, mock, mock, mock, mock, 0)
+		_, err := calc.CalculatePermissions(myUser, allResourceVerbs)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(Equal(resourceListerErr.Error()))
 	})
 
 	Context("Multi-tenant", func() {

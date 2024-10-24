@@ -2,10 +2,12 @@
 package mock
 
 import (
+	"errors"
 	"fmt"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/apimachinery/pkg/types"
 
 	log "github.com/sirupsen/logrus"
@@ -81,7 +83,11 @@ func (m *MockClient) ServerPreferredResources() ([]*meta_v1.APIResourceList, err
 	log.Debugf("Included resource dummy%d.fake", m.ResourcesQueries)
 	m.ResourcesQueries++
 
-	return rl, nil
+	discoveryFailure := &discovery.ErrGroupDiscoveryFailed{Groups: map[schema.GroupVersion]error{
+		{Group: "metrics.k8s.io", Version: "v1beta1"}: errors.New("this should be ignored"),
+	}}
+
+	return rl, discoveryFailure
 }
 
 func (m *MockClient) GetRole(namespace, name string) (*rbac_v1.Role, error) {
@@ -245,4 +251,16 @@ func (m *MockClient) ListManagedClusters() ([]*v3.ManagedCluster, error) {
 		}
 	}
 	return mgs, nil
+}
+
+type FailingResourceLister struct {
+	err error
+}
+
+func NewFailingResourceLister(err error) *FailingResourceLister {
+	return &FailingResourceLister{err: err}
+}
+
+func (m FailingResourceLister) ServerPreferredResources() ([]*meta_v1.APIResourceList, error) {
+	return nil, m.err
 }

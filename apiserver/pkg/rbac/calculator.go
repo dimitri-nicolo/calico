@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/discovery"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -344,7 +345,7 @@ func (c *calculator) loadResources() error {
 
 	// Get the registered resource groups and types.
 	log.Debug("Querying k8s for registered resource types")
-	pr, err := c.resourceLister.ServerPreferredResources()
+	pr, err := ignoreDiscoveryFailureErrors(c.resourceLister.ServerPreferredResources())
 	if err != nil {
 		return err
 	}
@@ -933,7 +934,10 @@ func (u *userCalculator) updatePermissions(rt ResourceType, verbs []Verb) {
 		log.Debugf("Resource type %s not found, update cached resource types", rt)
 		u.resourcesUpdated = true
 		u.updateResources()
-		ar, ok = u.resources[rt]
+		ar, ok = u.resources[mainresource]
+	}
+	if !ok {
+		log.Debugf("resource %v is not registered", mainresource)
 	}
 
 	u.permissions[rt] = make(map[Verb][]Match)
@@ -968,4 +972,27 @@ func (u *userCalculator) updateResources() {
 	log.Debug("Update user calculator to use updated cache of known resource types")
 	u.resources = u.calculator.resources
 	u.resourcesUpdateTime = u.calculator.resourceUpdateTime
+}
+
+// ignoreDiscoveryFailureErrors ignores all discovery failure errors except those for projectcalico.org
+func ignoreDiscoveryFailureErrors(res []*metav1.APIResourceList, err error) ([]*metav1.APIResourceList, error) {
+	if err == nil {
+		return res, nil
+	}
+
+	if discoveryFailed, ok := err.(*discovery.ErrGroupDiscoveryFailed); ok {
+		for groupVersion, groupErr := range discoveryFailed.Groups {
+			group := groupVersion.Group
+			if group == "projectcalico.org" { // fail fast
+				return res, err
+			} else {
+				log.Warnf("ignoring discovery failure for apiGroup: %v err: %v", group, groupErr)
+			}
+		}
+		return res, nil
+
+	} else {
+		return res, err
+	}
+
 }
