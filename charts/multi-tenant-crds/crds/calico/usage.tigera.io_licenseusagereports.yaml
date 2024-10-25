@@ -4,15 +4,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
-  name: tiers.crd.projectcalico.org
+  name: licenseusagereports.usage.tigera.io
 spec:
-  group: crd.projectcalico.org
+  group: usage.tigera.io
   names:
-    kind: Tier
-    listKind: TierList
-    plural: tiers
-    singular: tier
-  preserveUnknownFields: false
+    kind: LicenseUsageReport
+    listKind: LicenseUsageReportList
+    plural: licenseusagereports
+    singular: licenseusagereport
   scope: Cluster
   versions:
   - name: v1
@@ -32,25 +31,18 @@ spec:
           metadata:
             type: object
           spec:
-            description: TierSpec contains the specification for a security policy
-              tier resource.
             properties:
-              defaultAction:
-                description: 'DefaultAction specifies the action applied to workloads
-                  selected by a policy in the tier, but not rule matched the workload''s
-                  traffic. [Default: Deny]'
-                enum:
-                - Pass
-                - Deny
+              hmac:
                 type: string
-              order:
-                description: Order is an optional field that specifies the order in
-                  which the tier is applied. Tiers with higher "order" are applied
-                  after those with lower order.  If the order is omitted, it may be
-                  considered to be "infinite" - i.e. the tier will be applied last.  Tiers
-                  with identical order will be applied in alphanumerical order based
-                  on the Tier "Name".
-                type: number
+              reportData:
+                description: The base64-encoded JSON data for this report. The data
+                  represents an interval of time when license usage was monitored
+                  in the cluster, along with data that binds the report to its cluster
+                  context.
+                type: string
+            required:
+            - hmac
+            - reportData
             type: object
         type: object
     served: true
