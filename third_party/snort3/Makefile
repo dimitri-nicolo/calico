@@ -10,12 +10,12 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/snort3
 SNORT3_IMAGE ?= snort
 BUILD_IMAGES ?= $(SNORT3_IMAGE)
 
-SNORT3_VERSION ?= 3.1.81.0
+SNORT3_VERSION = 3.3.7.0
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
 BRANCH_NAME = v$(SNORT3_VERSION)
-LATEST_IMAGE_TAG = $(BRANCH_NAME)-mod
+LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
 ###############################################################################
 # Include lib.Makefile

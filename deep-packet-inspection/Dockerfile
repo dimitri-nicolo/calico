@@ -2,7 +2,7 @@
 
 ARG THIRD_PARTY_REGISTRY
 
-FROM ${THIRD_PARTY_REGISTRY}/snort:v3.1.81.0-mod AS snort
+FROM ${THIRD_PARTY_REGISTRY}/snort:v3.3.7.0 AS snort
 
 FROM scratch AS source
 
