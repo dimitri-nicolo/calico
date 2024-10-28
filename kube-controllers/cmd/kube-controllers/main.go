@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -614,7 +615,11 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.needLicenseMonitoring = true
 	}
 	if cfg.Controllers.ElasticsearchConfiguration != nil {
-		esK8sREST, err := relasticsearch.NewRESTClient(cfg.Controllers.ElasticsearchConfiguration.RESTConfig)
+		restCfg, err := clientcmd.BuildConfigFromFlags("", cfg.Controllers.ElasticsearchConfiguration.Kubeconfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build kubernetes client config")
+		}
+		esK8sREST, err := relasticsearch.NewRESTClient(restCfg)
 		if err != nil {
 			log.WithError(err).Fatal("failed to build elasticsearch rest client")
 		}
@@ -644,11 +649,16 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 
 	if cfg.Controllers.ManagedCluster != nil || cfg.Controllers.ManagedClusterLicensing != nil {
 		// We only want these clients created if the managedcluster controller type is enabled
-		var kubeconfig *restclient.Config
+		var kcPath string
 		if cfg.Controllers.ManagedCluster != nil {
-			kubeconfig = cfg.Controllers.ManagedCluster.RESTConfig
+			kcPath = cfg.Controllers.ManagedCluster.Kubeconfig
 		} else if cfg.Controllers.ManagedClusterLicensing != nil {
-			kubeconfig = cfg.Controllers.ManagedClusterLicensing.RESTConfig
+			kcPath = cfg.Controllers.ManagedClusterLicensing.Kubeconfig
+		}
+
+		kubeconfig, err := clientcmd.BuildConfigFromFlags("", kcPath)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build kubernetes client config")
 		}
 
 		esK8sREST, err := relasticsearch.NewRESTClient(kubeconfig)

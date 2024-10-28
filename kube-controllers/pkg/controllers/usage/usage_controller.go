@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
 	ctrlcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
@@ -32,7 +33,11 @@ import (
 //	      v
 //	reportWriter: 		enriches basicLicenseUsageReports with additional context and writes them to the datastore as LicenseUsageReports
 func NewUsageController(ctx context.Context, cfg *config.UsageControllerConfig, k8sClient *kubernetes.Clientset, calicoClient clientv3.Interface, nodeInformer, podInformer cache.SharedIndexInformer) (controller.Controller, error) {
-	usageClient, err := createUsageClient(ctx, cfg.RESTConfig)
+	restCfg, err := clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
+	if err != nil {
+		log.WithError(err).Fatal("failed to build kubernetes client config")
+	}
+	usageClient, err := createUsageClient(ctx, restCfg)
 	if err != nil {
 		log.WithError(err).Error("Failed to create usage client")
 		return nil, err

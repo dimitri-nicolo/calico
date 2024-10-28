@@ -23,11 +23,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config/configfactory"
@@ -99,10 +96,7 @@ contexts:
     user: calico
 current-context: test-context`
 
-	var (
-		kconfigFile *os.File
-		restCfg     *restclient.Config
-	)
+	var kconfigFile *os.File
 
 	createAndSetKubeConfig := func() {
 		// Write out a kubeconfig file
@@ -114,8 +108,6 @@ current-context: test-context`
 		Expect(err).NotTo(HaveOccurred())
 		err = os.Setenv("KUBECONFIG", kconfigFile.Name())
 		Expect(err).NotTo(HaveOccurred())
-		restCfg, err = clientcmd.BuildConfigFromFlags("", kconfigFile.Name())
-		Expect(err).ShouldNot(HaveOccurred())
 	}
 
 	deleteAndUnsetKubeConfig := func() {
@@ -179,7 +171,6 @@ current-context: test-context`
 					AutoHostEndpoints: false,
 					DeleteNodes:       true,
 					LeakGracePeriod:   &v1.Duration{Duration: 15 * time.Minute},
-					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Minute * 5,
@@ -278,7 +269,6 @@ current-context: test-context`
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
 					LeakGracePeriod:   &v1.Duration{Duration: 20 * time.Minute},
-					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 30,
@@ -566,7 +556,6 @@ current-context: test-context`
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
 					LeakGracePeriod:   &v1.Duration{Duration: 15 * time.Minute},
-					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 105,
@@ -659,7 +648,6 @@ current-context: test-context`
 					SyncLabels:        false,
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
-					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 105,

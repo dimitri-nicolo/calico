@@ -24,15 +24,12 @@ import (
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config/configfactory"
 
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	restclient "k8s.io/client-go/rest"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -93,13 +90,11 @@ type NodeControllerConfig struct {
 	// The grace period used by the controller to determine if an IP address is leaked.
 	// Set to 0 to disable IP address garbage collection.
 	LeakGracePeriod *v1.Duration
-
-	RESTConfig *restclient.Config
 }
 
 type ElasticsearchCfgControllerCfg struct {
 	NumberOfWorkers int
-	RESTConfig      *restclient.Config
+	Kubeconfig      string
 }
 
 type AuthorizationControllerCfg struct {
@@ -112,7 +107,7 @@ type AuthorizationControllerCfg struct {
 
 type ManagedClusterControllerConfig struct {
 	GenericControllerConfig
-	RESTConfig                     *restclient.Config
+	Kubeconfig                     string
 	MultiClusterForwardingEndpoint string
 	MultiClusterForwardingCA       string
 	ElasticConfig                  ElasticsearchCfgControllerCfg
@@ -124,7 +119,7 @@ type UsageControllerConfig struct {
 	GenericControllerConfig
 	UsageReportsPerDay         int
 	UsageReportRetentionPeriod time.Duration
-	RESTConfig                 *restclient.Config
+	Kubeconfig                 string
 }
 
 type RunConfigController struct {
@@ -134,7 +129,6 @@ type RunConfigController struct {
 
 type LicenseControllerCfg struct {
 	NumberOfWorkers int
-	RESTConfig      *restclient.Config
 }
 
 // ConfigChan returns a channel that sends an initial config snapshot at start
@@ -373,12 +367,6 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 			rc.Node.DeleteNodes = true
 			// This field doesn't have an equivalent in the status
 		}
-
-		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
-		if err != nil {
-			log.WithError(err).Fatal("failed to build kubernetes client config")
-		}
-		rc.Node.RESTConfig = restCfg
 	}
 
 	// Number of workers is not exposed on the API, so just use the envCfg for it
@@ -407,11 +395,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 	}
 	if rc.ElasticsearchConfiguration != nil {
 		rc.ElasticsearchConfiguration.NumberOfWorkers = envCfg.ManagedClusterWorkers
-		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
-		if err != nil {
-			log.WithError(err).Fatal("failed to build kubernetes client config")
-		}
-		rc.ElasticsearchConfiguration.RESTConfig = restCfg
+		rc.ElasticsearchConfiguration.Kubeconfig = envCfg.Kubeconfig
 	}
 
 	if rc.ManagedCluster != nil {
@@ -420,11 +404,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedCluster.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
-		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
-		if err != nil {
-			log.WithError(err).Fatal("failed to build kubernetes client config")
-		}
-		rc.ManagedCluster.RESTConfig = restCfg
+		rc.ManagedCluster.Kubeconfig = envCfg.Kubeconfig
 
 		// TenantNamespace will be available in Multitenant Mode.
 		rc.ManagedCluster.TenantNamespace = envCfg.TenantNamespace
@@ -435,11 +415,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedClusterLicensing.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
 		rc.ManagedClusterLicensing.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedClusterLicensing.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
-		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
-		if err != nil {
-			log.WithError(err).Fatal("failed to build kubernetes client config")
-		}
-		rc.ManagedClusterLicensing.RESTConfig = restCfg
+		rc.ManagedClusterLicensing.Kubeconfig = envCfg.Kubeconfig
 
 		// TenantNamespace will be available in Multitenant Mode.
 		rc.ManagedClusterLicensing.TenantNamespace = envCfg.TenantNamespace
@@ -459,10 +435,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		if err != nil {
 			log.WithError(err).Fatalf("failed to parse usage report duration (%s)", envCfg.UsageReportRetentionPeriod)
 		}
-		rc.Usage.RESTConfig, err = clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
-		if err != nil {
-			log.WithError(err).Fatal("failed to build kubernetes client config")
-		}
+		rc.Usage.Kubeconfig = envCfg.Kubeconfig
 	}
 
 	rCfg.ShortLicensePolling = envCfg.DebugUseShortPollIntervals
