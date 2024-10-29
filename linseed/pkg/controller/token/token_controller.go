@@ -468,7 +468,7 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 	defer logrus.Info("Token manager shutting down")
 
 	// reconcileChan handles reconcilation of tokens and secrets.
-	reconcileChan := make(chan *tokenEvent, 300)
+	reconcileChan := make(chan *tokenEvent, 2000)
 	defer close(reconcileChan)
 
 	ticker := time.After(*c.reconcilePeriod)
@@ -498,10 +498,11 @@ func (c *controller) ManageTokens(stop <-chan struct{}, updateChan chan *tokenEv
 					logrus.Warnf("Received unexpected type %T", obj)
 					continue
 				}
-
-				// Queue managed cluster for reconciliation.
-				reconcileChan <- &tokenEvent{
-					mc: mc,
+				if err := isValid(mc); err == nil && isConnected(mc) {
+					// Queue managed cluster for reconciliation.
+					reconcileChan <- &tokenEvent{
+						mc: mc,
+					}
 				}
 			}
 
