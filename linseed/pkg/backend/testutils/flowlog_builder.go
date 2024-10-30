@@ -212,15 +212,14 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 			}
 
 			pol := v1.Policy{
-				Tier:         h.Tier(),
-				Name:         name,
-				Namespace:    h.Namespace(),
-				Action:       string(h.Action()),
-				Count:        f.LogStats.FlowLogCount,
-				RuleID:       h.RuleIdIndex(),
-				IsProfile:    h.IsProfile(),
-				IsStaged:     h.IsStaged(),
-				IsKubernetes: h.IsKubernetes(),
+				Tier:      h.Tier(),
+				Name:      name,
+				Namespace: h.Namespace(),
+				Action:    string(h.Action()),
+				Count:     f.LogStats.FlowLogCount,
+				RuleID:    h.RuleIdIndex(),
+				IsProfile: h.IsProfile(),
+				IsStaged:  h.IsStaged(),
 			}
 			f.Policies = append(f.Policies, pol)
 		}

@@ -54,7 +54,19 @@ type FlowLogSearchRequest struct {
 
 	// PolicyMatches is used to fetch flowlogs by policy attributes. If multiple policy match
 	// attributes are provided, they are combined by logical OR.
-	PolicyMatches []lapi.PolicyMatch `json:"policy_matches,omitempty" validate:"omitempty,dive"`
+	PolicyMatches []PolicyMatch `json:"policy_matches,omitempty" validate:"omitempty"`
+}
+
+type PolicyMatch struct {
+	// Tier for the policy.
+	Tier string `json:"tier,omitempty" validate:"omitempty"`
+
+	// The action taken by the policy.
+	Action *lapi.FlowAction `json:"action,omitempty" validate:"omitempty"`
+
+	// Namespace and name of the policy.
+	Namespace *string `json:"namespace,omitempty" validate:"omitempty"`
+	Name      *string `json:"name,omitempty" validate:"omitempty"`
 }
 
 // SearchResponse contains the response of a raw log search.

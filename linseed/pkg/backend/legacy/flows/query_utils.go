@@ -3,13 +3,11 @@
 package flows
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -25,105 +23,38 @@ func BuildPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, 
 		if (m == v1.PolicyMatch{}) {
 			return nil, fmt.Errorf("PolicyMatch passed to BuildPolicyMatchQuery cannot be empty")
 		}
-		query, err := policyQuery(m)
-		if err != nil {
-			return nil, err
-		}
-		b.Should(query)
+		b.Should(policyQuery(m))
 	}
 	b.MinimumNumberShouldMatch(1)
 	return b, nil
 }
 
-func policyQuery(m v1.PolicyMatch) (elastic.Query, error) {
-	indexRegExp, nameRegExp, actionRegExp := "*", "*", "*"
-
-	// Validate and set the tier according to the policy type
-	tier, err := validateAndSetTierValue(m.Tier, m.Type)
-	if err != nil {
-		return nil, err
+func policyQuery(m v1.PolicyMatch) elastic.Query {
+	index := "*"
+	tier := "*"
+	name := "*"
+	action := "*"
+	if m.Tier != "" {
+		tier = m.Tier
 	}
 
-	// Set the action if an action is provided, otherwise action should be set to `*` to match against all actions
-	if m.Action != nil && *m.Action != "" {
-		actionRegExp = string(*m.Action)
+	// Names can look differently depending on the type of hit.
+	// - Namespaced policy: <namespace>/<tier>.<name>
+	// - Global / Profile: <tier>.<name>
+	if m.Name != nil {
+		name = fmt.Sprintf("%s.%s", tier, *m.Name)
 	}
-
-	// Set policy name if it is provided, otherwise name should be set to [a-zA-Z][-a-zA-Z0-9]*[a-zA-Z] to match against all names
-	if m.Name != nil && *m.Name != "" {
-		nameRegExp = *m.Name
+	if m.Namespace != nil {
+		name = fmt.Sprintf("%s/%s", *m.Namespace, name)
 	}
-
-	// For staged policy the tag "staged" has to be added in the formats below in the combined name:
-	// namespaced policies: <namespace>/<tier>.staged:<name>
-	// global policies: <tier>.staged:<name>
-	if m.Staged {
-		nameRegExp = fmt.Sprintf("%s:%s", "staged", nameRegExp)
-	}
-
-	// Policy combined-name in flowlogs is constructed differently depending on the type of hit.
-	// - Namespaced policy combined-name: <namespace>/<tier>.<name>
-	// - Global / Profile combined-name: <tier>.<name>
-	// - kubernetes combined-name: <namespace>/knp.default.<name>
-	// - kubernetes admin policy combined-name: kanp.adminnetworkpolicy.<name>
-	// m.Type defines how the name should be constructed
-	switch m.Type {
-	case v1.KNP:
-		nameRegExp = fmt.Sprintf("%s%s", names.K8sNetworkPolicyNamePrefix, nameRegExp)
-	case v1.KANP:
-		nameRegExp = fmt.Sprintf("%s%s", names.K8sAdminNetworkPolicyNamePrefix, nameRegExp)
-	default:
-		nameRegExp = fmt.Sprintf("%s.%s", tier, nameRegExp)
-	}
-
-	// Set namespace (not non-global policies)
-	if m.Global {
-		if m.Namespace != nil {
-			return nil, errors.New("namespace cannot be set when global==true")
-		}
-	} else if m.Namespace != nil && *m.Namespace != "" {
-		if m.Tier == "__PROFILE__" {
-			return nil, errors.New("namespace cannot be set when tier==__PROFILE__")
-		}
-		nameRegExp = fmt.Sprintf("%s/%s", *m.Namespace, nameRegExp)
-	} else {
-		if m.Tier != "__PROFILE__" {
-			nameRegExp = fmt.Sprintf("*/%s", nameRegExp)
-		}
+	if m.Action != nil {
+		action = string(*m.Action)
 	}
 
 	// Policy strings are formatted like so:
-	// <index> | <tier> | <combined-name> | <action> | <ruleID>
-	matchString := fmt.Sprintf("%s|%s|%s|%s|*", indexRegExp, tier, nameRegExp, actionRegExp)
+	// <index> | <tier> | <name> | <action> | <ruleID>
+	matchString := fmt.Sprintf("%s|%s|%s|%s*", index, tier, name, action)
 	logrus.WithField("match", matchString).Debugf("Matching on policy string")
-
 	wildcard := elastic.NewWildcardQuery("policies.all_policies", matchString)
-	return elastic.NewNestedQuery("policies", wildcard), nil
-}
-
-func validateAndSetTierValue(tier string, policyType v1.PolicyType) (string, error) {
-	// Validate tier for knp
-	if policyType == v1.KNP {
-		if tier != "" && tier != names.DefaultTierName {
-			return "", fmt.Errorf("tier cannot be set to %v for policy type %v", tier, policyType)
-		} else {
-			return names.DefaultTierName, nil
-		}
-	}
-
-	// Validate tier for kanp
-	if policyType == v1.KANP {
-		if tier != "" && tier != names.AdminNetworkPolicyTierName {
-			return "", fmt.Errorf("tier cannot be set to %v for policy type %v", tier, policyType)
-		} else {
-			return names.AdminNetworkPolicyTierName, nil
-		}
-	}
-
-	if tier != "" {
-		return tier, nil
-	} else {
-		// Match against all tiers if m.Tier is empty
-		return "*", nil
-	}
+	return elastic.NewNestedQuery("policies", wildcard)
 }

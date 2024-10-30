@@ -20,7 +20,7 @@ type FlowLogParams struct {
 	// by the provided tier.
 	// For example, return flowlogs which are allowed by the default tier.
 	// If multiple PolicyMatches are provided, they are combined with a logical OR.
-	PolicyMatches []PolicyMatch `json:"policy_matches" validate:"dive"`
+	PolicyMatches []PolicyMatch `json:"policy_matches"`
 }
 
 type IPMatch struct {
