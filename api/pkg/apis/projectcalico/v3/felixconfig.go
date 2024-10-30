@@ -479,16 +479,15 @@ type FelixConfigurationSpec struct {
 	// like Application layer policy. [Default: Empty]
 	PolicySyncPathPrefix string `json:"policySyncPathPrefix,omitempty"`
 
-	// UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage
-	// server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]
+	// UsageReportingEnabled is unused in Calico Enterprise, usage reporting is permanently disabled.
 	UsageReportingEnabled *bool `json:"usageReportingEnabled,omitempty"`
 
-	// UsageReportingInitialDelay controls the minimum delay before Felix makes a report. [Default: 300s]
+	// UsageReportingInitialDelay is unused in Calico Enterprise, usage reporting is permanently disabled. [Default: 300s]
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$`
 	UsageReportingInitialDelay *metav1.Duration `json:"usageReportingInitialDelay,omitempty" configv1timescale:"seconds" confignamev1:"UsageReportingInitialDelaySecs"`
 
-	// UsageReportingInterval controls the interval at which Felix makes reports. [Default: 86400s]
+	// UsageReportingInterval is unused in Calico Enterprise, usage reporting is permanently disabled. [Default: 86400s]
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$`
 	UsageReportingInterval *metav1.Duration `json:"usageReportingInterval,omitempty" configv1timescale:"seconds" confignamev1:"UsageReportingIntervalSecs"`

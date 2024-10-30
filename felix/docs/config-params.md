@@ -1924,6 +1924,8 @@ Used to specify the path of the stats dump file on Windows nodes.
 
 ### `EndpointReportingDelaySecs` (config file) / `endpointReportingDelay` (YAML)
 
+**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+
 The delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.
 
 | Detail |   |
@@ -1937,6 +1939,8 @@ The delay before Felix reports endpoint status to the datastore. This is only us
 
 ### `EndpointReportingEnabled` (config file) / `endpointReportingEnabled` (YAML)
 
+**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+
 Controls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.
 
 | Detail |   |
@@ -1949,6 +1953,8 @@ Controls whether Felix reports endpoint status to the datastore. This is only us
 | Default value (YAML) | `false` |
 
 ### `MetadataAddr` (config file) / `metadataAddr` (YAML)
+
+**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
 
 The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.
 
@@ -1964,6 +1970,8 @@ The IP address or domain name of the server that can answer VM queries for cloud
 
 ### `MetadataPort` (config file) / `metadataPort` (YAML)
 
+**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+
 The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .
 
 | Detail |   |
@@ -1977,6 +1985,8 @@ The port of the metadata server. This, combined with global.MetadataAddr (if not
 | Notes | Felix will exit if the value is invalid. | 
 
 ### `OpenstackRegion` (config file) / `openstackRegion` (YAML)
+
+**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
 
 The name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.
 
@@ -1992,6 +2002,8 @@ The name of the region that a particular Felix belongs to. In a multi-region Cal
 
 ### `ReportingIntervalSecs` (config file) / `reportingInterval` (YAML)
 
+**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+
 The interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.
 
 | Detail |   |
@@ -2004,6 +2016,8 @@ The interval at which Felix reports its status into the datastore or 0 to disabl
 | Default value (YAML) | `30s` |
 
 ### `ReportingTTLSecs` (config file) / `reportingTTL` (YAML)
+
+**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
 
 The time-to-live setting for process-wide status reports.
 
@@ -3812,7 +3826,7 @@ The path to write a diagnostic flow logs statistics dump to when triggered by si
 
 ### `UsageReportingEnabled` (config file) / `usageReportingEnabled` (YAML)
 
-Reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used.
+Unused in Calico Enterprise, usage reporting is permanently disabled.
 
 | Detail |   |
 | --- | --- |
@@ -3825,7 +3839,7 @@ Reports anonymous Calico version number and cluster size to projectcalico.org. L
 
 ### `UsageReportingInitialDelaySecs` (config file) / `usageReportingInitialDelay` (YAML)
 
-Controls the minimum delay before Felix makes a report.
+Unused in Calico Enterprise, usage reporting is permanently disabled.
 
 | Detail |   |
 | --- | --- |
@@ -3838,7 +3852,7 @@ Controls the minimum delay before Felix makes a report.
 
 ### `UsageReportingIntervalSecs` (config file) / `usageReportingInterval` (YAML)
 
-Controls the interval at which Felix makes reports.
+Unused in Calico Enterprise, usage reporting is permanently disabled.
 
 | Detail |   |
 | --- | --- |

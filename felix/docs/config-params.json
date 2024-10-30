@@ -3840,8 +3840,8 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "The delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
-          "DescriptionHTML": "<p>The delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
+          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
+          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
           "UserEditable": true,
           "GoType": "*v1.Duration"
         },
@@ -3866,8 +3866,8 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "Controls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
-          "DescriptionHTML": "<p>Controls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
+          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nControls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
+          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>Controls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
           "UserEditable": true,
           "GoType": "*bool"
         },
@@ -3892,8 +3892,8 @@
           "Required": false,
           "OnParseFailure": "Exit",
           "AllowedConfigSources": "All",
-          "Description": "The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.",
-          "DescriptionHTML": "<p>The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.</p>",
+          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.",
+          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.</p>",
           "UserEditable": true,
           "GoType": "string"
         },
@@ -3918,8 +3918,8 @@
           "Required": false,
           "OnParseFailure": "Exit",
           "AllowedConfigSources": "All",
-          "Description": "The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .",
-          "DescriptionHTML": "<p>The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .</p>",
+          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .",
+          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .</p>",
           "UserEditable": true,
           "GoType": "*int"
         },
@@ -3944,8 +3944,8 @@
           "Required": false,
           "OnParseFailure": "Exit",
           "AllowedConfigSources": "All",
-          "Description": "The name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.",
-          "DescriptionHTML": "<p>The name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.</p>",
+          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.",
+          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.</p>",
           "UserEditable": true,
           "GoType": "string"
         },
@@ -3970,8 +3970,8 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "The interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.",
-          "DescriptionHTML": "<p>The interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.</p>",
+          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.",
+          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.</p>",
           "UserEditable": true,
           "GoType": "*v1.Duration"
         },
@@ -3996,8 +3996,8 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "The time-to-live setting for process-wide status reports.",
-          "DescriptionHTML": "<p>The time-to-live setting for process-wide status reports.</p>",
+          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe time-to-live setting for process-wide status reports.",
+          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The time-to-live setting for process-wide status reports.</p>",
           "UserEditable": true,
           "GoType": "*v1.Duration"
         }
@@ -7734,8 +7734,8 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "Reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used.",
-          "DescriptionHTML": "<p>Reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used.</p>",
+          "Description": "Unused in Calico Enterprise, usage reporting is permanently disabled.",
+          "DescriptionHTML": "<p>Unused in Calico Enterprise, usage reporting is permanently disabled.</p>",
           "UserEditable": true,
           "GoType": "*bool"
         },
@@ -7760,8 +7760,8 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "Controls the minimum delay before Felix makes a report.",
-          "DescriptionHTML": "<p>Controls the minimum delay before Felix makes a report.</p>",
+          "Description": "Unused in Calico Enterprise, usage reporting is permanently disabled.",
+          "DescriptionHTML": "<p>Unused in Calico Enterprise, usage reporting is permanently disabled.</p>",
           "UserEditable": true,
           "GoType": "*v1.Duration"
         },
@@ -7786,8 +7786,8 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "Controls the interval at which Felix makes reports.",
-          "DescriptionHTML": "<p>Controls the interval at which Felix makes reports.</p>",
+          "Description": "Unused in Calico Enterprise, usage reporting is permanently disabled.",
+          "DescriptionHTML": "<p>Unused in Calico Enterprise, usage reporting is permanently disabled.</p>",
           "UserEditable": true,
           "GoType": "*v1.Duration"
         }

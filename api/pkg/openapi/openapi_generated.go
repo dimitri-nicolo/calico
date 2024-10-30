@@ -5606,21 +5606,23 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"prometheusMetricsCertFile": {
 						SchemaProps: spec.SchemaProps{
-							Description: "TLS credentials for this port.",
+							Description: "PrometheusMetricsCertFile is the path to the TLS certificate file for the Prometheus metrics server. [Default: empty]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"prometheusMetricsKeyFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "PrometheusMetricsKeyFile is the path to the TLS private key file for the Prometheus metrics server. [Default: empty]",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"prometheusMetricsCAFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "PrometheusMetricsCAFile is the path to the TLS CA file for the Prometheus metrics server. [Default: empty]",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"failsafeInboundHostPorts": {
@@ -5680,20 +5682,20 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"usageReportingEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]",
+							Description: "UsageReportingEnabled is unused in Calico Enterprise, usage reporting is permanently disabled.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
 					"usageReportingInitialDelay": {
 						SchemaProps: spec.SchemaProps{
-							Description: "UsageReportingInitialDelay controls the minimum delay before Felix makes a report. [Default: 300s]",
+							Description: "UsageReportingInitialDelay is unused in Calico Enterprise, usage reporting is permanently disabled. [Default: 300s]",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"usageReportingInterval": {
 						SchemaProps: spec.SchemaProps{
-							Description: "UsageReportingInterval controls the interval at which Felix makes reports. [Default: 86400s]",
+							Description: "UsageReportingInterval is unused in Calico Enterprise, usage reporting is permanently disabled. [Default: 86400s]",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -5762,51 +5764,58 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"nfNetlinkBufSize": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "NfNetlinkBufSize controls the size of NFLOG messages that the kernel will try to send to Felix.  NFLOG messages are used to report flow verdicts from the kernel.  Warning: currently increasing the value may cause errors due to a bug in the netlink library.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"statsDumpFilePath": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "StatsDumpFilePath is the path to write a diagnostic flow logs statistics dump to when triggered by signal.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"prometheusReporterEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Felix Denied Packet Metrics configuration parameters.",
+							Description: "PrometheusReporterEnabled controls whether the Prometheus per-flow metrics reporter is enabled. This is used to show real-time flow metrics in the UI.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
 					"prometheusReporterPort": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+							Description: "PrometheusReporterPort is the port that the Prometheus per-flow metrics reporter should bind to.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 					"prometheusReporterCertFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "PrometheusReporterCertFile is the path to the TLS certificate file for the Prometheus per-flow metrics reporter.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"prometheusReporterKeyFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "PrometheusReporterKeyFile is the path to the TLS private key file for the Prometheus per-flow metrics reporter.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"prometheusReporterCAFile": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "PrometheusReporterCAFile is the path to the TLS CA file for the Prometheus per-flow metrics reporter.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"deletedMetricsRetentionSecs": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+							Description: "DeletedMetricsRetentionSecs controls how long metrics are retianed after the flow is gone.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 					"dropActionOverride": {

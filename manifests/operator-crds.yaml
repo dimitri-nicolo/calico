@@ -29682,15 +29682,11 @@ spec:
                   like IPIP tunnel or Wireguard directly to the peer side of the workload''s
                   device. This makes redirection faster, however, it breaks tools
                   like tcpdump on the peer side. Use Enabled with caution. [Default:
-<<<<<<< HEAD
                   Disabled]'
-=======
-                  L2Only]'
                 enum:
                 - Enabled
                 - Disabled
                 - L2Only
->>>>>>> ef95f8efd9 (Felix config parameter metadata auto-generation (#9325))
                 type: string
               captureDir:
                 description: 'CaptureDir controls directory to store file capture.
@@ -29783,6 +29779,8 @@ spec:
                 pattern: ^(?i)(Drop|Accept|Return)?$
                 type: string
               deletedMetricsRetentionSecs:
+                description: DeletedMetricsRetentionSecs controls how long metrics
+                  are retianed after the flow is gone.
                 type: integer
               deviceRouteProtocol:
                 description: DeviceRouteProtocol controls the protocol to set on routes
@@ -30693,6 +30691,10 @@ spec:
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
               nfNetlinkBufSize:
+                description: 'NfNetlinkBufSize controls the size of NFLOG messages
+                  that the kernel will try to send to Felix.  NFLOG messages are used
+                  to report flow verdicts from the kernel.  Warning: currently increasing
+                  the value may cause errors due to a bug in the netlink library.'
                 type: string
               nftablesFilterAllowAction:
                 description: NftablesFilterAllowAction controls the nftables action
@@ -30756,9 +30758,12 @@ spec:
                   Prometheus load. [Default: true]'
                 type: boolean
               prometheusMetricsCAFile:
+                description: 'PrometheusMetricsCAFile is the path to the TLS CA file
+                  for the Prometheus metrics server. [Default: empty]'
                 type: string
               prometheusMetricsCertFile:
-                description: TLS credentials for this port.
+                description: 'PrometheusMetricsCertFile is the path to the TLS certificate
+                  file for the Prometheus metrics server. [Default: empty]'
                 type: string
               prometheusMetricsEnabled:
                 description: 'PrometheusMetricsEnabled enables the Prometheus metrics
@@ -30769,6 +30774,8 @@ spec:
                   metrics server should bind to. [Default: empty]'
                 type: string
               prometheusMetricsKeyFile:
+                description: 'PrometheusMetricsKeyFile is the path to the TLS private
+                  key file for the Prometheus metrics server. [Default: empty]'
                 type: string
               prometheusMetricsPort:
                 description: 'PrometheusMetricsPort is the TCP port that the Prometheus
@@ -30781,15 +30788,25 @@ spec:
                   Prometheus load. [Default: true]'
                 type: boolean
               prometheusReporterCAFile:
+                description: PrometheusReporterCAFile is the path to the TLS CA file
+                  for the Prometheus per-flow metrics reporter.
                 type: string
               prometheusReporterCertFile:
+                description: PrometheusReporterCertFile is the path to the TLS certificate
+                  file for the Prometheus per-flow metrics reporter.
                 type: string
               prometheusReporterEnabled:
-                description: Felix Denied Packet Metrics configuration parameters.
+                description: PrometheusReporterEnabled controls whether the Prometheus
+                  per-flow metrics reporter is enabled. This is used to show real-time
+                  flow metrics in the UI.
                 type: boolean
               prometheusReporterKeyFile:
+                description: PrometheusReporterKeyFile is the path to the TLS private
+                  key file for the Prometheus per-flow metrics reporter.
                 type: string
               prometheusReporterPort:
+                description: PrometheusReporterPort is the port that the Prometheus
+                  per-flow metrics reporter should bind to.
                 type: integer
               prometheusWireGuardMetricsEnabled:
                 description: 'PrometheusWireGuardMetricsEnabled disables wireguard
@@ -30873,6 +30890,8 @@ spec:
                   acceleration [Default: false]'
                 type: boolean
               statsDumpFilePath:
+                description: StatsDumpFilePath is the path to write a diagnostic flow
+                  logs statistics dump to when triggered by signal.
                 type: string
               syslogReporterAddress:
                 description: 'SyslogReporterAddress is the address to dial to when
@@ -30910,20 +30929,17 @@ spec:
                 format: int32
                 type: integer
               usageReportingEnabled:
-                description: 'UsageReportingEnabled reports anonymous Calico version
-                  number and cluster size to projectcalico.org. Logs warnings returned
-                  by the usage server. For example, if a significant security vulnerability
-                  has been discovered in the version of Calico being used. [Default:
-                  true]'
+                description: UsageReportingEnabled is unused in Calico Enterprise,
+                  usage reporting is permanently disabled.
                 type: boolean
               usageReportingInitialDelay:
-                description: 'UsageReportingInitialDelay controls the minimum delay
-                  before Felix makes a report. [Default: 300s]'
+                description: 'UsageReportingInitialDelay is unused in Calico Enterprise,
+                  usage reporting is permanently disabled. [Default: 300s]'
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
               usageReportingInterval:
-                description: 'UsageReportingInterval controls the interval at which
-                  Felix makes reports. [Default: 86400s]'
+                description: 'UsageReportingInterval is unused in Calico Enterprise,
+                  usage reporting is permanently disabled. [Default: 86400s]'
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
               useInternalDataplaneDriver:

@@ -1560,20 +1560,17 @@ spec:
                 format: int32
                 type: integer
               usageReportingEnabled:
-                description: 'UsageReportingEnabled reports anonymous Calico version
-                  number and cluster size to projectcalico.org. Logs warnings returned
-                  by the usage server. For example, if a significant security vulnerability
-                  has been discovered in the version of Calico being used. [Default:
-                  true]'
+                description: UsageReportingEnabled is unused in Calico Enterprise,
+                  usage reporting is permanently disabled.
                 type: boolean
               usageReportingInitialDelay:
-                description: 'UsageReportingInitialDelay controls the minimum delay
-                  before Felix makes a report. [Default: 300s]'
+                description: 'UsageReportingInitialDelay is unused in Calico Enterprise,
+                  usage reporting is permanently disabled. [Default: 300s]'
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
               usageReportingInterval:
-                description: 'UsageReportingInterval controls the interval at which
-                  Felix makes reports. [Default: 86400s]'
+                description: 'UsageReportingInterval is unused in Calico Enterprise,
+                  usage reporting is permanently disabled. [Default: 86400s]'
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
               useInternalDataplaneDriver:

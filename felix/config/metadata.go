@@ -60,6 +60,8 @@ var nodeFields = set.From(
 	"NodeIP",
 )
 
+const OpenstackMetadataGroup = "25 Dataplane: OpenStack support"
+
 var ConfigGroups = map[string]string{
 	"^(Datastore|Typha|Etcd|FelixHostname)": "00 Datastore connection",
 
@@ -74,7 +76,7 @@ var ConfigGroups = map[string]string{
 	"^Nftables": "21 Dataplane: nftables",
 	"^BPF":      "22 Dataplane: eBPF",
 	"^Windows":  "23 Dataplane: Windows",
-	"^(Openstack|Metadata|EndpointReporting|Reporting)": "25 Dataplane: OpenStack support",
+	"^(Openstack|Metadata|EndpointReporting|Reporting)": OpenstackMetadataGroup,
 	"^(XDP|GenericXDP)": "25 Dataplane: XDP acceleration for iptables dataplane",
 
 	"^(IPv4|IPv6|)VXLAN": "31 Overlay: VXLAN overlay",
@@ -216,6 +218,9 @@ func CombinedFieldInfo() ([]*FieldInfo, error) {
 		if pm.YAMLSchema == "Integer." && strings.HasPrefix(pm.StringSchema, "Integer") {
 			// String schema tends to have the ranges, which are missing from the YAML.
 			pm.YAMLSchema = pm.StringSchema
+		}
+		if pm.GroupWithSortPrefix == OpenstackMetadataGroup {
+			pm.Description = "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\n" + pm.Description
 		}
 		pm.StringSchemaHTML = convertSchemaToHTML(pm.StringSchema)
 		pm.YAMLSchemaHTML = convertSchemaToHTML(pm.YAMLSchema)
