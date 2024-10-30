@@ -313,15 +313,11 @@ spec:
                   like IPIP tunnel or Wireguard directly to the peer side of the workload''s
                   device. This makes redirection faster, however, it breaks tools
                   like tcpdump on the peer side. Use Enabled with caution. [Default:
-<<<<<<< HEAD
                   Disabled]'
-=======
-                  L2Only]'
                 enum:
                 - Enabled
                 - Disabled
                 - L2Only
->>>>>>> ef95f8efd9 (Felix config parameter metadata auto-generation (#9325))
                 type: string
               captureDir:
                 description: 'CaptureDir controls directory to store file capture.

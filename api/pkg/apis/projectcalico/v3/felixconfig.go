@@ -441,10 +441,13 @@ type FelixConfigurationSpec struct {
 	// PrometheusWireGuardMetricsEnabled disables wireguard metrics collection, which the Prometheus client does by default, when
 	// set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]
 	PrometheusWireGuardMetricsEnabled *bool `json:"prometheusWireGuardMetricsEnabled,omitempty"`
-	// TLS credentials for this port.
+
+	// PrometheusMetricsCertFile is the path to the TLS certificate file for the Prometheus metrics server. [Default: empty]
 	PrometheusMetricsCertFile string `json:"prometheusMetricsCertFile,omitempty"`
-	PrometheusMetricsKeyFile  string `json:"prometheusMetricsKeyFile,omitempty"`
-	PrometheusMetricsCAFile   string `json:"prometheusMetricsCAFile,omitempty"`
+	// PrometheusMetricsKeyFile is the path to the TLS private key file for the Prometheus metrics server. [Default: empty]
+	PrometheusMetricsKeyFile string `json:"prometheusMetricsKeyFile,omitempty"`
+	// PrometheusMetricsCAFile is the path to the TLS CA file for the Prometheus metrics server. [Default: empty]
+	PrometheusMetricsCAFile string `json:"prometheusMetricsCAFile,omitempty"`
 
 	// FailsafeInboundHostPorts is a list of ProtoPort struct objects including UDP/TCP/SCTP ports and CIDRs that Felix will
 	// allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidentally
@@ -527,16 +530,27 @@ type FelixConfigurationSpec struct {
 	// will be allowed.  By default, external tunneled traffic is blocked to reduce attack surface.
 	ExternalNodesCIDRList *[]string `json:"externalNodesList,omitempty"`
 
-	NfNetlinkBufSize  string `json:"nfNetlinkBufSize,omitempty"`
+	// NfNetlinkBufSize controls the size of NFLOG messages that the kernel will try to send to Felix.  NFLOG messages
+	// are used to report flow verdicts from the kernel.  Warning: currently increasing the value may cause errors
+	// due to a bug in the netlink library.
+	NfNetlinkBufSize string `json:"nfNetlinkBufSize,omitempty"`
+
+	// StatsDumpFilePath is the path to write a diagnostic flow logs statistics dump to when triggered by signal.
 	StatsDumpFilePath string `json:"statsDumpFilePath,omitempty"`
 
-	// Felix Denied Packet Metrics configuration parameters.
-	PrometheusReporterEnabled   *bool  `json:"prometheusReporterEnabled,omitempty"`
-	PrometheusReporterPort      *int   `json:"prometheusReporterPort,omitempty"`
-	PrometheusReporterCertFile  string `json:"prometheusReporterCertFile,omitempty"`
-	PrometheusReporterKeyFile   string `json:"prometheusReporterKeyFile,omitempty"`
-	PrometheusReporterCAFile    string `json:"prometheusReporterCAFile,omitempty"`
-	DeletedMetricsRetentionSecs *int   `json:"deletedMetricsRetentionSecs,omitempty"`
+	// PrometheusReporterEnabled controls whether the Prometheus per-flow metrics reporter is enabled. This is
+	// used to show real-time flow metrics in the UI.
+	PrometheusReporterEnabled *bool `json:"prometheusReporterEnabled,omitempty"`
+	// PrometheusReporterPort is the port that the Prometheus per-flow metrics reporter should bind to.
+	PrometheusReporterPort *int `json:"prometheusReporterPort,omitempty"`
+	// PrometheusReporterCertFile is the path to the TLS certificate file for the Prometheus per-flow metrics reporter.
+	PrometheusReporterCertFile string `json:"prometheusReporterCertFile,omitempty"`
+	// PrometheusReporterKeyFile is the path to the TLS private key file for the Prometheus per-flow metrics reporter.
+	PrometheusReporterKeyFile string `json:"prometheusReporterKeyFile,omitempty"`
+	// PrometheusReporterCAFile is the path to the TLS CA file for the Prometheus per-flow metrics reporter.
+	PrometheusReporterCAFile string `json:"prometheusReporterCAFile,omitempty"`
+	// DeletedMetricsRetentionSecs controls how long metrics are retianed after the flow is gone.
+	DeletedMetricsRetentionSecs *int `json:"deletedMetricsRetentionSecs,omitempty"`
 
 	// DropActionOverride overrides the Drop action in Felix, optionally changing the behavior to Accept, and optionally adding Log.
 	// Possible values are Drop, LogAndDrop, Accept, LogAndAccept. [Default: Drop]
@@ -1131,7 +1145,7 @@ type FelixConfigurationSpec struct {
 	// IPIP tunnel or Wireguard directly to the peer side of the workload's device. This
 	// makes redirection faster, however, it breaks tools like tcpdump on the peer side.
 	// Use Enabled with caution. [Default: Disabled]
-	//+kubebuilder:validation:Enum=Enabled;Disabled;L2Only
+	// +kubebuilder:validation:Enum=Enabled;Disabled;L2Only
 	BPFRedirectToPeer string `json:"bpfRedirectToPeer,omitempty"`
 
 	// RouteSource configures where Felix gets its routing information.
