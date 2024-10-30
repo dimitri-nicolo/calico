@@ -519,8 +519,8 @@ func v3TypesToDescription(si StructInfo, prop v1.JSONSchemaProps) (infoSchema st
 			enumConsts = append(enumConsts, fmt.Sprint(enumConst))
 			parts = append(parts, fmt.Sprintf("`%s`", e.Raw))
 		}
+		sort.Strings(enumConsts)
 		sort.Strings(parts)
-		enumConsts = parts
 		infoSchema = fmt.Sprintf("One of: %s.", strings.Join(parts, ", "))
 	}
 	sort.Strings(enumConsts)

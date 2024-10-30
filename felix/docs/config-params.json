@@ -1588,8 +1588,8 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`.",
           "YAMLEnumValues": [
-            "`\"Disabled\"`",
-            "`\"Enabled\"`"
+            "Disabled",
+            "Enabled"
           ],
           "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>.",
           "YAMLDefault": "Disabled",
@@ -1617,8 +1617,8 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`.",
           "YAMLEnumValues": [
-            "`\"Disabled\"`",
-            "`\"Enabled\"`"
+            "Disabled",
+            "Enabled"
           ],
           "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>.",
           "YAMLDefault": "Enabled",
@@ -1854,9 +1854,9 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"Auto\"`, `\"Disabled\"`, `\"Enabled\"`.",
           "YAMLEnumValues": [
-            "`\"Auto\"`",
-            "`\"Disabled\"`",
-            "`\"Enabled\"`"
+            "Auto",
+            "Disabled",
+            "Enabled"
           ],
           "YAMLSchemaHTML": "One of: <code>\"Auto\"</code>, <code>\"Disabled\"</code>, <code>\"Enabled\"</code>.",
           "YAMLDefault": "Disabled",
@@ -2789,9 +2789,9 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`, `\"TCP\"`.",
           "YAMLEnumValues": [
-            "`\"Disabled\"`",
-            "`\"Enabled\"`",
-            "`\"TCP\"`"
+            "Disabled",
+            "Enabled",
+            "TCP"
           ],
           "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>, <code>\"TCP\"</code>.",
           "YAMLDefault": "TCP",
@@ -3610,9 +3610,9 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`, `\"L2Only\"`.",
           "YAMLEnumValues": [
-            "`\"Disabled\"`",
-            "`\"Enabled\"`",
-            "`\"L2Only\"`"
+            "Disabled",
+            "Enabled",
+            "L2Only"
           ],
           "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>, <code>\"L2Only\"</code>.",
           "YAMLDefault": "Disabled",
@@ -3749,8 +3749,8 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"Disabled\"`, `\"Enabled\"`.",
           "YAMLEnumValues": [
-            "`\"Disabled\"`",
-            "`\"Enabled\"`"
+            "Disabled",
+            "Enabled"
           ],
           "YAMLSchemaHTML": "One of: <code>\"Disabled\"</code>, <code>\"Enabled\"</code>.",
           "YAMLDefault": "Disabled",
@@ -5259,9 +5259,9 @@
           "YAMLType": "integer",
           "YAMLSchema": "One of: `0`, `1`, `2`.",
           "YAMLEnumValues": [
-            "`0`",
-            "`1`",
-            "`2`"
+            "0",
+            "1",
+            "2"
           ],
           "YAMLSchemaHTML": "One of: <code>0</code>, <code>1</code>, <code>2</code>.",
           "YAMLDefault": "2",
@@ -5289,10 +5289,10 @@
           "YAMLType": "integer",
           "YAMLSchema": "One of: `0`, `1`, `2`, `3`.",
           "YAMLEnumValues": [
-            "`0`",
-            "`1`",
-            "`2`",
-            "`3`"
+            "0",
+            "1",
+            "2",
+            "3"
           ],
           "YAMLSchemaHTML": "One of: <code>0</code>, <code>1</code>, <code>2</code>, <code>3</code>.",
           "YAMLDefault": "1",
@@ -5845,8 +5845,8 @@
           "YAMLType": "integer",
           "YAMLSchema": "One of: `0`, `1`.",
           "YAMLEnumValues": [
-            "`0`",
-            "`1`"
+            "0",
+            "1"
           ],
           "YAMLSchemaHTML": "One of: <code>0</code>, <code>1</code>.",
           "YAMLDefault": "1",
@@ -6160,9 +6160,9 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"DelayDNSResponse\"`, `\"DelayDeniedPacket\"`, `\"NoDelay\"`.",
           "YAMLEnumValues": [
-            "`\"DelayDNSResponse\"`",
-            "`\"DelayDeniedPacket\"`",
-            "`\"NoDelay\"`"
+            "DelayDNSResponse",
+            "DelayDeniedPacket",
+            "NoDelay"
           ],
           "YAMLSchemaHTML": "One of: <code>\"DelayDNSResponse\"</code>, <code>\"DelayDeniedPacket\"</code>, <code>\"NoDelay\"</code>.",
           "YAMLDefault": "DelayDeniedPacket",
@@ -6774,9 +6774,9 @@
           "YAMLType": "string",
           "YAMLSchema": "One of: `\"Disable\"`, `\"DoNothing\"`, `\"Enable\"`.",
           "YAMLEnumValues": [
-            "`\"Disable\"`",
-            "`\"DoNothing\"`",
-            "`\"Enable\"`"
+            "Disable",
+            "DoNothing",
+            "Enable"
           ],
           "YAMLSchemaHTML": "One of: <code>\"Disable\"</code>, <code>\"DoNothing\"</code>, <code>\"Enable\"</code>.",
           "YAMLDefault": "DoNothing",
