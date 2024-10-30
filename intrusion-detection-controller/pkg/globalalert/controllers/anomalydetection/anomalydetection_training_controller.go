@@ -49,6 +49,7 @@ func (c *adJobTrainingController) Run(parentCtx context.Context) {
 	log.Info("Starting AD training controller")
 
 	go c.cleanup()
+	c.pong()
 }
 
 func (c *adJobTrainingController) Close() {

@@ -49,6 +49,7 @@ func (c *adJobDetectionController) Run(parentCtx context.Context) {
 	log.Info("Starting AD detection controller")
 
 	go c.cleanup()
+	c.pong()
 }
 
 func (c *adJobDetectionController) Close() {

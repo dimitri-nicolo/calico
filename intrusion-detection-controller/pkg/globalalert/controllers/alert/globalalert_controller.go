@@ -79,6 +79,7 @@ func (c *globalAlertController) Run(parentCtx context.Context) {
 	ctx, c.cancel = context.WithCancel(parentCtx)
 	log.Infof("[Global Alert] Starting alert controller for cluster %s", c.clusterName)
 	go c.worker.Run(ctx.Done())
+	c.pong()
 }
 
 // Close cancels the GlobalAlert worker context and removes health check for all the objects that worker watches.

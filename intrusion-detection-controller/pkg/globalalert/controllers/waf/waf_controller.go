@@ -78,6 +78,7 @@ func (c *wafAlertController) runWafLogsProcessingLoop(ctx context.Context) {
 			log.WithError(err).Error("[WAF] error while processing waf logs")
 		}
 
+		c.pong()
 		timer := time.NewTimer(controllerInterval)
 		defer timer.Stop()
 		select {

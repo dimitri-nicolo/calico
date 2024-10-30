@@ -74,6 +74,7 @@ func (m *managedClusterController) Run(parentCtx context.Context) {
 	ctx, m.cancel = context.WithCancel(parentCtx)
 	log.Info("Starting managed cluster controllers")
 	go m.worker.Run(ctx.Done())
+	m.pong()
 }
 
 // Close cancels the ManagedCluster worker context and removes health check for all the objects that worker watches.
