@@ -6,13 +6,16 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/client-go/tools/cache"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
 
 const (
@@ -38,6 +41,8 @@ type wafAlertController struct {
 	events             client.EventsInterface
 	logsCache          *WAFLogsCache
 	lastQueryTimestamp time.Time
+	ping               chan struct{}
+	fifo               *cache.DeltaFIFO
 }
 
 // NewWafAlertController returns a wafAlertController for handling waf events
@@ -73,6 +78,7 @@ func (c *wafAlertController) runWafLogsProcessingLoop(ctx context.Context) {
 			log.WithError(err).Error("[WAF] error while processing waf logs")
 		}
 
+		c.pong()
 		timer := time.NewTimer(controllerInterval)
 		defer timer.Stop()
 		select {
@@ -144,6 +150,35 @@ func (c *wafAlertController) Close() {
 	if c.cancel != nil {
 		c.cancel()
 	}
+}
+
+// Ping is used to ensure the watcher's main loop is running and not blocked.
+func (c *wafAlertController) Ping(ctx context.Context) error {
+	// Enqueue a ping
+	err := c.fifo.Update(util.Ping{})
+	if err != nil {
+		// Local fifo & cache should never error.
+		panic(err)
+	}
+
+	// Wait for the ping to be processed, or context to expire.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+
+	// Since this channel is unbuffered, this will block if the main loop is not
+	// running, or has itself blocked.
+	case <-c.ping:
+		return nil
+	}
+}
+
+// pong is called from the main processing loop to reply to a ping.
+func (c *wafAlertController) pong() {
+	// Nominally, a sync.Cond would work nicely here rather than a channel,
+	// which would allow us to wake up all pingers at once. However, sync.Cond
+	// doesn't allow timeouts, so we stick with channels and one pong() per ping.
+	c.ping <- struct{}{}
 }
 
 func (c *wafAlertController) ProcessWafLogs(ctx context.Context) error {

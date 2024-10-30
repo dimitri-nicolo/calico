@@ -16,8 +16,9 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,8 @@ type managedClusterController struct {
 	clientSetFactory lmak8s.ClientSetFactory
 	cancel           context.CancelFunc
 	worker           worker.Worker
+	fifo             *cache.DeltaFIFO
+	ping             chan struct{}
 }
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
@@ -71,6 +74,7 @@ func (m *managedClusterController) Run(parentCtx context.Context) {
 	ctx, m.cancel = context.WithCancel(parentCtx)
 	log.Info("Starting managed cluster controllers")
 	go m.worker.Run(ctx.Done())
+	m.pong()
 }
 
 // Close cancels the ManagedCluster worker context and removes health check for all the objects that worker watches.
@@ -78,4 +82,33 @@ func (m *managedClusterController) Close() {
 	log.Infof("closing a managed cluster controller %+v", m)
 	m.worker.Close()
 	m.cancel()
+}
+
+// Ping is used to ensure the watcher's main loop is running and not blocked.
+func (m *managedClusterController) Ping(ctx context.Context) error {
+	// Enqueue a ping
+	err := m.fifo.Update(util.Ping{})
+	if err != nil {
+		// Local fifo & cache should never error.
+		panic(err)
+	}
+
+	// Wait for the ping to be processed, or context to expire.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+
+	// Since this channel is unbuffered, this will block if the main loop is not
+	// running, or has itself blocked.
+	case <-m.ping:
+		return nil
+	}
+}
+
+// pong is called from the main processing loop to reply to a ping.
+func (m *managedClusterController) pong() {
+	// Nominally, a sync.Cond would work nicely here rather than a channel,
+	// which would allow us to wake up all pingers at once. However, sync.Cond
+	// doesn't allow timeouts, so we stick with channels and one pong() per ping.
+	m.ping <- struct{}{}
 }
