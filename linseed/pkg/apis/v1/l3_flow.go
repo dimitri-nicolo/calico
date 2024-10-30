@@ -70,7 +70,7 @@ type L3FlowParams struct {
 	// by the provided tier.
 	// For example, return flows which are allowed by the default tier.
 	// If multiple PolicyMatches are provided, they are combined with a logical OR.
-	PolicyMatches []PolicyMatch `json:"policy_matches"`
+	PolicyMatches []PolicyMatch `json:"policy_matches" validate:"dive"`
 
 	// Statistics will include different metrics for the L3 flows that are queried
 	// The following metrics can be extracted: connection, tcp, flow and process
@@ -80,17 +80,32 @@ type L3FlowParams struct {
 
 // PolicyMatch allows matching on a policy when querying flow logs.
 type PolicyMatch struct {
+	// Type of the policy: knp: KubernetesNetworkPolicy, anp: AdminNetworkPolicy
+	Type PolicyType `json:"type,omitempty" validate:"omitempty,oneof=knp kanp"`
+
+	// Staged is a boolean that indicates matching for staged policies.
+	Staged bool `json:"staged,omitempty"`
+
+	// Global is a boolean that indicates matching for global policies
+	Global bool `json:"global,omitempty"`
+
 	// Tier for the policy.
-	Tier string `json:"tier,omitempty" validate:"omitempty"`
+	Tier string `json:"tier,omitempty" validate:"omitempty,excludesall=.:/"`
 
 	// The action taken by the policy.
 	Action *FlowAction `json:"action,omitempty" validate:"omitempty"`
 
-	// Namespace and name of the policy. If Tier and Name are provided but Namespace is not, it means we are matching
-	// for global (non-namespaced) policies.
-	Namespace *string `json:"namespace,omitempty" validate:"omitempty"`
-	Name      *string `json:"name,omitempty" validate:"omitempty"`
+	// Namespace and name of the policy.
+	Namespace *string `json:"namespace,omitempty" validate:"omitempty,excludesall=.:/"`
+	Name      *string `json:"name,omitempty" validate:"omitempty,excludesall=.:/"`
 }
+
+type PolicyType string
+
+const (
+	KNP  PolicyType = "knp"
+	KANP PolicyType = "kanp"
+)
 
 type MatchType string
 

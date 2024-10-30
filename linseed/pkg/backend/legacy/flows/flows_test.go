@@ -723,7 +723,7 @@ func TestFlowFiltering(t *testing.T) {
 			},
 
 			// Both flows have a policy hit in this tier.
-			ExpectFlow1: true,
+			ExpectFlow1: false,
 			ExpectFlow2: true,
 		},
 		{
@@ -739,7 +739,7 @@ func TestFlowFiltering(t *testing.T) {
 			},
 
 			// Both flows have a policy hit in this tier, but only the second
-			// is allowed by the tier.
+			// is allowed by the tier and namespaced policies.
 			ExpectFlow1: false,
 			ExpectFlow2: true,
 		},
@@ -769,7 +769,7 @@ func TestFlowFiltering(t *testing.T) {
 				},
 			},
 
-			ExpectFlow1: true,
+			ExpectFlow1: false,
 			ExpectFlow2: true,
 		},
 		{
@@ -828,6 +828,70 @@ func TestFlowFiltering(t *testing.T) {
 			ExpectFlow1: true,
 			ExpectFlow2: false,
 		},
+		{
+			Name: "should return flows with a kubernetes policy hit",
+			Params: v1.L3FlowParams{
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Type:      "knp",
+						Namespace: testutils.StringPtr("default"),
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should return flows with a staged policy hit",
+			Params: v1.L3FlowParams{
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Staged:    true,
+						Namespace: testutils.StringPtr("default"),
+						Tier:      "default",
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should return flows with namespaced policy hit",
+			Params: v1.L3FlowParams{
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Namespace: testutils.StringPtr("default"),
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should return flows with global policy hit",
+			Params: v1.L3FlowParams{
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Global: true,
+						Tier:   "allow-tigera",
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with a namespaced policy hit in any namespace (not providing the namespace)",
+			Params: v1.L3FlowParams{
+				PolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -867,7 +931,7 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src").WithAction("allow").
 				WithSourceLabels("bread=rye", "cheese=cheddar", "wine=none").
 				// Pass followed by a profile allow.
-				WithPolicy("0|allow-tigera|openshift-dns/allow-tigera.cluster-dns|pass|1").
+				WithPolicy("0|allow-tigera|allow-tigera.cluster-dns|pass|1").
 				WithPolicy("1|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo, numLogs)
@@ -889,13 +953,16 @@ func TestFlowFiltering(t *testing.T) {
 				WithReporter("src").WithAction("deny").
 				WithSourceLabels("cheese=brie").
 				// Explicit allow.
-				WithPolicy("0|allow-tigera|kube-system/allow-tigera.cluster-dns|allow|1").
+				WithPolicy("0|default|default/default.staged:test-staged-policy|pass|2").
+				WithPolicy("1|default|default/knp.default.test-k8s-policy|pass|2").
+				WithPolicy("2|allow-tigera|kube-system/allow-tigera.cluster-dns|allow|1").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo, numLogs)
 
 			// Query for flows.
 			r, err := fb.List(ctx, clusterInfo, &testcase.Params)
+
 			require.NoError(t, err)
 			require.Len(t, r.Items, numExpected(testcase))
 			require.Nil(t, r.AfterKey)

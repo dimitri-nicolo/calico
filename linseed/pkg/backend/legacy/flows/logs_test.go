@@ -4,14 +4,13 @@ package flows_test
 
 import (
 	"context"
+	gojson "encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
-
-	gojson "encoding/json"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -438,12 +437,13 @@ func TestFlowLogFiltering(t *testing.T) {
 			ExpectLog2: false,
 		},
 		{
-			Name: "should support selection when only tier is specified",
+			Name: "should support selection when tier is specified",
 			Params: v1.FlowLogParams{
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
-						Tier: "custom-tier",
+						Global: true,
+						Tier:   "custom-tier",
 					},
 				},
 			},
@@ -526,6 +526,7 @@ func TestFlowLogFiltering(t *testing.T) {
 				QueryParams: v1.QueryParams{},
 				PolicyMatches: []v1.PolicyMatch{
 					{
+						Global: true,
 						Action: ActionPtr(v1.FlowActionDeny),
 					},
 				},

@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -389,7 +390,7 @@ var _ = Describe("SearchElasticHits", func() {
 					}},
 					Timeout: &metav1.Duration{Duration: 60 * time.Second},
 				},
-				PolicyMatches: []v1.PolicyMatch{},
+				PolicyMatches: []lapi.PolicyMatch{},
 			}
 
 			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
@@ -575,7 +576,7 @@ var _ = Describe("SearchElasticHits", func() {
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
 			Expect(se.Status).To(Equal(500))
-			Expect(se.Msg).To(Equal("error performing search"))
+			Expect(strings.HasPrefix(se.Msg, "error performing search")).To(BeTrue())
 			Expect(results).To(BeNil())
 		})
 
@@ -605,7 +606,7 @@ var _ = Describe("SearchElasticHits", func() {
 			var httpErr *httputils.HttpStatusError
 			Expect(errors.As(err, &httpErr)).To(BeTrue())
 			Expect(httpErr.Status).To(Equal(500))
-			Expect(httpErr.Msg).To(Equal("error performing search"))
+			Expect(strings.HasPrefix(httpErr.Msg, "error performing search")).To(BeTrue())
 			Expect(results).To(BeNil())
 		})
 	})
