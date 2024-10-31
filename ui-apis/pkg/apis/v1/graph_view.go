@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/projectcalico/calico/lma/pkg/httputils"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 // GraphView provides the configuration for what is included in the service graph response.

@@ -18,17 +18,15 @@ import (
 	"fmt"
 	"strings"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/hashutils"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 // ruleRenderer defined in rules_defs.go.

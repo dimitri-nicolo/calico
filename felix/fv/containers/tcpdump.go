@@ -11,10 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
-	"github.com/onsi/ginkgo"
 
 	"github.com/projectcalico/calico/felix/fv/utils"
 )

@@ -27,7 +27,6 @@ import (
 	"time"
 
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
-
 	"github.com/containernetworking/plugins/pkg/ns"
 	nsutils "github.com/containernetworking/plugins/pkg/testutils"
 	"github.com/docopt/docopt-go"

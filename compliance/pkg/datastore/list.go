@@ -3,13 +3,11 @@ package datastore
 
 import (
 	log "github.com/sirupsen/logrus"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
 	lmaL "github.com/projectcalico/calico/lma/pkg/list"
 )
 

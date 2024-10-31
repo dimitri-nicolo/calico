@@ -4,13 +4,11 @@ package keyselector
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

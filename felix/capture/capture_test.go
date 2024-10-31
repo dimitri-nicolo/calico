@@ -10,14 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/felix/proto"
-
-	"github.com/projectcalico/calico/felix/capture"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/felix/capture"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 var _ = Describe("PacketCapture Capture Tests", func() {

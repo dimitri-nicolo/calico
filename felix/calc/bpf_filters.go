@@ -9,10 +9,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/tigera/api/pkg/lib/numorstring"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 // default rule action to be used when appending multiple rules

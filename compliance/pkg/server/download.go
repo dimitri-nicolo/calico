@@ -10,10 +10,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"

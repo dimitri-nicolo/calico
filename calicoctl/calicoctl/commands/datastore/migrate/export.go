@@ -23,13 +23,12 @@ import (
 
 	"github.com/docopt/docopt-go"
 	"github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"

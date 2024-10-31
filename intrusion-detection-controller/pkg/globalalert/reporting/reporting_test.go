@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

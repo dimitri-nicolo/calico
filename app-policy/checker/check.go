@@ -19,7 +19,11 @@ import (
 	"fmt"
 	"strings"
 
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"google.golang.org/genproto/googleapis/rpc/code"
+	"google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/types"
@@ -27,11 +31,6 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
-	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/genproto/googleapis/rpc/code"
-	"google.golang.org/genproto/googleapis/rpc/status"
 )
 
 var OK = int32(code.Code_OK)

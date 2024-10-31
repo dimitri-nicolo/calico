@@ -4,10 +4,9 @@ package commands
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
-
-	"sort"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

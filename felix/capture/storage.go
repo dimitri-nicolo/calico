@@ -7,11 +7,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/projectcalico/calico/felix/proto"
-
+	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 // ActiveCaptures stores the state of the current active capture

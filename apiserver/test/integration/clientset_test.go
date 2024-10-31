@@ -30,6 +30,9 @@ import (
 	"testing"
 	"time"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,10 +52,6 @@ import (
 	licclient "github.com/projectcalico/calico/licensing/client"
 	licFeatures "github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/utils"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 // TestGroupVersion is trivial.

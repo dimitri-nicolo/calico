@@ -4,12 +4,11 @@ package metrics
 
 import (
 	"bufio"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )

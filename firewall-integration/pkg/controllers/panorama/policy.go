@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	panw "github.com/PaloAltoNetworks/pango"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-
-	panw "github.com/PaloAltoNetworks/pango"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/firewall-integration/pkg/util"

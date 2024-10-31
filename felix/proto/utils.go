@@ -5,9 +5,8 @@ package proto
 import (
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/gogo/protobuf/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // ConvertTime converts a time.Time structure into gogo types Timestamp

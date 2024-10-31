@@ -9,10 +9,8 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-
-	"k8s.io/apiserver/pkg/endpoints/request"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/endpoints/request"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"

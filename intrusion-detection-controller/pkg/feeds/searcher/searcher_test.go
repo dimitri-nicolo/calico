@@ -8,14 +8,13 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // TestDoIPSet tests the case where everything is working

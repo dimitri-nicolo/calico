@@ -6,11 +6,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	httpUtils "github.com/projectcalico/calico/es-gateway/pkg/handlers/internal/common/http"
-
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/elastic"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/kibana"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/kubernetes"
+	httpUtils "github.com/projectcalico/calico/es-gateway/pkg/handlers/internal/common/http"
 )
 
 // GetHealthHandler returns an HTTP handler to check whether Kube API is ready. This is the only

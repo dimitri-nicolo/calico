@@ -11,11 +11,9 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/lma/pkg/api"

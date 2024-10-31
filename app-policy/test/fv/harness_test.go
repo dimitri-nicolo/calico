@@ -5,10 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
+	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
 	"github.com/projectcalico/calico/app-policy/server"
 	fakepolicysync "github.com/projectcalico/calico/app-policy/test/fv/policysync"

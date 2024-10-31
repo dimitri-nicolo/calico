@@ -8,18 +8,15 @@ import (
 	"sync"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	kapiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/proxy"
 
+	. "github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
-	kapiv1 "k8s.io/api/core/v1"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	. "github.com/projectcalico/calico/felix/calc"
 )
 
 var _ = Describe("ServiceLookupsCache tests", func() {

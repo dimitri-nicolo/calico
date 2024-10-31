@@ -7,9 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/projectcalico/calico/felix/proto"
-
 	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type mockWorkloadCallbacks struct {

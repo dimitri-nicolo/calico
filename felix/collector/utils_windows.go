@@ -8,9 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
+	log "github.com/sirupsen/logrus"
 )
 
 // We need to use another package for Windows rotate logs.

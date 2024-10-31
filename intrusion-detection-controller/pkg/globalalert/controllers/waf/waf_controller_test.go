@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("WAF Controller", func() {

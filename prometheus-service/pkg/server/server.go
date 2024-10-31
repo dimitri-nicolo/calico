@@ -8,16 +8,15 @@ import (
 	"net/url"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	health "github.com/projectcalico/calico/prometheus-service/pkg/handler/health"
 	proxy "github.com/projectcalico/calico/prometheus-service/pkg/handler/proxy"
 	"github.com/projectcalico/calico/prometheus-service/pkg/middleware"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (

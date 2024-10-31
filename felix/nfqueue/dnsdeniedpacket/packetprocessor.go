@@ -8,17 +8,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/felix/jitter"
-	"github.com/projectcalico/calico/nfnetlink"
-	"github.com/projectcalico/calico/nfnetlink/pkt"
-
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/nfqueue"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/nfnetlink"
+	"github.com/projectcalico/calico/nfnetlink/pkt"
 )
 
 var (

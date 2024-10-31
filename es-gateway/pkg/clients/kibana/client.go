@@ -12,9 +12,9 @@ import (
 	"os"
 	"time"
 
-	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
-
 	log "github.com/sirupsen/logrus"
+
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 )
 
 const kibanaRequestTimeout = time.Second * 10

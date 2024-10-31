@@ -1,10 +1,10 @@
 package geodb
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestGeoDB(t *testing.T) {

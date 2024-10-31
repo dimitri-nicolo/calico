@@ -3,10 +3,9 @@ package collector
 import (
 	"io"
 
-	"google.golang.org/grpc"
-
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
 	v3 "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v3"
+	"google.golang.org/grpc"
 )
 
 var (

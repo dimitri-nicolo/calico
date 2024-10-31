@@ -5,9 +5,8 @@ package metrics
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/node/pkg/bgp"
 )

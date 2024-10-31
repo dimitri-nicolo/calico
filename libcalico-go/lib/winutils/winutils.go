@@ -25,13 +25,12 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/node/pkg/metrics"
-
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	certutil "k8s.io/client-go/util/cert"
+
+	"github.com/projectcalico/calico/node/pkg/metrics"
 )
 
 func Powershell(args ...string) (string, string, error) {

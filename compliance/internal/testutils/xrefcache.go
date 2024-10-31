@@ -6,13 +6,11 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"

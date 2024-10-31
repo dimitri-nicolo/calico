@@ -5,14 +5,12 @@ package calc_test
 import (
 	"time"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/calc/capture"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 

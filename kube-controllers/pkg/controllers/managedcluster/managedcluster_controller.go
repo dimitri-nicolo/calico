@@ -6,18 +6,15 @@ import (
 	"context"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-
-	log "github.com/sirupsen/logrus"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"

@@ -5,12 +5,12 @@ package authorization
 import (
 	"context"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 type clusterRoleReconciler struct {

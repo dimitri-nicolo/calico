@@ -6,15 +6,13 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

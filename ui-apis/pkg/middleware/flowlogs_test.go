@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
@@ -27,8 +27,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
 	"github.com/projectcalico/calico/ui-apis/pkg/pip"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

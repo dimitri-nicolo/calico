@@ -7,12 +7,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
-
-	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 )
 
 const (

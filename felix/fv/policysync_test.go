@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
@@ -48,8 +48,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/pod2daemon/binder"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func init() {

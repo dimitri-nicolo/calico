@@ -13,13 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager/checksum"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
 const (

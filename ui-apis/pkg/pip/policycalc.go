@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -22,8 +22,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/calico/ui-apis/pkg/pip/policycalc"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

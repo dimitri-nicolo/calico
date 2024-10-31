@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/app-policy/policystore"

@@ -7,15 +7,13 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 // Sanity check the realServiceGraphBackend satisfies the ServiceGraphBackend interface.

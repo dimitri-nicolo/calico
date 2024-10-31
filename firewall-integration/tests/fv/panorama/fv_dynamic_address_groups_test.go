@@ -9,18 +9,17 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/onsi/ginkgo/extensions/table"
-
 	panw "github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/objs/addr"
 	"github.com/PaloAltoNetworks/pango/objs/addrgrp"
 	dvgrp "github.com/PaloAltoNetworks/pango/pnrm/dg"
-
+	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
@@ -29,9 +28,6 @@ import (
 	panutilmocks "github.com/projectcalico/calico/firewall-integration/tests/mocks"
 	"github.com/projectcalico/calico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (

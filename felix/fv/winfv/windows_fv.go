@@ -10,9 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tigera/windows-networking/pkg/testutils"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/windows-networking/pkg/testutils"
 )
 
 type CalicoBackEnd string

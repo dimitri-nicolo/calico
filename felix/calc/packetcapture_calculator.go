@@ -6,14 +6,11 @@ import (
 	"fmt"
 	"reflect"
 
+	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/utils/strings"
 
 	"github.com/projectcalico/calico/felix/calc/capture"
-
-	log "github.com/sirupsen/logrus"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/felix/multidict"

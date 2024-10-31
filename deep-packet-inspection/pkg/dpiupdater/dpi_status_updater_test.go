@@ -13,10 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var _ = Describe("DPI status updater", func() {

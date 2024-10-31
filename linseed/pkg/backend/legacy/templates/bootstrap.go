@@ -13,9 +13,8 @@ import (
 	"github.com/projectcalico/go-json/json"
 	"github.com/sirupsen/logrus"
 
-	lmaelastic "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic"
-
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
+	lmaelastic "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic"
 )
 
 // Event indices prior to 3.17 were created to match the pattern tigera_secure_ee_events.{$managed_cluster}.lma

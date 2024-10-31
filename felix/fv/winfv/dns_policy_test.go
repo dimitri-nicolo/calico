@@ -8,14 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
-
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/tigera/windows-networking/pkg/testutils"
 
 	. "github.com/projectcalico/calico/felix/fv/winfv"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 )
 
 var allowDnsPolicy string = `

@@ -9,10 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
-
 	log "github.com/sirupsen/logrus"
-
+	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/tigera/api/pkg/lib/numorstring"

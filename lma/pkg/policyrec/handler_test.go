@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"net/http"
 
-	"github.com/projectcalico/calico/lma/pkg/policyrec"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/lma/pkg/policyrec"
 )
 
 var (

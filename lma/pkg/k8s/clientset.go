@@ -8,14 +8,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 const (

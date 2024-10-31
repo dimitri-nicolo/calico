@@ -10,7 +10,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v32 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -26,9 +27,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v32 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 const DefaultResyncPeriod = 0

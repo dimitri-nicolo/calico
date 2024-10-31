@@ -4,16 +4,13 @@ package dispatcher_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/calico/compliance/pkg/dispatcher"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 var (

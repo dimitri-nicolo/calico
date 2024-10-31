@@ -10,19 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-
-	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
 	"github.com/stretchr/testify/require"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )

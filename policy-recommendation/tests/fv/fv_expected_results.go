@@ -2,10 +2,9 @@
 package fv
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	prtypes "github.com/projectcalico/calico/policy-recommendation/pkg/types"
 )

@@ -6,7 +6,6 @@ import (
 
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/app-policy/checker"

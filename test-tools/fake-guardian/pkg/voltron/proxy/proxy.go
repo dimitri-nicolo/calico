@@ -14,10 +14,9 @@ import (
 
 	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Create a new logger instance with the JSON handler

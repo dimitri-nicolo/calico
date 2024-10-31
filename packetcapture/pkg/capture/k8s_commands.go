@@ -7,13 +7,11 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/packetcapture/pkg/cache"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

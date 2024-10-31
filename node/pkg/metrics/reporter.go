@@ -8,12 +8,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/projectcalico/calico/node/pkg/bgp"
-
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/node/pkg/bgp"
 )
 
 const (

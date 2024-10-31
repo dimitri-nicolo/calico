@@ -8,26 +8,19 @@ import (
 	"fmt"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
-
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
 	"github.com/google/gopacket/layers"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var _ = Describe("DomainName Thread Feeds UT", func() {

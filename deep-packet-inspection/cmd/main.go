@@ -9,15 +9,8 @@ import (
 	"os"
 	"time"
 
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/typha/pkg/buildinfo"
-	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
-	"github.com/projectcalico/calico/typha/pkg/syncproto"
+	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/calicoclient"
@@ -30,9 +23,14 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/syncer"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/version"
-
-	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
+	"github.com/projectcalico/calico/typha/pkg/buildinfo"
+	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
+	"github.com/projectcalico/calico/typha/pkg/syncproto"
 )
 
 var versionFlag = flag.Bool("version", false, "Print version information")

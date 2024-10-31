@@ -6,14 +6,13 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 type reconciler struct {

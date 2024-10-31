@@ -5,13 +5,12 @@ import (
 	"context"
 	"time"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // TODO (rlb):  These data types are basically focussed on the requirements of the web server

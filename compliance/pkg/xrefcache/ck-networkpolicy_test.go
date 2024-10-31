@@ -4,17 +4,14 @@ package xrefcache_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	. "github.com/projectcalico/calico/compliance/internal/testutils"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 var _ = Describe("Basic CRUD of network policies with no other resources present", func() {

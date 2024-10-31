@@ -15,8 +15,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-
+	"github.com/kelseyhightower/envconfig"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientruntime "k8s.io/apimachinery/pkg/runtime"
@@ -28,15 +30,23 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kelseyhightower/envconfig"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
+	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
+	bgpbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/bgp"
+	compliancebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/compliance"
+	dnsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
+	eventbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
+	flowbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	procbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
+	runtimebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/runtime"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	threatfeedsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/threatfeeds"
+	wafbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/waf"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/linseed/pkg/controller/token"
 	"github.com/projectcalico/calico/linseed/pkg/handler"
@@ -56,20 +66,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/cache"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
-
-	"github.com/projectcalico/calico/linseed/pkg/backend/api"
-	auditbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
-	bgpbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/bgp"
-	compliancebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/compliance"
-	dnsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
-	eventbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
-	flowbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
-	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
-	procbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/processes"
-	runtimebackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/runtime"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
-	threatfeedsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/threatfeeds"
-	wafbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/waf"
 )
 
 var (

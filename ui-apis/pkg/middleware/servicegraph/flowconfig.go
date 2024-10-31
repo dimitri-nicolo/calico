@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/lma/pkg/k8s"

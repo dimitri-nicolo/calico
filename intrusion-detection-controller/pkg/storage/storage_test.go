@@ -12,25 +12,19 @@ import (
 	"testing"
 	"time"
 
-	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	"github.com/araddon/dateparse"
 	. "github.com/onsi/gomega"
-
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
-
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var oneMinuteAgo time.Time

@@ -17,18 +17,15 @@ package converter_test
 import (
 	"math/rand"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
-
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	corev1 "k8s.io/api/core/v1"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
 )
 
 var _ = Describe("Service/Endpoint to NetworkSet conversion tests", func() {

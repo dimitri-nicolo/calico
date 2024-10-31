@@ -18,7 +18,6 @@ import (
 	"errors"
 
 	log "github.com/sirupsen/logrus"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 

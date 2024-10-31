@@ -3,14 +3,13 @@
 package intdataplane
 
 import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/vishvananda/netlink"
+
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
-
-	"github.com/vishvananda/netlink"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("ExternalNetworkManager", func() {

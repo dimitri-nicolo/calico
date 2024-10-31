@@ -23,21 +23,18 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
-
-	log "github.com/sirupsen/logrus"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {

@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 

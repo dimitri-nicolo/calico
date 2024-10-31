@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 )
 

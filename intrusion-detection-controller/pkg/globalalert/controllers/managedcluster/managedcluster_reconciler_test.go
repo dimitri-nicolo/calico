@@ -3,14 +3,12 @@ package managedcluster
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

@@ -16,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/ip"
-
 	"github.com/projectcalico/calico/felix/testutils"
 )
 

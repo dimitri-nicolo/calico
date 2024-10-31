@@ -9,10 +9,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestClusterInfo(t *testing.T) {

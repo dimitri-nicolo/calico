@@ -5,9 +5,8 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/coreos/go-iptables/iptables"
+	log "github.com/sirupsen/logrus"
 
 	envoyconfig "github.com/projectcalico/calico/app-policy/envoy/config"
 	"github.com/projectcalico/calico/app-policy/flags"

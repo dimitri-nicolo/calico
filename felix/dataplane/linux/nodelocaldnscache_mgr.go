@@ -6,11 +6,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (

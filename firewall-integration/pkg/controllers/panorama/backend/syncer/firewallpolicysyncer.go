@@ -4,11 +4,10 @@ package panoramasyncer
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/calc"
 	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 	watchersyncer "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/watcher"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
-
-	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"

@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/endpoints/request"
 

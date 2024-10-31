@@ -6,15 +6,13 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type Permission interface {

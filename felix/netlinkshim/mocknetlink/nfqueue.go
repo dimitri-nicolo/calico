@@ -18,9 +18,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/projectcalico/calico/felix/netlinkshim"
-
 	gonfqueue "github.com/florianl/go-nfqueue"
+
+	"github.com/projectcalico/calico/felix/netlinkshim"
 )
 
 type NfQueueFactory struct {

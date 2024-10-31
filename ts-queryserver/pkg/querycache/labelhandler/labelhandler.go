@@ -4,6 +4,7 @@ package labelhandler
 import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/labelindex"
 	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -12,8 +13,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type Interface interface {

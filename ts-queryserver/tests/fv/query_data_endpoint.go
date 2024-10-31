@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func endpointTestQueryData() []testQueryData {

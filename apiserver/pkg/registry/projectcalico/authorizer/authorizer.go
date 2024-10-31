@@ -7,13 +7,11 @@ import (
 	"fmt"
 	"sync"
 
-	"k8s.io/klog/v2"
-
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	k8sauth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
+	"k8s.io/klog/v2"
 )
 
 type TierAuthorizer interface {

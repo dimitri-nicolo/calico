@@ -19,7 +19,6 @@ import (
 	"encoding/base64"
 
 	log "github.com/sirupsen/logrus"
-
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/felix/proto"

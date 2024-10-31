@@ -8,14 +8,12 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
-
-	"github.com/tigera/api/pkg/lib/numorstring"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	kapiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/dataplane/mock"

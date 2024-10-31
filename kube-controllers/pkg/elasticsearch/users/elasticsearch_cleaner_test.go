@@ -5,14 +5,13 @@ package users_test
 import (
 	"sort"
 
-	es "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
+
+	es "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
 
 type MockClient struct {

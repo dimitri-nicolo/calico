@@ -8,23 +8,19 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/replay"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/list"
 )
 

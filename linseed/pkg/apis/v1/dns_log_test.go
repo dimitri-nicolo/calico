@@ -8,11 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/google/gopacket/layers"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 )
 
 var (

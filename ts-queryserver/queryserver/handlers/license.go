@@ -9,13 +9,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	licClient "github.com/projectcalico/calico/licensing/client"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // License type wraps libcalico API Client.

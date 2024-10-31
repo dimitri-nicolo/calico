@@ -7,16 +7,12 @@ import (
 	"fmt"
 	"reflect"
 
-	"k8s.io/apimachinery/pkg/fields"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/options"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/errors"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -24,12 +20,12 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/util"
 	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 // rest implements a RESTStorage for API services against etcd

@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/projectcalico/calico/ui-apis/pkg/math"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/ui-apis/pkg/math"
 )
 
 // AggregatedProtoPorts holds info about an aggregated set of protocols and ports.

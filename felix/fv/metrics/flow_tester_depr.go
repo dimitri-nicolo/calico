@@ -8,12 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
-
-	. "github.com/onsi/gomega"
 )
 
 // This flow tester makes too many assumptions about the tests, so isn't particularly useful for handling more

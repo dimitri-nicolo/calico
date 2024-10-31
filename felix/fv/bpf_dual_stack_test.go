@@ -26,26 +26,23 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 
-	log "github.com/sirupsen/logrus"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/felix/bpf/ifstate"
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	. "github.com/projectcalico/calico/felix/fv/connectivity"
-	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
-	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
-
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	options2 "github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 

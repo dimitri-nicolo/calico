@@ -6,18 +6,15 @@ import (
 	"path/filepath"
 	"time"
 
+	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/stretchr/testify/suite"
-
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-
 	"github.com/projectcalico/calico/app-policy/server"
-	"github.com/projectcalico/calico/felix/proto"
-
 	fakepolicysync "github.com/projectcalico/calico/app-policy/test/fv/policysync"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type dikastesTestSuite struct {

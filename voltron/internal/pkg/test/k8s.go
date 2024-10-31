@@ -1,12 +1,11 @@
 package test
 
 import (
+	calicofake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
-
-	calicofake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 type k8sFake = fake.Clientset

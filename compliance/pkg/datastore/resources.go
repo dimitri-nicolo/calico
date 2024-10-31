@@ -6,12 +6,10 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type resourceHelper struct {

@@ -10,12 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
-
-	"k8s.io/client-go/kubernetes"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"

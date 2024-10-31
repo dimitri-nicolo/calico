@@ -5,11 +5,9 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-
-	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 

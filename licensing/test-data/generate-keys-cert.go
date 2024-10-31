@@ -1,12 +1,11 @@
 package main
 
 import (
-	"log"
-	"time"
-
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log"
+	"time"
 
 	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
 )

@@ -5,10 +5,9 @@ package fileutils
 import (
 	"fmt"
 
-	"github.com/projectcalico/calico/deep-packet-inspection/pkg/weputils"
-
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/weputils"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 

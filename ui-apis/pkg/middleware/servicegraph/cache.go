@@ -10,9 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"

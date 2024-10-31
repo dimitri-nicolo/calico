@@ -7,20 +7,18 @@ import (
 	"reflect"
 	"strings"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	k8sStorage "k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
-
-	features "github.com/projectcalico/calico/licensing/client/features"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	features "github.com/projectcalico/calico/licensing/client/features"
 )
 
 // NewNetworkPolicyStorage creates a new libcalico-based k8sStorage.Interface implementation for Policy

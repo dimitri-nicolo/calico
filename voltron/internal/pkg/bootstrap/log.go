@@ -7,9 +7,9 @@ package bootstrap
 import (
 	"os"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 // ConfigureLogging configures the logging framework. The logging level that will

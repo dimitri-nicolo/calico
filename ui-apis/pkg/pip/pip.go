@@ -5,17 +5,14 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
-	"github.com/projectcalico/calico/lma/pkg/list"
-
-	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
-
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/list"
+	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
 )
 
 // New returns a new PIP instance.

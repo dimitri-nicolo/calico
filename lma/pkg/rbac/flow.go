@@ -9,7 +9,6 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 )

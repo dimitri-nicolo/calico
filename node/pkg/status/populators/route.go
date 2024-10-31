@@ -25,11 +25,9 @@ import (
 	"strings"
 	"time"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/olekukonko/tablewriter"
-
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

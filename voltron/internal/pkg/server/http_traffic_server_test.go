@@ -18,23 +18,19 @@ import (
 	"os"
 	"time"
 
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"golang.org/x/net/http2"
-
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
-
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 func init() {

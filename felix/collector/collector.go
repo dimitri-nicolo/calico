@@ -15,6 +15,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	kapiv1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
@@ -31,8 +32,6 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
-	kapiv1 "k8s.io/api/core/v1"
 )
 
 // defaultGroupIP is used as the key for the DNS lookup info for all clients when

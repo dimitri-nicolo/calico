@@ -21,21 +21,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
-	accesslogtest "github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog/test"
-
-	authnv1 "k8s.io/api/authentication/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"golang.org/x/net/http2"
-
+	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
@@ -45,24 +43,19 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	voltronconfig "github.com/projectcalico/calico/voltron/internal/pkg/config"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog"
+	accesslogtest "github.com/projectcalico/calico/voltron/internal/pkg/server/accesslog/test"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
-	voltronconfig "github.com/projectcalico/calico/voltron/internal/pkg/config"
 )
 
 const (

@@ -6,15 +6,14 @@ import (
 	"context"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
 )
 
 // rest implements a RESTStorage for API services against etcd

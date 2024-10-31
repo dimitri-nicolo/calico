@@ -5,19 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
-
-	. "github.com/projectcalico/calico/apiserver/pkg/rbac"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-
 	rbac_v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/discovery"
 
+	. "github.com/projectcalico/calico/apiserver/pkg/rbac"
 	rbacmock "github.com/projectcalico/calico/apiserver/pkg/rbac/mock"
 )
 

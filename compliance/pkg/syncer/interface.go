@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 type Starter interface {

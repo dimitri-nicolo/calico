@@ -7,10 +7,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )

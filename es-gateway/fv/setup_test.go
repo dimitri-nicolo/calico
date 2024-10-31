@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 )

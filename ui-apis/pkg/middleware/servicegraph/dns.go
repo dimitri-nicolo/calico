@@ -10,7 +10,6 @@ import (
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 )
 

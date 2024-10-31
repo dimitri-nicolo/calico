@@ -4,10 +4,10 @@ package report
 import (
 	"testing"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )
 
 func TestReport(t *testing.T) {

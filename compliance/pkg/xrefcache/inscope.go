@@ -6,13 +6,11 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector/parser"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

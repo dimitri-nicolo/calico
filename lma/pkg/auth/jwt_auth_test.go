@@ -8,10 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/auth/testing"
-
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +15,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 )
 
 var _ = Describe("Test dex username prefixes", func() {

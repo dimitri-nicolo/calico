@@ -12,16 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/metrics"
-
-	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/projectcalico/calico/linseed/pkg/config"
-
 	"github.com/olivere/elastic/v7"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/linseed/pkg/config"
+	"github.com/projectcalico/calico/linseed/pkg/metrics"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 

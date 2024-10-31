@@ -8,10 +8,9 @@ import (
 	"strings"
 
 	// TODO (mattl): Check glide for these and if they need to be private
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )

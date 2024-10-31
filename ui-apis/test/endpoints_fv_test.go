@@ -13,9 +13,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	authzv1 "k8s.io/api/authorization/v1"
-
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -26,8 +25,6 @@ import (
 	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/client"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // The user authentication review mock struct implementing the authentication review interface.

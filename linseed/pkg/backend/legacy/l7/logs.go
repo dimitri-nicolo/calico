@@ -6,13 +6,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"

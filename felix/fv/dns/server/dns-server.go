@@ -6,14 +6,12 @@ import (
 	"encoding/json"
 	"net"
 
+	"github.com/docopt/docopt-go"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/fv/dns"
-
-	"github.com/docopt/docopt-go"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 )
 
 const usage = `dns-server: create a dummy dns server that responds with pre-programmed ips for domains.

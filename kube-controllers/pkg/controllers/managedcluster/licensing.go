@@ -1,13 +1,12 @@
 package managedcluster
 
 import (
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/license"
-
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
-	"k8s.io/client-go/kubernetes"
 )
 
 type Licensing struct {

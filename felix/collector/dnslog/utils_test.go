@@ -9,10 +9,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	"github.com/projectcalico/calico/felix/calc"
 )
 
 var _ = Describe("DNS log utility functions", func() {

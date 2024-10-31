@@ -5,9 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	licFeatures "github.com/projectcalico/calico/licensing/client/features"
-
 	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	licFeatures "github.com/projectcalico/calico/licensing/client/features"
 )
 
 // ConvertToPackageType converts the features array extracted from a license

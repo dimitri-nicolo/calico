@@ -1,11 +1,11 @@
 package metrics_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestHandler(t *testing.T) {

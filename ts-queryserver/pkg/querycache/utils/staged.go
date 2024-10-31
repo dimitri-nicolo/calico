@@ -2,12 +2,12 @@
 package utils
 
 import (
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // DoExcludeStagedPolicy return true if staged policy should be filtered out

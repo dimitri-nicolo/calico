@@ -13,7 +13,6 @@ import (
 	"k8s.io/client-go/util/keyutil"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
 	"github.com/projectcalico/calico/ui-apis/pkg/server"
 )
 

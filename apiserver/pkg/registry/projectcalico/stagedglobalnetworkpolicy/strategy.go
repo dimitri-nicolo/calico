@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"

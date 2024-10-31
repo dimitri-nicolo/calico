@@ -12,6 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
+
 	"github.com/projectcalico/calico/egress-gateway/data"
 	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
 	netutil "github.com/projectcalico/calico/egress-gateway/util/net"
@@ -19,12 +24,6 @@ import (
 	protoutil "github.com/projectcalico/calico/egress-gateway/util/proto"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
-
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/clock"
 )
 
 // RouteManager is responsible for programming return-routes back to workloads over VXLAN.

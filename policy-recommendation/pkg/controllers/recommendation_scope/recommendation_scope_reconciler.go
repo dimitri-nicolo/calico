@@ -9,12 +9,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"

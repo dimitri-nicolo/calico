@@ -22,27 +22,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/config"
-
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
-
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	uruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 )
 
 // serviceController implements the Controller interface for managing Kubernetes services

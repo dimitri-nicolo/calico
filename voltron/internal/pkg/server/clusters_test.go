@@ -15,21 +15,19 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
-
-	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
-	"github.com/projectcalico/calico/voltron/internal/pkg/config"
-	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
-	"github.com/projectcalico/calico/voltron/internal/pkg/test"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
+	"github.com/projectcalico/calico/voltron/internal/pkg/config"
+	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
+	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 )
 
 func describe(name string, testFn func(string)) bool {

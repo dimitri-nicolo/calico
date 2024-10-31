@@ -5,9 +5,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/projectcalico/calico/lma/pkg/httputils"
-
 	"github.com/projectcalico/calico/linseed/pkg/config"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 type version struct {

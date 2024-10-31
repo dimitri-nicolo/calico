@@ -6,11 +6,9 @@ import (
 	"context"
 	"testing"
 
-	. "github.com/onsi/gomega"
-
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-
+	. "github.com/onsi/gomega"
 	"google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/projectcalico/calico/app-policy/policystore"

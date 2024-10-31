@@ -5,14 +5,13 @@ package calico
 import (
 	"reflect"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/klog/v2"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func aapiError(err error, key string) error {

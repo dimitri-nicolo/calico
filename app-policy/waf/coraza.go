@@ -11,21 +11,17 @@ import (
 	"net/http"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	coraza "github.com/corazawaf/coraza/v3"
 	corazatypes "github.com/corazawaf/coraza/v3/types"
-
-	mergefs "github.com/jcchavezs/mergefs"
-	mergefsio "github.com/jcchavezs/mergefs/io"
-
-	wrappers "github.com/golang/protobuf/ptypes/wrappers"
-	code "google.golang.org/genproto/googleapis/rpc/code"
-	status "google.golang.org/genproto/googleapis/rpc/status"
-
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	wrappers "github.com/golang/protobuf/ptypes/wrappers"
+	mergefs "github.com/jcchavezs/mergefs"
+	mergefsio "github.com/jcchavezs/mergefs/io"
+	log "github.com/sirupsen/logrus"
+	code "google.golang.org/genproto/googleapis/rpc/code"
+	status "google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"

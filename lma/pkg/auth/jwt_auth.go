@@ -11,9 +11,7 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
-
 	log "github.com/sirupsen/logrus"
-
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"

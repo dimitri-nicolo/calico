@@ -22,9 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	gocache "github.com/patrickmn/go-cache"
-
 	"k8s.io/client-go/util/workqueue"
 )
 

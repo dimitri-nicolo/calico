@@ -6,11 +6,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
-
 	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/projectcalico/calico/felix/proto"
-
 	"github.com/projectcalico/calico/felix/tproxydefs"
 )
 

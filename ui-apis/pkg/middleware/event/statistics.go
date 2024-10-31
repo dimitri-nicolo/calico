@@ -13,11 +13,10 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware/search"
-
-	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 const (

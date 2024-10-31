@@ -6,17 +6,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/query"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/query"
 )
 
 const (

@@ -8,14 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"

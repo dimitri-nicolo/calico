@@ -16,17 +16,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"

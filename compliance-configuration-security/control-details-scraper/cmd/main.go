@@ -5,8 +5,9 @@ package main
 import (
 	"flag"
 
-	"github.com/projectcalico/calico/compliance-configuration-security/control-details-scraper/pkg/controlgen"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/compliance-configuration-security/control-details-scraper/pkg/controlgen"
 )
 
 func main() {

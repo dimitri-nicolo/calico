@@ -5,9 +5,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/net"
-
 	"github.com/projectcalico/calico/compliance/pkg/internet"
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 var (

@@ -10,6 +10,7 @@ import (
 
 	yaml2 "github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,8 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var managedKubeconfig = os.Getenv("MANAGED_KUBECONFIG")

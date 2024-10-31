@@ -17,6 +17,7 @@ package calc
 import (
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
@@ -24,8 +25,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // ProfileDecoder takes updates from a dispatcher, determines if the profile is a Kubernetes Service Account or

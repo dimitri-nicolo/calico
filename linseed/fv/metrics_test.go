@@ -13,19 +13,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
+	"github.com/google/gopacket/layers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
-	"github.com/google/gopacket/layers"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	"github.com/stretchr/testify/require"
 )
 
 // metricsSetupAndTeardown sets up additional test environment for the metrics tests.

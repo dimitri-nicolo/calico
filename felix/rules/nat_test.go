@@ -18,17 +18,15 @@ import (
 	"fmt"
 	"net"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/felix/generictables"
-	. "github.com/projectcalico/calico/felix/rules"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"github.com/projectcalico/calico/felix/ipsets"
 	. "github.com/projectcalico/calico/felix/iptables"
+	. "github.com/projectcalico/calico/felix/rules"
 )
 
 type (

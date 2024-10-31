@@ -4,7 +4,6 @@ package securityeventwebhook
 
 import (
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/endpoints/request"

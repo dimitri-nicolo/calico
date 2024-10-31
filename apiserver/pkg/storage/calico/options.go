@@ -3,11 +3,10 @@
 package calico
 
 import (
+	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/licensing/monitor"
-
-	"k8s.io/apiserver/pkg/registry/generic"
 )
 
 const (

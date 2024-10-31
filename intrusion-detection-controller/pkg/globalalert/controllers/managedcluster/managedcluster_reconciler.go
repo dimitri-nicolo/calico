@@ -6,10 +6,9 @@ import (
 	"context"
 	"fmt"
 
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -18,10 +17,8 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // managedClusterReconciler is responsible for starting and managing GlobalAlertController for every managed cluster.

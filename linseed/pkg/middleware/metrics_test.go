@@ -8,12 +8,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/projectcalico/calico/linseed/pkg/metrics"
-
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/prometheus/client_golang/prometheus"
-
+	"github.com/projectcalico/calico/linseed/pkg/metrics"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 )
 

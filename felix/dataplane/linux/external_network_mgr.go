@@ -4,14 +4,13 @@ package intdataplane
 
 import (
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // externalNetworkManager watches WorkloadEndpoint and ExternalNetwork updates.

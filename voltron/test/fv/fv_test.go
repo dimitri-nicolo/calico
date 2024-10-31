@@ -20,22 +20,20 @@ import (
 
 	"github.com/elazarl/goproxy"
 	pauth "github.com/elazarl/goproxy/ext/auth"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kscheme "k8s.io/client-go/kubernetes/scheme"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/projectcalico/calico/apiserver/pkg/authentication"
-
 	logrus "github.com/sirupsen/logrus"
-
 	"github.com/stretchr/testify/mock"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"golang.org/x/net/http2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/projectcalico/calico/apiserver/pkg/authentication"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
 	vcfg "github.com/projectcalico/calico/voltron/internal/pkg/config"
@@ -44,13 +42,6 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
-
-	"github.com/projectcalico/calico/lma/pkg/auth"
-
-	"golang.org/x/net/http2"
-
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/rest"
 )
 
 var (

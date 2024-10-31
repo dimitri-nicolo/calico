@@ -5,23 +5,19 @@ package calico
 import (
 	"reflect"
 
-	"golang.org/x/net/context"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/apiserver/pkg/helpers"
-
+	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	licClient "github.com/projectcalico/calico/licensing/client"
-
+	"github.com/projectcalico/calico/apiserver/pkg/helpers"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	licClient "github.com/projectcalico/calico/licensing/client"
 )
 
 // NewLicenseKeyStorage creates a new libcalico-based storage.Interface implementation for LicenseKeys

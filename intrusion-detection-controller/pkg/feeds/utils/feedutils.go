@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"

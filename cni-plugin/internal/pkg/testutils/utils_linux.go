@@ -33,12 +33,11 @@ import (
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/containernetworking/plugins/pkg/testutils"
+	"github.com/google/uuid"
 	je "github.com/juju/errors"
 	"github.com/mcuadros/go-version"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
-
-	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 

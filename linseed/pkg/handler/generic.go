@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/olivere/elastic/v7"
-
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"

@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/ui-apis/pkg/pip/policycalc"
 )
 

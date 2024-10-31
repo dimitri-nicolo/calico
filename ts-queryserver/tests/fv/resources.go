@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	. "github.com/onsi/gomega"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -19,8 +19,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 /*

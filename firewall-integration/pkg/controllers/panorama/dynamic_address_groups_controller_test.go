@@ -11,22 +11,19 @@ import (
 	"github.com/PaloAltoNetworks/pango/objs/addr"
 	"github.com/PaloAltoNetworks/pango/objs/addrgrp"
 	dvgrp "github.com/PaloAltoNetworks/pango/pnrm/dg"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	"github.com/projectcalico/calico/firewall-integration/tests/mocks"
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (

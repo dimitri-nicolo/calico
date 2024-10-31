@@ -7,14 +7,13 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/nfqueue"
 	"github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var (

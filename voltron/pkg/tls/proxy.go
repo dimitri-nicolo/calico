@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/voltron/pkg/conn"
-
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/voltron/pkg/conn"
 )
 
 const (

@@ -6,12 +6,10 @@ import (
 	"errors"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/fields"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 	k8scache "k8s.io/client-go/tools/cache"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

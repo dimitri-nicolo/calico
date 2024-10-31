@@ -2,10 +2,10 @@
 package flow_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestFlow(t *testing.T) {

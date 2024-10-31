@@ -21,12 +21,11 @@ import (
 	"strings"
 	"sync"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/generictables"

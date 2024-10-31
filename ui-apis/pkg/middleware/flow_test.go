@@ -9,28 +9,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	calicojson "github.com/projectcalico/calico/ui-apis/test/json"
-	"github.com/projectcalico/calico/ui-apis/test/thirdpartymock"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	calicojson "github.com/projectcalico/calico/ui-apis/test/json"
+	"github.com/projectcalico/calico/ui-apis/test/thirdpartymock"
 )
 
 var _ = Describe("FlowLog middleware", func() {

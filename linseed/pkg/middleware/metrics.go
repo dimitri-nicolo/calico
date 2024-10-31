@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/metrics"
-
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/projectcalico/calico/linseed/pkg/metrics"
 )
 
 type Metrics struct{}

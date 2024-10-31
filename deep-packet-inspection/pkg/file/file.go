@@ -9,10 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/projectcalico/calico/deep-packet-inspection/pkg/fileutils"
-
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/fileutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 

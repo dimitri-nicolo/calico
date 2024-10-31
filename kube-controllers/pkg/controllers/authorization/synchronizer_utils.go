@@ -7,23 +7,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	retryr "k8s.io/client-go/util/retry"
-
-	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-
 	log "github.com/sirupsen/logrus"
-
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	retryr "k8s.io/client-go/util/retry"
 
+	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/userscache"
 	"github.com/projectcalico/calico/kube-controllers/pkg/rbaccache"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
-	rbacv1 "k8s.io/api/rbac/v1"
-
-	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/strutil"
 )
 

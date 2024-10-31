@@ -4,29 +4,15 @@ package audit_test
 
 import (
 	"context"
+	gojson "encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
-	gojson "encoding/json"
-
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,9 +20,16 @@ import (
 	kaudit "k8s.io/apiserver/pkg/apis/audit"
 	"k8s.io/kubernetes/pkg/apis/apps"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/audit"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/config"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )

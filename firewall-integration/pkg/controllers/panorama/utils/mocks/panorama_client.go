@@ -3,18 +3,13 @@
 package mocks
 
 import (
+	pango "github.com/PaloAltoNetworks/pango"
 	addr "github.com/PaloAltoNetworks/pango/objs/addr"
 	addrgrp "github.com/PaloAltoNetworks/pango/objs/addrgrp"
-
-	dg "github.com/PaloAltoNetworks/pango/pnrm/dg"
-
-	mock "github.com/stretchr/testify/mock"
-
-	pango "github.com/PaloAltoNetworks/pango"
-
-	security "github.com/PaloAltoNetworks/pango/poli/security"
-
 	srvc "github.com/PaloAltoNetworks/pango/objs/srvc"
+	dg "github.com/PaloAltoNetworks/pango/pnrm/dg"
+	security "github.com/PaloAltoNetworks/pango/poli/security"
+	mock "github.com/stretchr/testify/mock"
 
 	util "github.com/projectcalico/calico/firewall-integration/pkg/util"
 )

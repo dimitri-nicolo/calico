@@ -21,17 +21,14 @@ import (
 	"io"
 	"net"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
-	"reflect"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/olekukonko/tablewriter"
-
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Check for Word_<IP> where every octate is separated by "_", regardless of IP protocols

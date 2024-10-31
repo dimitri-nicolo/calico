@@ -12,7 +12,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	logutil "github.com/projectcalico/calico/felix/logutils"
-
 	"github.com/projectcalico/calico/felix/rules"
 )
 

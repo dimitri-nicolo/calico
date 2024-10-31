@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-
 	"strings"
 
 	log "github.com/sirupsen/logrus"

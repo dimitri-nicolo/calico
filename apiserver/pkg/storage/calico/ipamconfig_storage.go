@@ -3,23 +3,20 @@
 package calico
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
-	"context"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 )
 
 // NewIPAMConfigurationStorage creates a new libcalico-based storage.Interface implementation for IPAMConfig

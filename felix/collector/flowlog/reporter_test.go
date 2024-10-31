@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
@@ -20,9 +22,6 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var (

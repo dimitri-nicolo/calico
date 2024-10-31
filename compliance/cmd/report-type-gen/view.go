@@ -6,14 +6,12 @@ import (
 	"path"
 	"strings"
 
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var viewCmd = &cobra.Command{

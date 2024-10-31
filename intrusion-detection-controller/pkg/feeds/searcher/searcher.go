@@ -10,7 +10,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -21,8 +21,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type Searcher interface {

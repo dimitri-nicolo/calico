@@ -3,9 +3,8 @@
 package userscache
 
 import (
-	"github.com/projectcalico/calico/kube-controllers/pkg/utils"
-
 	"github.com/projectcalico/calico/kube-controllers/pkg/strutil"
+	"github.com/projectcalico/calico/kube-controllers/pkg/utils"
 )
 
 // OIDCUserCache caches OIDC user information like subject, username and groups.

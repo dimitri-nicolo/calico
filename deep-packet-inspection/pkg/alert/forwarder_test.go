@@ -6,15 +6,13 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var _ = Describe("Alert Forwarder", func() {

@@ -12,18 +12,16 @@ import (
 	"testing"
 	"time"
 
-	sync2 "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
-
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	sync2 "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

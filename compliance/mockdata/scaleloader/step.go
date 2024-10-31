@@ -7,12 +7,10 @@ import (
 	"reflect"
 	"text/template"
 
-	logrus "github.com/sirupsen/logrus"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	json "github.com/projectcalico/go-json/json"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+	logrus "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )

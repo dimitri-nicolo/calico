@@ -17,21 +17,16 @@ package rest
 import (
 	"fmt"
 
-	"github.com/projectcalico/calico/licensing/monitor"
-
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
+	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
 	calicoauthenticationreview "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	calicoauthorizationreview "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
-	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/securityeventwebhook"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
 	calicobfdconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bfdconfiguration"
 	calicobgpconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgpfilter "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpfilter"
@@ -63,6 +58,7 @@ import (
 	calicopolicyrecommendationscope "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/policyrecommendationscope"
 	calicoprofile "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/profile"
 	calicoremoteclusterconfig "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/remoteclusterconfig"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/securityeventwebhook"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
 	calicostagedgpolicy "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/stagedglobalnetworkpolicy"
 	calicostagedk8spolicy "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/stagedkubernetesnetworkpolicy"
@@ -72,6 +68,7 @@ import (
 	calicouisettingsgroup "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/uisettingsgroup"
 	calicostorage "github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 	"github.com/projectcalico/calico/apiserver/pkg/storage/etcd"
+	"github.com/projectcalico/calico/licensing/monitor"
 )
 
 // RESTStorageProvider provides a factory method to create a new APIGroupInfo for

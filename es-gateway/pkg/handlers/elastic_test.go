@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/handlers"
-
 	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
 	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 )

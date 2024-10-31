@@ -22,20 +22,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/config/configfactory"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/calico/kube-controllers/pkg/config/configfactory"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
 var title = cases.Title(language.English)

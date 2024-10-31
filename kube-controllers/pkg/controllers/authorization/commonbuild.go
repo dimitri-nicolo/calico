@@ -5,10 +5,10 @@ package authorization
 import (
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	eusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func (n *nativeUserSynchronizer) eeResync() error {

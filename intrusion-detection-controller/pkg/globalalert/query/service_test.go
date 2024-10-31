@@ -16,20 +16,15 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 const (

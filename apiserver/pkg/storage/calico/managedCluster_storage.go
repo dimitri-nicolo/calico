@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"reflect"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/context"
-
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
@@ -25,8 +24,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"github.com/projectcalico/calico/licensing/client/features"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for

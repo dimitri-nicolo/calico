@@ -17,14 +17,13 @@
 package fv_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

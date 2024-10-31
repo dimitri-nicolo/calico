@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/ips"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	internalv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -22,10 +23,6 @@ import (
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	"github.com/projectcalico/calico/compliance/pkg/config"
-	"github.com/projectcalico/calico/compliance/pkg/ips"
-	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 const (

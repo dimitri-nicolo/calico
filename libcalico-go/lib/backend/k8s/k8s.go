@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,9 +35,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Import all auth providers.
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	adminpolicyclient "sigs.k8s.io/network-policy-api/pkg/client/clientset/versioned/typed/apis/v1alpha1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"

@@ -25,11 +25,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
-
 	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

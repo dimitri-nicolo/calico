@@ -7,11 +7,9 @@ import (
 	"reflect"
 	"time"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"k8s.io/utils/strings"
-
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/utils/strings"
 
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/proto"

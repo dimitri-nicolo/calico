@@ -5,12 +5,11 @@ package handlers_test
 import (
 	"testing"
 
+	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
+	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 func TestHandlers(t *testing.T) {

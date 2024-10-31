@@ -12,9 +12,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,10 +31,6 @@ import (
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	lmapolicyrec "github.com/projectcalico/calico/lma/pkg/policyrec"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 const recommendURLPath = "/recommend"

@@ -21,9 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
@@ -34,8 +33,6 @@ import (
 	"github.com/projectcalico/calico/node/pkg/lifecycle/utils"
 	"github.com/projectcalico/calico/node/pkg/status"
 	populator "github.com/projectcalico/calico/node/pkg/status/populators"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

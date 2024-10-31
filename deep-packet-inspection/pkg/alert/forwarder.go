@@ -6,12 +6,11 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/util/workqueue"
 
-	log "github.com/sirupsen/logrus"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 type Forwarder interface {

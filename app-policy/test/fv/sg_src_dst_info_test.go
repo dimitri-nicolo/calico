@@ -9,13 +9,11 @@ import (
 	"testing"
 	"time"
 
+	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 
 	"github.com/projectcalico/calico/app-policy/server"
 	fakepolicysync "github.com/projectcalico/calico/app-policy/test/fv/policysync"

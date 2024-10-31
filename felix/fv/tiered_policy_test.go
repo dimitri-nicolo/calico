@@ -11,16 +11,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/projectcalico/calico/felix/fv/connectivity"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"

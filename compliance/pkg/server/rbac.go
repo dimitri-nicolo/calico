@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/endpoints/request"
+
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 type ReportRbacHelper interface {

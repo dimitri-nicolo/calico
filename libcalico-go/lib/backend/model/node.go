@@ -17,12 +17,10 @@ package model
 import (
 	goerrors "errors"
 	"fmt"
+	"reflect"
 	"regexp"
 
-	"reflect"
-
 	log "github.com/sirupsen/logrus"
-
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"

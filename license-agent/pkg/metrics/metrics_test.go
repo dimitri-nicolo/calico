@@ -8,9 +8,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	licutils "github.com/projectcalico/calico/licensing/utils"
-
 	"github.com/projectcalico/calico/license-agent/pkg/metrics"
+	licutils "github.com/projectcalico/calico/licensing/utils"
 )
 
 var _ = Describe("Check License Validity", func() {

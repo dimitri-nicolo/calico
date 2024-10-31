@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
-
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 

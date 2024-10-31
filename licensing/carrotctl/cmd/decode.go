@@ -6,11 +6,9 @@ import (
 	"log"
 	"os"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/spf13/cobra"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"gopkg.in/yaml.v2"
 
 	"github.com/projectcalico/calico/licensing/client"
 )

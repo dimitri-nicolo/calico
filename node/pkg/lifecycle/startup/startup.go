@@ -26,14 +26,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -45,7 +44,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator"
 	"github.com/projectcalico/calico/libcalico-go/lib/upgrade/migrator/clients"
 	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
-
 	"github.com/projectcalico/calico/node/pkg/calicoclient"
 	"github.com/projectcalico/calico/node/pkg/earlynetworking"
 	"github.com/projectcalico/calico/node/pkg/lifecycle/startup/autodetection"

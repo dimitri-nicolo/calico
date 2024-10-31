@@ -14,12 +14,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
-	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
-
 	"github.com/projectcalico/calico/felix/ip"
 	. "github.com/projectcalico/calico/felix/ipsec"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/testutils"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 var (

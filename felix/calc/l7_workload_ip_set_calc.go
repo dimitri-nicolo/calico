@@ -8,16 +8,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
-	"github.com/projectcalico/calico/felix/tproxydefs"
-	"github.com/projectcalico/calico/libcalico-go/lib/net"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/felix/proto"
-
+	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // L7WorkloadIPSetCalculator keeps the tproxydefs.ApplicationLayerPolicyIPSet up to date.  The IP set contains

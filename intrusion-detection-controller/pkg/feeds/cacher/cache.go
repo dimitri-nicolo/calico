@@ -8,11 +8,10 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientV3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type CacheRequestType int

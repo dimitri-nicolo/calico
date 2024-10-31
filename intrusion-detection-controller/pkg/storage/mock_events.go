@@ -8,7 +8,6 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3client "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -17,9 +19,6 @@ import (
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	feedutils "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3client "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 const DefaultClientRetries = 5

@@ -7,15 +7,13 @@ import (
 	"fmt"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	log "github.com/sirupsen/logrus"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 type reconciler struct {

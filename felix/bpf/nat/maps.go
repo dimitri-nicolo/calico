@@ -23,9 +23,8 @@ import (
 	"net"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/ip"

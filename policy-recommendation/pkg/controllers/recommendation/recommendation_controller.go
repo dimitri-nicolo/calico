@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -19,8 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
 	k8scache "k8s.io/client-go/tools/cache"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

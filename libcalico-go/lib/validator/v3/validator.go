@@ -26,24 +26,19 @@ import (
 	"time"
 	"unicode/utf8"
 
-	calicoconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
-
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+	wireguard "golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	validator "gopkg.in/go-playground/validator.v9"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
-
-	wireguard "golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
-
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-
+	calicoconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
+	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"

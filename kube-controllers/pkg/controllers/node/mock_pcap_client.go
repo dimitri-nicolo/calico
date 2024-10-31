@@ -6,11 +6,9 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
-
-	options "github.com/projectcalico/calico/libcalico-go/lib/options"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	options "github.com/projectcalico/calico/libcalico-go/lib/options"
 	watch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 

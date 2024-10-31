@@ -14,28 +14,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/felix/collector/flowlog"
-	"github.com/projectcalico/calico/felix/collector/types/endpoint"
-	"github.com/projectcalico/calico/felix/collector/types/tuple"
-	"github.com/projectcalico/calico/felix/ip"
-
-	"github.com/projectcalico/calico/felix/fv/connectivity"
-	"github.com/projectcalico/calico/felix/fv/metrics"
-
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/collector/flowlog"
+	"github.com/projectcalico/calico/felix/collector/types/endpoint"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
+	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
+	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 // This is an extension of the flow_logs_tests.go file to test flow logs from staged policies.

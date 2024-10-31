@@ -9,18 +9,16 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
-
 	"k8s.io/klog/v2"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/controller"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/compliance/pkg/version"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 const (

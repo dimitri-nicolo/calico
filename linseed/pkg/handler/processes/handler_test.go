@@ -10,12 +10,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"

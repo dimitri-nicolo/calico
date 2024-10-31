@@ -17,14 +17,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/packetcapture/pkg/cache"
 	"github.com/projectcalico/calico/packetcapture/pkg/capture"
 	"github.com/projectcalico/calico/packetcapture/pkg/handlers"
 	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("FilesDownload", func() {

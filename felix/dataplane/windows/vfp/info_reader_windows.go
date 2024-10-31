@@ -7,21 +7,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	"github.com/projectcalico/calico/felix/collector"
-	"github.com/projectcalico/calico/felix/collector/types/tuple"
-
-	"sigs.k8s.io/kind/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
-
 	"github.com/tigera/windows-networking/pkg/etw"
 	"github.com/tigera/windows-networking/pkg/vfpctrl"
+	"sigs.k8s.io/kind/pkg/errors"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (

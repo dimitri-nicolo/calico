@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
@@ -15,8 +15,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	esauth "github.com/projectcalico/calico/ui-apis/pkg/auth"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // This file implements an RBAC flow filter. It parses the AuthorizedResourceVerbs returned by a authorization

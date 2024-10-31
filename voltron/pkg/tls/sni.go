@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/projectcalico/calico/voltron/pkg/conn"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/voltron/pkg/conn"
 )
 
 // extractSNI attempts to read the client hello from the TLS Handshake and extract the servername. No bytes are written to

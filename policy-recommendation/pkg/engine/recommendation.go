@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	log "github.com/sirupsen/logrus"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 

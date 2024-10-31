@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
+	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -15,8 +16,6 @@ import (
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/policyrec"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
-
-	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 
 const (

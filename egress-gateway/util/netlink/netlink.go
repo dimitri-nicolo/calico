@@ -1,10 +1,10 @@
 package netlink
 
 import (
-	nl "github.com/vishvananda/netlink"
-
 	"fmt"
 	"strings"
+
+	nl "github.com/vishvananda/netlink"
 )
 
 // NeighsEqual compares two netlink neighbours and decides if they are equivalent.

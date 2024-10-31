@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"

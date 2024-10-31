@@ -15,6 +15,7 @@ import (
 
 	retry "github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -24,8 +25,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

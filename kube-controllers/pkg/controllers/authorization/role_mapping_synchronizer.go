@@ -8,15 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
-	"k8s.io/client-go/kubernetes"
-
 	log "github.com/sirupsen/logrus"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/rbaccache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 // roleMappingSynchronizer is an implementation of k8sRBACSynchronizer interface, to keep Elasticsearch role mappings updated.

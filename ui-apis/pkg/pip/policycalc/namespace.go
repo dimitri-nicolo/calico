@@ -4,13 +4,10 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 

@@ -10,16 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 

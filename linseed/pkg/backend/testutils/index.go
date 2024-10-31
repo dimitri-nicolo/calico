@@ -9,9 +9,8 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	elastic "github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"

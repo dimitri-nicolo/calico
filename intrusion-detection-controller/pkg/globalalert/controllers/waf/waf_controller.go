@@ -6,16 +6,14 @@ import (
 	"context"
 	"time"
 
-	"k8s.io/client-go/tools/cache"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 const (

@@ -20,14 +20,12 @@ import (
 	"path"
 	"strings"
 
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // TODO(bk): could probably extend this command to generate Global Report manifests as well.

@@ -78,12 +78,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector"
@@ -91,6 +88,7 @@ import (
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 

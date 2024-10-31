@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	cache2 "github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
@@ -16,10 +19,6 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/fileutils"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
-
-	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"

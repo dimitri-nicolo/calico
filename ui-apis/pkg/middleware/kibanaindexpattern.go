@@ -8,11 +8,10 @@ import (
 	"net/http"
 	"regexp"
 
-	esauth "github.com/projectcalico/calico/ui-apis/pkg/auth"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	esauth "github.com/projectcalico/calico/ui-apis/pkg/auth"
 )
 
 // The handler returned by this will add a ResourceAttribute to the context

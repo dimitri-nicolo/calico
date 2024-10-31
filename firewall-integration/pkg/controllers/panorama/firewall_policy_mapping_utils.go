@@ -6,18 +6,15 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/PaloAltoNetworks/pango/objs/addr"
 	"github.com/PaloAltoNetworks/pango/objs/srvc"
-
+	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (

@@ -15,13 +15,12 @@
 package intdataplane
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/format"
-
 	"testing"
 
+	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 )

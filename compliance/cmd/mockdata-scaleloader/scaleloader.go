@@ -5,9 +5,8 @@ import (
 	"os"
 	"time"
 
-	"gopkg.in/yaml.v2"
-
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 
 	"github.com/projectcalico/calico/compliance/mockdata/scaleloader"
 	"github.com/projectcalico/calico/compliance/pkg/api"

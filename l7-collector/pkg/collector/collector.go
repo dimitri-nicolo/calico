@@ -6,9 +6,8 @@ import (
 	"context"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
-
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )

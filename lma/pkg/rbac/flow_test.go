@@ -5,15 +5,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
-
-	authzv1 "k8s.io/api/authorization/v1"
-	"k8s.io/apiserver/pkg/authentication/user"
 )
 
 var _ = Describe("FlowHelper tests", func() {

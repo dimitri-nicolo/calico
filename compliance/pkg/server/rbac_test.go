@@ -8,22 +8,18 @@ import (
 	"net/http"
 	"os"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-
-	"k8s.io/apiserver/pkg/endpoints/request"
-
-	auth2 "github.com/projectcalico/calico/lma/pkg/auth"
-
 	k8suser "k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
-
 	"github.com/projectcalico/calico/compliance/pkg/server"
+	auth2 "github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 const (

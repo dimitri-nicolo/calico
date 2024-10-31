@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/config"
-
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	"github.com/projectcalico/calico/lma/pkg/auth"

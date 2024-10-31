@@ -7,18 +7,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/projectcalico/calico/es-gateway/pkg/cache"
-	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
-
-	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
-
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/elastic"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/kibana"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/kubernetes"
 	"github.com/projectcalico/calico/es-gateway/pkg/config"
+	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
+	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
 	"github.com/projectcalico/calico/es-gateway/pkg/server"
 	"github.com/projectcalico/calico/es-gateway/pkg/version"

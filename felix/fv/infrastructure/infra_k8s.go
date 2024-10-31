@@ -28,28 +28,24 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/onsi/ginkgo"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/calico/felix/fv/containers"
+	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
-
-	"github.com/projectcalico/calico/felix/fv/containers"
-	"github.com/projectcalico/calico/felix/fv/utils"
 )
 
 type K8sDatastoreInfra struct {

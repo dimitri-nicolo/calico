@@ -5,11 +5,10 @@ import (
 	"errors"
 	"strings"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // ResourceChange contains a single resource update that we are previewing.

@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/yamux"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
 	"golang.org/x/net/http/httpproxy"
 
 	calicoTLS "github.com/projectcalico/calico/crypto/pkg/tls"

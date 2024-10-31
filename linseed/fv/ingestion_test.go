@@ -13,17 +13,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 // ingestionSetupAndTeardown performs additional setup and teardown for ingestion tests.

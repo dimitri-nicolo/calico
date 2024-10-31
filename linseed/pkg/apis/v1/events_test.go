@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/linseed/pkg/testutils"

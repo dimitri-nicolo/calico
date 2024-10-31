@@ -10,15 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/informers"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
-
 	"github.com/SermoDigital/jose/jws"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
@@ -26,9 +17,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/lma/pkg/k8s"

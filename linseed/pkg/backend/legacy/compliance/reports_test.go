@@ -11,7 +11,6 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

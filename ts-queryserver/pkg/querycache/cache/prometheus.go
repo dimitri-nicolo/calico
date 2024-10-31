@@ -10,12 +10,11 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
+	log "github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 )

@@ -13,18 +13,16 @@ import (
 	"net/url"
 	"sync"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	"k8s.io/apiserver/pkg/authentication/user"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/stretchr/testify/mock"
-
-	"k8s.io/apiserver/pkg/authentication/user"
-	k8sfake "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	"github.com/projectcalico/calico/lma/pkg/auth"
@@ -33,8 +31,6 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
-
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 var _ = Describe("Server supports unauthenticated targets", func() {

@@ -6,10 +6,8 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-
-	"k8s.io/apiserver/pkg/endpoints/request"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"

@@ -5,16 +5,14 @@ package audit
 import (
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
 	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kaudit "k8s.io/apiserver/pkg/apis/audit"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
 const dummyURL = "anyURL"

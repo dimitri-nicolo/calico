@@ -21,19 +21,16 @@ import (
 	"net"
 	"os"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/utils"
+	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 type EtcdDatastoreInfra struct {

@@ -10,16 +10,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
-
-	log "github.com/sirupsen/logrus"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"

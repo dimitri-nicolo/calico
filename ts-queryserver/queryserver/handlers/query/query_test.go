@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"

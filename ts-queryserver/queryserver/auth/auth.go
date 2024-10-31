@@ -3,12 +3,11 @@ package auth
 
 import (
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 // GetJWTAuth returns an lma JWT authenticator.

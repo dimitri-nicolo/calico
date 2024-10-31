@@ -7,13 +7,11 @@ import (
 	"time"
 
 	"github.com/google/gopacket/layers"
-
 	. "github.com/onsi/gomega"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 

@@ -12,10 +12,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
-
-	"github.com/pkg/errors"
 )
 
 // LoadX509Key reads private keys from file and returns the key as a crypto.Signer

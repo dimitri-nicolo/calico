@@ -6,11 +6,10 @@ import (
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
 )

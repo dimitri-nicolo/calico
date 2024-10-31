@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"strings"
 
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
 	log "github.com/sirupsen/logrus"
+
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // ZipFiles represents the expected query for the download API

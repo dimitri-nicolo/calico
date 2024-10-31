@@ -13,6 +13,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
@@ -21,8 +22,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var wrappedInBracketsRegexp = regexp.MustCompile(`^\[.*\]$`)

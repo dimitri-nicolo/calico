@@ -14,11 +14,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/nfnetlink/nfnl"
 	"github.com/projectcalico/calico/nfnetlink/pkt"
 )

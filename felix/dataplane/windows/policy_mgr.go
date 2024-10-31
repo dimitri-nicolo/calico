@@ -19,7 +19,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/calico/felix/proto"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 

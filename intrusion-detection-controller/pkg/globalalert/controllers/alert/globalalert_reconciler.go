@@ -5,18 +5,15 @@ package alert
 import (
 	"context"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	log "github.com/sirupsen/logrus"
-
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/alert"
-
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 // globalAlertReconciler creates a routine for each new GlobalAlert resource that queries Linseed on interval,

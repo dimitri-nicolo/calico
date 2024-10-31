@@ -6,12 +6,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
 	"github.com/projectcalico/calico/compliance/pkg/list"
 )

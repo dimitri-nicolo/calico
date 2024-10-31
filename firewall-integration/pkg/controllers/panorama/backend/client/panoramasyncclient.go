@@ -4,19 +4,17 @@ package panoramasyncclient
 import (
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
-
 	panw "github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/objs/addr"
 	"github.com/PaloAltoNetworks/pango/objs/srvc"
 	"github.com/PaloAltoNetworks/pango/poli/security"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/calico/libcalico-go/lib/selector"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	log "github.com/sirupsen/logrus"
 
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	"github.com/projectcalico/calico/firewall-integration/pkg/util"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (

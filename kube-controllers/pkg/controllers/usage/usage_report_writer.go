@@ -12,15 +12,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/options"
-	"github.com/projectcalico/calico/licensing/client"
-
 	"k8s.io/client-go/kubernetes"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	usagev1 "github.com/projectcalico/calico/libcalico-go/lib/apis/usage.tigera.io/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/licensing/client"
 )
 
 const apiServerOperationAttempts = 3

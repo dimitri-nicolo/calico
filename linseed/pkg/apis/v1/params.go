@@ -5,9 +5,8 @@ package v1
 import (
 	"time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )

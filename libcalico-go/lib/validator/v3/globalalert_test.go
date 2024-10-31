@@ -7,10 +7,8 @@ import (
 
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = DescribeTable("GlobalAlert extractVariablesFromTemplate",

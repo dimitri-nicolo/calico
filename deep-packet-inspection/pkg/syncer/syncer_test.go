@@ -9,8 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	k8sapi "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,8 +30,6 @@ import (
 	"github.com/projectcalico/calico/typha/pkg/buildinfo"
 	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/calico/typha/pkg/syncproto"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("Syncer", func() {

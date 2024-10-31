@@ -13,10 +13,9 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 )
 
 var _ = Describe("Prometheus Proxy Test", func() {

@@ -22,14 +22,13 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/pod2daemon/binder"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const (

@@ -9,7 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/projectcalico/calico/felix/netlinkshim"
-
 	"github.com/projectcalico/calico/felix/timeshim"
 )
 

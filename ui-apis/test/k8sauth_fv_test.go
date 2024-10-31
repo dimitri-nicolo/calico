@@ -8,20 +8,18 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
-
-	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/auth/testing"
-
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/auth/testing"
+	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
 )
 
 // HttpHandler to see that the 'next' handler was called or not

@@ -6,15 +6,14 @@ import (
 	"context"
 	"sort"
 
-	"github.com/projectcalico/calico/apiserver/pkg/rbac"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
+
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 )
 
 type REST struct {

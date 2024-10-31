@@ -6,22 +6,18 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/config"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
-
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 

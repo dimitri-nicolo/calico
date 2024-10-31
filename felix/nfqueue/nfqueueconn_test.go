@@ -10,19 +10,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	gonfqueue "github.com/florianl/go-nfqueue"
 	"github.com/mdlayher/netlink"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/felix/netlinkshim/mocknetlink"
 	"github.com/projectcalico/calico/felix/nfqueue"
 	"github.com/projectcalico/calico/felix/timeshim"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 // timeoutTemporaryError is a mock error type used to test Timeout and Temporary error handling of the nfqueue.

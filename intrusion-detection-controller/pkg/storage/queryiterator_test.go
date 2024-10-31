@@ -7,13 +7,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-
 	. "github.com/onsi/gomega"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 func TestFlowLogIterator(t *testing.T) {

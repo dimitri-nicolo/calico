@@ -11,7 +11,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
-
 	"github.com/projectcalico/calico/ui-apis/pkg/pip/policycalc"
 )
 

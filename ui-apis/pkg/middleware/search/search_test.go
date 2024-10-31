@@ -15,10 +15,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
-
 	"github.com/sirupsen/logrus"
-
+	"github.com/stretchr/testify/mock"
+	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
@@ -32,10 +33,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/test/thirdpartymock"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
-
-	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 var (

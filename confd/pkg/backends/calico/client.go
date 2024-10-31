@@ -26,18 +26,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/projectcalico/calico/confd/pkg/backends"
-	"github.com/projectcalico/calico/confd/pkg/resource/template"
-
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/confd/pkg/buildinfo"
-	"github.com/projectcalico/calico/confd/pkg/config"
-	logutils "github.com/projectcalico/calico/confd/pkg/log"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/confd/pkg/backends"
+	"github.com/projectcalico/calico/confd/pkg/buildinfo"
+	"github.com/projectcalico/calico/confd/pkg/config"
+	logutils "github.com/projectcalico/calico/confd/pkg/log"
+	"github.com/projectcalico/calico/confd/pkg/resource/template"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"

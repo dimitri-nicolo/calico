@@ -10,9 +10,8 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
-	"github.com/projectcalico/calico/lma/pkg/rbac"
-
 	"github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
 )
 
 var _ = Describe("FlowFilter", func() {

@@ -10,15 +10,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
-
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/elastic"

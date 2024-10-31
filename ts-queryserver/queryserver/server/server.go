@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
 	"k8s.io/client-go/kubernetes"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"

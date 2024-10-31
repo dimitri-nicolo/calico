@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
-
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
 )
 

@@ -9,9 +9,8 @@ import (
 	"os"
 	"path"
 
-	"gopkg.in/natefinch/lumberjack.v2"
-
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )

@@ -10,9 +10,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
-
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	cache2 "github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"

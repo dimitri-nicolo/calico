@@ -17,14 +17,12 @@
 package fv_test
 
 import (
-	"os"
-
 	"fmt"
+	"os"
 	"regexp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"

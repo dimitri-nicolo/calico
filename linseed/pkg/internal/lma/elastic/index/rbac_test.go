@@ -5,16 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	. "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
-
-	"github.com/olivere/elastic/v7"
-
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

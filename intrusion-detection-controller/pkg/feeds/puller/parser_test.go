@@ -7,10 +7,9 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type entryHandlerInput struct {

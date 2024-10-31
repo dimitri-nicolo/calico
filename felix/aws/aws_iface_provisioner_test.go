@@ -22,13 +22,11 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clock "k8s.io/utils/clock/testing"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (

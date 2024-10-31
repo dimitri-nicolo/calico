@@ -8,11 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
 var (

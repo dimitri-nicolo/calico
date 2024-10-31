@@ -17,15 +17,12 @@ package resources
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-
+	"github.com/tigera/api/pkg/lib/numorstring"
 	k8sapi "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/api/pkg/lib/numorstring"
-
+	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 

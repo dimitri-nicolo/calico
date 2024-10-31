@@ -3,12 +3,11 @@
 package processes
 
 import (
-	"github.com/projectcalico/calico/linseed/pkg/handler"
-
 	authzv1 "k8s.io/api/authorization/v1"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/handler"
 )
 
 const (

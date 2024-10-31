@@ -14,12 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/yamux"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"golang.org/x/oauth2"
-
-	"github.com/hashicorp/yamux"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"

@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"net"
 
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const TigeraComment = "Managed by Tigera Calico Enterprise"

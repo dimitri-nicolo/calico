@@ -13,13 +13,10 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
-	log "github.com/sirupsen/logrus"
-
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/prometheus/client_golang/prometheus"
-
+	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	corev1 "k8s.io/api/core/v1"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

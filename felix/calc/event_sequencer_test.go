@@ -18,13 +18,12 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/projectcalico/calico/felix/calc/capture"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/calc/capture"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

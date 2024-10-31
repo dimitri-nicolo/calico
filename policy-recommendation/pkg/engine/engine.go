@@ -7,11 +7,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"k8s.io/apimachinery/pkg/types"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/types"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	libcselector "github.com/projectcalico/calico/libcalico-go/lib/selector"

@@ -8,11 +8,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
-
-	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 )
 
 // The resyncCache provides syncer support for a single key type in the backend.

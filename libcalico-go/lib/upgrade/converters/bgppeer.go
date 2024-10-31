@@ -18,9 +18,8 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv1 "github.com/projectcalico/calico/libcalico-go/lib/apis/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/apis/v1/unversioned"

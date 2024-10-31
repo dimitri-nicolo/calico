@@ -19,7 +19,6 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
-
 	handler "github.com/projectcalico/calico/prometheus-service/pkg/handler/proxy"
 )
 

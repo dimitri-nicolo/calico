@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -29,13 +31,8 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
-	licClient "github.com/projectcalico/calico/licensing/client"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/apiserver/pkg/helpers"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	licClient "github.com/projectcalico/calico/licensing/client"
 )
 
 type apiServerStrategy struct {

@@ -8,9 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	k8scache "k8s.io/client-go/tools/cache"
-
 	"k8s.io/apimachinery/pkg/watch"
+	k8scache "k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/kubernetes"
 )

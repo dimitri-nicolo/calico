@@ -7,17 +7,14 @@ import (
 	"fmt"
 	"strings"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/windows-networking/pkg/testutils"
 
 	"github.com/projectcalico/calico/felix/fv/metrics"
-	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
-
-	log "github.com/sirupsen/logrus"
-
 	. "github.com/projectcalico/calico/felix/fv/winfv"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/libcalico-go/lib/winutils"
 )
 
 // Generate traffic flows to test flow logs on Windows nodes.

@@ -6,15 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/mock"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/stretchr/testify/mock"
-
 	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func cwEvent(t calicoWatch.EventType, o *api.SecurityEventWebhook) calicoWatch.Event {

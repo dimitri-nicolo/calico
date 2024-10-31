@@ -5,12 +5,11 @@ import (
 	"context"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const wildcardSuffix = "-*"

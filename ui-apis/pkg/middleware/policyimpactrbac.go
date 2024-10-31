@@ -5,14 +5,11 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 )
 

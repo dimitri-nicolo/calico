@@ -19,7 +19,6 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
 	logutil "github.com/projectcalico/calico/felix/logutils"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 

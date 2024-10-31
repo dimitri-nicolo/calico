@@ -7,16 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/stretchr/testify/mock"
-
-	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
-
+	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
+	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/bcrypt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"

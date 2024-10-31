@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	k8sFake "k8s.io/client-go/kubernetes/fake"
 	crtlclient "sigs.k8s.io/controller-runtime/pkg/client"

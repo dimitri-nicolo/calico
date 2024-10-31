@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
-
 	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/compliance/pkg/api"

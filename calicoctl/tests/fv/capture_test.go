@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
 
 	. "github.com/projectcalico/calico/calicoctl/tests/fv/utils"

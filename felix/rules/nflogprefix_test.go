@@ -15,11 +15,11 @@
 package rules_test
 
 import (
-	. "github.com/projectcalico/calico/felix/rules"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	. "github.com/projectcalico/calico/felix/rules"
 )
 
 var _ = Describe("NFLOG prefix construction tests", func() {

@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -23,8 +24,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	. "github.com/projectcalico/calico/ui-apis/pkg/middleware/aggregation"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // MockAuthorizer implements both Authorizer interface to allow mock results.

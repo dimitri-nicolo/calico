@@ -9,10 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/yamux"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/hashicorp/yamux"
 
 	"github.com/projectcalico/calico/voltron/pkg/state"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"

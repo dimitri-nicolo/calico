@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+	cli "github.com/urfave/cli/v2"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/projectcalico/calico/release/internal/config"
@@ -32,9 +34,6 @@ import (
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
 	"github.com/projectcalico/calico/release/pkg/tasks"
-
-	"github.com/sirupsen/logrus"
-	cli "github.com/urfave/cli/v2"
 )
 
 const (

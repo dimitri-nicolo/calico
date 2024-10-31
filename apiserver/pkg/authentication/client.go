@@ -12,14 +12,12 @@ import (
 	"net/url"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (

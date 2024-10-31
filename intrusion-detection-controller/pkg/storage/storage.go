@@ -11,9 +11,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
@@ -21,10 +23,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (

@@ -11,7 +11,6 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"

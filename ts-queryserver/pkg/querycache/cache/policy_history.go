@@ -4,9 +4,8 @@ package cache
 import (
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	prommodel "github.com/prometheus/common/model"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"

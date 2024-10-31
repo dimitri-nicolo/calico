@@ -25,11 +25,9 @@ import (
 
 	//nolint:staticcheck // Ignore SA1019 deprecated
 	"github.com/golang/protobuf/proto"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
-
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"

@@ -9,24 +9,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	"k8s.io/apimachinery/pkg/types"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	"k8s.io/apiserver/pkg/apis/audit"
-
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apiserver/pkg/apis/audit"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/config"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func RunAuditEETest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {

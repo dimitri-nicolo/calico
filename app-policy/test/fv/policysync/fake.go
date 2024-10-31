@@ -6,7 +6,6 @@ import (
 	"net"
 
 	log "github.com/sirupsen/logrus"
-
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/felix/proto"

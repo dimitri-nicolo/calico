@@ -11,15 +11,14 @@ import (
 	"strings"
 	"time"
 
-	calcCapture "github.com/projectcalico/calico/felix/calc/capture"
-
-	"github.com/projectcalico/calico/felix/proto"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/google/gopacket/pcapgo"
 	log "github.com/sirupsen/logrus"
+
+	calcCapture "github.com/projectcalico/calico/felix/calc/capture"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 // PacketInfoLen represents the size of packet header. The packet header will be written

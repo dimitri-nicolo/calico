@@ -6,13 +6,12 @@ import (
 	"sync/atomic"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/calico/lma/pkg/cache/fake"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Test Caching Authorizer", func() {

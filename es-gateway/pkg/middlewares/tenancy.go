@@ -9,10 +9,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/projectcalico/calico/lma/pkg/httputils"
-
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 const maxSize = 100 * 1000000

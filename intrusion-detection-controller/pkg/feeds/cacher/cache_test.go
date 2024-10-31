@@ -10,11 +10,10 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/calico"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func TestGlobalThreatFeedCache_GetCachedGlobalThreatFeed(t *testing.T) {

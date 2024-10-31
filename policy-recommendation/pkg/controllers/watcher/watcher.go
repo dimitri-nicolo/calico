@@ -6,7 +6,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"

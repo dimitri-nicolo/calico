@@ -5,11 +5,9 @@ package v3
 import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	k8sv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = DescribeTable("GlobalThreatFeed Validator",

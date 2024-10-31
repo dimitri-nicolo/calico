@@ -28,16 +28,13 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
-
 	"github.com/tigera/api/pkg/lib/numorstring"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/stringutils"

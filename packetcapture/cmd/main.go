@@ -10,7 +10,6 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
-
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"

@@ -5,11 +5,10 @@ package calico
 import (
 	"context"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type MockGlobalThreatFeedInterface struct {

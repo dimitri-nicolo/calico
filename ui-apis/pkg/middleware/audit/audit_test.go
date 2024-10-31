@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	authnv1 "k8s.io/api/authentication/v1"
 	knet "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,14 +19,9 @@ import (
 	kaudit "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var auditRequest = `

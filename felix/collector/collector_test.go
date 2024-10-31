@@ -12,16 +12,13 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/pkg/proxy"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/calico/libcalico-go/lib/net"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
@@ -34,9 +31,8 @@ import (
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
-
-	"k8s.io/apimachinery/pkg/util/intstr"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/nfnetlink"
 	"github.com/projectcalico/calico/nfnetlink/nfnl"
 )

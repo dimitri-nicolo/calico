@@ -10,9 +10,20 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/equality"
-
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	uruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/reference"
+	"k8s.io/kubectl/pkg/scheme"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
@@ -27,20 +38,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
-	v1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	uruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/tools/reference"
-	"k8s.io/kubectl/pkg/scheme"
 )
 
 const (

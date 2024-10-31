@@ -13,12 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector"

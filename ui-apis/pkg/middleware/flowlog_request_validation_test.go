@@ -6,10 +6,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	networkingv1 "k8s.io/api/networking/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	networkingv1 "k8s.io/api/networking/v1"
 )
 
 const (

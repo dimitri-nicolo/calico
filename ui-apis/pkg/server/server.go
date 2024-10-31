@@ -8,13 +8,12 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
@@ -39,8 +38,6 @@ import (
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware/servicegraph"
 	"github.com/projectcalico/calico/ui-apis/pkg/pip"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

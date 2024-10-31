@@ -3,13 +3,11 @@ package xrefcache
 
 import (
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // This file implements a RuleSelector cache. This is a pseudo-resource, implemented to allow rule selectors to be

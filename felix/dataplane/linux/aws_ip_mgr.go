@@ -16,19 +16,15 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/calico/felix/routetable/ownershippol"
-
-	"github.com/projectcalico/calico/felix/environment"
-
-	"github.com/projectcalico/calico/felix/ifacemonitor"
-
 	"github.com/projectcalico/calico/felix/aws"
-
+	"github.com/projectcalico/calico/felix/environment"
+	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
+	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 

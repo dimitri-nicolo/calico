@@ -8,14 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaindex "github.com/projectcalico/calico/linseed/pkg/internal/lma/elastic/index"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 // BuildQuery builds an elastic log query using the given parameters.

@@ -29,9 +29,8 @@ import (
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"

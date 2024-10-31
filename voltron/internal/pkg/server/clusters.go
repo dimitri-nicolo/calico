@@ -18,13 +18,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/http2"
-
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
@@ -36,8 +34,6 @@ import (
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for

@@ -8,13 +8,12 @@ import (
 	"regexp"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/strings/slices"
-
-	log "github.com/sirupsen/logrus"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -30,8 +29,6 @@ import (
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/labelhandler"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewQueryInterface returns a queryable resource cache.

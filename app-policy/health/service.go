@@ -17,9 +17,8 @@ package health
 import (
 	"context"
 
-	healthzv1 "google.golang.org/grpc/health/grpc_health_v1"
-
 	log "github.com/sirupsen/logrus"
+	healthzv1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 var (

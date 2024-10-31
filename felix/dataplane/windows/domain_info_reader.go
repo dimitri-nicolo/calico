@@ -7,7 +7,6 @@ import (
 
 	fc "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/dns"
-
 	"github.com/projectcalico/calico/felix/dataplane/windows/etw"
 )
 

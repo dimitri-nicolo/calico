@@ -4,10 +4,10 @@ package main
 import (
 	"os"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	server "github.com/projectcalico/calico/prometheus-service/pkg/server"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (

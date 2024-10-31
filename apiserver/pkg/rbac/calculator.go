@@ -8,8 +8,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/discovery"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,10 +18,9 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/client-go/discovery"
 	"k8s.io/kubernetes/pkg/registry/rbac/validation"
 	rbac_auth "k8s.io/kubernetes/plugin/pkg/auth/authorizer/rbac"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Verb is a bit-wise set of available verbs for Kubernetes RBAC. Use Verbs() to convert to a slice of strings.

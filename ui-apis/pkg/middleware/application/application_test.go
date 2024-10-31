@@ -12,6 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -19,8 +20,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	"github.com/projectcalico/calico/ui-apis/test/thirdpartymock"
-
-	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

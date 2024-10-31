@@ -3,10 +3,10 @@
 package calc_test
 
 import (
+	"net"
+
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
-	"net"
 
 	. "github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/ip"

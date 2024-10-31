@@ -9,15 +9,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
-
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/benchmark"
 	"github.com/projectcalico/calico/compliance/pkg/cis"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/version"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 const (

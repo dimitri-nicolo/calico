@@ -4,10 +4,10 @@ import (
 	"math"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // newReportGenerator creates a report generator that observes the event channels and generates basicLicenseUsageReport objects

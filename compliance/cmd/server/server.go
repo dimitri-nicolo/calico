@@ -9,13 +9,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
-	"k8s.io/apiserver/pkg/authentication/user"
-
 	"github.com/caimeo/iniflags"
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-
+	k8sserviceaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	krest "k8s.io/client-go/rest"
 	"k8s.io/klog/v2"

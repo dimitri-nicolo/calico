@@ -5,7 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 )
 

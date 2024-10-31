@@ -7,14 +7,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"k8s.io/apiserver/pkg/authentication/user"
-
 	log "github.com/sirupsen/logrus"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"

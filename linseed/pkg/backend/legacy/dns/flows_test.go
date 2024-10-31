@@ -9,22 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-
 	"github.com/google/gopacket/layers"
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )

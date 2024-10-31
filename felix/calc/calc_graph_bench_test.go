@@ -24,7 +24,6 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/config"

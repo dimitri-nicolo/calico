@@ -8,16 +8,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
 	"github.com/olivere/elastic/v7"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/context"
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 // JsonObject is used to define a JSON object as a map representation

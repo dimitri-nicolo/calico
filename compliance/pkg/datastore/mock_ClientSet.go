@@ -4,7 +4,7 @@ package datastore
 
 import (
 	mock "github.com/stretchr/testify/mock"
-
+	v3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	discovery "k8s.io/client-go/discovery"
 	v1 "k8s.io/client-go/kubernetes/typed/admissionregistration/v1"
@@ -50,8 +50,6 @@ import (
 	storagev1alpha1 "k8s.io/client-go/kubernetes/typed/storage/v1alpha1"
 	storagev1beta1 "k8s.io/client-go/kubernetes/typed/storage/v1beta1"
 	rest "k8s.io/client-go/rest"
-
-	v3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
 	list "github.com/projectcalico/calico/lma/pkg/list"
 )

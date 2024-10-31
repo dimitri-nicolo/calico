@@ -3,7 +3,7 @@ package pip
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,8 +15,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/api"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
 	"github.com/projectcalico/calico/ui-apis/pkg/pip/policycalc"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

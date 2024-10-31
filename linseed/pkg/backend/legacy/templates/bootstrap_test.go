@@ -8,11 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -20,6 +17,7 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 )
 

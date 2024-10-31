@@ -15,7 +15,10 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/stretchr/testify/require"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,11 +40,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/linseed/pkg/controller/token"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	projectcalicov3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 var (

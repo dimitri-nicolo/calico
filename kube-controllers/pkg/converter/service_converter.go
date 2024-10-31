@@ -22,17 +22,15 @@ import (
 	"strconv"
 	"strings"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
 	log "github.com/sirupsen/logrus"
-
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 const (

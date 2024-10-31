@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"

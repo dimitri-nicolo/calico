@@ -2,13 +2,12 @@
 package xrefcache
 
 import (
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/compliance/pkg/dispatcher"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Callback for notification that a particular resource type is in-scope. The x-ref cache will guarantee that this

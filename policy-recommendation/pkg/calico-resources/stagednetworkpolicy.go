@@ -6,12 +6,11 @@ import (
 	"sort"
 	"time"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/compliance/pkg/hashutils"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/types"

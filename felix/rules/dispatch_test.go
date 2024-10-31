@@ -17,18 +17,16 @@ package rules_test
 import (
 	"fmt"
 
-	"github.com/projectcalico/calico/felix/generictables"
-	. "github.com/projectcalico/calico/felix/rules"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
+	. "github.com/projectcalico/calico/felix/rules"
 )
 
 var _ = Describe("Dispatch chains", func() {

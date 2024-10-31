@@ -12,13 +12,12 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/calico/linseed/pkg/controller/token"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
-
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
 )
 
 var _ = Describe("Test local authenticator", func() {

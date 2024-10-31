@@ -5,22 +5,18 @@ package capture_test
 import (
 	"context"
 	"fmt"
-
-	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
-
 	"time"
 
-	. "github.com/onsi/gomega"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/proto"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
 )

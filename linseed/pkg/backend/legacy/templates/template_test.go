@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-
 	"github.com/stretchr/testify/require"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
 func TestBootstrapFlowsTemplate(t *testing.T) {

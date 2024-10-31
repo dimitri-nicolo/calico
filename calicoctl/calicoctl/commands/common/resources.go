@@ -19,16 +19,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/projectcalico/go-yaml-wrapper"
 	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	licClient "github.com/projectcalico/calico/licensing/client"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/go-yaml-wrapper"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
@@ -37,6 +33,7 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	licClient "github.com/projectcalico/calico/licensing/client"
 )
 
 type action int

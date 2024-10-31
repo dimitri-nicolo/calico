@@ -10,11 +10,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"

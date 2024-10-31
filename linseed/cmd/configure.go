@@ -7,8 +7,6 @@ import (
 	"os"
 	"time"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
@@ -16,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/config"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 func boostrapElasticIndices() {

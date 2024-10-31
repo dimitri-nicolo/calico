@@ -13,31 +13,24 @@ import (
 	"syscall"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/klog/v2"
-
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
-
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/config"
-
-	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
-
-	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/config"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
 	geo "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/rbac"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	feedsWatcher "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/watcher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/forwarder"
@@ -53,6 +46,8 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 

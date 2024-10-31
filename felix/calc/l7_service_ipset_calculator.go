@@ -6,17 +6,15 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/projectcalico/calico/felix/proto"
-
-	"github.com/projectcalico/calico/felix/config"
-	"github.com/projectcalico/calico/felix/ip"
-
 	log "github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 
+	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dispatcher"
+	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/tproxydefs"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

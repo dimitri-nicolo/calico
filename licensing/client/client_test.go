@@ -10,11 +10,10 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
 	. "github.com/onsi/gomega"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

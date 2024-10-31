@@ -20,15 +20,13 @@ import (
 	"strings"
 
 	"github.com/docopt/docopt-go"
-	"gopkg.in/yaml.v2"
-
-	"github.com/projectcalico/calico/licensing/client"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"gopkg.in/yaml.v2"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
+	"github.com/projectcalico/calico/licensing/client"
 )
 
 func Validate(args []string) error {

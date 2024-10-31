@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	rbac_v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -15,8 +15,6 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	rbacmock "github.com/projectcalico/calico/apiserver/pkg/rbac/mock"
 	. "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("AuthorizationReview storage tests", func() {

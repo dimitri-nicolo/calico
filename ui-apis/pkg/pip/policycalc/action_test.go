@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
-
 	"github.com/projectcalico/calico/ui-apis/pkg/pip/policycalc"
 )
 

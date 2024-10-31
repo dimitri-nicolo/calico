@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"

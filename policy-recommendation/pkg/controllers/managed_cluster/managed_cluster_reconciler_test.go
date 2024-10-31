@@ -8,16 +8,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
 	kscheme "k8s.io/client-go/kubernetes/scheme"
 	k8sctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectlrruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	fakecalico "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

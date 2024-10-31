@@ -6,13 +6,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
-
 	"github.com/stretchr/testify/mock"
-
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
-
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"

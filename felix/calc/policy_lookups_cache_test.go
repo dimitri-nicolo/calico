@@ -3,14 +3,13 @@
 package calc_test
 
 import (
-	. "github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	. "github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var (

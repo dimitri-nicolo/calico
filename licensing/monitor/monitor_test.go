@@ -10,18 +10,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v4/jwt"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/go-jose/go-jose/v4/jwt"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	lapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	lclient "github.com/projectcalico/calico/licensing/client"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func init() {

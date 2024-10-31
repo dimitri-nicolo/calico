@@ -8,13 +8,11 @@ import (
 	"strings"
 
 	"github.com/SermoDigital/jose/jws"
-
-	controller "github.com/projectcalico/calico/linseed/pkg/controller/token"
-
 	"github.com/sirupsen/logrus"
 	authzv1 "k8s.io/api/authorization/v1"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	controller "github.com/projectcalico/calico/linseed/pkg/controller/token"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )

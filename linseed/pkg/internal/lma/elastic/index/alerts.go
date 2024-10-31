@@ -6,14 +6,12 @@ import (
 	"net/http"
 
 	"github.com/olivere/elastic/v7"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
 // alertsIndexHelper implements the Helper interface for events.

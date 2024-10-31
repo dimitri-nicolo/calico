@@ -15,10 +15,9 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/memkv"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/confd/pkg/backends"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

@@ -4,6 +4,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
@@ -11,10 +13,6 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
-	"k8s.io/client-go/kubernetes"
 )
 
 // Elasticsearch is a ControllerManager implementation responsible for managing elasticsearch resources for a manage

@@ -11,13 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/voltron/pkg/state"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/pkg/state"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 

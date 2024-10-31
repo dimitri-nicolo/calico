@@ -6,7 +6,6 @@ import (
 	"context"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/endpoints/request"

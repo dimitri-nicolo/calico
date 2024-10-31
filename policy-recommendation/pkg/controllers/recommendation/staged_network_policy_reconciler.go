@@ -8,12 +8,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

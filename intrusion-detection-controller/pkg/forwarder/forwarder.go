@@ -12,14 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	"github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )

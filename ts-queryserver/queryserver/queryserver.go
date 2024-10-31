@@ -7,9 +7,10 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
@@ -18,9 +19,6 @@ import (
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 	handler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/server"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Client Config from environment option.

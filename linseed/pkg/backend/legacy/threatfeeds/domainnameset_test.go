@@ -9,11 +9,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func TestDomainSetBasic(t *testing.T) {

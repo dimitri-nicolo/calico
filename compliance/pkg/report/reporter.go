@@ -7,10 +7,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
 	capi "github.com/projectcalico/calico/compliance/pkg/api"
 	"github.com/projectcalico/calico/compliance/pkg/archive"
@@ -22,8 +20,7 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (

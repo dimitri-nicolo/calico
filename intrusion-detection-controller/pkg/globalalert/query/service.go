@@ -12,18 +12,14 @@ import (
 	"strings"
 	"time"
 
-	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	log "github.com/sirupsen/logrus"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 const (

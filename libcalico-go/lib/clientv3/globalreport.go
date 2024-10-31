@@ -16,14 +16,13 @@ package clientv3
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // GlobalReportInterface has methods to work with GlobalReport resources.

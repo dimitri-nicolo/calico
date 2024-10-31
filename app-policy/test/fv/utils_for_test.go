@@ -10,7 +10,6 @@ import (
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	authzv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 

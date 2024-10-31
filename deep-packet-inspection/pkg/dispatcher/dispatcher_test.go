@@ -6,6 +6,11 @@ import (
 	"context"
 	"reflect"
 
+	. "github.com/onsi/ginkgo"
+	"github.com/stretchr/testify/mock"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/alert"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
@@ -15,13 +20,6 @@ import (
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/exec"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
-
-	. "github.com/onsi/ginkgo"
-	"github.com/stretchr/testify/mock"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )

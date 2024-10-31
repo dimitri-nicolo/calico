@@ -24,9 +24,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"golang.org/x/sync/semaphore"
 
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"

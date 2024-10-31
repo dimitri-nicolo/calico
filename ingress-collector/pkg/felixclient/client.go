@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/resolver"
 

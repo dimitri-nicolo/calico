@@ -15,9 +15,8 @@
 package populator
 
 import (
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // Interface for a component to populate its status to node status resource.

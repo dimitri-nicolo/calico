@@ -7,10 +7,10 @@ import (
 	"os"
 	"path"
 
-	. "github.com/projectcalico/calico/felix/ipsec"
-
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	. "github.com/projectcalico/calico/felix/ipsec"
 )
 
 var _ = DescribeTable("config tree rendering tests",

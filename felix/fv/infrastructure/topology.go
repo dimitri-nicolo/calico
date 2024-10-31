@@ -26,18 +26,15 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	licutils "github.com/projectcalico/calico/licensing/utils"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/calico/felix/fv/containers"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	"github.com/projectcalico/calico/felix/fv/containers"
+	licutils "github.com/projectcalico/calico/licensing/utils"
 )
 
 type TopologyOptions struct {

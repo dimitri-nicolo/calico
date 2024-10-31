@@ -3,9 +3,8 @@
 package events
 
 import (
-	"unsafe"
-
 	"bytes"
+	"unsafe"
 
 	log "github.com/sirupsen/logrus"
 )

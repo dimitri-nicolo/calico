@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"

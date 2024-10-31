@@ -8,9 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/go-chi/chi/v5"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 )

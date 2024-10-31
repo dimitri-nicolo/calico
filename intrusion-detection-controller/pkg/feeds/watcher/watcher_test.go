@@ -9,21 +9,18 @@ import (
 	"testing"
 	"time"
 
-	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
-
 	. "github.com/onsi/gomega"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/calico"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var testClient = &http.Client{Transport: &util.MockRoundTripper{Error: errors.New("mock error")}}

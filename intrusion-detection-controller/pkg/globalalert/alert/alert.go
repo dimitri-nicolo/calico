@@ -8,19 +8,15 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/query"
-
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/query"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 const (

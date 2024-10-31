@@ -4,19 +4,15 @@ package xrefcache_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
-
-	networkingv1 "k8s.io/api/networking/v1"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	networkingv1 "k8s.io/api/networking/v1"
 
 	. "github.com/projectcalico/calico/compliance/internal/testutils"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 var _ = Describe("xref cache", func() {

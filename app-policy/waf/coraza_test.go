@@ -1,11 +1,10 @@
 package waf_test
 
 import (
+	_ "embed"
 	"os"
 	"path/filepath"
 	"testing"
-
-	_ "embed"
 
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/sirupsen/logrus"

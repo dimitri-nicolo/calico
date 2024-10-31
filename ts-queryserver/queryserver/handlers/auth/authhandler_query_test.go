@@ -12,13 +12,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	authzv1 "k8s.io/api/authorization/v1"
-
 	"k8s.io/apimachinery/pkg/runtime"
-
 	"k8s.io/apiserver/pkg/authentication/user"
-
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"

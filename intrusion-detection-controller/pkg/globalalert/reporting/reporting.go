@@ -9,11 +9,10 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	batchv1 "k8s.io/api/batch/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/util/retry"
-
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // UpdateGlobalAlertStatusWithRetryOnConflict

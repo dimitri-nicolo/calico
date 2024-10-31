@@ -2,11 +2,10 @@
 package labels
 
 import (
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/projectcalico/calico/compliance/pkg/hashutils"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AddKindandNameLabels adds the NetworkSet Kind and Name labels.

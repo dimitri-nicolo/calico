@@ -12,11 +12,10 @@ import (
 	"strings"
 	"testing"
 
-	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/stretchr/testify/assert"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )
 
 // Token to use for HTTP requests against Linseed.

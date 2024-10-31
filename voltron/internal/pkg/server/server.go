@@ -18,20 +18,18 @@ import (
 	"strings"
 	"time"
 
-	authnv1 "k8s.io/api/authentication/v1"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
 	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	authnv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"

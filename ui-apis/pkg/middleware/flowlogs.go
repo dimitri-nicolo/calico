@@ -12,13 +12,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	pippkg "github.com/projectcalico/calico/ui-apis/pkg/pip"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
@@ -27,8 +25,7 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	pippkg "github.com/projectcalico/calico/ui-apis/pkg/pip"
 )
 
 type FlowLogsParams struct {

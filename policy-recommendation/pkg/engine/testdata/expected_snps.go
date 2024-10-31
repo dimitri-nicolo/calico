@@ -2,10 +2,9 @@
 package enginedata
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // The contents of this file are meant to be used to hold the expected output of the staged network

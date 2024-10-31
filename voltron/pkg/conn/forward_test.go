@@ -4,10 +4,10 @@ import (
 	"net"
 	"sync"
 
-	"github.com/projectcalico/calico/voltron/pkg/conn"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/voltron/pkg/conn"
 )
 
 var _ = Describe("Forwarding connections", func() {

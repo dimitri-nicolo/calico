@@ -12,18 +12,15 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kscheme "k8s.io/client-go/kubernetes/scheme"
-
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (

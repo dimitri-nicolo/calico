@@ -6,12 +6,11 @@ import (
 	"context"
 	"time"
 
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 

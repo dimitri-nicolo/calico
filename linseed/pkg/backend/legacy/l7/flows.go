@@ -4,10 +4,9 @@ package l7
 import (
 	"context"
 
+	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/apimachinery/pkg/types"
-
-	elastic "github.com/olivere/elastic/v7"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"

@@ -5,7 +5,6 @@ import (
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
-
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 

@@ -7,13 +7,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 type ipSetQuerier struct {

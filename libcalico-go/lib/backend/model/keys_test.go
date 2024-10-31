@@ -22,11 +22,9 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
-	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 

@@ -13,13 +13,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
 	"github.com/projectcalico/calico/egress-gateway/controlplane/mock"
 	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
 	mocknetlink "github.com/projectcalico/calico/egress-gateway/netlinkshim/mock"
 	netutil "github.com/projectcalico/calico/egress-gateway/util/net"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 const (

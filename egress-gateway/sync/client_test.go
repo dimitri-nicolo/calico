@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
 
 	mymock "github.com/projectcalico/calico/egress-gateway/sync/mocks"

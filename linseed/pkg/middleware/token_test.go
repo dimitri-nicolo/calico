@@ -13,18 +13,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/projectcalico/calico/linseed/pkg/middleware"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTokenMiddleware(t *testing.T) {

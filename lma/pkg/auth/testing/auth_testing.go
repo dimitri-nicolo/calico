@@ -8,9 +8,8 @@ import (
 	"fmt"
 
 	. "github.com/onsi/gomega"
-	authzv1 "k8s.io/api/authorization/v1"
-
 	authnv1 "k8s.io/api/authentication/v1"
+	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"

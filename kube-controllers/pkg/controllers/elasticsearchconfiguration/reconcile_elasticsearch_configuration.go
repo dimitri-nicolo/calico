@@ -7,19 +7,18 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-
-	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (

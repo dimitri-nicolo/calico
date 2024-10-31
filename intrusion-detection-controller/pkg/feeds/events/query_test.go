@@ -8,13 +8,12 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func TestSuspiciousIP_Success(t *testing.T) {

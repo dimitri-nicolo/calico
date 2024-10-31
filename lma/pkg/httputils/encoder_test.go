@@ -12,10 +12,9 @@ import (
 	"strings"
 
 	"github.com/olivere/elastic/v7"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )

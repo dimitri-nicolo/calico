@@ -4,11 +4,10 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"

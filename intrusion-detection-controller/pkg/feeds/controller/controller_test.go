@@ -10,15 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/spyutil"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 )
 
 const (

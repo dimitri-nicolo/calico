@@ -9,9 +9,8 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/projectcalico/calico/felix/config"

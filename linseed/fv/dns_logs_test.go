@@ -9,20 +9,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
-
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
-	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
 	"github.com/google/gopacket/layers"
+	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	"github.com/stretchr/testify/require"
-
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/linseed/pkg/config"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 func RunDNSLogTest(t *testing.T, name string, testFn func(*testing.T, bapi.Index)) {

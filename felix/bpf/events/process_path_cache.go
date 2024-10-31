@@ -14,9 +14,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
 	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 // processPathCacheEntry is a cache entry for process path information.

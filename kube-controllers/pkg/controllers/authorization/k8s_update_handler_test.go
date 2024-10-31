@@ -7,23 +7,19 @@ import (
 	"fmt"
 	"sync"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/userscache"
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	"github.com/stretchr/testify/mock"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/calico/kube-controllers/pkg/rbaccache"
-
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/userscache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/rbaccache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 var _ = Describe("role mapping listenAndSynchronize", func() {

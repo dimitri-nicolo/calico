@@ -5,14 +5,11 @@ import (
 	"context"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-
 	log "github.com/sirupsen/logrus"
-
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/lma/pkg/k8s"
-
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 )
 

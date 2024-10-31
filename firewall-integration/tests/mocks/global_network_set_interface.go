@@ -6,13 +6,9 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
-
-	types "k8s.io/apimachinery/pkg/types"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 )
 

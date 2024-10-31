@@ -9,13 +9,12 @@ import (
 
 	"github.com/prometheus/procfs"
 
+	. "github.com/projectcalico/calico/felix/collector/file"
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/ip"
-
-	. "github.com/projectcalico/calico/felix/collector/file"
 )
 
 func BenchmarkFileReporter_Report(b *testing.B) {

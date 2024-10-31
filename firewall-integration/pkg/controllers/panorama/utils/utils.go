@@ -17,15 +17,13 @@ import (
 	"github.com/PaloAltoNetworks/pango/pnrm/dg"
 	"github.com/PaloAltoNetworks/pango/poli/security"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/selector"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	pkgutil "github.com/projectcalico/calico/firewall-integration/pkg/util"
-
-	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (

@@ -3,6 +3,8 @@ package policycalc
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -10,9 +12,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 // This file contains most of the policy calculation tests, by explicitly testing each match criteria.

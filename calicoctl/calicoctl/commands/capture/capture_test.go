@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/capture"
-
-	. "github.com/onsi/gomega"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 

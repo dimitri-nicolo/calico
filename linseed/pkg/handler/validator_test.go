@@ -10,20 +10,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/config"
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	"github.com/projectcalico/calico/linseed/pkg/handler"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 const (

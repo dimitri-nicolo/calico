@@ -15,19 +15,16 @@
 package converter_test
 
 import (
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
-	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/client-go/tools/cache"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/cache"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
 )
 
 var _ = Describe("NetworkPolicy conversion tests", func() {

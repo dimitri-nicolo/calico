@@ -22,24 +22,20 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/projectcalico/calico/felix/fv/connectivity"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/collector/flowlog"
-	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-
+	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
 var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 workloads", func() {

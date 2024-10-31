@@ -9,9 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	validator "gopkg.in/go-playground/validator.v9"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	validator "gopkg.in/go-playground/validator.v9"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )

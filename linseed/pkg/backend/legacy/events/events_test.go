@@ -9,26 +9,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tidwall/gjson"
-
-	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
-
-	"github.com/projectcalico/calico/linseed/pkg/testutils"
-
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 

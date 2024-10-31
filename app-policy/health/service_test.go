@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-
 	healthzv1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 

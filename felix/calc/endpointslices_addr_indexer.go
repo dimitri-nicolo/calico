@@ -5,12 +5,10 @@ package calc
 import (
 	"net"
 
-	"github.com/projectcalico/calico/felix/k8sutils"
-
 	log "github.com/sirupsen/logrus"
-
 	discovery "k8s.io/api/discovery/v1"
 
+	"github.com/projectcalico/calico/felix/k8sutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )

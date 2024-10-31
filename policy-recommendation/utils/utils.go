@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"

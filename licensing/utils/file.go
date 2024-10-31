@@ -4,9 +4,8 @@ import (
 	"log"
 	"os"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // ReadFile reads license from file and returns the LicenseKey resource.

@@ -14,12 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gopacket/layers"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/net/idna"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
-	"github.com/google/gopacket/layers"
-	"golang.org/x/net/idna"
 )
 
 // DNSLogParams define querying parameters to retrieve DNS logs

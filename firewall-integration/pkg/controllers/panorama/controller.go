@@ -9,13 +9,12 @@ import (
 	panw "github.com/PaloAltoNetworks/pango"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
-
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/firewall-integration/pkg/cache"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 )
 
 const (

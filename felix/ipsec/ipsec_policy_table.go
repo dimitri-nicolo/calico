@@ -15,7 +15,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 

@@ -4,10 +4,9 @@ package cache
 import (
 	"time"
 
+	prommodel "github.com/prometheus/common/model"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/informers"
-
-	prommodel "github.com/prometheus/common/model"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"

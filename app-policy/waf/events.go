@@ -7,9 +7,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	corazatypes "github.com/corazawaf/coraza/v3/types"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"

@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
@@ -19,8 +19,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {

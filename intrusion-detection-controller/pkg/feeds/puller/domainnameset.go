@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/idna"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
@@ -18,8 +19,6 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

@@ -4,12 +4,11 @@ package client
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // mocks api.Node

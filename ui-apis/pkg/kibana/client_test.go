@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"sync"
 
-	calicojson "github.com/projectcalico/calico/ui-apis/test/json"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	calicojson "github.com/projectcalico/calico/ui-apis/test/json"
 )
 
 var _ = Describe("client", func() {
