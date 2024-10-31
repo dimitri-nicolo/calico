@@ -178,6 +178,9 @@ type FieldInfo struct {
 
 	// GoType is the type of the field in the FelixConfiguration Go API structs.
 	GoType string
+
+	// OpenSourceOnly is true if the parameter is only supported in open-source.
+	OpenSourceOnly bool
 }
 
 type ParseFailureAction string
@@ -220,7 +223,15 @@ func CombinedFieldInfo() ([]*FieldInfo, error) {
 			pm.YAMLSchema = pm.StringSchema
 		}
 		if pm.GroupWithSortPrefix == OpenstackMetadataGroup {
-			pm.Description = "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\n" + pm.Description
+			pm.Description = "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\n" + pm.Description
+			pm.OpenSourceOnly = true
+		}
+		if strings.HasPrefix(pm.NameConfigFile, "Etcd") {
+			pm.Description = "**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.\n\n" + pm.Description
+			pm.OpenSourceOnly = true
+		}
+		if strings.HasPrefix(pm.NameConfigFile, "UsageReporting") {
+			pm.OpenSourceOnly = true
 		}
 		pm.StringSchemaHTML = convertSchemaToHTML(pm.StringSchema)
 		pm.YAMLSchemaHTML = convertSchemaToHTML(pm.YAMLSchema)
@@ -281,6 +292,7 @@ func CombinedFieldInfo() ([]*FieldInfo, error) {
 }
 
 var backtickRegex = regexp.MustCompile("`([^`]+)`")
+var doubleStarRegex = regexp.MustCompile(`\*\*(.+?)\*\*`)
 
 func convertDescriptionToHTML(description string) string {
 	// The description is basically simple markdown:
@@ -289,7 +301,7 @@ func convertDescriptionToHTML(description string) string {
 	// - Backticks should be converted to <code>.
 	description = escapeHTML(description)
 	description = "<p>" + strings.ReplaceAll(description, "\n\n", "</p>\n<p>") + "</p>"
-	description = convertBackticksToHTML(description)
+	description = convertMarkdownMarksToHTML(description)
 	return description
 }
 
@@ -299,12 +311,14 @@ func convertSchemaToHTML(description string) string {
 	description = escapeHTML(description)
 	// 2^63 is common in int ranges, make it look nicer.
 	description = strings.ReplaceAll(description, "2^63", "2<sup>63</sup>")
-	description = convertBackticksToHTML(description)
+	description = convertMarkdownMarksToHTML(description)
 	return description
 }
 
-func convertBackticksToHTML(description string) string {
-	return backtickRegex.ReplaceAllString(description, "<code>$1</code>")
+func convertMarkdownMarksToHTML(description string) string {
+	description = doubleStarRegex.ReplaceAllString(description, "<b>$1</b>")
+	description = backtickRegex.ReplaceAllString(description, "<code>$1</code>")
+	return description
 }
 
 func escapeHTML(s string) string {

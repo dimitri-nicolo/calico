@@ -48,6 +48,8 @@ will be used by default).
 
 ### `EtcdAddr` (config file / env var only)
 
+**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.
+
 When using the `etcdv3` datastore driver, the etcd server and port to connect to. If EtcdEndpoints
 is also specified, it takes precedence.
 
@@ -59,6 +61,8 @@ is also specified, it takes precedence.
 | Notes | Config file / env var only. | 
 
 ### `EtcdCaFile` (config file / env var only)
+
+**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.
 
 When using the `etcdv3` datastore driver, path to TLS CA file to use when connecting to
 etcd. If the CA file is specified, the other TLS parameters are mandatory.
@@ -72,6 +76,8 @@ etcd. If the CA file is specified, the other TLS parameters are mandatory.
 
 ### `EtcdCertFile` (config file / env var only)
 
+**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.
+
 When using the `etcdv3` datastore driver, path to TLS certificate file to use when connecting to
 etcd. If the certificate file is specified, the other TLS parameters are mandatory.
 
@@ -83,6 +89,8 @@ etcd. If the certificate file is specified, the other TLS parameters are mandato
 | Notes | Config file / env var only. | 
 
 ### `EtcdEndpoints` (config file / env var only)
+
+**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.
 
 When using the `etcdv3` datastore driver, comma-delimited list of etcd endpoints to connect to,
 replaces EtcdAddr and EtcdScheme.
@@ -96,6 +104,8 @@ replaces EtcdAddr and EtcdScheme.
 
 ### `EtcdKeyFile` (config file / env var only)
 
+**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.
+
 When using the `etcdv3` datastore driver, path to TLS private key file to use when connecting to
 etcd. If the key file is specified, the other TLS parameters are mandatory.
 
@@ -107,6 +117,8 @@ etcd. If the key file is specified, the other TLS parameters are mandatory.
 | Notes | Config file / env var only. | 
 
 ### `EtcdScheme` (config file / env var only)
+
+**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.
 
 EtcdAddr: when using the `etcdv3` datastore driver, the URL scheme to use. If EtcdEndpoints
 is also specified, it takes precedence.
@@ -1924,7 +1936,7 @@ Used to specify the path of the stats dump file on Windows nodes.
 
 ### `EndpointReportingDelaySecs` (config file) / `endpointReportingDelay` (YAML)
 
-**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.
 
 The delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.
 
@@ -1939,7 +1951,7 @@ The delay before Felix reports endpoint status to the datastore. This is only us
 
 ### `EndpointReportingEnabled` (config file) / `endpointReportingEnabled` (YAML)
 
-**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.
 
 Controls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.
 
@@ -1954,7 +1966,7 @@ Controls whether Felix reports endpoint status to the datastore. This is only us
 
 ### `MetadataAddr` (config file) / `metadataAddr` (YAML)
 
-**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.
 
 The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.
 
@@ -1970,7 +1982,7 @@ The IP address or domain name of the server that can answer VM queries for cloud
 
 ### `MetadataPort` (config file) / `metadataPort` (YAML)
 
-**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.
 
 The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .
 
@@ -1986,7 +1998,7 @@ The port of the metadata server. This, combined with global.MetadataAddr (if not
 
 ### `OpenstackRegion` (config file) / `openstackRegion` (YAML)
 
-**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.
 
 The name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.
 
@@ -2002,7 +2014,7 @@ The name of the region that a particular Felix belongs to. In a multi-region Cal
 
 ### `ReportingIntervalSecs` (config file) / `reportingInterval` (YAML)
 
-**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.
 
 The interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.
 
@@ -2017,7 +2029,7 @@ The interval at which Felix reports its status into the datastore or 0 to disabl
 
 ### `ReportingTTLSecs` (config file) / `reportingTTL` (YAML)
 
-**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.
+**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.
 
 The time-to-live setting for process-wide status reports.
 

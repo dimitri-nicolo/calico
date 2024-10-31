@@ -28,7 +28,8 @@
           "Description": "Controls which datastore driver Felix will use. Typically, this is detected from the environment\nand it does not need to be set manually. (For example, if `KUBECONFIG` is set, the kubernetes datastore driver\nwill be used by default).",
           "DescriptionHTML": "<p>Controls which datastore driver Felix will use. Typically, this is detected from the environment\nand it does not need to be set manually. (For example, if <code>KUBECONFIG</code> is set, the kubernetes datastore driver\nwill be used by default).</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -51,10 +52,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "LocalOnly",
-          "Description": "When using the `etcdv3` datastore driver, the etcd server and port to connect to. If EtcdEndpoints\nis also specified, it takes precedence.",
-          "DescriptionHTML": "<p>When using the <code>etcdv3</code> datastore driver, the etcd server and port to connect to. If EtcdEndpoints\nis also specified, it takes precedence.</p>",
+          "Description": "**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.\n\nWhen using the `etcdv3` datastore driver, the etcd server and port to connect to. If EtcdEndpoints\nis also specified, it takes precedence.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; <code>etcdv3</code> datastore driver is not supported in Calico Enterprise/Cloud.</p>\n<p>When using the <code>etcdv3</code> datastore driver, the etcd server and port to connect to. If EtcdEndpoints\nis also specified, it takes precedence.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Datastore connection",
@@ -77,10 +79,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "LocalOnly",
-          "Description": "When using the `etcdv3` datastore driver, path to TLS CA file to use when connecting to\netcd. If the CA file is specified, the other TLS parameters are mandatory.",
-          "DescriptionHTML": "<p>When using the <code>etcdv3</code> datastore driver, path to TLS CA file to use when connecting to\netcd. If the CA file is specified, the other TLS parameters are mandatory.</p>",
+          "Description": "**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.\n\nWhen using the `etcdv3` datastore driver, path to TLS CA file to use when connecting to\netcd. If the CA file is specified, the other TLS parameters are mandatory.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; <code>etcdv3</code> datastore driver is not supported in Calico Enterprise/Cloud.</p>\n<p>When using the <code>etcdv3</code> datastore driver, path to TLS CA file to use when connecting to\netcd. If the CA file is specified, the other TLS parameters are mandatory.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Datastore connection",
@@ -103,10 +106,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "LocalOnly",
-          "Description": "When using the `etcdv3` datastore driver, path to TLS certificate file to use when connecting to\netcd. If the certificate file is specified, the other TLS parameters are mandatory.",
-          "DescriptionHTML": "<p>When using the <code>etcdv3</code> datastore driver, path to TLS certificate file to use when connecting to\netcd. If the certificate file is specified, the other TLS parameters are mandatory.</p>",
+          "Description": "**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.\n\nWhen using the `etcdv3` datastore driver, path to TLS certificate file to use when connecting to\netcd. If the certificate file is specified, the other TLS parameters are mandatory.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; <code>etcdv3</code> datastore driver is not supported in Calico Enterprise/Cloud.</p>\n<p>When using the <code>etcdv3</code> datastore driver, path to TLS certificate file to use when connecting to\netcd. If the certificate file is specified, the other TLS parameters are mandatory.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Datastore connection",
@@ -129,10 +133,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "LocalOnly",
-          "Description": "When using the `etcdv3` datastore driver, comma-delimited list of etcd endpoints to connect to,\nreplaces EtcdAddr and EtcdScheme.",
-          "DescriptionHTML": "<p>When using the <code>etcdv3</code> datastore driver, comma-delimited list of etcd endpoints to connect to,\nreplaces EtcdAddr and EtcdScheme.</p>",
+          "Description": "**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.\n\nWhen using the `etcdv3` datastore driver, comma-delimited list of etcd endpoints to connect to,\nreplaces EtcdAddr and EtcdScheme.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; <code>etcdv3</code> datastore driver is not supported in Calico Enterprise/Cloud.</p>\n<p>When using the <code>etcdv3</code> datastore driver, comma-delimited list of etcd endpoints to connect to,\nreplaces EtcdAddr and EtcdScheme.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Datastore connection",
@@ -155,10 +160,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "LocalOnly",
-          "Description": "When using the `etcdv3` datastore driver, path to TLS private key file to use when connecting to\netcd. If the key file is specified, the other TLS parameters are mandatory.",
-          "DescriptionHTML": "<p>When using the <code>etcdv3</code> datastore driver, path to TLS private key file to use when connecting to\netcd. If the key file is specified, the other TLS parameters are mandatory.</p>",
+          "Description": "**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.\n\nWhen using the `etcdv3` datastore driver, path to TLS private key file to use when connecting to\netcd. If the key file is specified, the other TLS parameters are mandatory.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; <code>etcdv3</code> datastore driver is not supported in Calico Enterprise/Cloud.</p>\n<p>When using the <code>etcdv3</code> datastore driver, path to TLS private key file to use when connecting to\netcd. If the key file is specified, the other TLS parameters are mandatory.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Datastore connection",
@@ -181,10 +187,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "LocalOnly",
-          "Description": "EtcdAddr: when using the `etcdv3` datastore driver, the URL scheme to use. If EtcdEndpoints\nis also specified, it takes precedence.",
-          "DescriptionHTML": "<p>EtcdAddr: when using the <code>etcdv3</code> datastore driver, the URL scheme to use. If EtcdEndpoints\nis also specified, it takes precedence.</p>",
+          "Description": "**Open source-only parameter**; `etcdv3` datastore driver is not supported in Calico Enterprise/Cloud.\n\nEtcdAddr: when using the `etcdv3` datastore driver, the URL scheme to use. If EtcdEndpoints\nis also specified, it takes precedence.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; <code>etcdv3</code> datastore driver is not supported in Calico Enterprise/Cloud.</p>\n<p>EtcdAddr: when using the <code>etcdv3</code> datastore driver, the URL scheme to use. If EtcdEndpoints\nis also specified, it takes precedence.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Datastore connection",
@@ -210,7 +217,8 @@
           "Description": "The name of this node, used to identify resources in the datastore that belong to this node.\nAuto-detected from the node's hostname if not provided.",
           "DescriptionHTML": "<p>The name of this node, used to identify resources in the datastore that belong to this node.\nAuto-detected from the node's hostname if not provided.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -236,7 +244,8 @@
           "Description": "If set, tells Felix to connect to Typha at the given address and port. Overrides TyphaK8sServiceName.",
           "DescriptionHTML": "<p>If set, tells Felix to connect to Typha at the given address and port. Overrides TyphaK8sServiceName.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -262,7 +271,8 @@
           "Description": "Path to the TLS CA file to use when communicating with Typha. If this parameter is specified,\nthe other TLS parameters must also be specified.",
           "DescriptionHTML": "<p>Path to the TLS CA file to use when communicating with Typha. If this parameter is specified,\nthe other TLS parameters must also be specified.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -288,7 +298,8 @@
           "Description": "Common name to use when authenticating to Typha over TLS. If any TLS parameters are specified then one of\nTyphaCN and TyphaURISAN must be set.",
           "DescriptionHTML": "<p>Common name to use when authenticating to Typha over TLS. If any TLS parameters are specified then one of\nTyphaCN and TyphaURISAN must be set.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -314,7 +325,8 @@
           "Description": "Path to the TLS certificate to use when communicating with Typha. If this parameter is specified,\nthe other TLS parameters must also be specified.",
           "DescriptionHTML": "<p>Path to the TLS certificate to use when communicating with Typha. If this parameter is specified,\nthe other TLS parameters must also be specified.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -340,7 +352,8 @@
           "Description": "Namespace to look in when looking for Typha's service (see TyphaK8sServiceName).",
           "DescriptionHTML": "<p>Namespace to look in when looking for Typha's service (see TyphaK8sServiceName).</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -366,7 +379,8 @@
           "Description": "If set, tells Felix to connect to Typha by looking up the Endpoints of the given Kubernetes\nService in namespace specified by TyphaK8sNamespace.",
           "DescriptionHTML": "<p>If set, tells Felix to connect to Typha by looking up the Endpoints of the given Kubernetes\nService in namespace specified by TyphaK8sNamespace.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -392,7 +406,8 @@
           "Description": "Path to the TLS private key to use when communicating with Typha. If this parameter is specified,\nthe other TLS parameters must also be specified.",
           "DescriptionHTML": "<p>Path to the TLS private key to use when communicating with Typha. If this parameter is specified,\nthe other TLS parameters must also be specified.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -418,7 +433,8 @@
           "Description": "Read timeout when reading from the Typha connection. If typha sends no data for this long,\nFelix will exit and restart. (Note that Typha sends regular pings so traffic is always expected.)",
           "DescriptionHTML": "<p>Read timeout when reading from the Typha connection. If typha sends no data for this long,\nFelix will exit and restart. (Note that Typha sends regular pings so traffic is always expected.)</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -444,7 +460,8 @@
           "Description": "URI SAN to use when authenticating to Typha over TLS. If any TLS parameters are specified then one of\nTyphaCN and TyphaURISAN must be set.",
           "DescriptionHTML": "<p>URI SAN to use when authenticating to Typha over TLS. If any TLS parameters are specified then one of\nTyphaCN and TyphaURISAN must be set.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Datastore connection",
@@ -470,7 +487,8 @@
           "Description": "Write timeout when writing data to Typha.",
           "DescriptionHTML": "<p>Write timeout when writing data to Typha.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -501,7 +519,8 @@
           "Description": "Used to override feature detection based on auto-detected platform capabilities. Values are specified in a comma separated list with no spaces, example; \"SNATFullyRandom=true,MASQFullyRandom=false,RestoreSupportsLock=\". A value of \"true\" or \"false\" will force enable/disable feature, empty or omitted values fall back to auto-detection.",
           "DescriptionHTML": "<p>Used to override feature detection based on auto-detected platform capabilities. Values are specified in a comma separated list with no spaces, example; \"SNATFullyRandom=true,MASQFullyRandom=false,RestoreSupportsLock=\". A value of \"true\" or \"false\" will force enable/disable feature, empty or omitted values fall back to auto-detection.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Feature detection/overrides",
@@ -527,7 +546,8 @@
           "Description": "Used to enable or disable tech-preview Calico features. Values are specified in a comma separated list with no spaces, example; \"BPFConnectTimeLoadBalancingWorkaround=enabled,XyZ=false\". This is used to enable features that are not fully production ready.",
           "DescriptionHTML": "<p>Used to enable or disable tech-preview Calico features. Values are specified in a comma separated list with no spaces, example; \"BPFConnectTimeLoadBalancingWorkaround=enabled,XyZ=false\". This is used to enable features that are not fully production ready.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -558,7 +578,8 @@
           "Description": "Sets the Go runtime's garbage collection threshold. I.e. the percentage that the heap is allowed to grow before garbage collection is triggered. In general, doubling the value halves the CPU time spent doing GC, but it also doubles peak GC memory overhead. A special value of -1 can be used to disable GC entirely; this should only be used in conjunction with the GoMemoryLimitMB setting.\n\nThis setting is overridden by the GOGC environment variable.",
           "DescriptionHTML": "<p>Sets the Go runtime's garbage collection threshold. I.e. the percentage that the heap is allowed to grow before garbage collection is triggered. In general, doubling the value halves the CPU time spent doing GC, but it also doubles peak GC memory overhead. A special value of -1 can be used to disable GC entirely; this should only be used in conjunction with the GoMemoryLimitMB setting.</p>\n<p>This setting is overridden by the GOGC environment variable.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Go runtime",
@@ -584,7 +605,8 @@
           "Description": "Sets the maximum number of CPUs that the Go runtime will use concurrently. A value of -1 means \"use the system default\"; typically the number of real CPUs on the system.\n\nthis setting is overridden by the GOMAXPROCS environment variable.",
           "DescriptionHTML": "<p>Sets the maximum number of CPUs that the Go runtime will use concurrently. A value of -1 means \"use the system default\"; typically the number of real CPUs on the system.</p>\n<p>this setting is overridden by the GOMAXPROCS environment variable.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Go runtime",
@@ -610,7 +632,8 @@
           "Description": "Sets a (soft) memory limit for the Go runtime in MB. The Go runtime will try to keep its memory usage under the limit by triggering GC as needed. To avoid thrashing, it will exceed the limit if GC starts to take more than 50% of the process's CPU time. A value of -1 disables the memory limit.\n\nNote that the memory limit, if used, must be considerably less than any hard resource limit set at the container or pod level. This is because felix is not the only process that must run in the container or pod.\n\nThis setting is overridden by the GOMEMLIMIT environment variable.",
           "DescriptionHTML": "<p>Sets a (soft) memory limit for the Go runtime in MB. The Go runtime will try to keep its memory usage under the limit by triggering GC as needed. To avoid thrashing, it will exceed the limit if GC starts to take more than 50% of the process's CPU time. A value of -1 disables the memory limit.</p>\n<p>Note that the memory limit, if used, must be considerably less than any hard resource limit set at the container or pod level. This is because felix is not the only process that must run in the container or pod.</p>\n<p>This setting is overridden by the GOMEMLIMIT environment variable.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -641,7 +664,8 @@
           "Description": "If set to true, enables Felix's health port, which provides readiness and liveness endpoints.",
           "DescriptionHTML": "<p>If set to true, enables Felix's health port, which provides readiness and liveness endpoints.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Health port and timeouts",
@@ -667,7 +691,8 @@
           "Description": "The host that the health server should bind to.",
           "DescriptionHTML": "<p>The host that the health server should bind to.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Health port and timeouts",
@@ -693,7 +718,8 @@
           "Description": "The TCP port that the health server should bind to.",
           "DescriptionHTML": "<p>The TCP port that the health server should bind to.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Health port and timeouts",
@@ -719,7 +745,8 @@
           "Description": "Allows the internal watchdog timeouts of individual subcomponents to be overridden. This is useful for working around \"false positive\" liveness timeouts that can occur in particularly stressful workloads or if CPU is constrained. For a list of active subcomponents, see Felix's logs.",
           "DescriptionHTML": "<p>Allows the internal watchdog timeouts of individual subcomponents to be overridden. This is useful for working around \"false positive\" liveness timeouts that can occur in particularly stressful workloads or if CPU is constrained. For a list of active subcomponents, see Felix's logs.</p>",
           "UserEditable": true,
-          "GoType": "[]v3.HealthTimeoutOverride"
+          "GoType": "[]v3.HealthTimeoutOverride",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -750,7 +777,8 @@
           "Description": "Controls which source code files have their Debug log output included in the logs. Only logs from files with names that match the given regular expression are included. The filter only applies to Debug level logs.",
           "DescriptionHTML": "<p>Controls which source code files have their Debug log output included in the logs. Only logs from files with names that match the given regular expression are included. The filter only applies to Debug level logs.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Logging",
@@ -776,7 +804,8 @@
           "Description": "Specifies whether or not to include the DropActionOverride in the logs when it is triggered.",
           "DescriptionHTML": "<p>Specifies whether or not to include the DropActionOverride in the logs when it is triggered.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Logging",
@@ -802,7 +831,8 @@
           "Description": "The full path to the Felix log. Set to none to disable file logging.",
           "DescriptionHTML": "<p>The full path to the Felix log. Set to none to disable file logging.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Logging",
@@ -828,7 +858,8 @@
           "Description": "The log prefix that Felix uses when rendering LOG rules.",
           "DescriptionHTML": "<p>The log prefix that Felix uses when rendering LOG rules.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Logging",
@@ -860,7 +891,8 @@
           "Description": "The log severity above which logs are sent to the log file.",
           "DescriptionHTML": "<p>The log severity above which logs are sent to the log file.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Logging",
@@ -892,7 +924,8 @@
           "Description": "The log severity above which logs are sent to the stdout.",
           "DescriptionHTML": "<p>The log severity above which logs are sent to the stdout.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Logging",
@@ -924,7 +957,8 @@
           "Description": "The log severity above which logs are sent to the syslog. Set to None for no logging to syslog.",
           "DescriptionHTML": "<p>The log severity above which logs are sent to the syslog. Set to None for no logging to syslog.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -955,7 +989,8 @@
           "Description": "Disables Go runtime metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load.",
           "DescriptionHTML": "<p>Disables Go runtime metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -981,7 +1016,8 @@
           "Description": "The path to the TLS CA file for the Prometheus metrics server.",
           "DescriptionHTML": "<p>The path to the TLS CA file for the Prometheus metrics server.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -1007,7 +1043,8 @@
           "Description": "The path to the TLS certificate file for the Prometheus metrics server.",
           "DescriptionHTML": "<p>The path to the TLS certificate file for the Prometheus metrics server.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -1033,7 +1070,8 @@
           "Description": "Enables the Prometheus metrics server in Felix if set to true.",
           "DescriptionHTML": "<p>Enables the Prometheus metrics server in Felix if set to true.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -1059,7 +1097,8 @@
           "Description": "The host that the Prometheus metrics server should bind to.",
           "DescriptionHTML": "<p>The host that the Prometheus metrics server should bind to.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -1085,7 +1124,8 @@
           "Description": "The path to the TLS private key file for the Prometheus metrics server.",
           "DescriptionHTML": "<p>The path to the TLS private key file for the Prometheus metrics server.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -1111,7 +1151,8 @@
           "Description": "The TCP port that the Prometheus metrics server should bind to.",
           "DescriptionHTML": "<p>The TCP port that the Prometheus metrics server should bind to.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -1137,7 +1178,8 @@
           "Description": "Disables process metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load.",
           "DescriptionHTML": "<p>Disables process metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Process: Prometheus metrics",
@@ -1163,7 +1205,8 @@
           "Description": "Disables wireguard metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load.",
           "DescriptionHTML": "<p>Disables wireguard metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -1194,7 +1237,8 @@
           "Description": "Controls whether Felix will add a rule to drop IPIP encapsulated traffic from workloads.",
           "DescriptionHTML": "<p>Controls whether Felix will add a rule to drop IPIP encapsulated traffic from workloads.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1220,7 +1264,8 @@
           "Description": "Controls whether Felix will add a rule to drop VXLAN encapsulated traffic from workloads.",
           "DescriptionHTML": "<p>Controls whether Felix will add a rule to drop VXLAN encapsulated traffic from workloads.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1249,7 +1294,8 @@
           "Description": "Controls whether Felix hooks the kernel's top-level iptables chains by inserting a rule at the top of the chain or by appending a rule at the bottom. insert is the safe default since it prevents Calico's rules from being bypassed. If you switch to append mode, be sure that the other rules in the chains signal acceptance by falling through to the Calico rules, otherwise the Calico policy will be bypassed.",
           "DescriptionHTML": "<p>Controls whether Felix hooks the kernel's top-level iptables chains by inserting a rule at the top of the chain or by appending a rule at the bottom. insert is the safe default since it prevents Calico's rules from being bypassed. If you switch to append mode, be sure that the other rules in the chains signal acceptance by falling through to the Calico rules, otherwise the Calico policy will be bypassed.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1275,7 +1321,8 @@
           "Description": "Filename of the external dataplane driver to use. Only used if UseInternalDataplaneDriver is set to false.",
           "DescriptionHTML": "<p>Filename of the external dataplane driver to use. Only used if UseInternalDataplaneDriver is set to false.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1301,7 +1348,8 @@
           "Description": "The readiness/liveness timeout used for Felix's (internal) dataplane driver. Deprecated: replaced by the generic HealthTimeoutOverrides.",
           "DescriptionHTML": "<p>The readiness/liveness timeout used for Felix's (internal) dataplane driver. Deprecated: replaced by the generic HealthTimeoutOverrides.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1331,7 +1379,8 @@
           "Description": "Controls what happens to traffic that goes from a workload endpoint to the host itself (after the endpoint's egress policy is applied). By default, Calico blocks traffic from workload endpoints to the host itself with an iptables \"DROP\" action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables \"INPUT\" chain; Calico will insert its rules at the top of that chain, then \"RETURN\" packets to the \"INPUT\" chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy.",
           "DescriptionHTML": "<p>Controls what happens to traffic that goes from a workload endpoint to the host itself (after the endpoint's egress policy is applied). By default, Calico blocks traffic from workload endpoints to the host itself with an iptables \"DROP\" action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables \"INPUT\" chain; Calico will insert its rules at the top of that chain, then \"RETURN\" packets to the \"INPUT\" chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1357,7 +1406,8 @@
           "Description": "Controls the protocol to set on routes programmed by Felix. The protocol is an 8-bit label used to identify the owner of the route.",
           "DescriptionHTML": "<p>Controls the protocol to set on routes programmed by Felix. The protocol is an 8-bit label used to identify the owner of the route.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1383,7 +1433,8 @@
           "Description": "IPv4 address to set as the source hint for routes programmed by Felix. When not set the source address for local traffic from host to workload will be determined by the kernel.",
           "DescriptionHTML": "<p>IPv4 address to set as the source hint for routes programmed by Felix. When not set the source address for local traffic from host to workload will be determined by the kernel.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1409,7 +1460,8 @@
           "Description": "IPv6 address to set as the source hint for routes programmed by Felix. When not set the source address for local traffic from host to workload will be determined by the kernel.",
           "DescriptionHTML": "<p>IPv6 address to set as the source hint for routes programmed by Felix. When not set the source address for local traffic from host to workload will be determined by the kernel.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1435,7 +1487,8 @@
           "Description": "Disables the check for invalid connections in conntrack. While the conntrack invalid check helps to detect malicious traffic, it can also cause issues with certain multi-NIC scenarios.",
           "DescriptionHTML": "<p>Disables the check for invalid connections in conntrack. While the conntrack invalid check helps to detect malicious traffic, it can also cause issues with certain multi-NIC scenarios.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1466,7 +1519,8 @@
           "Description": "Overrides the Drop action in Felix, optionally changing the behavior to Accept, and optionally adding Log. Possible values are Drop, LogAndDrop, Accept, LogAndAccept.",
           "DescriptionHTML": "<p>Overrides the Drop action in Felix, optionally changing the behavior to Accept, and optionally adding Log. Possible values are Drop, LogAndDrop, Accept, LogAndAccept.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1492,7 +1546,8 @@
           "Description": "The path to the directory where endpoint status will be written. Endpoint status file reporting is disabled if field is left empty.\n\nChosen directory should match the directory used by the CNI plugin for PodStartupDelay.",
           "DescriptionHTML": "<p>The path to the directory where endpoint status will be written. Endpoint status file reporting is disabled if field is left empty.</p>\n<p>Chosen directory should match the directory used by the CNI plugin for PodStartupDelay.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1518,7 +1573,8 @@
           "Description": "A list of CIDR's of external, non-Calico nodes from which VXLAN/IPIP overlay traffic will be allowed. By default, external tunneled traffic is blocked to reduce attack surface.",
           "DescriptionHTML": "<p>A list of CIDR's of external, non-Calico nodes from which VXLAN/IPIP overlay traffic will be allowed. By default, external tunneled traffic is blocked to reduce attack surface.</p>",
           "UserEditable": true,
-          "GoType": "*[]string"
+          "GoType": "*[]string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1544,7 +1600,8 @@
           "Description": "A list of ProtoPort struct objects including UDP/TCP/SCTP ports and CIDRs that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. For backwards compatibility, if the protocol is not specified, it defaults to \"tcp\". If a CIDR is not specified, it will allow traffic from all addresses. To disable all inbound host ports, use the value \"[]\". The default value allows ssh access, DHCP, BGP, etcd and the Kubernetes API.",
           "DescriptionHTML": "<p>A list of ProtoPort struct objects including UDP/TCP/SCTP ports and CIDRs that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. For backwards compatibility, if the protocol is not specified, it defaults to \"tcp\". If a CIDR is not specified, it will allow traffic from all addresses. To disable all inbound host ports, use the value \"[]\". The default value allows ssh access, DHCP, BGP, etcd and the Kubernetes API.</p>",
           "UserEditable": true,
-          "GoType": "*[]v3.ProtoPort"
+          "GoType": "*[]v3.ProtoPort",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1570,7 +1627,8 @@
           "Description": "A list of PortProto struct objects including UDP/TCP/SCTP ports and CIDRs that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. For backwards compatibility, if the protocol is not specified, it defaults to \"tcp\". If a CIDR is not specified, it will allow traffic from all addresses. To disable all outbound host ports, use the value \"[]\". The default value opens etcd's standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP, DNS, BGP and the Kubernetes API.",
           "DescriptionHTML": "<p>A list of PortProto struct objects including UDP/TCP/SCTP ports and CIDRs that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. For backwards compatibility, if the protocol is not specified, it defaults to \"tcp\". If a CIDR is not specified, it will allow traffic from all addresses. To disable all outbound host ports, use the value \"[]\". The default value opens etcd's standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP, DNS, BGP and the Kubernetes API.</p>",
           "UserEditable": true,
-          "GoType": "*[]v3.ProtoPort"
+          "GoType": "*[]v3.ProtoPort",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1599,7 +1657,8 @@
           "Description": "Configures whether or not Felix will program non-OpenStack floating IP addresses. (OpenStack-derived floating IPs are always programmed, regardless of this setting.)",
           "DescriptionHTML": "<p>Configures whether or not Felix will program non-OpenStack floating IP addresses. (OpenStack-derived floating IPs are always programmed, regardless of this setting.)</p>",
           "UserEditable": true,
-          "GoType": "*v3.FloatingIPType"
+          "GoType": "*v3.FloatingIPType",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1628,7 +1687,8 @@
           "Description": "Controls whether Felix sets the host sysctls to enable IP forwarding. IP forwarding is required when using Calico for workload networking. This should be disabled only on hosts where Calico is used solely for host protection. In BPF mode, due to a kernel interaction, either IPForwarding must be enabled or BPFEnforceRPF must be disabled.",
           "DescriptionHTML": "<p>Controls whether Felix sets the host sysctls to enable IP forwarding. IP forwarding is required when using Calico for workload networking. This should be disabled only on hosts where Calico is used solely for host protection. In BPF mode, due to a kernel interaction, either IPForwarding must be enabled or BPFEnforceRPF must be disabled.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1654,7 +1714,8 @@
           "Description": "A comma-separated list of interface names that should be excluded when Felix is resolving host endpoints. The default value ensures that Felix ignores Kubernetes' internal `kube-ipvs0` device. If you want to exclude multiple interface names using a single value, the list supports regular expressions. For regular expressions you must wrap the value with `/`. For example having values `/^kube/,veth1` will exclude all interfaces that begin with `kube` and also the interface `veth1`.",
           "DescriptionHTML": "<p>A comma-separated list of interface names that should be excluded when Felix is resolving host endpoints. The default value ensures that Felix ignores Kubernetes' internal <code>kube-ipvs0</code> device. If you want to exclude multiple interface names using a single value, the list supports regular expressions. For regular expressions you must wrap the value with <code>/</code>. For example having values <code>/^kube/,veth1</code> will exclude all interfaces that begin with <code>kube</code> and also the interface <code>veth1</code>.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1680,7 +1741,8 @@
           "Description": "The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Note: in environments other than bare metal, the orchestrators configure this appropriately. For example our Kubernetes and Docker integrations set the 'cali' value, and our OpenStack integration sets the 'tap' value.",
           "DescriptionHTML": "<p>The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Note: in environments other than bare metal, the orchestrators configure this appropriately. For example our Kubernetes and Docker integrations set the 'cali' value, and our OpenStack integration sets the 'tap' value.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1706,7 +1768,8 @@
           "Description": "The period at which Felix rescans local interfaces to verify their state. The rescan can be disabled by setting the interval to 0.",
           "DescriptionHTML": "<p>The period at which Felix rescans local interfaces to verify their state. The rescan can be disabled by setting the interval to 0.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1732,7 +1795,8 @@
           "Description": "Controls whether Felix enables support for IPv6 (if supported by the in-use dataplane).",
           "DescriptionHTML": "<p>Controls whether Felix enables support for IPv6 (if supported by the in-use dataplane).</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1758,7 +1822,8 @@
           "Description": "Should be set to the same value as --iptables-masquerade-bit of kube-proxy when TPROXY is used. The default is the same as kube-proxy default thus only needs a change if kube-proxy is using a non-standard setting. Must be within the range of 0-31.",
           "DescriptionHTML": "<p>Should be set to the same value as --iptables-masquerade-bit of kube-proxy when TPROXY is used. The default is the same as kube-proxy default thus only needs a change if kube-proxy is using a non-standard setting. Must be within the range of 0-31.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1784,7 +1849,8 @@
           "Description": "A regular expression that controls which interfaces Felix should scan in order to calculate the host's MTU. This should not match workload interfaces (usually named cali...).",
           "DescriptionHTML": "<p>A regular expression that controls which interfaces Felix should scan in order to calculate the host's MTU. This should not match workload interfaces (usually named cali...).</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1810,7 +1876,8 @@
           "Description": "Specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (i.e. it uses the iptables MASQUERADE target).",
           "DescriptionHTML": "<p>Specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (i.e. it uses the iptables MASQUERADE target).</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1836,7 +1903,8 @@
           "Description": "Specifies the range of ports that is used for port mapping when doing outgoing NAT. When unset the default behavior of the network stack is used.",
           "DescriptionHTML": "<p>Specifies the range of ports that is used for port mapping when doing outgoing NAT. When unset the default behavior of the network stack is used.</p>",
           "UserEditable": true,
-          "GoType": "*numorstring.Port"
+          "GoType": "*numorstring.Port",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1866,7 +1934,8 @@
           "Description": "Configures nftables support in Felix.",
           "DescriptionHTML": "<p>Configures nftables support in Felix.</p>",
           "UserEditable": true,
-          "GoType": "*v3.NFTablesMode"
+          "GoType": "*v3.NFTablesMode",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1892,7 +1961,8 @@
           "Description": "The timeout when talking to the kernel over the netlink protocol, used for programming routes, rules, and other kernel objects.",
           "DescriptionHTML": "<p>The timeout when talking to the kernel over the netlink protocol, used for programming routes, rules, and other kernel objects.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1918,7 +1988,8 @@
           "Description": "Controls the size of NFLOG messages that the kernel will try to send to Felix. NFLOG messages are used to report flow verdicts from the kernel. Warning: currently increasing the value may cause errors due to a bug in the netlink library.",
           "DescriptionHTML": "<p>Controls the size of NFLOG messages that the kernel will try to send to Felix. NFLOG messages are used to report flow verdicts from the kernel. Warning: currently increasing the value may cause errors due to a bug in the netlink library.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1944,7 +2015,8 @@
           "Description": "Used to by Felix to communicate policy changes to external services, like Application layer policy.",
           "DescriptionHTML": "<p>Used to by Felix to communicate policy changes to external services, like Application layer policy.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1970,7 +2042,8 @@
           "Description": "Controls whether Felix will remove unexpected routes to workload interfaces. Felix will always clean up expected routes that use the configured DeviceRouteProtocol. To add your own routes, you must use a distinct protocol (in addition to setting this field to false).",
           "DescriptionHTML": "<p>Controls whether Felix will remove unexpected routes to workload interfaces. Felix will always clean up expected routes that use the configured DeviceRouteProtocol. To add your own routes, you must use a distinct protocol (in addition to setting this field to false).</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -1996,7 +2069,8 @@
           "Description": "The period at which Felix re-checks the routes in the dataplane to ensure that no other process has accidentally broken Calico's rules. Set to 0 to disable route refresh.",
           "DescriptionHTML": "<p>The period at which Felix re-checks the routes in the dataplane to ensure that no other process has accidentally broken Calico's rules. Set to 0 to disable route refresh.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2025,7 +2099,8 @@
           "Description": "Configures where Felix gets its routing information. - WorkloadIPs: use workload endpoints to construct routes. - CalicoIPAM: the default - use IPAM data to construct routes.",
           "DescriptionHTML": "<p>Configures where Felix gets its routing information. - WorkloadIPs: use workload endpoints to construct routes. - CalicoIPAM: the default - use IPAM data to construct routes.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2051,7 +2126,8 @@
           "Description": "Will disable all operations performed on the route table. Set to true to run in network-policy mode only.",
           "DescriptionHTML": "<p>Will disable all operations performed on the route table. Set to true to run in network-policy mode only.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2077,7 +2153,8 @@
           "Description": "Deprecated in favor of RouteTableRanges. Calico programs additional Linux route tables for various purposes. RouteTableRange specifies the indices of the route tables that Calico should use.",
           "DescriptionHTML": "<p>Deprecated in favor of RouteTableRanges. Calico programs additional Linux route tables for various purposes. RouteTableRange specifies the indices of the route tables that Calico should use.</p>",
           "UserEditable": true,
-          "GoType": "*v3.RouteTableRange"
+          "GoType": "*v3.RouteTableRange",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2103,7 +2180,8 @@
           "Description": "Calico programs additional Linux route tables for various purposes. RouteTableRanges specifies a set of table index ranges that Calico should use. Deprecates`RouteTableRange`, overrides `RouteTableRange`.",
           "DescriptionHTML": "<p>Calico programs additional Linux route tables for various purposes. RouteTableRanges specifies a set of table index ranges that Calico should use. Deprecates<code>RouteTableRange</code>, overrides <code>RouteTableRange</code>.</p>",
           "UserEditable": true,
-          "GoType": "*v3.RouteTableRanges"
+          "GoType": "*v3.RouteTableRanges",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2133,7 +2211,8 @@
           "Description": "When service IP advertisement is enabled, prevent routing loops to service IPs that are not in use, by dropping or rejecting packets that do not get DNAT'd by kube-proxy. Unless set to \"Disabled\", in which case such routing loops continue to be allowed.",
           "DescriptionHTML": "<p>When service IP advertisement is enabled, prevent routing loops to service IPs that are not in use, by dropping or rejecting packets that do not get DNAT'd by kube-proxy. Unless set to \"Disabled\", in which case such routing loops continue to be allowed.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2159,7 +2238,8 @@
           "Description": "Enables experimental sidecar acceleration.",
           "DescriptionHTML": "<p>Enables experimental sidecar acceleration.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2185,7 +2265,8 @@
           "Description": "If true, Felix will use its internal dataplane programming logic. If false, it will launch an external dataplane driver and communicate with it over protobuf.",
           "DescriptionHTML": "<p>If true, Felix will use its internal dataplane programming logic. If false, it will launch an external dataplane driver and communicate with it over protobuf.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Common",
@@ -2214,7 +2295,8 @@
           "Description": "Controls whether pods can use the allowedSourcePrefixes annotation to send traffic with a source IP address that is not theirs. This is disabled by default. When set to \"Any\", pods can request any prefix.",
           "DescriptionHTML": "<p>Controls whether pods can use the allowedSourcePrefixes annotation to send traffic with a source IP address that is not theirs. This is disabled by default. When set to \"Any\", pods can request any prefix.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -2245,7 +2327,8 @@
           "Description": "Controls the period at which Felix re-checks all IP sets to look for discrepancies. Set to 0 to disable the periodic refresh.",
           "DescriptionHTML": "<p>Controls the period at which Felix re-checks all IP sets to look for discrepancies. Set to 0 to disable the periodic refresh.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2275,7 +2358,8 @@
           "Description": "Controls which backend of iptables will be used. The default is `Auto`.\n\nWarning: changing this on a running system can leave \"orphaned\" rules in the \"other\" backend. These should be cleaned up to avoid confusing interactions.",
           "DescriptionHTML": "<p>Controls which backend of iptables will be used. The default is <code>Auto</code>.</p>\n<p>Warning: changing this on a running system can leave \"orphaned\" rules in the \"other\" backend. These should be cleaned up to avoid confusing interactions.</p>",
           "UserEditable": true,
-          "GoType": "*v3.IptablesBackend"
+          "GoType": "*v3.IptablesBackend",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2304,7 +2388,8 @@
           "Description": "Controls what happens to traffic that is accepted by a Felix policy chain in the iptables filter table (which is used for \"normal\" policy). The default will immediately `Accept` the traffic. Use `Return` to send the traffic back up to the system chains for further processing.",
           "DescriptionHTML": "<p>Controls what happens to traffic that is accepted by a Felix policy chain in the iptables filter table (which is used for \"normal\" policy). The default will immediately <code>Accept</code> the traffic. Use <code>Return</code> to send the traffic back up to the system chains for further processing.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2333,7 +2418,8 @@
           "Description": "Controls what happens to traffic that is denied by network policy. By default Calico blocks traffic with an iptables \"DROP\" action. If you want to use \"REJECT\" action instead you can configure it in here.",
           "DescriptionHTML": "<p>Controls what happens to traffic that is denied by network policy. By default Calico blocks traffic with an iptables \"DROP\" action. If you want to use \"REJECT\" action instead you can configure it in here.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2359,7 +2445,8 @@
           "Description": "The location of the iptables lock file. You may need to change this if the lock file is not in its standard location (for example if you have mapped it into Felix's container at a different path).",
           "DescriptionHTML": "<p>The location of the iptables lock file. You may need to change this if the lock file is not in its standard location (for example if you have mapped it into Felix's container at a different path).</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2385,7 +2472,8 @@
           "Description": "When IptablesLockTimeout is enabled: the time that Felix will wait between attempts to acquire the iptables lock if it is not available. Lower values make Felix more responsive when the lock is contended, but use more CPU.",
           "DescriptionHTML": "<p>When IptablesLockTimeout is enabled: the time that Felix will wait between attempts to acquire the iptables lock if it is not available. Lower values make Felix more responsive when the lock is contended, but use more CPU.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2411,7 +2499,8 @@
           "Description": "The time that Felix itself will wait for the iptables lock (rather than delegating the lock handling to the `iptables` command).\n\nDeprecated: `iptables-restore` v1.8+ always takes the lock, so enabling this feature results in deadlock.",
           "DescriptionHTML": "<p>The time that Felix itself will wait for the iptables lock (rather than delegating the lock handling to the <code>iptables</code> command).</p>\n<p>Deprecated: <code>iptables-restore</code> v1.8+ always takes the lock, so enabling this feature results in deadlock.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2440,7 +2529,8 @@
           "Description": "Controls what happens to traffic that is accepted by a Felix policy chain in the iptables mangle table (which is used for \"pre-DNAT\" policy). The default will immediately `Accept` the traffic. Use `Return` to send the traffic back up to the system chains for further processing.",
           "DescriptionHTML": "<p>Controls what happens to traffic that is accepted by a Felix policy chain in the iptables mangle table (which is used for \"pre-DNAT\" policy). The default will immediately <code>Accept</code> the traffic. Use <code>Return</code> to send the traffic back up to the system chains for further processing.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2466,7 +2556,8 @@
           "Description": "The mask that Felix selects its IPTables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system.",
           "DescriptionHTML": "<p>The mask that Felix selects its IPTables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system.</p>",
           "UserEditable": true,
-          "GoType": "*uint32"
+          "GoType": "*uint32",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2492,7 +2583,8 @@
           "Description": "This parameter can be used to limit the host interfaces on which Calico will apply SNAT to traffic leaving a Calico IPAM pool with \"NAT outgoing\" enabled. This can be useful if you have a main data interface, where traffic should be SNATted and a secondary device (such as the docker bridge) which is local to the host and doesn't require SNAT. This parameter uses the iptables interface matching syntax, which allows + as a wildcard. Most users will not need to set this. Example: if your data interfaces are eth0 and eth1 and you want to exclude the docker bridge, you could set this to eth+.",
           "DescriptionHTML": "<p>This parameter can be used to limit the host interfaces on which Calico will apply SNAT to traffic leaving a Calico IPAM pool with \"NAT outgoing\" enabled. This can be useful if you have a main data interface, where traffic should be SNATted and a secondary device (such as the docker bridge) which is local to the host and doesn't require SNAT. This parameter uses the iptables interface matching syntax, which allows + as a wildcard. Most users will not need to set this. Example: if your data interfaces are eth0 and eth1 and you want to exclude the docker bridge, you could set this to eth+.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2518,7 +2610,8 @@
           "Description": "The period after Felix has done a write to the dataplane that it schedules an extra read back in order to check the write was not clobbered by another process. This should only occur if another application on the system doesn't respect the iptables lock.",
           "DescriptionHTML": "<p>The period after Felix has done a write to the dataplane that it schedules an extra read back in order to check the write was not clobbered by another process. This should only occur if another application on the system doesn't respect the iptables lock.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2544,7 +2637,8 @@
           "Description": "The period at which Felix re-checks the IP sets in the dataplane to ensure that no other process has accidentally broken Calico's rules. Set to 0 to disable IP sets refresh. Note: the default for this value is lower than the other refresh intervals as a workaround for a Linux kernel bug that was fixed in kernel version 4.11. If you are using v4.11 or greater you may want to set this to, a higher value to reduce Felix CPU usage.",
           "DescriptionHTML": "<p>The period at which Felix re-checks the IP sets in the dataplane to ensure that no other process has accidentally broken Calico's rules. Set to 0 to disable IP sets refresh. Note: the default for this value is lower than the other refresh intervals as a workaround for a Linux kernel bug that was fixed in kernel version 4.11. If you are using v4.11 or greater you may want to set this to, a higher value to reduce Felix CPU usage.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2570,7 +2664,8 @@
           "Description": "Holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode. Felix uses these ranges to separate host and workload traffic. .",
           "DescriptionHTML": "<p>Holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode. Felix uses these ranges to separate host and workload traffic. .</p>",
           "UserEditable": true,
-          "GoType": "*[]numorstring.Port"
+          "GoType": "*[]numorstring.Port",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: iptables",
@@ -2596,7 +2691,8 @@
           "Description": "The maximum number of IP addresses that can be stored in an IP set. Not applicable if using the nftables backend.",
           "DescriptionHTML": "<p>The maximum number of IP addresses that can be stored in an IP set. Not applicable if using the nftables backend.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -2630,7 +2726,8 @@
           "Description": "Controls the nftables action that Felix uses to represent the \"allow\" policy verdict in the filter table. The default is to `ACCEPT` the traffic, which is a terminal action. Alternatively, `RETURN` can be used to return the traffic back to the top-level chain for further processing by your rules.",
           "DescriptionHTML": "<p>Controls the nftables action that Felix uses to represent the \"allow\" policy verdict in the filter table. The default is to <code>ACCEPT</code> the traffic, which is a terminal action. Alternatively, <code>RETURN</code> can be used to return the traffic back to the top-level chain for further processing by your rules.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: nftables",
@@ -2659,7 +2756,8 @@
           "Description": "Controls what happens to traffic that is denied by network policy. By default, Calico blocks traffic with a \"drop\" action. If you want to use a \"reject\" action instead you can configure it here.",
           "DescriptionHTML": "<p>Controls what happens to traffic that is denied by network policy. By default, Calico blocks traffic with a \"drop\" action. If you want to use a \"reject\" action instead you can configure it here.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: nftables",
@@ -2688,7 +2786,8 @@
           "Description": "Controls the nftables action that Felix uses to represent the \"allow\" policy verdict in the mangle table. The default is to `ACCEPT` the traffic, which is a terminal action. Alternatively, `RETURN` can be used to return the traffic back to the top-level chain for further processing by your rules.",
           "DescriptionHTML": "<p>Controls the nftables action that Felix uses to represent the \"allow\" policy verdict in the mangle table. The default is to <code>ACCEPT</code> the traffic, which is a terminal action. Alternatively, <code>RETURN</code> can be used to return the traffic back to the top-level chain for further processing by your rules.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: nftables",
@@ -2714,7 +2813,8 @@
           "Description": "The mask that Felix selects its nftables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system.",
           "DescriptionHTML": "<p>The mask that Felix selects its nftables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system.</p>",
           "UserEditable": true,
-          "GoType": "*uint32"
+          "GoType": "*uint32",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: nftables",
@@ -2740,7 +2840,8 @@
           "Description": "Controls the interval at which Felix periodically refreshes the nftables rules.",
           "DescriptionHTML": "<p>Controls the interval at which Felix periodically refreshes the nftables rules.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -2771,7 +2872,8 @@
           "Description": "Specifies, what is logged by connect time load balancer when BPFLogLevel is debug. Currently has to be specified as 'all' when BPFLogFilters is set to see CTLB logs.",
           "DescriptionHTML": "<p>Specifies, what is logged by connect time load balancer when BPFLogLevel is debug. Currently has to be specified as 'all' when BPFLogFilters is set to see CTLB logs.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2801,7 +2903,8 @@
           "Description": "When in BPF mode, controls whether Felix installs the connect-time load balancer. The connect-time load balancer is required for the host to be able to reach Kubernetes services and it improves the performance of pod-to-service connections.When set to TCP, connect time load balancing is available only for services with TCP ports.",
           "DescriptionHTML": "<p>When in BPF mode, controls whether Felix installs the connect-time load balancer. The connect-time load balancer is required for the host to be able to reach Kubernetes services and it improves the performance of pod-to-service connections.When set to TCP, connect time load balancing is available only for services with TCP ports.</p>",
           "UserEditable": true,
-          "GoType": "*v3.BPFConnectTimeLBType"
+          "GoType": "*v3.BPFConnectTimeLBType",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2827,7 +2930,8 @@
           "Description": "When in BPF mode, controls whether Felix installs the connection-time load balancer. The connect-time load balancer is required for the host to be able to reach Kubernetes services and it improves the performance of pod-to-service connections. The only reason to disable it is for debugging purposes.\n\nDeprecated: Use BPFConnectTimeLoadBalancing.",
           "DescriptionHTML": "<p>When in BPF mode, controls whether Felix installs the connection-time load balancer. The connect-time load balancer is required for the host to be able to reach Kubernetes services and it improves the performance of pod-to-service connections. The only reason to disable it is for debugging purposes.</p>\n<p>Deprecated: Use BPFConnectTimeLoadBalancing.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2853,7 +2957,8 @@
           "Description": "Specifies how DNS policy programming will be handled. Inline - BPF parses DNS response inline with DNS response packet processing. This guarantees the DNS rules reflect any change immediately. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.",
           "DescriptionHTML": "<p>Specifies how DNS policy programming will be handled. Inline - BPF parses DNS response inline with DNS response packet processing. This guarantees the DNS rules reflect any change immediately. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.</p>",
           "UserEditable": true,
-          "GoType": "*v3.BPFDNSPolicyMode"
+          "GoType": "*v3.BPFDNSPolicyMode",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2879,7 +2984,8 @@
           "Description": "A list of CIDRs which are excluded from DSR. That is, clients in those CIDRs will access service node ports as if BPFExternalServiceMode was set to Tunnel.",
           "DescriptionHTML": "<p>A list of CIDRs which are excluded from DSR. That is, clients in those CIDRs will access service node ports as if BPFExternalServiceMode was set to Tunnel.</p>",
           "UserEditable": true,
-          "GoType": "*[]string"
+          "GoType": "*[]string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2905,7 +3011,8 @@
           "Description": "A regular expression that controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the network. This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster. It should not match the workload interfaces (usually named cali...).",
           "DescriptionHTML": "<p>A regular expression that controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the network. This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster. It should not match the workload interfaces (usually named cali...).</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2931,7 +3038,8 @@
           "Description": "A regular expression that controls which interfaces Felix should disable the Generic Receive Offload [GRO] option. It should not match the workload interfaces (usually named cali...).",
           "DescriptionHTML": "<p>A regular expression that controls which interfaces Felix should disable the Generic Receive Offload [GRO] option. It should not match the workload interfaces (usually named cali...).</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2957,7 +3065,8 @@
           "Description": "If enabled, Felix sets the kernel.unprivileged_bpf_disabled sysctl to disable unprivileged use of BPF. This ensures that unprivileged users cannot access Calico's BPF maps and cannot insert their own BPF programs to interfere with Calico's.",
           "DescriptionHTML": "<p>If enabled, Felix sets the kernel.unprivileged_bpf_disabled sysctl to disable unprivileged use of BPF. This ensures that unprivileged users cannot access Calico's BPF maps and cannot insert their own BPF programs to interfere with Calico's.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -2983,7 +3092,8 @@
           "Description": "If enabled Felix will use the BPF dataplane.",
           "DescriptionHTML": "<p>If enabled Felix will use the BPF dataplane.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3013,7 +3123,8 @@
           "Description": "Enforce strict RPF on all host interfaces with BPF programs regardless of what is the per-interfaces or global setting. Possible values are Disabled, Strict or Loose.",
           "DescriptionHTML": "<p>Enforce strict RPF on all host interfaces with BPF programs regardless of what is the per-interfaces or global setting. Possible values are Disabled, Strict or Loose.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3039,7 +3150,8 @@
           "Description": "A list of CIDRs that are to be excluded from NAT resolution so that host can handle them. A typical usecase is node local DNS cache.",
           "DescriptionHTML": "<p>A list of CIDRs that are to be excluded from NAT resolution so that host can handle them. A typical usecase is node local DNS cache.</p>",
           "UserEditable": true,
-          "GoType": "*[]string"
+          "GoType": "*[]string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3065,7 +3177,8 @@
           "Description": "In BPF mode, controls the buffer size used for sending BPF events to felix.",
           "DescriptionHTML": "<p>In BPF mode, controls the buffer size used for sending BPF events to felix.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3091,7 +3204,8 @@
           "Description": "In BPF mode, controls a 32bit mark that is set on connections from an external client to a local service. This mark allows us to control how packets of that connection are routed within the host and how is routing interpreted by RPF check.",
           "DescriptionHTML": "<p>In BPF mode, controls a 32bit mark that is set on connections from an external client to a local service. This mark allows us to control how packets of that connection are routed within the host and how is routing interpreted by RPF check.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3120,7 +3234,8 @@
           "Description": "In BPF mode, controls how connections from outside the cluster to services (node ports and cluster IPs) are forwarded to remote workloads. If set to \"Tunnel\" then both request and response traffic is tunneled to the remote node. If set to \"DSR\", the request traffic is tunneled but the response traffic is sent directly from the remote node. In \"DSR\" mode, the remote node appears to use the IP of the ingress node; this requires a permissive L2 network.",
           "DescriptionHTML": "<p>In BPF mode, controls how connections from outside the cluster to services (node ports and cluster IPs) are forwarded to remote workloads. If set to \"Tunnel\" then both request and response traffic is tunneled to the remote node. If set to \"DSR\", the request traffic is tunneled but the response traffic is sent directly from the remote node. In \"DSR\" mode, the remote node appears to use the IP of the ingress node; this requires a permissive L2 network.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3146,7 +3261,8 @@
           "Description": "In BPF mode, forces traffic from these interfaces to skip Calico's iptables NOTRACK rule, allowing traffic from those interfaces to be tracked by Linux conntrack. Should only be used for interfaces that are not used for the Calico fabric. For example, a docker bridge device for non-Calico-networked containers.",
           "DescriptionHTML": "<p>In BPF mode, forces traffic from these interfaces to skip Calico's iptables NOTRACK rule, allowing traffic from those interfaces to be tracked by Linux conntrack. Should only be used for interfaces that are not used for the Calico fabric. For example, a docker bridge device for non-Calico-networked containers.</p>",
           "UserEditable": true,
-          "GoType": "*[]string"
+          "GoType": "*[]string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3172,7 +3288,8 @@
           "Description": "Controls whether to bypass Linux conntrack in BPF mode for workloads and services.",
           "DescriptionHTML": "<p>Controls whether to bypass Linux conntrack in BPF mode for workloads and services.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3198,7 +3315,8 @@
           "Description": "When in BPF mode, controls whether Felix does a NAT without CTLB. This along with BPFConnectTimeLoadBalancing determines the CTLB behavior.",
           "DescriptionHTML": "<p>When in BPF mode, controls whether Felix does a NAT without CTLB. This along with BPFConnectTimeLoadBalancing determines the CTLB behavior.</p>",
           "UserEditable": true,
-          "GoType": "*v3.BPFHostNetworkedNATType"
+          "GoType": "*v3.BPFHostNetworkedNATType",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3224,7 +3342,8 @@
           "Description": "Deprecated and has no effect. BPF kube-proxy always accepts endpoint slices. This option will be removed in the next release.",
           "DescriptionHTML": "<p>Deprecated and has no effect. BPF kube-proxy always accepts endpoint slices. This option will be removed in the next release.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3250,7 +3369,8 @@
           "Description": "If enabled in BPF mode, Felix will proactively clean up the upstream Kubernetes kube-proxy's iptables chains. Should only be enabled if kube-proxy is not running.",
           "DescriptionHTML": "<p>If enabled in BPF mode, Felix will proactively clean up the upstream Kubernetes kube-proxy's iptables chains. Should only be enabled if kube-proxy is not running.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3276,7 +3396,8 @@
           "Description": "In BPF mode, controls the minimum time between updates to the dataplane for Felix's embedded kube-proxy. Lower values give reduced set-up latency. Higher values reduce Felix CPU usage by batching up more work.",
           "DescriptionHTML": "<p>In BPF mode, controls the minimum time between updates to the dataplane for Felix's embedded kube-proxy. Lower values give reduced set-up latency. Higher values reduce Felix CPU usage by batching up more work.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3302,7 +3423,8 @@
           "Description": "A regular expression that allows to list tunnel devices like wireguard or vxlan (i.e., L3 devices) in addition to BPFDataIfacePattern. That is, tunnel interfaces not created by Calico, that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster.",
           "DescriptionHTML": "<p>A regular expression that allows to list tunnel devices like wireguard or vxlan (i.e., L3 devices) in addition to BPFDataIfacePattern. That is, tunnel interfaces not created by Calico, that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to nodeports and services from outside the cluster.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3328,7 +3450,8 @@
           "Description": "A map of key=values where the value is a pcap filter expression and the key is an interface name with 'all' denoting all interfaces, 'weps' all workload endpoints and 'heps' all host endpoints.\n\nWhen specified as an env var, it accepts a comma-separated list of key=values.",
           "DescriptionHTML": "<p>A map of key=values where the value is a pcap filter expression and the key is an interface name with 'all' denoting all interfaces, 'weps' all workload endpoints and 'heps' all host endpoints.</p>\n<p>When specified as an env var, it accepts a comma-separated list of key=values.</p>",
           "UserEditable": true,
-          "GoType": "*map[string]string"
+          "GoType": "*map[string]string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3358,7 +3481,8 @@
           "Description": "Controls the log level of the BPF programs when in BPF dataplane mode. One of \"Off\", \"Info\", or \"Debug\". The logs are emitted to the BPF trace pipe, accessible with the command `tc exec bpf debug`. .",
           "DescriptionHTML": "<p>Controls the log level of the BPF programs when in BPF dataplane mode. One of \"Off\", \"Info\", or \"Debug\". The logs are emitted to the BPF trace pipe, accessible with the command <code>tc exec bpf debug</code>. .</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3384,7 +3508,8 @@
           "Description": "Sets the size for the conntrack map. This map must be large enough to hold an entry for each active connection. Warning: changing the size of the conntrack map can cause disruption.",
           "DescriptionHTML": "<p>Sets the size for the conntrack map. This map must be large enough to hold an entry for each active connection. Warning: changing the size of the conntrack map can cause disruption.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3410,7 +3535,8 @@
           "Description": "Sets the size for ipsets map. The IP sets map must be large enough to hold an entry for each endpoint matched by every selector in the source/destination matches in network policy. Selectors such as \"all()\" can result in large numbers of entries (one entry per endpoint in that case).",
           "DescriptionHTML": "<p>Sets the size for ipsets map. The IP sets map must be large enough to hold an entry for each endpoint matched by every selector in the source/destination matches in network policy. Selectors such as \"all()\" can result in large numbers of entries (one entry per endpoint in that case).</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3436,7 +3562,8 @@
           "Description": "Sets the size for ifstate map. The ifstate map must be large enough to hold an entry for each device (host + workloads) on a host.",
           "DescriptionHTML": "<p>Sets the size for ifstate map. The ifstate map must be large enough to hold an entry for each device (host + workloads) on a host.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3462,7 +3589,8 @@
           "Description": "Sets the size of the BPF map that stores the affinity of a connection (for services that enable that feature.",
           "DescriptionHTML": "<p>Sets the size of the BPF map that stores the affinity of a connection (for services that enable that feature.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3488,7 +3616,8 @@
           "Description": "Sets the size for NAT back end map. This is the total number of endpoints. This is mostly more than the size of the number of services.",
           "DescriptionHTML": "<p>Sets the size for NAT back end map. This is the total number of endpoints. This is mostly more than the size of the number of services.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3514,7 +3643,8 @@
           "Description": "Sets the size for NAT front end map. FrontendMap should be large enough to hold an entry for each nodeport, external IP and each port in each service.",
           "DescriptionHTML": "<p>Sets the size for NAT front end map. FrontendMap should be large enough to hold an entry for each nodeport, external IP and each port in each service.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3540,7 +3670,8 @@
           "Description": "Sets the size for the routes map. The routes map should be large enough to hold one entry per workload and a handful of entries per host (enough to cover its own IPs and tunnel IPs).",
           "DescriptionHTML": "<p>Sets the size for the routes map. The routes map should be large enough to hold one entry per workload and a handful of entries per host (enough to cover its own IPs and tunnel IPs).</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3566,7 +3697,8 @@
           "Description": "Sets the range from which we randomly pick a port if there is a source port collision. This should be within the ephemeral range as defined by RFC 6056 (1024–65535) and preferably outside the ephemeral ranges used by common operating systems. Linux uses 32768–60999, while others mostly use the IANA defined range 49152–65535. It is not necessarily a problem if this range overlaps with the operating systems. Both ends of the range are inclusive.",
           "DescriptionHTML": "<p>Sets the range from which we randomly pick a port if there is a source port collision. This should be within the ephemeral range as defined by RFC 6056 (1024–65535) and preferably outside the ephemeral ranges used by common operating systems. Linux uses 32768–60999, while others mostly use the IANA defined range 49152–65535. It is not necessarily a problem if this range overlaps with the operating systems. Both ends of the range are inclusive.</p>",
           "UserEditable": true,
-          "GoType": "*numorstring.Port"
+          "GoType": "*numorstring.Port",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3592,7 +3724,8 @@
           "Description": "When true, Felix records detailed information about the BPF policy programs, which can be examined with the calico-bpf command-line tool.",
           "DescriptionHTML": "<p>When true, Felix records detailed information about the BPF policy programs, which can be examined with the calico-bpf command-line tool.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
@@ -3622,7 +3755,8 @@
           "Description": "Controls which whether it is allowed to forward straight to the peer side of the workload devices. It is allowed for any host L2 devices by default (L2Only), but it breaks TCP dump on the host side of workload device as it bypasses it on ingress. Value of Enabled also allows redirection from L3 host devices like IPIP tunnel or Wireguard directly to the peer side of the workload's device. This makes redirection faster, however, it breaks tools like tcpdump on the peer side. Use Enabled with caution.",
           "DescriptionHTML": "<p>Controls which whether it is allowed to forward straight to the peer side of the workload devices. It is allowed for any host L2 devices by default (L2Only), but it breaks TCP dump on the host side of workload device as it bypasses it on ingress. Value of Enabled also allows redirection from L3 host devices like IPIP tunnel or Wireguard directly to the peer side of the workload's device. This makes redirection faster, however, it breaks tools like tcpdump on the peer side. Use Enabled with caution.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -3653,7 +3787,8 @@
           "Description": "The name of the file that Felix uses to preserve learnt DNS information when restarting. .",
           "DescriptionHTML": "<p>The name of the file that Felix uses to preserve learnt DNS information when restarting. .</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Windows",
@@ -3679,7 +3814,8 @@
           "Description": "Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. The default value is 120s which is same as the default value of ServicePointManager.DnsRefreshTimeout on .net framework. .",
           "DescriptionHTML": "<p>Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. The default value is 120s which is same as the default value of ServicePointManager.DnsRefreshTimeout on .net framework. .</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Windows",
@@ -3705,7 +3841,8 @@
           "Description": "Sets the directory where flow logs files are stored on Windows nodes. .",
           "DescriptionHTML": "<p>Sets the directory where flow logs files are stored on Windows nodes. .</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Windows",
@@ -3731,7 +3868,8 @@
           "Description": "Used to specify the position of the external pipeline that reads flow logs on Windows nodes. . This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
           "DescriptionHTML": "<p>Used to specify the position of the external pipeline that reads flow logs on Windows nodes. . This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Windows",
@@ -3760,7 +3898,8 @@
           "Description": "Configures whether or not Felix will program Windows Firewall rules (to allow inbound access to its own metrics ports).",
           "DescriptionHTML": "<p>Configures whether or not Felix will program Windows Firewall rules (to allow inbound access to its own metrics ports).</p>",
           "UserEditable": true,
-          "GoType": "*v3.WindowsManageFirewallRulesMode"
+          "GoType": "*v3.WindowsManageFirewallRulesMode",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Windows",
@@ -3786,7 +3925,8 @@
           "Description": "Specifies which Windows HNS networks Felix should operate on. The default is to match networks that start with \"calico\". Supports regular expression syntax.",
           "DescriptionHTML": "<p>Specifies which Windows HNS networks Felix should operate on. The default is to match networks that start with \"calico\". Supports regular expression syntax.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: Windows",
@@ -3812,7 +3952,8 @@
           "Description": "Used to specify the path of the stats dump file on Windows nodes.",
           "DescriptionHTML": "<p>Used to specify the path of the stats dump file on Windows nodes.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -3840,10 +3981,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
-          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
+          "Description": "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The delay before Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Dataplane: OpenStack support",
@@ -3866,10 +4008,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nControls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
-          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>Controls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
+          "Description": "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\nControls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>Controls whether Felix reports endpoint status to the datastore. This is only used by the OpenStack integration.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Dataplane: OpenStack support",
@@ -3892,10 +4035,11 @@
           "Required": false,
           "OnParseFailure": "Exit",
           "AllowedConfigSources": "All",
-          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.",
-          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.</p>",
+          "Description": "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case-insensitive) means that Felix should not set up any NAT rule for the metadata path.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Dataplane: OpenStack support",
@@ -3918,10 +4062,11 @@
           "Required": false,
           "OnParseFailure": "Exit",
           "AllowedConfigSources": "All",
-          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .",
-          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .</p>",
+          "Description": "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed .</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Dataplane: OpenStack support",
@@ -3944,10 +4089,11 @@
           "Required": false,
           "OnParseFailure": "Exit",
           "AllowedConfigSources": "All",
-          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.",
-          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.</p>",
+          "Description": "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Dataplane: OpenStack support",
@@ -3970,10 +4116,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.",
-          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.</p>",
+          "Description": "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Dataplane: OpenStack support",
@@ -3996,10 +4143,11 @@
           "Required": false,
           "OnParseFailure": "ReplaceWithDefault",
           "AllowedConfigSources": "All",
-          "Description": "**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe time-to-live setting for process-wide status reports.",
-          "DescriptionHTML": "<p>**Open source-only parameter**: OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The time-to-live setting for process-wide status reports.</p>",
+          "Description": "**Open source-only parameter**; OpenStack is not supported in Calico Enterprise/Cloud.\n\nThe time-to-live setting for process-wide status reports.",
+          "DescriptionHTML": "<p><b>Open source-only parameter</b>; OpenStack is not supported in Calico Enterprise/Cloud.</p>\n<p>The time-to-live setting for process-wide status reports.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": true
         }
       ]
     },
@@ -4030,7 +4178,8 @@
           "Description": "Enables Generic XDP so network cards that don't support XDP offload or driver modes can use XDP. This is not recommended since it doesn't provide better performance than iptables.",
           "DescriptionHTML": "<p>Enables Generic XDP so network cards that don't support XDP offload or driver modes can use XDP. This is not recommended since it doesn't provide better performance than iptables.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: XDP acceleration for iptables dataplane",
@@ -4056,7 +4205,8 @@
           "Description": "Enables XDP acceleration for suitable untracked incoming deny rules.",
           "DescriptionHTML": "<p>Enables XDP acceleration for suitable untracked incoming deny rules.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: XDP acceleration for iptables dataplane",
@@ -4082,7 +4232,8 @@
           "Description": "The period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh.",
           "DescriptionHTML": "<p>The period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -4113,7 +4264,8 @@
           "Description": "Overrides whether Felix should create the VXLAN tunnel device for IPv4 VXLAN networking. Optional as Felix determines this based on the existing IP pools.",
           "DescriptionHTML": "<p>Overrides whether Felix should create the VXLAN tunnel device for IPv4 VXLAN networking. Optional as Felix determines this based on the existing IP pools.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: VXLAN overlay",
@@ -4139,7 +4291,8 @@
           "Description": "The MTU to set on the IPv4 VXLAN tunnel device. Optional as Felix auto-detects the MTU based on the MTU of the host's interfaces.",
           "DescriptionHTML": "<p>The MTU to set on the IPv4 VXLAN tunnel device. Optional as Felix auto-detects the MTU based on the MTU of the host's interfaces.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: VXLAN overlay",
@@ -4165,7 +4318,8 @@
           "Description": "The MTU to set on the IPv6 VXLAN tunnel device. Optional as Felix auto-detects the MTU based on the MTU of the host's interfaces.",
           "DescriptionHTML": "<p>The MTU to set on the IPv6 VXLAN tunnel device. Optional as Felix auto-detects the MTU based on the MTU of the host's interfaces.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: VXLAN overlay",
@@ -4191,7 +4345,8 @@
           "Description": "The UDP port number to use for VXLAN traffic.",
           "DescriptionHTML": "<p>The UDP port number to use for VXLAN traffic.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: VXLAN overlay",
@@ -4217,7 +4372,8 @@
           "Description": "The VXLAN VNI to use for VXLAN traffic. You may need to change this if the default value is in use on your system.",
           "DescriptionHTML": "<p>The VXLAN VNI to use for VXLAN traffic. You may need to change this if the default value is in use on your system.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -4248,7 +4404,8 @@
           "Description": "Overrides whether Felix should configure an IPIP interface on the host. Optional as Felix determines this based on the existing IP pools.",
           "DescriptionHTML": "<p>Overrides whether Felix should configure an IPIP interface on the host. Optional as Felix determines this based on the existing IP pools.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: IP-in-IP",
@@ -4274,7 +4431,8 @@
           "Description": "Controls the MTU to set on the IPIP tunnel device. Optional as Felix auto-detects the MTU based on the MTU of the host's interfaces.",
           "DescriptionHTML": "<p>Controls the MTU to set on the IPIP tunnel device. Optional as Felix auto-detects the MTU based on the MTU of the host's interfaces.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -4305,7 +4463,8 @@
           "Description": "Controls whether Wireguard is enabled for IPv4 (encapsulating IPv4 traffic over an IPv4 underlay network).",
           "DescriptionHTML": "<p>Controls whether Wireguard is enabled for IPv4 (encapsulating IPv4 traffic over an IPv4 underlay network).</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4331,7 +4490,8 @@
           "Description": "Controls whether Wireguard is enabled for IPv6 (encapsulating IPv6 traffic over an IPv6 underlay network).",
           "DescriptionHTML": "<p>Controls whether Wireguard is enabled for IPv6 (encapsulating IPv6 traffic over an IPv6 underlay network).</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4357,7 +4517,8 @@
           "Description": "Controls whether Wireguard host-to-host encryption is enabled.",
           "DescriptionHTML": "<p>Controls whether Wireguard host-to-host encryption is enabled.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4383,7 +4544,8 @@
           "Description": "Specifies the name to use for the IPv4 Wireguard interface.",
           "DescriptionHTML": "<p>Specifies the name to use for the IPv4 Wireguard interface.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4409,7 +4571,8 @@
           "Description": "Specifies the name to use for the IPv6 Wireguard interface.",
           "DescriptionHTML": "<p>Specifies the name to use for the IPv6 Wireguard interface.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4435,7 +4598,8 @@
           "Description": "Controls the listening port used by IPv4 Wireguard.",
           "DescriptionHTML": "<p>Controls the listening port used by IPv4 Wireguard.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4461,7 +4625,8 @@
           "Description": "Controls the listening port used by IPv6 Wireguard.",
           "DescriptionHTML": "<p>Controls the listening port used by IPv6 Wireguard.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4487,7 +4652,8 @@
           "Description": "Controls the MTU on the IPv4 Wireguard interface. See Configuring MTU.",
           "DescriptionHTML": "<p>Controls the MTU on the IPv4 Wireguard interface. See Configuring MTU.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4513,7 +4679,8 @@
           "Description": "Controls the MTU on the IPv6 Wireguard interface. See Configuring MTU.",
           "DescriptionHTML": "<p>Controls the MTU on the IPv6 Wireguard interface. See Configuring MTU.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4539,7 +4706,8 @@
           "Description": "Controls Wireguard PersistentKeepalive option. Set 0 to disable.",
           "DescriptionHTML": "<p>Controls Wireguard PersistentKeepalive option. Set 0 to disable.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: Wireguard",
@@ -4565,7 +4733,8 @@
           "Description": "Controls the priority value to use for the Wireguard routing rule.",
           "DescriptionHTML": "<p>Controls the priority value to use for the Wireguard routing rule.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -4596,7 +4765,8 @@
           "Description": "Controls whether non-IPsec traffic is allowed in addition to IPsec traffic. Enabling this negates the anti-spoofing protections of IPsec but it is useful when migrating to/from IPsec.",
           "DescriptionHTML": "<p>Controls whether non-IPsec traffic is allowed in addition to IPsec traffic. Enabling this negates the anti-spoofing protections of IPsec but it is useful when migrating to/from IPsec.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: IPSec",
@@ -4622,7 +4792,8 @@
           "Description": "IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation.",
           "DescriptionHTML": "<p>IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: IPSec",
@@ -4648,7 +4819,8 @@
           "Description": "Sets IPSec IKE algorithm. Default is NIST suite B recommendation.",
           "DescriptionHTML": "<p>Sets IPSec IKE algorithm. Default is NIST suite B recommendation.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: IPSec",
@@ -4680,7 +4852,8 @@
           "Description": "Controls log level for IPSec components. Set to None for no logging. A generic log level terminology is used [None, Notice, Info, Debug, Verbose].",
           "DescriptionHTML": "<p>Controls log level for IPSec components. Set to None for no logging. A generic log level terminology is used [None, Notice, Info, Debug, Verbose].</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: IPSec",
@@ -4706,7 +4879,8 @@
           "Description": "Controls which mode IPSec is operating on. Default value means IPSec is not enabled.",
           "DescriptionHTML": "<p>Controls which mode IPSec is operating on. Default value means IPSec is not enabled.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: IPSec",
@@ -4732,7 +4906,8 @@
           "Description": "File contains PSK.",
           "DescriptionHTML": "<p>File contains PSK.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Overlay: IPSec",
@@ -4758,7 +4933,8 @@
           "Description": "The interval at which Felix will check the kernel's IPsec policy tables and repair any inconsistencies.",
           "DescriptionHTML": "<p>The interval at which Felix will check the kernel's IPsec policy tables and repair any inconsistencies.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -4789,7 +4965,8 @@
           "Description": "Controls how long metrics are retianed after the flow is gone.",
           "DescriptionHTML": "<p>Controls how long metrics are retianed after the flow is gone.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: Prometheus reports",
@@ -4815,7 +4992,8 @@
           "Description": "The path to the TLS CA file for the Prometheus per-flow metrics reporter.",
           "DescriptionHTML": "<p>The path to the TLS CA file for the Prometheus per-flow metrics reporter.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: Prometheus reports",
@@ -4841,7 +5019,8 @@
           "Description": "The path to the TLS certificate file for the Prometheus per-flow metrics reporter.",
           "DescriptionHTML": "<p>The path to the TLS certificate file for the Prometheus per-flow metrics reporter.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: Prometheus reports",
@@ -4867,7 +5046,8 @@
           "Description": "Controls whether the Prometheus per-flow metrics reporter is enabled. This is used to show real-time flow metrics in the UI.",
           "DescriptionHTML": "<p>Controls whether the Prometheus per-flow metrics reporter is enabled. This is used to show real-time flow metrics in the UI.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: Prometheus reports",
@@ -4893,7 +5073,8 @@
           "Description": "The path to the TLS private key file for the Prometheus per-flow metrics reporter.",
           "DescriptionHTML": "<p>The path to the TLS private key file for the Prometheus per-flow metrics reporter.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: Prometheus reports",
@@ -4919,7 +5100,8 @@
           "Description": "The port that the Prometheus per-flow metrics reporter should bind to.",
           "DescriptionHTML": "<p>The port that the Prometheus per-flow metrics reporter should bind to.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -4950,7 +5132,8 @@
           "Description": "The address to dial to when writing to Syslog. For TCP and UDP networks, the address has the form \"host:port\". The host must be a literal IP address, or a host name that can be resolved to IP addresses. The port must be a literal port number or a service name. For more, see: https://pkg.go.dev/net#Dial.",
           "DescriptionHTML": "<p>The address to dial to when writing to Syslog. For TCP and UDP networks, the address has the form \"host:port\". The host must be a literal IP address, or a host name that can be resolved to IP addresses. The port must be a literal port number or a service name. For more, see: https://pkg.go.dev/net#Dial.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: Syslog reports",
@@ -4976,7 +5159,8 @@
           "Description": "Turns on the feature to write logs to Syslog. Please note that this can incur significant disk space usage when running felix on non-cluster hosts.",
           "DescriptionHTML": "<p>Turns on the feature to write logs to Syslog. Please note that this can incur significant disk space usage when running felix on non-cluster hosts.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: Syslog reports",
@@ -5002,7 +5186,8 @@
           "Description": "The network to dial to when writing to Syslog. Known networks are \"tcp\", \"tcp4\" (IPv4-only), \"tcp6\" (IPv6-only), \"udp\", \"udp4\" (IPv4-only), \"udp6\" (IPv6-only), \"ip\", \"ip4\" (IPv4-only), \"ip6\" (IPv6-only), \"unix\", \"unixgram\" and \"unixpacket\". For more, see: https://pkg.go.dev/net#Dial.",
           "DescriptionHTML": "<p>The network to dial to when writing to Syslog. Known networks are \"tcp\", \"tcp4\" (IPv4-only), \"tcp6\" (IPv6-only), \"udp\", \"udp4\" (IPv4-only), \"udp6\" (IPv6-only), \"ip\", \"ip4\" (IPv4-only), \"ip6\" (IPv6-only), \"unix\", \"unixgram\" and \"unixpacket\". For more, see: https://pkg.go.dev/net#Dial.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -5033,7 +5218,8 @@
           "Description": "Used specify how far behind the external pipeline that reads flow logs can be. Default is 8192 bytes. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
           "DescriptionHTML": "<p>Used specify how far behind the external pipeline that reads flow logs can be. Default is 8192 bytes. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5059,7 +5245,8 @@
           "Description": "If enabled Felix will load the kprobe BPF programs to collect process info.",
           "DescriptionHTML": "<p>If enabled Felix will load the kprobe BPF programs to collect process info.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5085,7 +5272,8 @@
           "Description": "When FlowLogsCollectProcessPath and FlowLogsCollectProcessInfo are both enabled, each flow log will include information about the process that is sending or receiving the packets in that flow: the `process_name` field will contain the full path of the process executable, and the `process_args` field will have the arguments with which the executable was invoked. Process information will not be reported for connections which use raw sockets.",
           "DescriptionHTML": "<p>When FlowLogsCollectProcessPath and FlowLogsCollectProcessInfo are both enabled, each flow log will include information about the process that is sending or receiving the packets in that flow: the <code>process_name</code> field will contain the full path of the process executable, and the <code>process_args</code> field will have the arguments with which the executable was invoked. Process information will not be reported for connections which use raw sockets.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5111,7 +5299,8 @@
           "Description": "Enables flow logs reporting TCP socket stats.",
           "DescriptionHTML": "<p>Enables flow logs reporting TCP socket stats.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5137,7 +5326,8 @@
           "Description": "When FlowLogsCollectorDebugTrace is set to true, enables the logs in the collector to be printed in their entirety.",
           "DescriptionHTML": "<p>When FlowLogsCollectorDebugTrace is set to true, enables the logs in the collector to be printed in their entirety.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5163,7 +5353,8 @@
           "Description": "Used to configure if the source IP is used in the mapping of top level destination domains.",
           "DescriptionHTML": "<p>Used to configure if the source IP is used in the mapping of top level destination domains.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5189,7 +5380,8 @@
           "Description": "Used to enable/disable dynamically changing aggregation levels. Default is true.",
           "DescriptionHTML": "<p>Used to enable/disable dynamically changing aggregation levels. Default is true.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5215,7 +5407,8 @@
           "Description": "Enables Flow logs reporting for HostEndpoints.",
           "DescriptionHTML": "<p>Enables Flow logs reporting for HostEndpoints.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5241,7 +5434,8 @@
           "Description": "Enables Flow logs reporting for GlobalNetworkSets.",
           "DescriptionHTML": "<p>Enables Flow logs reporting for GlobalNetworkSets.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5271,7 +5465,8 @@
           "Description": "Used to choose the type of aggregation for flow log entries created for allowed connections. . Accepted values are 0, 1 and 2. 0 - No aggregation. 1 - Source port based aggregation. 2 - Pod prefix name based aggreagation.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for flow log entries created for allowed connections. . Accepted values are 0, 1 and 2. 0 - No aggregation. 1 - Source port based aggregation. 2 - Pod prefix name based aggreagation.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5302,7 +5497,8 @@
           "Description": "Used to choose the type of aggregation for flow log entries created for denied connections. . Accepted values are 0, 1 and 2. 0 - No aggregation. 1 - Source port based aggregation. 2 - Pod prefix name based aggregation. 3 - No destination ports based aggregation.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for flow log entries created for denied connections. . Accepted values are 0, 1 and 2. 0 - No aggregation. 1 - Source port based aggregation. 2 - Pod prefix name based aggregation. 3 - No destination ports based aggregation.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5328,7 +5524,8 @@
           "Description": "Sets the directory where flow logs files are stored.",
           "DescriptionHTML": "<p>Sets the directory where flow logs files are stored.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5354,7 +5551,8 @@
           "Description": "Used to configure the number of (destination) domains to include in the flow log. These are not included for workload or host endpoint destinations.",
           "DescriptionHTML": "<p>Used to configure the number of (destination) domains to include in the flow log. These are not included for workload or host endpoint destinations.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5380,7 +5578,8 @@
           "Description": "When set to true, enables logging flow logs to a file. If false no flow logging to file will occur.",
           "DescriptionHTML": "<p>When set to true, enables logging flow logs to a file. If false no flow logging to file will occur.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5406,7 +5605,8 @@
           "Description": "Used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
           "DescriptionHTML": "<p>Used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5432,7 +5632,8 @@
           "Description": "Used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
           "DescriptionHTML": "<p>Used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5458,7 +5659,8 @@
           "Description": "Used to configure if endpoint labels are included in a Flow log entry written to file.",
           "DescriptionHTML": "<p>Used to configure if endpoint labels are included in a Flow log entry written to file.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5484,7 +5686,8 @@
           "Description": "Used to configure if policy information are included in a Flow log entry written to file.",
           "DescriptionHTML": "<p>Used to configure if policy information are included in a Flow log entry written to file.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5510,7 +5713,8 @@
           "Description": "Used to configure if the destination service is included in a Flow log entry written to file. The service information can only be included if the flow was explicitly determined to be directed at the service (e.g. when the pre-DNAT destination corresponds to the service ClusterIP and port).",
           "DescriptionHTML": "<p>Used to configure if the destination service is included in a Flow log entry written to file. The service information can only be included if the flow was explicitly determined to be directed at the service (e.g. when the pre-DNAT destination corresponds to the service ClusterIP and port).</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5536,7 +5740,8 @@
           "Description": "Sets the max size in MB of flow logs files before rotation.",
           "DescriptionHTML": "<p>Sets the max size in MB of flow logs files before rotation.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5562,7 +5767,8 @@
           "Description": "Sets the number of log files to keep.",
           "DescriptionHTML": "<p>Sets the number of log files to keep.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5588,7 +5794,8 @@
           "Description": "Used to specify the maximum number of distinct post SNAT ports that will appear in the flowLogs. Default value is 3.",
           "DescriptionHTML": "<p>Used to specify the maximum number of distinct post SNAT ports that will appear in the flowLogs. Default value is 3.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5614,7 +5821,8 @@
           "Description": "Used to specify the maximum number of distinct process args that will appear in the flowLogs. Default value is 5.",
           "DescriptionHTML": "<p>Used to specify the maximum number of distinct process args that will appear in the flowLogs. Default value is 5.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5640,7 +5848,8 @@
           "Description": "Used to specify the maximum number of flow log entries with distinct process information beyond which process information will be aggregated.",
           "DescriptionHTML": "<p>Used to specify the maximum number of flow log entries with distinct process information beyond which process information will be aggregated.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5666,7 +5875,8 @@
           "Description": "Configures the interval at which Felix exports flow logs.",
           "DescriptionHTML": "<p>Configures the interval at which Felix exports flow logs.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5692,7 +5902,8 @@
           "Description": "Specifies the number of unique IP addresses (if relevant) that should be included in Flow logs.",
           "DescriptionHTML": "<p>Specifies the number of unique IP addresses (if relevant) that should be included in Flow logs.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Flow logs: file reports",
@@ -5718,7 +5929,8 @@
           "Description": "Used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.",
           "DescriptionHTML": "<p>Used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos. This parameter only takes effect when FlowLogsDynamicAggregationEnabled is set to true.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -5749,7 +5961,8 @@
           "Description": "An arbitrary number that can be changed, at runtime, to tell Felix to discard all its learnt DNS information. .",
           "DescriptionHTML": "<p>An arbitrary number that can be changed, at runtime, to tell Felix to discard all its learnt DNS information. .</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5775,7 +5988,8 @@
           "Description": "The name of the file that Felix uses to preserve learnt DNS information when restarting. .",
           "DescriptionHTML": "<p>The name of the file that Felix uses to preserve learnt DNS information when restarting. .</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5801,7 +6015,8 @@
           "Description": "The periodic interval at which Felix saves learnt DNS information to the cache file. .",
           "DescriptionHTML": "<p>The periodic interval at which Felix saves learnt DNS information to the cache file. .</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5827,7 +6042,8 @@
           "Description": "Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. .",
           "DescriptionHTML": "<p>Extra time to keep IPs and alias names that are learnt from DNS, in addition to each name or IP's advertised TTL. .</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5856,7 +6072,8 @@
           "Description": "Used to choose the type of aggregation for DNS log entries. . Accepted values are 0 and 1. 0 - No aggregation. 1 - Aggregate over clients with the same name prefix.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for DNS log entries. . Accepted values are 0 and 1. 0 - No aggregation. 1 - Aggregate over clients with the same name prefix.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5882,7 +6099,8 @@
           "Description": "Sets the directory where DNS log files are stored.",
           "DescriptionHTML": "<p>Sets the directory where DNS log files are stored.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5908,7 +6126,8 @@
           "Description": "Controls logging DNS logs to a file. If false no DNS logging to file will occur.",
           "DescriptionHTML": "<p>Controls logging DNS logs to a file. If false no DNS logging to file will occur.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5934,7 +6153,8 @@
           "Description": "Used to configure if endpoint labels are included in a DNS log entry written to file.",
           "DescriptionHTML": "<p>Used to configure if endpoint labels are included in a DNS log entry written to file.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5960,7 +6180,8 @@
           "Description": "Sets the max size in MB of DNS log files before rotation.",
           "DescriptionHTML": "<p>Sets the max size in MB of DNS log files before rotation.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -5986,7 +6207,8 @@
           "Description": "Sets the number of DNS log files to keep.",
           "DescriptionHTML": "<p>Sets the number of DNS log files to keep.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6012,7 +6234,8 @@
           "Description": "Limit on the number of DNS logs that can be emitted within each flush interval. When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs.",
           "DescriptionHTML": "<p>Limit on the number of DNS logs that can be emitted within each flush interval. When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6038,7 +6261,8 @@
           "Description": "Configures the interval at which Felix exports DNS logs.",
           "DescriptionHTML": "<p>Configures the interval at which Felix exports DNS logs.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6064,7 +6288,8 @@
           "Description": "Indicates to include measurements of DNS request/response latency in each DNS log.",
           "DescriptionHTML": "<p>Indicates to include measurements of DNS request/response latency in each DNS log.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6090,7 +6315,8 @@
           "Description": "The NFQUEUE ID to use for capturing DNS packets to ensure programming IPSets occurs before the response is released. Used when DNSPolicyMode is DelayDNSResponse.",
           "DescriptionHTML": "<p>The NFQUEUE ID to use for capturing DNS packets to ensure programming IPSets occurs before the response is released. Used when DNSPolicyMode is DelayDNSResponse.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6116,7 +6342,8 @@
           "Description": "The max length of time to hold on to a DNS response while waiting for the the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSResponse.",
           "DescriptionHTML": "<p>The max length of time to hold on to a DNS response while waiting for the the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSResponse.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6142,7 +6369,8 @@
           "Description": "The size of the NFQUEUE for captured DNS packets. This is the maximum number of DNS packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSResponse.",
           "DescriptionHTML": "<p>The size of the NFQUEUE for captured DNS packets. This is the maximum number of DNS packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSResponse.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6172,7 +6400,8 @@
           "Description": "Specifies how DNS policy programming will be handled. DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches, but did not match. The packet is released after a fixed time, or after the destination IP address was programmed. DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit statistics. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.\n\nThis setting is ignored on Windows and \"NoDelay\" is always used.\n\nThis setting is ignored by eBPF and BPFDNSPolicyMode is used instead.",
           "DescriptionHTML": "<p>Specifies how DNS policy programming will be handled. DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches, but did not match. The packet is released after a fixed time, or after the destination IP address was programmed. DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit statistics. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.</p>\n<p>This setting is ignored on Windows and \"NoDelay\" is always used.</p>\n<p>This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.</p>",
           "UserEditable": true,
-          "GoType": "*v3.DNSPolicyMode"
+          "GoType": "*v3.DNSPolicyMode",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6198,7 +6427,8 @@
           "Description": "The NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed to ipsets yet. Used when DNSPolicyMode is DelayDeniedPacket.",
           "DescriptionHTML": "<p>The NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed to ipsets yet. Used when DNSPolicyMode is DelayDeniedPacket.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6224,7 +6454,8 @@
           "Description": "DNSPolicyNfqueueID is the size of the NFQUEUE for DNS policy re-evaluation. This is the maximum number of denied packets that may be queued up pending re-evaluation. Used when DNSPolicyMode is DelayDeniedPacket.",
           "DescriptionHTML": "<p>DNSPolicyNfqueueID is the size of the NFQUEUE for DNS policy re-evaluation. This is the maximum number of denied packets that may be queued up pending re-evaluation. Used when DNSPolicyMode is DelayDeniedPacket.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "DNS logs / policy",
@@ -6250,7 +6481,8 @@
           "Description": "The DNS servers that Felix should trust. Each entry here must be `<ip>[:<port>]` - indicating an explicit DNS server IP - or `k8s-service:[<namespace>/]<name>[:port]` - indicating a Kubernetes DNS service. `<port>` defaults to the first service port, or 53 for an IP, and `<namespace>` to `kube-system`. An IPv6 address with a port must use the square brackets convention, for example `[fd00:83a6::12]:5353`.Note that Felix (calico-node) will need RBAC permission to read the details of each service specified by a `k8s-service:...` form. .",
           "DescriptionHTML": "<p>The DNS servers that Felix should trust. Each entry here must be <code>&lt;ip&gt;[:&lt;port&gt;]</code> - indicating an explicit DNS server IP - or <code>k8s-service:[&lt;namespace&gt;/]&lt;name&gt;[:port]</code> - indicating a Kubernetes DNS service. <code>&lt;port&gt;</code> defaults to the first service port, or 53 for an IP, and <code>&lt;namespace&gt;</code> to <code>kube-system</code>. An IPv6 address with a port must use the square brackets convention, for example <code>[fd00:83a6::12]:5353</code>.Note that Felix (calico-node) will need RBAC permission to read the details of each service specified by a <code>k8s-service:...</code> form. .</p>",
           "UserEditable": true,
-          "GoType": "*[]string"
+          "GoType": "*[]string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -6284,7 +6516,8 @@
           "Description": "Used to choose the type of aggregation for the destination metadata on L7 log entries. . Accepted values are IncludeL7DestinationInfo and ExcludeL7DestinationInfo. IncludeL7DestinationInfo - Include destination metadata in the logs. ExcludeL7DestinationInfo - Aggregate over all other fields ignoring the destination aggregated name, namespace, and type.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for the destination metadata on L7 log entries. . Accepted values are IncludeL7DestinationInfo and ExcludeL7DestinationInfo. IncludeL7DestinationInfo - Include destination metadata in the logs. ExcludeL7DestinationInfo - Aggregate over all other fields ignoring the destination aggregated name, namespace, and type.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6313,7 +6546,8 @@
           "Description": "Used to choose the type of aggregation for HTTP header data on L7 log entries. . Accepted values are IncludeL7HTTPHeaderInfo and ExcludeL7HTTPHeaderInfo. IncludeL7HTTPHeaderInfo - Include HTTP header data in the logs. ExcludeL7HTTPHeaderInfo - Aggregate over all other fields ignoring the user agent and log type.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for HTTP header data on L7 log entries. . Accepted values are IncludeL7HTTPHeaderInfo and ExcludeL7HTTPHeaderInfo. IncludeL7HTTPHeaderInfo - Include HTTP header data in the logs. ExcludeL7HTTPHeaderInfo - Aggregate over all other fields ignoring the user agent and log type.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6342,7 +6576,8 @@
           "Description": "Used to choose the type of aggregation for the HTTP request method on L7 log entries. . Accepted values are IncludeL7HTTPMethod and ExcludeL7HTTPMethod. IncludeL7HTTPMethod - Include HTTP method in the logs. ExcludeL7HTTPMethod - Aggregate over all other fields ignoring the HTTP method.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for the HTTP request method on L7 log entries. . Accepted values are IncludeL7HTTPMethod and ExcludeL7HTTPMethod. IncludeL7HTTPMethod - Include HTTP method in the logs. ExcludeL7HTTPMethod - Aggregate over all other fields ignoring the HTTP method.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6368,7 +6603,8 @@
           "Description": "Used to choose the number of components in the url path to display. This allows for the url to be truncated in case parts of the path provide no value. Setting this value to negative will allow all parts of the path to be displayed. .",
           "DescriptionHTML": "<p>Used to choose the number of components in the url path to display. This allows for the url to be truncated in case parts of the path provide no value. Setting this value to negative will allow all parts of the path to be displayed. .</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6397,7 +6633,8 @@
           "Description": "Used to choose the type of aggregation for the response code on L7 log entries. . Accepted values are IncludeL7ResponseCode and ExcludeL7ResponseCode. IncludeL7ResponseCode - Include the response code in the logs. ExcludeL7ResponseCode - Aggregate over all other fields ignoring the response code.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for the response code on L7 log entries. . Accepted values are IncludeL7ResponseCode and ExcludeL7ResponseCode. IncludeL7ResponseCode - Include the response code in the logs. ExcludeL7ResponseCode - Aggregate over all other fields ignoring the response code.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6426,7 +6663,8 @@
           "Description": "Used to choose the type of aggregation for the service data on L7 log entries. . Accepted values are IncludeL7ServiceInfo and ExcludeL7ServiceInfo. IncludeL7ServiceInfo - Include service data in the logs. ExcludeL7ServiceInfo - Aggregate over all other fields ignoring the service name, namespace, and port.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for the service data on L7 log entries. . Accepted values are IncludeL7ServiceInfo and ExcludeL7ServiceInfo. IncludeL7ServiceInfo - Include service data in the logs. ExcludeL7ServiceInfo - Aggregate over all other fields ignoring the service name, namespace, and port.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6456,7 +6694,8 @@
           "Description": "L7LogsFileAggregationExcludeSourceInfo is used to choose the type of aggregation for the source metadata on L7 log entries. . Accepted values are IncludeL7SourceInfo, IncludeL7SourceInfoNoPort, and ExcludeL7SourceInfo. IncludeL7SourceInfo - Include source metadata in the logs. IncludeL7SourceInfoNoPort - Include source metadata in the logs excluding the source port. ExcludeL7SourceInfo - Aggregate over all other fields ignoring the source aggregated name, namespace, and type.",
           "DescriptionHTML": "<p>L7LogsFileAggregationExcludeSourceInfo is used to choose the type of aggregation for the source metadata on L7 log entries. . Accepted values are IncludeL7SourceInfo, IncludeL7SourceInfoNoPort, and ExcludeL7SourceInfo. IncludeL7SourceInfo - Include source metadata in the logs. IncludeL7SourceInfoNoPort - Include source metadata in the logs excluding the source port. ExcludeL7SourceInfo - Aggregate over all other fields ignoring the source aggregated name, namespace, and type.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6487,7 +6726,8 @@
           "Description": "Used to choose the type of aggregation for the url on L7 log entries. . Accepted values: IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.",
           "DescriptionHTML": "<p>Used to choose the type of aggregation for the url on L7 log entries. . Accepted values: IncludeL7FullURL - Include the full URL up to however many path components are allowed by L7LogsFileAggregationNumURLPath. TrimURLQuery - Aggregate over all other fields ignoring the query parameters on the URL. TrimURLQueryAndPath - Aggregate over all other fields and the base URL only. ExcludeL7URL - Aggregate over all other fields ignoring the URL entirely.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6513,7 +6753,8 @@
           "Description": "Limit on the length of the URL collected in L7 logs. When a URL length reaches this limit it is sliced off, and the sliced URL is sent to log storage.",
           "DescriptionHTML": "<p>Limit on the length of the URL collected in L7 logs. When a URL length reaches this limit it is sliced off, and the sliced URL is sent to log storage.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6539,7 +6780,8 @@
           "Description": "Sets the directory where L7 log files are stored.",
           "DescriptionHTML": "<p>Sets the directory where L7 log files are stored.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6565,7 +6807,8 @@
           "Description": "Controls logging L7 logs to a file. If false no L7 logging to file will occur.",
           "DescriptionHTML": "<p>Controls logging L7 logs to a file. If false no L7 logging to file will occur.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6591,7 +6834,8 @@
           "Description": "Sets the max size in MB of L7 log files before rotation.",
           "DescriptionHTML": "<p>Sets the max size in MB of L7 log files before rotation.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6617,7 +6861,8 @@
           "Description": "Sets the number of L7 log files to keep.",
           "DescriptionHTML": "<p>Sets the number of L7 log files to keep.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6643,7 +6888,8 @@
           "Description": "Limit on the number of L7 logs that can be emitted within each flush interval. When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs. A value of 0 means no limit.",
           "DescriptionHTML": "<p>Limit on the number of L7 logs that can be emitted within each flush interval. When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs. A value of 0 means no limit.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 logs",
@@ -6669,7 +6915,8 @@
           "Description": "Configures the interval at which Felix exports L7 logs.",
           "DescriptionHTML": "<p>Configures the interval at which Felix exports L7 logs.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -6700,7 +6947,8 @@
           "Description": "The timeout on AWS API requests.",
           "DescriptionHTML": "<p>The timeout on AWS API requests.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "AWS integration",
@@ -6726,7 +6974,8 @@
           "Description": "Controls the priority that Felix will use for routing rules when programming them for AWS Secondary IP support.",
           "DescriptionHTML": "<p>Controls the priority that Felix will use for routing rules when programming them for AWS Secondary IP support.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "AWS integration",
@@ -6756,7 +7005,8 @@
           "Description": "Controls whether Felix will try to provision AWS secondary ENIs for workloads that have IPs from IP pools that are configured with an AWS subnet ID. If the field is set to \"EnabledENIPerWorkload\" then each workload with an AWS-backed IP will be assigned its own secondary ENI. If set to \"Enabled\" then each workload with an AWS-backed IP pool will be allocated a secondary IP address on a secondary ENI; this mode requires additional IP pools to be provisioned for the host to claim IPs for the primary IP of the secondary ENIs. Accepted value must be one of \"Enabled\", \"EnabledENIPerWorkload\" or \"Disabled\".",
           "DescriptionHTML": "<p>Controls whether Felix will try to provision AWS secondary ENIs for workloads that have IPs from IP pools that are configured with an AWS subnet ID. If the field is set to \"EnabledENIPerWorkload\" then each workload with an AWS-backed IP will be assigned its own secondary ENI. If set to \"Enabled\" then each workload with an AWS-backed IP pool will be allocated a secondary IP address on a secondary ENI; this mode requires additional IP pools to be provisioned for the host to claim IPs for the primary IP of the secondary ENIs. Accepted value must be one of \"Enabled\", \"EnabledENIPerWorkload\" or \"Disabled\".</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "AWS integration",
@@ -6786,7 +7036,8 @@
           "Description": "Controls whether Felix will try to change the \"source/dest check\" setting on the EC2 instance on which it is running. A value of \"Disable\" will try to disable the source/dest check. Disabling the check allows for sending workload traffic without encapsulation within the same AWS subnet.",
           "DescriptionHTML": "<p>Controls whether Felix will try to change the \"source/dest check\" setting on the EC2 instance on which it is running. A value of \"Disable\" will try to disable the source/dest check. Disabling the check allows for sending workload traffic without encapsulation within the same AWS subnet.</p>",
           "UserEditable": true,
-          "GoType": "*v3.AWSSrcDstCheckOption"
+          "GoType": "*v3.AWSSrcDstCheckOption",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -6817,7 +7068,8 @@
           "Description": "The minimum number of poll failures before a remote Egress Gateway is considered to have failed.",
           "DescriptionHTML": "<p>The minimum number of poll failures before a remote Egress Gateway is considered to have failed.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Egress gateway",
@@ -6843,7 +7095,8 @@
           "Description": "The interval at which Felix will poll remote egress gateways to check their health. Only Egress Gateways with a named \"health\" port will be polled in this way. Egress Gateways that fail the health check will be taken our of use as if they have been deleted.",
           "DescriptionHTML": "<p>The interval at which Felix will poll remote egress gateways to check their health. Only Egress Gateways with a named \"health\" port will be polled in this way. Egress Gateways that fail the health check will be taken our of use as if they have been deleted.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Egress gateway",
@@ -6869,7 +7122,8 @@
           "Description": "Controls the priority value to use for the egress IP routing rule.",
           "DescriptionHTML": "<p>Controls the priority value to use for the egress IP routing rule.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Egress gateway",
@@ -6899,7 +7153,8 @@
           "Description": "Defines three different support modes for egress IP function. - Disabled: Egress IP function is disabled. - EnabledPerNamespace: Egress IP function is enabled and can be configured on a per-namespace basis; per-pod egress annotations are ignored. - EnabledPerNamespaceOrPerPod: Egress IP function is enabled and can be configured per-namespace or per-pod, with per-pod egress annotations overriding namespace annotations.",
           "DescriptionHTML": "<p>Defines three different support modes for egress IP function. - Disabled: Egress IP function is disabled. - EnabledPerNamespace: Egress IP function is enabled and can be configured on a per-namespace basis; per-pod egress annotations are ignored. - EnabledPerNamespaceOrPerPod: Egress IP function is enabled and can be configured per-namespace or per-pod, with per-pod egress annotations overriding namespace annotations.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Egress gateway",
@@ -6925,7 +7180,8 @@
           "Description": "The port number of vxlan tunnel device for egress traffic.",
           "DescriptionHTML": "<p>The port number of vxlan tunnel device for egress traffic.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Egress gateway",
@@ -6951,7 +7207,8 @@
           "Description": "The VNI ID of vxlan tunnel device for egress traffic.",
           "DescriptionHTML": "<p>The VNI ID of vxlan tunnel device for egress traffic.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -6982,7 +7239,8 @@
           "Description": "Controls the priority value to use for the external network routing rule.",
           "DescriptionHTML": "<p>Controls the priority value to use for the external network routing rule.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "External network support",
@@ -7011,7 +7269,8 @@
           "Description": "Defines two different support modes for external network function. - Disabled: External network function is disabled. - Enabled: External network function is enabled.",
           "DescriptionHTML": "<p>Defines two different support modes for external network function. - Disabled: External network function is disabled. - Enabled: External network function is enabled.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -7042,7 +7301,8 @@
           "Description": "Controls directory to store file capture.",
           "DescriptionHTML": "<p>Controls directory to store file capture.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Packet capture",
@@ -7068,7 +7328,8 @@
           "Description": "Controls number of rotated capture file to keep.",
           "DescriptionHTML": "<p>Controls number of rotated capture file to keep.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Packet capture",
@@ -7094,7 +7355,8 @@
           "Description": "Controls the max size of a file capture.",
           "DescriptionHTML": "<p>Controls the max size of a file capture.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Packet capture",
@@ -7120,7 +7382,8 @@
           "Description": "Controls the time rotation of a packet capture.",
           "DescriptionHTML": "<p>Controls the time rotation of a packet capture.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -7155,7 +7418,8 @@
           "Description": "Sets whether traffic is directed through a transparent proxy for further processing or not and how is the proxying done.",
           "DescriptionHTML": "<p>Sets whether traffic is directed through a transparent proxy for further processing or not and how is the proxying done.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 proxy",
@@ -7181,7 +7445,8 @@
           "Description": "Sets to which port proxied traffic should be redirected.",
           "DescriptionHTML": "<p>Sets to which port proxied traffic should be redirected.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "L7 proxy",
@@ -7207,7 +7472,8 @@
           "Description": "Tells Felix which mark is used by the proxy for its upstream connections so that Felix can program the dataplane correctly.",
           "DescriptionHTML": "<p>Tells Felix which mark is used by the proxy for its upstream connections so that Felix can program the dataplane correctly.</p>",
           "UserEditable": true,
-          "GoType": "*uint32"
+          "GoType": "*uint32",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -7238,7 +7504,8 @@
           "Description": "Controls the cgroup v2 path that we apply the connect-time load balancer to. Most distros\nare configured for cgroup v1, which prevents all but the root cgroup v2 from working so this is only useful\nfor development right now.",
           "DescriptionHTML": "<p>Controls the cgroup v2 path that we apply the connect-time load balancer to. Most distros\nare configured for cgroup v1, which prevents all but the root cgroup v2 from working so this is only useful\nfor development right now.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7264,7 +7531,8 @@
           "Description": "Can be used to prevent Felix from repinning its BPF maps at startup. This is useful for\ntesting with multiple Felix instances running on one host.",
           "DescriptionHTML": "<p>Can be used to prevent Felix from repinning its BPF maps at startup. This is useful for\ntesting with multiple Felix instances running on one host.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7290,7 +7558,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7316,7 +7585,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7342,7 +7612,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7368,7 +7639,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7394,7 +7666,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7420,7 +7693,8 @@
           "Description": "Disables the dropping of log messages when the log buffer is full. This can significantly impact performance if log write-out is a bottleneck.",
           "DescriptionHTML": "<p>Disables the dropping of log messages when the log buffer is full. This can significantly impact performance if log write-out is a bottleneck.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7446,7 +7720,8 @@
           "Description": "The host IP or hostname to bind the debug port to. Only used if DebugPort is set.",
           "DescriptionHTML": "<p>The host IP or hostname to bind the debug port to. Only used if DebugPort is set.</p>",
           "UserEditable": true,
-          "GoType": "*string"
+          "GoType": "*string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7472,7 +7747,8 @@
           "Description": "The path to write the memory profile to when triggered by signal.",
           "DescriptionHTML": "<p>The path to write the memory profile to when triggered by signal.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7498,7 +7774,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7524,7 +7801,8 @@
           "Description": "If set, enables Felix's debug HTTP port, which allows memory and CPU profiles to be retrieved. The debug port is not secure, it should not be exposed to the internet.",
           "DescriptionHTML": "<p>If set, enables Felix's debug HTTP port, which allows memory and CPU profiles to be retrieved. The debug port is not secure, it should not be exposed to the internet.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7550,7 +7828,8 @@
           "Description": "Used to simulate a hang in the calculation graph after the specified duration. This is useful in tests of the watchdog system only!",
           "DescriptionHTML": "<p>Used to simulate a hang in the calculation graph after the specified duration. This is useful in tests of the watchdog system only!</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7576,7 +7855,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7602,7 +7882,8 @@
           "Description": "Adds an artificial delay to every dataplane operation. This is useful for simulating a heavily loaded system for test purposes only.",
           "DescriptionHTML": "<p>Adds an artificial delay to every dataplane operation. This is useful for simulating a heavily loaded system for test purposes only.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7628,7 +7909,8 @@
           "Description": "Used to simulate a hang in the dataplane after the specified duration. This is useful in tests of the watchdog system only!",
           "DescriptionHTML": "<p>Used to simulate a hang in the dataplane after the specified duration. This is useful in tests of the watchdog system only!</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7654,7 +7936,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7680,7 +7963,8 @@
           "Description": "Unsupported diagnostic setting, used when testing Felix.  Not exposed in `FelixConfiguration`.",
           "DescriptionHTML": "<p>Unsupported diagnostic setting, used when testing Felix.  Not exposed in <code>FelixConfiguration</code>.</p>",
           "UserEditable": true,
-          "GoType": ""
+          "GoType": "",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Debug/test-only (generally unsupported)",
@@ -7706,7 +7990,8 @@
           "Description": "The path to write a diagnostic flow logs statistics dump to when triggered by signal.",
           "DescriptionHTML": "<p>The path to write a diagnostic flow logs statistics dump to when triggered by signal.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         }
       ]
     },
@@ -7737,7 +8022,8 @@
           "Description": "Unused in Calico Enterprise, usage reporting is permanently disabled.",
           "DescriptionHTML": "<p>Unused in Calico Enterprise, usage reporting is permanently disabled.</p>",
           "UserEditable": true,
-          "GoType": "*bool"
+          "GoType": "*bool",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Usage reporting",
@@ -7763,7 +8049,8 @@
           "Description": "Unused in Calico Enterprise, usage reporting is permanently disabled.",
           "DescriptionHTML": "<p>Unused in Calico Enterprise, usage reporting is permanently disabled.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": true
         },
         {
           "Group": "Usage reporting",
@@ -7789,7 +8076,8 @@
           "Description": "Unused in Calico Enterprise, usage reporting is permanently disabled.",
           "DescriptionHTML": "<p>Unused in Calico Enterprise, usage reporting is permanently disabled.</p>",
           "UserEditable": true,
-          "GoType": "*v1.Duration"
+          "GoType": "*v1.Duration",
+          "OpenSourceOnly": true
         }
       ]
     }
