@@ -10,6 +10,7 @@ TEST_DIR=./tests/k8st
 : ${KIND:=dist/kind}
 
 echo "Download kind executable with multiple networks support"
+mkdir -p $(dirname ${KIND})
 curl -L https://github.com/projectcalico/kind/releases/download/multiple-networks-0.3/kind -o ${KIND}
 chmod +x ${KIND}
 
