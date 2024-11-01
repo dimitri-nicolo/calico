@@ -518,6 +518,11 @@ var _ = DescribeTable("Config parsing",
 			{Protocol: "tcp", Port: 6667},
 		},
 	),
+
+	Entry("GoMaxProcs default", "GoMaxProcs", "", -1),
+	Entry("GoMaxProcs -2 should be replaced with default", "GoMaxProcs", "-2", -1),
+	Entry("GoMaxProcs 1000 valid", "GoMaxProcs", "1000", 1000),
+
 	Entry("KubeNodePortRanges empty", "KubeNodePortRanges", "",
 		[]numorstring.Port{
 			{MinPort: 30000, MaxPort: 32767, PortName: ""},

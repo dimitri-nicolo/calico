@@ -18,12 +18,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +51,7 @@ const (
 
 type Metadata struct {
 	Name              string
+	Type              string
 	DefaultString     string
 	Default           interface{}
 	ZeroValue         interface{}
@@ -74,6 +77,13 @@ func (m *Metadata) setDefault(config *Config) {
 
 type BoolParam struct {
 	Metadata
+}
+
+const boolSchema = "Boolean: `true`, `1`, `yes`, `y`, `t` accepted as True; " +
+	"`false`, `0`, `no`, `n`, `f` accepted (case insensitively) as False."
+
+func (p *BoolParam) SchemaDescription() string {
+	return boolSchema
 }
 
 func (p *BoolParam) Parse(raw string) (interface{}, error) {
@@ -102,6 +112,10 @@ func (p *BoolPtrParam) Parse(raw string) (interface{}, error) {
 	return nil, p.parseFailed(raw, "invalid boolean")
 }
 
+func (p *BoolPtrParam) SchemaDescription() string {
+	return boolSchema
+}
+
 type MinMax struct {
 	Min int
 	Max int
@@ -113,7 +127,7 @@ type IntParam struct {
 }
 
 func (p *IntParam) Parse(raw string) (interface{}, error) {
-	value, err := strconv.ParseInt(raw, 0, 32)
+	value, err := strconv.ParseInt(raw, 0, 64)
 	if err != nil {
 		err = p.parseFailed(raw, "invalid int")
 		return nil, err
@@ -150,6 +164,42 @@ func (p *IntParam) Parse(raw string) (interface{}, error) {
 	return result, err
 }
 
+func (p *IntParam) SchemaDescription() string {
+	if len(p.Ranges) > 0 {
+		return intSchema(p.Ranges)
+	} else {
+		return intSchema([]MinMax{{math.MinInt32, math.MaxInt32}})
+	}
+}
+
+func intSchema(ranges []MinMax) string {
+	if len(ranges) == 1 && ranges[0].Min == math.MinInt && ranges[0].Max == math.MaxInt {
+		// Avoid printing the default range, which is ridiculously large for
+		// most fields.
+		return "Integer"
+	}
+	desc := "Integer: "
+	first := true
+	for _, r := range ranges {
+		if !first {
+			desc = desc + ", "
+		} else {
+			first = false
+		}
+		desc = desc + fmt.Sprintf("[%v,%v]", formatInt(r.Min), formatInt(r.Max))
+	}
+	return desc
+}
+
+func formatInt(m int) string {
+	if m == math.MaxInt64 {
+		return "2^63-1"
+	} else if m == math.MinInt64 {
+		return "-2^63"
+	}
+	return fmt.Sprint(m)
+}
+
 type Int32Param struct {
 	Metadata
 }
@@ -164,6 +214,10 @@ func (p *Int32Param) Parse(raw string) (interface{}, error) {
 	return result, err
 }
 
+func (p *Int32Param) SchemaDescription() string {
+	return intSchema([]MinMax{{math.MinInt32, math.MaxInt32}})
+}
+
 type FloatParam struct {
 	Metadata
 }
@@ -175,6 +229,10 @@ func (p *FloatParam) Parse(raw string) (result interface{}, err error) {
 		return
 	}
 	return
+}
+
+func (p *FloatParam) SchemaDescription() string {
+	return "Floating point number"
 }
 
 type SecondsParam struct {
@@ -198,6 +256,14 @@ func (p *SecondsParam) Parse(raw string) (result interface{}, err error) {
 	return result, err
 }
 
+func (p *SecondsParam) SchemaDescription() string {
+	desc := "Seconds (floating point)"
+	if p.Min != math.MinInt || p.Max != math.MaxInt {
+		desc = desc + fmt.Sprintf(" between %v and %v", p.Min, p.Max)
+	}
+	return desc
+}
+
 type MillisParam struct {
 	Metadata
 }
@@ -210,6 +276,10 @@ func (p *MillisParam) Parse(raw string) (result interface{}, err error) {
 	}
 	result = time.Duration(millis * float64(time.Millisecond))
 	return
+}
+
+func (p *MillisParam) SchemaDescription() string {
+	return "Milliseconds (floating point)"
 }
 
 type RegexpParam struct {
@@ -225,6 +295,13 @@ func (p *RegexpParam) Parse(raw string) (result interface{}, err error) {
 		result = raw
 	}
 	return
+}
+
+func (p *RegexpParam) SchemaDescription() string {
+	if p.Regexp == StringRegexp {
+		return "String"
+	}
+	return fmt.Sprintf("String matching regex `%s`", p.Regexp.String())
 }
 
 // RegexpPatternParam differs from RegexpParam (above) in that it validates
@@ -251,6 +328,10 @@ func (p *RegexpPatternParam) Parse(raw string) (interface{}, error) {
 	return result, nil
 }
 
+func (p *RegexpPatternParam) SchemaDescription() string {
+	return "Regular expression"
+}
+
 // RegexpPatternListParam differs from RegexpParam (above) in that it validates
 // string values that are (themselves) regular expressions.
 type RegexpPatternListParam struct {
@@ -259,6 +340,7 @@ type RegexpPatternListParam struct {
 	NonRegexpElemRegexp *regexp.Regexp
 	Delimiter           string
 	Msg                 string
+	Schema              string
 }
 
 // Parse validates whether the given raw string contains a list of valid values.
@@ -290,6 +372,10 @@ func (p *RegexpPatternListParam) Parse(raw string) (interface{}, error) {
 		}
 	}
 	return result, nil
+}
+
+func (p *RegexpPatternListParam) SchemaDescription() string {
+	return p.Schema
 }
 
 type FileParam struct {
@@ -352,6 +438,18 @@ func (p *FileParam) Parse(raw string) (interface{}, error) {
 	return raw, nil
 }
 
+func (p *FileParam) SchemaDescription() string {
+	mustExist := ""
+	if p.MustExist {
+		mustExist = ", which must exist"
+	}
+	if p.Executable {
+		return "Path to executable" + mustExist + ". If not an absolute path, " +
+			"the directory containing this binary and the system path will be searched."
+	}
+	return "Path to file" + mustExist
+}
+
 type Ipv4Param struct {
 	Metadata
 }
@@ -368,6 +466,10 @@ func (p *Ipv4Param) Parse(raw string) (result interface{}, err error) {
 	return
 }
 
+func (p *Ipv4Param) SchemaDescription() string {
+	return "IPv4 address"
+}
+
 type Ipv6Param struct {
 	Metadata
 }
@@ -382,6 +484,10 @@ func (p *Ipv6Param) Parse(raw string) (result interface{}, err error) {
 	}
 	result = res
 	return
+}
+
+func (p *Ipv6Param) SchemaDescription() string {
+	return "IPv6 address"
 }
 
 type PortListParam struct {
@@ -463,6 +569,12 @@ func (p *PortListParam) Parse(raw string) (interface{}, error) {
 	return result, nil
 }
 
+func (p *PortListParam) SchemaDescription() string {
+	return "Comma-delimited list of numeric ports with optional protocol and CIDR:" +
+		"`(tcp|udp):<cidr>:<port>`, `(tcp|udp):<port>` or `<port>`. IPv6 " +
+		"CIDRs must be enclosed in square brackets."
+}
+
 type PortRangeParam struct {
 	Metadata
 }
@@ -476,6 +588,10 @@ func (p *PortRangeParam) Parse(raw string) (interface{}, error) {
 		return nil, p.parseFailed(raw, fmt.Sprintf("%s has port name set", raw))
 	}
 	return portRange, nil
+}
+
+func (p *PortRangeParam) SchemaDescription() string {
+	return "Port range: either a single number in [0,65535] or a range of numbers `n:m`"
 }
 
 type PortRangeListParam struct {
@@ -495,6 +611,10 @@ func (p *PortRangeListParam) Parse(raw string) (interface{}, error) {
 		result = append(result, portRange)
 	}
 	return result, nil
+}
+
+func (p *PortRangeListParam) SchemaDescription() string {
+	return "List of port ranges: comma-delimited list of either single numbers in range [0,65535] or a ranges of numbers `n:m`"
 }
 
 type EndpointListParam struct {
@@ -541,6 +661,10 @@ func (p *EndpointListParam) Parse(raw string) (result interface{}, err error) {
 	return
 }
 
+func (p *EndpointListParam) SchemaDescription() string {
+	return "List of HTTP endpoints: comma-delimited list of `http(s)://hostname:port`"
+}
+
 type MarkBitmaskParam struct {
 	Metadata
 }
@@ -566,6 +690,10 @@ func (p *MarkBitmaskParam) Parse(raw string) (interface{}, error) {
 	return result, err
 }
 
+func (p *MarkBitmaskParam) SchemaDescription() string {
+	return fmt.Sprintf("32-bit bitmask (hex or deccimal allowed) with at least %d bits set, example: `0xffff0000`", MinIptablesMarkBits)
+}
+
 type OneofListParam struct {
 	Metadata
 	lowerCaseOptionsToCanonical map[string]string
@@ -577,6 +705,15 @@ func (p *OneofListParam) Parse(raw string) (result interface{}, err error) {
 		err = p.parseFailed(raw, "unknown option")
 	}
 	return
+}
+
+func (p *OneofListParam) SchemaDescription() string {
+	var values []string
+	for _, v := range p.lowerCaseOptionsToCanonical {
+		values = append(values, fmt.Sprintf("`%s`", v))
+	}
+	sort.Strings(values)
+	return "One of: " + strings.Join(values, ", ") + " (case insensitive)"
 }
 
 type CIDRListParam struct {
@@ -600,6 +737,10 @@ func (c *CIDRListParam) Parse(raw string) (result interface{}, err error) {
 		resultSlice = append(resultSlice, net.String())
 	}
 	return resultSlice, nil
+}
+
+func (c *CIDRListParam) SchemaDescription() string {
+	return "Comma-delimited list of CIDRs"
 }
 
 type ServerListParam struct {
@@ -681,6 +822,13 @@ func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
 	return resultSlice, nil
 }
 
+func (c *ServerListParam) SchemaDescription() string {
+	return "Comma-delimited list of DNS servers. Each entry can be: " +
+		"`<IP address>`, an `<IP address>:<port>` (IPv6 addresses must be " +
+		"wrapped in square brackets), or, a Kubernetes service name " +
+		"`k8s-service:(namespace/)service-name`."
+}
+
 func realGetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 	// Try to get the kubernetes config either from environments or in-cluster.
 	// Note: Felix on Windows does not run as a Pod hence no in-cluster config is available.
@@ -742,6 +890,10 @@ func (r *RegionParam) Parse(raw string) (result interface{}, err error) {
 	return raw, nil
 }
 
+func (r *RegionParam) SchemaDescription() string {
+	return "OpenStack region name (must be a valid DNS label)"
+}
+
 // linux can support route-table indices up to 0xFFFFFFFF
 // however, using 0xFFFFFFFF tables would require too much computation, so the total number of designated tables is capped at 0xFFFF
 const routeTableMaxLinux = 0xffffffff
@@ -770,6 +922,10 @@ func (p *RouteTableRangeParam) Parse(raw string) (result interface{}, err error)
 		err = nil
 	}
 	return
+}
+
+func (p *RouteTableRangeParam) SchemaDescription() string {
+	return "Range of route table indices `n-m`, where `n` and `m` are integers in [0,250]."
 }
 
 type RouteTableRangesParam struct {
@@ -835,6 +991,12 @@ func (p *RouteTableRangesParam) Parse(raw string) (result interface{}, err error
 	return
 }
 
+func (p *RouteTableRangesParam) SchemaDescription() string {
+	return fmt.Sprintf("Comma or space-delimited list of route table ranges of the form `n-m` "+
+		"where `n` and `m` are integers in [0,%d]. The sum of the sizes of all ranges may not exceed %d.",
+		routeTableMaxLinux, routeTableRangeMaxTables)
+}
+
 type KeyValueListParam struct {
 	Metadata
 }
@@ -844,6 +1006,10 @@ func (p *KeyValueListParam) Parse(raw string) (result interface{}, err error) {
 	return
 }
 
+func (p *KeyValueListParam) SchemaDescription() string {
+	return "Comma-delimited list of key=value pairs"
+}
+
 type KeyDurationListParam struct {
 	Metadata
 }
@@ -851,6 +1017,11 @@ type KeyDurationListParam struct {
 func (p *KeyDurationListParam) Parse(raw string) (result interface{}, err error) {
 	result, err = stringutils.ParseKeyDurationList(raw)
 	return
+}
+
+func (p *KeyDurationListParam) SchemaDescription() string {
+	return "Comma-delimited list of `<key>=<duration>` pairs, where durations " +
+		"use Go's standard format (e.g. 1s, 1m, 1h3m2s)"
 }
 
 type StringSliceParam struct {
@@ -883,4 +1054,11 @@ func (p *StringSliceParam) Parse(raw string) (result interface{}, err error) {
 	}
 
 	return resultSlice, nil
+}
+
+func (p *StringSliceParam) SchemaDescription() string {
+	if p.ValidationRegex == nil {
+		return "Comma-delimited list of strings"
+	}
+	return fmt.Sprintf("Comma-delimited list of strings, each matching the regex `%s`", p.ValidationRegex.String())
 }
