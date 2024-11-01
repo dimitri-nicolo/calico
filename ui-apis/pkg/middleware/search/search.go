@@ -329,21 +329,7 @@ func searchFlowLogs(
 	params := &lapi.FlowLogParams{}
 
 	if len(request.PolicyMatches) > 0 {
-		var policyMatches []lapi.PolicyMatch
-		for _, item := range request.PolicyMatches {
-			if (item != v1.PolicyMatch{}) {
-				pm := lapi.PolicyMatch{
-					Name:      item.Name,
-					Namespace: item.Namespace,
-					Action:    item.Action,
-					Tier:      item.Tier,
-				}
-				policyMatches = append(policyMatches, pm)
-			}
-		}
-		if len(policyMatches) > 0 {
-			params.PolicyMatches = policyMatches
-		}
+		params.PolicyMatches = request.PolicyMatches
 	}
 
 	// Merge in common search request parameters.
@@ -486,6 +472,11 @@ func searchLogs[T any](
 	start := time.Now()
 	items, err := listFunc(ctx, params)
 	if err != nil {
+		if httpErr, ok := err.(lapi.HTTPError); ok {
+			// It's an HTTP error.
+			return nil, httpErr
+		}
+
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
 			Msg:    "error performing search",

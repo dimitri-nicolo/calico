@@ -217,6 +217,34 @@ func TestFV_FlowLogs(t *testing.T) {
 
 		require.Equal(t, receivedItems, totalItems)
 	})
+
+	RunFlowLogTest(t, "should reject request with invalid policy_match values", func(t *testing.T, idx bapi.Index) {
+		namespace := "wrong/namespace"
+		name := "wrong:name"
+
+		params := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Now().Add(-5 * time.Second),
+					To:   time.Now().Add(5 * time.Second),
+				},
+			},
+			PolicyMatches: []v1.PolicyMatch{
+				{
+					Type:      "wrong_type",
+					Tier:      "wrong.tier",
+					Namespace: &namespace,
+					Name:      &name,
+				},
+			},
+		}
+		_, err := cli.FlowLogs(cluster).List(ctx, &params)
+		require.ErrorContains(t, err, "error with the following fields")
+		require.ErrorContains(t, err, "Type = 'wrong_type' (Reason: failed to validate Field: Type because of Tag: oneof )")
+		require.ErrorContains(t, err, "Tier = 'wrong.tier' (Reason: failed to validate Field: Tier because of Tag: excludesall )")
+		require.ErrorContains(t, err, "Namespace = 'wrong/namespace' (Reason: failed to validate Field: Namespace because of Tag: excludesall )")
+		require.ErrorContains(t, err, "Name = 'wrong:name' (Reason: failed to validate Field: Name because of Tag: excludesall )")
+	})
 }
 
 func TestFV_FlowLogsTenancy(t *testing.T) {
