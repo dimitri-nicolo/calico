@@ -158,7 +158,6 @@ require (
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/elazarl/goproxy.v1 v1.0.0-20180725130230-947c36da3153
 	// validator.v9 must be at v9.30.2 for libcalico-go to build. It may be possible to upgrade this
 	// with some changes to libcalico-go, though.
 	gopkg.in/go-playground/validator.v9 v9.30.2
@@ -169,17 +168,17 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	// Most k8s.io modules we 'require' will also need a 'replace' directive below in order for the module graph to resolve.
 	// Ensure that any version updates to k8s.io modules are reflected in the replace block if those modules require replacement.
-	k8s.io/api v0.29.9
-	k8s.io/apiextensions-apiserver v0.29.9
-	k8s.io/apimachinery v0.29.9
-	k8s.io/apiserver v0.29.9
-	k8s.io/client-go v0.29.9
-	k8s.io/component-base v0.29.9
+	k8s.io/api v0.29.10
+	k8s.io/apiextensions-apiserver v0.29.10
+	k8s.io/apimachinery v0.29.10
+	k8s.io/apiserver v0.29.10
+	k8s.io/client-go v0.29.10
+	k8s.io/component-base v0.29.10
 	k8s.io/klog/v2 v2.120.1
-	k8s.io/kube-aggregator v0.29.9
+	k8s.io/kube-aggregator v0.29.10
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00
-	k8s.io/kubectl v0.29.9
-	k8s.io/kubernetes v1.29.9
+	k8s.io/kubectl v0.29.10
+	k8s.io/kubernetes v1.29.10
 	k8s.io/utils v0.0.0-20240310230437-4693a0247e57
 	modernc.org/memory v1.8.0
 	sigs.k8s.io/controller-runtime v0.17.3
@@ -428,18 +427,18 @@ require (
 	gorm.io/gorm v1.25.1 // indirect
 	gotest.tools/v3 v3.5.0 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/cloud-provider v0.29.9 // indirect
-	k8s.io/component-helpers v0.29.9 // indirect
-	k8s.io/controller-manager v0.29.9 // indirect
-	k8s.io/cri-api v0.29.9 // indirect
-	k8s.io/csi-translation-lib v0.29.9 // indirect
-	k8s.io/dynamic-resource-allocation v0.29.9 // indirect
-	k8s.io/kms v0.29.9 // indirect
-	k8s.io/kube-scheduler v0.29.9 // indirect
-	k8s.io/kubelet v0.29.9 // indirect
-	k8s.io/legacy-cloud-providers v0.29.9 // indirect
-	k8s.io/mount-utils v0.29.9 // indirect
-	k8s.io/pod-security-admission v0.29.9 // indirect
+	k8s.io/cloud-provider v0.29.10 // indirect
+	k8s.io/component-helpers v0.29.10 // indirect
+	k8s.io/controller-manager v0.29.10 // indirect
+	k8s.io/cri-api v0.29.10 // indirect
+	k8s.io/csi-translation-lib v0.29.10 // indirect
+	k8s.io/dynamic-resource-allocation v0.29.10 // indirect
+	k8s.io/kms v0.29.10 // indirect
+	k8s.io/kube-scheduler v0.29.10 // indirect
+	k8s.io/kubelet v0.29.10 // indirect
+	k8s.io/legacy-cloud-providers v0.29.10 // indirect
+	k8s.io/mount-utils v0.29.10 // indirect
+	k8s.io/pod-security-admission v0.29.10 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
@@ -457,30 +456,30 @@ replace (
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernetes repo pulls them in via a replacement to its own vendored copies, which doesn't work for
 	// transient imports.
-	k8s.io/api => k8s.io/api v0.29.9
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.9
-	k8s.io/apimachinery => k8s.io/apimachinery v0.29.9
-	k8s.io/apiserver => k8s.io/apiserver v0.29.9
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.29.9
-	k8s.io/client-go => k8s.io/client-go v0.29.9
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.29.9
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.29.9
-	k8s.io/code-generator => k8s.io/code-generator v0.29.9
-	k8s.io/component-base => k8s.io/component-base v0.29.9
-	k8s.io/component-helpers => k8s.io/component-helpers v0.29.9
-	k8s.io/controller-manager => k8s.io/controller-manager v0.29.9
-	k8s.io/cri-api => k8s.io/cri-api v0.29.9
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.29.9
-	k8s.io/endpointslice => k8s.io/endpointslice v0.29.9
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.29.9
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.29.9
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.9
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.9
-	k8s.io/kubectl => k8s.io/kubectl v0.29.9
-	k8s.io/kubelet => k8s.io/kubelet v0.29.9
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.29.9
-	k8s.io/metrics => k8s.io/metrics v0.29.9
-	k8s.io/mount-utils => k8s.io/mount-utils v0.29.9
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.9
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.9
+	k8s.io/api => k8s.io/api v0.29.10
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.10
+	k8s.io/apimachinery => k8s.io/apimachinery v0.29.10
+	k8s.io/apiserver => k8s.io/apiserver v0.29.10
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.29.10
+	k8s.io/client-go => k8s.io/client-go v0.29.10
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.29.10
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.29.10
+	k8s.io/code-generator => k8s.io/code-generator v0.29.10
+	k8s.io/component-base => k8s.io/component-base v0.29.10
+	k8s.io/component-helpers => k8s.io/component-helpers v0.29.10
+	k8s.io/controller-manager => k8s.io/controller-manager v0.29.10
+	k8s.io/cri-api => k8s.io/cri-api v0.29.10
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.29.10
+	k8s.io/endpointslice => k8s.io/endpointslice v0.29.10
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.29.10
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.29.10
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.10
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.10
+	k8s.io/kubectl => k8s.io/kubectl v0.29.10
+	k8s.io/kubelet => k8s.io/kubelet v0.29.10
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.29.10
+	k8s.io/metrics => k8s.io/metrics v0.29.10
+	k8s.io/mount-utils => k8s.io/mount-utils v0.29.10
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.10
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.10
 )
