@@ -1,5 +1,5 @@
 version: v1.0
-name: Cut Release
+name: Cut Release - Node
 
 execution_time_limit:
   minutes: 30
@@ -17,7 +17,7 @@ global_job_config:
       - cd node
 
 blocks:
-  - name: 'Cut Release'
+  - name: 'Cut Release - Node'
     task:
       secrets:
         - name: marvin-github-ssh-private-key
@@ -33,7 +33,7 @@ blocks:
           # Login to quay in order to push images to quay.
           - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
       jobs:
-        - name: Cut Release
+        - name: Cut Release - Node
           env_vars:
           - name: DEV_REGISTRIES
             value: gcr.io/unique-caldron-775/cnx/tigera
