@@ -18,18 +18,28 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 
-	cont "github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/controller"
 	geodb "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/geodb"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/puller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/searcher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/storage"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
 
 const DefaultResyncPeriod = 0
+
+// Watcher accepts updates from threat pullers and synchronizes them to the
+// database
+type Watcher interface {
+	health.Pinger
+
+	// Run starts the feed synchronization.
+	Run(ctx context.Context)
+	Close()
+}
 
 type watcher struct {
 	configMapClient        v1.ConfigMapInterface
@@ -55,12 +65,12 @@ type watcher struct {
 	// to Pullers & Searchers we create.
 	ctx context.Context
 
-	once            sync.Once
-	ping            chan struct{}
-	watching        bool
-	cacheController cache.Controller
-	fifo            *cache.DeltaFIFO
-	feeds           cache.Store
+	once       sync.Once
+	ping       chan struct{}
+	watching   bool
+	controller cache.Controller
+	fifo       *cache.DeltaFIFO
+	feeds      cache.Store
 }
 
 type feedWatcher struct {
@@ -85,7 +95,7 @@ func NewWatcher(
 	events storage.Events,
 	geodb geodb.GeoDatabase,
 	maxLinseedTimeSkew time.Duration,
-) cont.Controller {
+) Watcher {
 	feedWatchers := map[string]*feedWatcher{}
 
 	lw := &cache.ListWatch{
@@ -125,7 +135,7 @@ func NewWatcher(
 		RetryOnError:     false,
 		Process:          w.processQueue,
 	}
-	w.cacheController = cache.New(cfg)
+	w.controller = cache.New(cfg)
 
 	return w
 }
@@ -141,7 +151,7 @@ func (s *watcher) Run(ctx context.Context) {
 			// bother with a lock because updates to booleans are always atomic.
 			s.watching = true
 			defer func() { s.watching = false }()
-			s.cacheController.Run(s.ctx.Done())
+			s.controller.Run(s.ctx.Done())
 		}()
 
 		// The ipsController/dnsController can start running right away. It waits for
@@ -157,7 +167,7 @@ func (s *watcher) Run(ctx context.Context) {
 		// before syncing all threat feeds, we might delete state associated
 		// with an active threat feed.
 		go func() {
-			if !cache.WaitForCacheSync(s.ctx.Done(), s.cacheController.HasSynced) {
+			if !cache.WaitForCacheSync(s.ctx.Done(), s.controller.HasSynced) {
 				// WaitForCacheSync returns false if the context expires before sync is successful.
 				// If that happens, the controller is no longer needed, so just log the error.
 				log.Error("[Global Threat Feeds] Failed to sync GlobalThreatFeed controller")
