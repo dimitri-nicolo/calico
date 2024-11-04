@@ -9,13 +9,14 @@ import (
 	"os"
 	"strings"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/dexidp/dex/pkg/featureflags"
 	"github.com/dexidp/dex/server"
 	"github.com/dexidp/dex/storage"
 	"github.com/dexidp/dex/storage/etcd"
 	"github.com/dexidp/dex/storage/kubernetes"
 	"github.com/dexidp/dex/storage/memory"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Config is the config format for the main application.

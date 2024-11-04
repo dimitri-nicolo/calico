@@ -22,9 +22,6 @@ import (
 	gosundheit "github.com/AppsFlyer/go-sundheit"
 	"github.com/AppsFlyer/go-sundheit/checks"
 	gosundheithttp "github.com/AppsFlyer/go-sundheit/http"
-	"github.com/dexidp/dex/api/v2"
-	"github.com/dexidp/dex/server"
-	"github.com/dexidp/dex/storage"
 	"github.com/fsnotify/fsnotify"
 	"github.com/ghodss/yaml"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -36,6 +33,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/dexidp/dex/api/v2"
+	"github.com/dexidp/dex/server"
+	"github.com/dexidp/dex/storage"
 
 	tls2 "github.com/projectcalico/calico/crypto/pkg/tls"
 )
