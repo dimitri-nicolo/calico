@@ -29,16 +29,12 @@ var _ = Describe("Abstract Worker Tests", func() {
 		rateLimitInterface = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 		reconciler         = fakeReconciler{}
 
-		newWorker worker
-	)
-
-	BeforeEach(func() {
 		newWorker = worker{
 			RateLimitingInterface: rateLimitInterface,
 			reconciler:            &reconciler,
 			maxRequeueAttempts:    DefaultMaxRequeueAttempts,
 		}
-	})
+	)
 
 	Context("Test Worker worker Queue", func() {
 		It("Worker health check ", func() {
