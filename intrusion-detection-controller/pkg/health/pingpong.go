@@ -5,7 +5,6 @@ package health
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -64,7 +63,7 @@ func (p *pingPonger) Ping(ctx context.Context) error {
 	t := time.NewTicker(5 * time.Second)
 	select {
 	case <-t.C:
-		return fmt.Errorf("%v", "error timeout: ping never returned a pong")
+		return k8serrors.NewInternalError(errors.New("error timeout: ping never returned a pong"))
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-ponger.WaitForPong():
