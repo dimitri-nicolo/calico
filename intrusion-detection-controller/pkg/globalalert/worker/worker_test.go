@@ -38,7 +38,7 @@ var _ = Describe("Abstract Worker Tests", func() {
 
 	Context("Test Worker worker Queue", func() {
 		It("Worker health check ", func() {
-			ctx, _ := context.WithCancel(context.Background())
+			ctx := context.Background()
 			ponger := newWorker.AddWatch(&cache.ListWatch{}, &v3.GlobalAlert{})
 
 			go newWorker.startWorker()
