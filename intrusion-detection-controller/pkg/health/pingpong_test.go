@@ -5,7 +5,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 )
 
 var _ = Describe("PingPonger Tests", func() {
@@ -25,8 +24,6 @@ var _ = Describe("PingPonger Tests", func() {
 					}
 				}
 			}
-
-			logrus.Info("blah blah blah")
 
 			pingPonger := NewPingPonger()
 
