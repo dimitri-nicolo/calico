@@ -1,4 +1,4 @@
-// Copyright 2021 Tigera Inc. All rights reserved.
+// Copyright 2024 Tigera Inc. All rights reserved.
 
 package health
 
@@ -26,7 +26,7 @@ type PingPonger interface {
 // NewPingPonger initiates and returns a PingPonger.
 func NewPingPonger() PingPonger {
 	return &pingPonger{
-		pings:           make(chan Ponger),
+		pings:           make(chan Ponger, 1),
 		closePingPonger: make(chan struct{}),
 	}
 }
