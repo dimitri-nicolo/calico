@@ -25,11 +25,14 @@ func perHostCheckProviderScenarios() []*checkAuthScenario {
 		},
 	}
 
+	alpSidecar := &proto.ApplicationLayer{Policy: "Enabled"}
+
 	basicUpdates := append(
 		[]*proto.ToDataplane{
-			wepUpdate("pod-1", []string{"10.0.1.1/32"}, []string{"default"}),
-			wepUpdate("pod-2", []string{"10.0.2.2/32"}, []string{"default"}),
-			ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1", "10.0.2.2"}),
+			wepUpdate("pod-1", []string{"10.0.1.1/32"}, []string{"default"}, nil),
+			wepUpdate("pod-2", []string{"10.0.2.2/32"}, []string{"default"}, nil),
+			wepUpdate("pod-3", []string{"10.0.3.3/32"}, []string{"default"}, alpSidecar),
+			ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1/32", "10.0.2.2/32", "10.0.3.3/32"}),
 		},
 		policyAndProfileUpdate("secure", "default", inboundRule)...,
 	)
@@ -37,6 +40,7 @@ func perHostCheckProviderScenarios() []*checkAuthScenario {
 	knownSrcOrDstCheckTest := &checkAuthScenario{
 		subscriptionType: subscriptionType,
 		comment:          "checker basic tests",
+		alpTproxy:        true,
 		updates:          basicUpdates,
 		cases: []*checkAuthScenarioCases{
 			{
@@ -64,6 +68,18 @@ func perHostCheckProviderScenarios() []*checkAuthScenario {
 				checker.OK,
 			},
 			{
+				"known dest (sidecar) should pass OK due to policy",
+				newRequest(
+					"GET", "/public/assets",
+					nil,
+					// some random src
+					newPeer("10.52.1.1", "default", "default"),
+					// known dest
+					newPeer("10.0.3.3", "default", "default"),
+				),
+				checker.OK,
+			},
+			{
 				"known dest should get rejected with PERMISSION_DENIED due to policy",
 				newRequest(
 					"GET", "/private/data",
@@ -72,6 +88,18 @@ func perHostCheckProviderScenarios() []*checkAuthScenario {
 					newPeer("10.52.1.1", "default", "default"),
 					// known dest
 					newPeer("10.0.1.1", "default", "default"),
+				),
+				checker.PERMISSION_DENIED,
+			},
+			{
+				"known dest (sidecar) should get rejected with PERMISSION_DENIED due to policy",
+				newRequest(
+					"GET", "/private/data",
+					nil,
+					// some random src
+					newPeer("10.52.1.1", "default", "default"),
+					// known dest
+					newPeer("10.0.3.3", "default", "default"),
 				),
 				checker.PERMISSION_DENIED,
 			},
@@ -90,8 +118,54 @@ func perHostCheckProviderScenarios() []*checkAuthScenario {
 		},
 	}
 
+	knownSrcOrDstSidecarOnlyCheckTest := &checkAuthScenario{
+		subscriptionType: subscriptionType,
+		comment:          "checker sidecar only basic tests",
+		alpTproxy:        false,
+		updates:          basicUpdates,
+		cases: []*checkAuthScenarioCases{
+			{
+				"known dest (not sidecar) not registered for other provider, expected INTERNAL",
+				newRequest(
+					"GET", "/public/assets",
+					nil,
+					// some random src
+					newPeer("10.52.1.1", "default", "default"),
+					// known dest
+					newPeer("10.0.1.1", "default", "default"),
+				),
+				checker.INTERNAL,
+			},
+			{
+				"known dest should pass OK due to policy",
+				newRequest(
+					"GET", "/public/assets",
+					nil,
+					// some random src
+					newPeer("10.52.1.1", "default", "default"),
+					// known dest
+					newPeer("10.0.3.3", "default", "default"),
+				),
+				checker.OK,
+			},
+			{
+				"known dest should get rejected with PERMISSION_DENIED due to policy",
+				newRequest(
+					"GET", "/private/data",
+					nil,
+					// some random src
+					newPeer("10.52.1.1", "default", "default"),
+					// known dest
+					newPeer("10.0.3.3", "default", "default"),
+				),
+				checker.PERMISSION_DENIED,
+			},
+		},
+	}
+
 	return []*checkAuthScenario{
 		knownSrcOrDstCheckTest,
+		knownSrcOrDstSidecarOnlyCheckTest,
 	}
 }
 

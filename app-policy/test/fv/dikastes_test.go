@@ -30,7 +30,7 @@ func (s *dikastesTestSuite) TestBasicExtAuthz() {
 			comment: "basics: has wep, no policy",
 			updates: []*proto.ToDataplane{
 				wepUpdate("pod-1", []string{"10.0.1.1/32"}, nil),
-				ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1"}),
+				ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1/32"}),
 				inSync(),
 			},
 			checks: []dikastesTestCaseData{
@@ -143,7 +143,7 @@ func (s *dikastesTestSuite) TestDikastesRecov() {
 			comment: "basics: wep with policy and profile",
 			updates: append([]*proto.ToDataplane{
 				wepUpdate("pod-1", []string{"10.0.1.1/32"}, []string{"default"}),
-				ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1"}),
+				ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1/32"}),
 				inSync(),
 			}, policyAndProfileUpdate("secure", "default", inboundRule)...),
 			checks: []dikastesTestCaseData{

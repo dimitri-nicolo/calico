@@ -104,17 +104,14 @@ func (w *Server) Name() string {
 	return "coraza"
 }
 
+func (w *Server) EnabledForRequest(ps *policystore.PolicyStore, req *envoyauthz.CheckRequest) bool {
+	sidecar := checker.GetSidecar(ps, req)
+	return (sidecar == nil && w.perHostEnabled) || (sidecar != nil && sidecar.ApplicationLayer.Waf == "Enabled")
+}
+
 func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
 	// Update current policystore
 	w.currPolicyStore = st
-
-	resp := &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code.Code_INTERNAL)}}
-	wledp, err := checker.CheckWorkloadEndpoint(w.currPolicyStore, checkReq)
-	if err != nil {
-		return resp, err
-	} else if (wledp == nil && !w.perHostEnabled) || (wledp != nil && wledp.ApplicationLayer.Waf != "Enabled") {
-		return &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code.Code_UNKNOWN)}}, nil
-	}
 
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{"attributes": checkReq.Attributes}).Debug("check request received")

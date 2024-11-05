@@ -56,8 +56,6 @@ func (index *IPToEndpointsIndexer) Update(k ip.Addr, v *proto.WorkloadEndpointUp
 	}
 	if _, ok := index.store[k]; !ok {
 		index.store[k] = make(wlMap)
-		index.Update(k, v)
-		return
 	}
 
 	index.store[k][*v.Id] = v.Endpoint

@@ -81,7 +81,7 @@ func (m ipMapSet) RemoveString(ip string) {
 
 func (m ipMapSet) ContainsAddress(addr *envoyapi.Address) bool {
 	sck := addr.GetSocketAddress()
-	key := sck.GetAddress()
+	key := sck.GetAddress() + "/32"
 	log.WithFields(log.Fields{
 		"proto": addr.String(),
 		"key":   key,

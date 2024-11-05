@@ -44,16 +44,16 @@ func TestAddIp(t *testing.T) {
 	RegisterTestingT(t)
 
 	uut := NewIPSet(proto.IPSetUpdate_IP)
-	uut.AddString("2.2.2.2")
+	uut.AddString("2.2.2.2/32")
 	addr := makeIpAddr("2.2.2.2")
 	Expect(uut.ContainsAddress(&addr)).To(BeTrue())
 
-	uut.AddString("2.2.2.3")
+	uut.AddString("2.2.2.3/32")
 	addr.GetSocketAddress().Address = "2.2.2.3"
 	Expect(uut.ContainsAddress(&addr)).To(BeTrue())
 
 	// Test idempotency
-	uut.AddString("2.2.2.3")
+	uut.AddString("2.2.2.3/32")
 	addr.GetSocketAddress().Address = "2.2.2.3"
 	Expect(uut.ContainsAddress(&addr)).To(BeTrue())
 }
@@ -64,18 +64,18 @@ func TestRemoveIp(t *testing.T) {
 	uut := NewIPSet(proto.IPSetUpdate_IP)
 	addr := makeIpAddr("2.2.2.2")
 
-	uut.RemoveString("2.2.2.2")
+	uut.RemoveString("2.2.2.2/32")
 	Expect(uut.ContainsAddress(&addr)).To(BeFalse())
-	uut.AddString("2.2.2.2")
+	uut.AddString("2.2.2.2/32")
 	Expect(uut.ContainsAddress(&addr)).To(BeTrue())
-	uut.RemoveString("2.2.2.2")
+	uut.RemoveString("2.2.2.2/32")
 	Expect(uut.ContainsAddress(&addr)).To(BeFalse())
 	// Test idempotency
-	uut.RemoveString("2.2.2.2")
+	uut.RemoveString("2.2.2.2/32")
 	Expect(uut.ContainsAddress(&addr)).To(BeFalse())
 
 	// Adding a different address should not affect a removed one
-	uut.AddString("2.2.2.3")
+	uut.AddString("2.2.2.3/32")
 	Expect(uut.ContainsAddress(&addr)).To(BeFalse())
 }
 

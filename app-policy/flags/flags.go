@@ -23,7 +23,6 @@ type Config struct {
 	SidecarALPEnabled      bool          `json:"sidecarWafEnabled,omitempty"`
 	SidecarWAFEnabled      bool          `json:"sidecarAlpEnabled,omitempty"`
 	SidecarLogsEnabled     bool          `json:"sidecarLogsEnabled,omitempty"`
-	PodID                  string        `json:"podID,omitempty"`
 	WAFRulesetFiles        stringArray   `json:"wafRulesetFiles,omitempty"`
 	WAFDirectives          stringArray   `json:"wafDirectives,omitempty"`
 	WAFLogFile             string        `json:"wafLogFile,omitempty"`
@@ -67,7 +66,6 @@ func New() *Config {
 	fs.BoolVar(&cfg.SidecarALPEnabled, "sidecar-alp-enabled", false, "Enable ALP.")
 	fs.BoolVar(&cfg.SidecarWAFEnabled, "sidecar-waf-enabled", false, "Enable WAF.")
 	fs.BoolVar(&cfg.SidecarLogsEnabled, "sidecar-logs-enabled", false, "Enable HTTP logging.")
-	cfg.PodID = getEnv("DIKASTES_POD_NAMESPACE", "") + "/" + getEnv("DIKASTES_POD_NAME", "")
 	fs.Var(&cfg.WAFRulesetFiles, "waf-ruleset-file", "WAF ruleset file path to load. e.g. /etc/modsecurity-ruleset/tigera.conf. Can be specified multiple times.")
 	fs.Var(&cfg.WAFDirectives, "waf-directive", "Additional directives to specify for WAF (if enabled). Can be specified multiple times.")
 	fs.StringVar(&cfg.WAFLogFile, "waf-log-file", "", "WAF log file path. e.g. /var/log/calico/waf/waf.log")

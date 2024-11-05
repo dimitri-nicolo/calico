@@ -106,6 +106,12 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 			checkName := checkProvider.Name()
 			logCtx.Debugf("checking request with provider %s", checkName)
 
+			// Check if provider is enabled in case is TPROXY or
+			// sidecar
+			if !checkProvider.EnabledForRequest(ps, req) {
+				continue
+			}
+
 			resp, err = checkProvider.Check(ps, req)
 			if err != nil {
 				msg := fmt.Sprintf("check provider %s failed with error %v", checkName, err)
@@ -127,8 +133,6 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 				// check provider is requesting to continue to next check
 				logCtx.Debugf("request returned unknown for %s check", checkName)
 				unknownChecks++
-				// Force OK if the last one is UNKNOWN
-				resp.Status.Code = OK
 				continue T
 			default:
 				logCtx.Errorf("request denied by %s with status %s", checkName, code.Code(v).String())

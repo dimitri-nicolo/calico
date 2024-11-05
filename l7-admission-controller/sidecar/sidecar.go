@@ -126,22 +126,6 @@ func generateDikastesInitContainer(image string, args []string) []map[string]int
 			"args":    args,
 			"env": []map[string]interface{}{
 				{
-					"name": "DIKASTES_POD_NAMESPACE",
-					"valueFrom": map[string]interface{}{
-						"fieldRef": map[string]interface{}{
-							"fieldPath": "metadata.namespace",
-						},
-					},
-				},
-				{
-					"name": "DIKASTES_POD_NAME",
-					"valueFrom": map[string]interface{}{
-						"fieldRef": map[string]interface{}{
-							"fieldPath": "metadata.name",
-						},
-					},
-				},
-				{
 					"name":  "ENVOY_CONFIG_PATH",
 					"value": "/etc/tigera/envoy.yaml",
 				},

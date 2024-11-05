@@ -28,15 +28,6 @@
                       transport_api_version: V3
 {{- end -}}
 
-{{- define "DIKASTES_CTX" -}}
-                      typed_per_filter_config:
-                        envoy.filters.http.ext_authz:
-                          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                          check_settings:
-                            context_extensions:
-                              podid: {{.}}
-{{- end -}}
-
 {{- define "XFF" -}}
                 xff_num_trusted_hops: {{.NumTrustedHopsXFF}}
                 use_remote_address: {{.UseRemoteAddressXFF}}
@@ -87,7 +78,6 @@ static_resources:
                     - name: backend
                       domains:
                         - "*"
-                      {{if or .SidecarALPEnabled .SidecarWAFEnabled}}{{template "DIKASTES_CTX" .PodID}}{{end}}
                       routes:
                         - match:
                             prefix: "/"
@@ -115,7 +105,6 @@ static_resources:
                     - name: backend
                       domains:
                         - "*"
-                      {{if or .SidecarALPEnabled .SidecarWAFEnabled}}{{template "DIKASTES_CTX" .PodID}}{{end}}
                       routes:
                         - match:
                             prefix: "/"

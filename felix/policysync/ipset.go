@@ -19,12 +19,11 @@ import (
 
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 type ipSetInfo struct {
 	ipsets.IPSetMetadata
-	members set.Set[ipsets.IPSetMember]
+	members map[string]ipsets.IPSetMember
 }
 
 func newIPSet(update *proto.IPSetUpdate) *ipSetInfo {
@@ -52,27 +51,26 @@ func newIPSet(update *proto.IPSetUpdate) *ipSetInfo {
 }
 
 func (s *ipSetInfo) replaceMembers(update *proto.IPSetUpdate) {
-	s.members = set.New[ipsets.IPSetMember]()
+	s.members = map[string]ipsets.IPSetMember{}
 	for _, ms := range update.GetMembers() {
-		s.members.Add(ipsets.CanonicaliseMember(s.Type, ms))
+		s.members[ms] = ipsets.CanonicaliseMember(s.Type, ms)
 	}
 }
 
 func (s *ipSetInfo) deltaUpdate(update *proto.IPSetDeltaUpdate) {
 	for _, ms := range update.GetAddedMembers() {
-		s.members.Add(ipsets.CanonicaliseMember(s.Type, ms))
+		s.members[ms] = ipsets.CanonicaliseMember(s.Type, ms)
 	}
 	for _, ms := range update.GetRemovedMembers() {
-		s.members.Discard(ipsets.CanonicaliseMember(s.Type, ms))
+		delete(s.members, ms)
 	}
 }
 
 func (s *ipSetInfo) getIPSetUpdate() *proto.IPSetUpdate {
 	u := &proto.IPSetUpdate{Id: s.SetID, Type: s.getProtoType()}
-	s.members.Iter(func(item ipsets.IPSetMember) error {
-		u.Members = append(u.Members, item.String())
-		return nil
-	})
+	for ms := range s.members {
+		u.Members = append(u.Members, ms)
+	}
 	return u
 }
 

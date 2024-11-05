@@ -30,7 +30,7 @@ func TestCheckAuthScenarios(t *testing.T) {
 			ctx, ps, dpStats,
 			checker.WithSubscriptionType(scenario.subscriptionType),
 			checker.WithRegisteredCheckProvider(
-				checker.NewALPCheckProvider(scenario.subscriptionType, true),
+				checker.NewALPCheckProvider(scenario.subscriptionType, scenario.alpTproxy),
 			),
 		)
 
@@ -57,6 +57,7 @@ func TestCheckAuthScenarios(t *testing.T) {
 
 type checkAuthScenario struct {
 	comment, subscriptionType string
+	alpTproxy                 bool
 	updates                   []*proto.ToDataplane
 	cases                     []*checkAuthScenarioCases
 }
@@ -67,7 +68,7 @@ type checkAuthScenarioCases struct {
 	res     int32
 }
 
-func wepUpdate(name string, ip4s, profiles []string) *proto.ToDataplane {
+func wepUpdate(name string, ip4s, profiles []string, appLayer *proto.ApplicationLayer) *proto.ToDataplane {
 	return &proto.ToDataplane{
 		Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
 			WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
@@ -77,9 +78,10 @@ func wepUpdate(name string, ip4s, profiles []string) *proto.ToDataplane {
 					WorkloadId:     name,
 				},
 				Endpoint: &proto.WorkloadEndpoint{
-					Name:       name,
-					Ipv4Nets:   ip4s,
-					ProfileIds: profiles,
+					Name:             name,
+					Ipv4Nets:         ip4s,
+					ProfileIds:       profiles,
+					ApplicationLayer: appLayer,
 				},
 			},
 		},
