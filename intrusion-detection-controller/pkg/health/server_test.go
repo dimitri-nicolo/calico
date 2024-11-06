@@ -6,8 +6,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
@@ -25,27 +25,29 @@ func (r testReadier) Ready() bool {
 	return r.r
 }
 
-func TestLiveness_ServeHTTP(t *testing.T) {
-	RegisterTestingT(t)
+var _ = Describe("Multi Tests", func() {
+	Context("Test Livness Serve HTTP", func() {
+		uut := liveness{testPinger{}}
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/liveness", nil)
+		uut.ServeHTTP(resp, req)
+		Expect(resp.Code).To(Equal(http.StatusOK))
+	})
 
-	uut := liveness{testPinger{}}
-	resp := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/liveness", nil)
-	uut.ServeHTTP(resp, req)
-	Expect(resp.Code).To(Equal(http.StatusOK))
-}
-
-func TestReadiness_ServeHTTP(t *testing.T) {
-	RegisterTestingT(t)
-
-	uut := readiness{testReadier{true}}
-	resp := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/liveness", nil)
-	uut.ServeHTTP(resp, req)
-	Expect(resp.Code).To(Equal(http.StatusOK))
-
-	uut.readier = testReadier{false}
-	resp = httptest.NewRecorder()
-	uut.ServeHTTP(resp, req)
-	Expect(resp.Code).To(Equal(http.StatusInternalServerError))
-}
+	Context("Test Readiness Server Http", func() {
+		It("Readiness Success", func() {
+			uut := readiness{testReadier{true}}
+			resp := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/liveness", nil)
+			uut.ServeHTTP(resp, req)
+			Expect(resp.Code).To(Equal(http.StatusOK))
+		})
+		It("Readiness Fail", func() {
+			uut := readiness{testReadier{false}}
+			resp := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/liveness", nil)
+			uut.ServeHTTP(resp, req)
+			Expect(resp.Code).To(Equal(http.StatusInternalServerError))
+		})
+	})
+})

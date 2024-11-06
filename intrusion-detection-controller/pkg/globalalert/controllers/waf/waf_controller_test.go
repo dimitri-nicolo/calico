@@ -126,7 +126,5 @@ var _ = Describe("WAF Controller", func() {
 			Expect(len(logs2.Items)).To(Equal(numOfAlerts))
 
 		})
-
 	})
-
 })

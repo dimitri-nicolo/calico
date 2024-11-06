@@ -1,10 +1,11 @@
-// Copyright 2021 Tigera Inc. All rights reserved.
+// Copyright 2024 Tigera Inc. All rights reserved.
 
 package health
 
 import (
 	"context"
 	"errors"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +27,7 @@ type PingPonger interface {
 // NewPingPonger initiates and returns a PingPonger.
 func NewPingPonger() PingPonger {
 	return &pingPonger{
-		pings:           make(chan Ponger),
+		pings:           make(chan Ponger, 1),
 		closePingPonger: make(chan struct{}),
 	}
 }
@@ -59,7 +60,10 @@ func (p *pingPonger) Ping(ctx context.Context) error {
 	}
 
 	// Wait for the pong or return an error if the context finishes before we receive one
+	t := time.NewTicker(5 * time.Second)
 	select {
+	case <-t.C:
+		return k8serrors.NewInternalError(errors.New("error timeout: ping never returned a pong"))
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-ponger.WaitForPong():
