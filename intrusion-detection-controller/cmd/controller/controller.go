@@ -35,7 +35,6 @@ import (
 	feedsWatcher "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/watcher"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/forwarder"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/anomalydetection"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/managedcluster"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/waf"
@@ -231,15 +230,8 @@ func main() {
 
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
 
-	// anomaly detection cleanup controllers
-	var anomalyTrainingController, anomalyDetectionController controller.Controller
-
 	if enableAlerts {
 		if cfg.TenantNamespace == "" {
-			// Initialize controllers to clean up cron jobs for anomaly detection
-			anomalyTrainingController = anomalydetection.NewADJobTrainingController(kubeClientSet, TigeraIntrusionDetectionNamespace)
-			anomalyDetectionController = anomalydetection.NewADJobDetectionController(kubeClientSet, TigeraIntrusionDetectionNamespace)
-
 			// This will manage global alerts inside the management cluster
 			managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClientSet, linseedClient, kubeClientSet, "cluster", cfg.TenantID, TigeraIntrusionDetectionNamespace, cfg.TenantNamespace)
 			healthPingers = append(healthPingers, &alertHealthPinger)
@@ -296,11 +288,6 @@ func main() {
 
 			if enableAlerts {
 				if cfg.TenantNamespace == "" {
-					anomalyTrainingController.Run(ctx)
-					defer anomalyTrainingController.Close()
-					anomalyDetectionController.Run(ctx)
-					defer anomalyDetectionController.Close()
-
 					managementAlertController.Run(ctx)
 					defer managementAlertController.Close()
 
@@ -327,8 +314,6 @@ func main() {
 
 			if enableAlerts {
 				if cfg.TenantNamespace == "" {
-					anomalyTrainingController.Close()
-					anomalyDetectionController.Close()
 					managementAlertController.Close()
 				}
 
