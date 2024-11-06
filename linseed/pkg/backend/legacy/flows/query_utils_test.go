@@ -6,10 +6,12 @@ import (
 	"testing"
 
 	"github.com/olivere/elastic/v7"
+
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
 func TestPolicyMatchQueryBuilder(t *testing.T) {
@@ -34,7 +36,7 @@ func TestPolicyMatchQueryBuilder(t *testing.T) {
 			},
 		},
 		{
-			name:          "should no return error when the PolicyMatch slice is empty",
+			name:          "should not return error when the PolicyMatch slice is empty",
 			policyMatches: []v1.PolicyMatch{},
 			testResult: testResult{
 				error:     false,
@@ -54,6 +56,7 @@ func TestPolicyMatchQueryBuilder(t *testing.T) {
 				boolQuery: elastic.NewBoolQuery(),
 			},
 		},
+		{},
 	}
 
 	for _, tt := range testcases {
@@ -74,4 +77,222 @@ func TestPolicyMatchQueryBuilder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCompileStringMatch(t *testing.T) {
+	type testResult struct {
+		error       bool
+		errorMsg    string
+		stringMatch string
+	}
+	testcases := []struct {
+		name        string
+		policyMatch v1.PolicyMatch
+		testResult  testResult
+	}{
+		{
+			name: "kubernetes network policy with name",
+			policyMatch: v1.PolicyMatch{
+				Type: "knp",
+				Name: testutils.StringPtr("test"),
+			},
+			testResult: testResult{
+				error:       true,
+				errorMsg:    "namespace cannot be empty for kubernetes network policy",
+				stringMatch: "",
+			},
+		},
+		{
+			name: "kubernetes network policy with namespace",
+			policyMatch: v1.PolicyMatch{
+				Type:      "knp",
+				Namespace: testutils.StringPtr("ns"),
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|default|ns/knp.default.*|*|*",
+			},
+		},
+		{
+			name: "staged kubernetes network policy with namespace",
+			policyMatch: v1.PolicyMatch{
+				Type:      "knp",
+				Staged:    true,
+				Namespace: testutils.StringPtr("ns"),
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|default|ns/staged:knp.default.*|*|*",
+			},
+		},
+		{
+			name: "kubernetes network policy with incorrect tier",
+			policyMatch: v1.PolicyMatch{
+				Type:      "knp",
+				Namespace: testutils.StringPtr("ns"),
+				Tier:      "tier1",
+			},
+			testResult: testResult{
+				error:       true,
+				errorMsg:    "tier cannot be set to tier1 for kubernetes network policy",
+				stringMatch: "",
+			},
+		},
+		{
+			name: "admin network policy with name",
+			policyMatch: v1.PolicyMatch{
+				Type: "kanp",
+				Name: testutils.StringPtr("test"),
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|adminnetworkpolicy|kanp.adminnetworkpolicy.test|*|*",
+			},
+		},
+		{
+			name: "admin network policy with namespace",
+			policyMatch: v1.PolicyMatch{
+				Type:      "kanp",
+				Namespace: testutils.StringPtr("ns"),
+			},
+			testResult: testResult{
+				error:       true,
+				errorMsg:    "namespace cannot be set for adminnetworkpolicy",
+				stringMatch: "",
+			},
+		},
+		{
+			name: "staged admin network policy",
+			policyMatch: v1.PolicyMatch{
+				Type:   "kanp",
+				Staged: true,
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|adminnetworkpolicy|kanp.adminnetworkpolicy.staged:*|*|*",
+			},
+		},
+		{
+			name: "admin network policy with incorrect tier",
+			policyMatch: v1.PolicyMatch{
+				Type: "kanp",
+				Tier: "tier1",
+			},
+			testResult: testResult{
+				error:       true,
+				errorMsg:    "tier cannot be set to tier1 for adminnetworkpolicy",
+				stringMatch: "",
+			},
+		},
+		{
+			name: "calico network policy with name (global)",
+			policyMatch: v1.PolicyMatch{
+				Name: testutils.StringPtr("test"),
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|*|*.test|*|*",
+			},
+		},
+		{
+			name: "calico network policy with name & namespaces",
+			policyMatch: v1.PolicyMatch{
+				Name:      testutils.StringPtr("test"),
+				Namespace: testutils.StringPtr("ns"),
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|*|ns/*.test|*|*",
+			},
+		},
+		{
+			name: "calico network policy with name & tier (global)",
+			policyMatch: v1.PolicyMatch{
+				Name: testutils.StringPtr("test"),
+				Tier: "tier1",
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|tier1|tier1.test|*|*",
+			},
+		},
+		{
+			name: "calico network policy with name, namespace, & tier",
+			policyMatch: v1.PolicyMatch{
+				Name:      testutils.StringPtr("test"),
+				Namespace: testutils.StringPtr("ns"),
+				Tier:      "tier1",
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|tier1|ns/tier1.test|*|*",
+			},
+		},
+		{
+			name: "calico network policy with name, namespace = \"*\", & tier",
+			policyMatch: v1.PolicyMatch{
+				Name:      testutils.StringPtr("test"),
+				Namespace: testutils.StringPtr("*"),
+				Tier:      "tier1",
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|tier1|*/tier1.test|*|*",
+			},
+		},
+		{
+			name: "calico network policy with staged & namespace",
+			policyMatch: v1.PolicyMatch{
+				Staged:    true,
+				Namespace: testutils.StringPtr("ns"),
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|*|ns/*.staged:*|*|*",
+			},
+		},
+		{
+			name: "calico network policy with staged & global",
+			policyMatch: v1.PolicyMatch{
+				Staged: true,
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|*|*.staged:*|*|*",
+			},
+		},
+		{
+			name: "calico network policy with __PROFILE__",
+			policyMatch: v1.PolicyMatch{
+				Tier: "__PROFILE__",
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|__PROFILE__|__PROFILE__.*|*|*",
+			},
+		},
+	}
+
+	for _, tt := range testcases {
+		stringMatch, err := flows.CompileStringMatch(tt.policyMatch)
+		if tt.testResult.error {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, tt.testResult.stringMatch, stringMatch)
+		}
+	}
+
 }
