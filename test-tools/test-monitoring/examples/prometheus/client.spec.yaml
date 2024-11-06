@@ -30,15 +30,15 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: flow-log-gen-metrics-svc
+  name: fake-log-gen-metrics-svc
   namespace: tigera-fluentd
   labels:
-    k8s-app: flow-log-gen
+    k8s-app: fake-log-gen
   annotations:
     prometheus.io/scrape: 'true'
 spec:
   selector:
-    k8s-app: flow-log-gen
+    k8s-app: fake-log-gen
   ports:
   - name: metrics
     protocol: TCP
@@ -51,7 +51,7 @@ spec:
 kind: ServiceMonitor
 apiVersion: monitoring.coreos.com/v1
 metadata:
-  name: flow-log-gen-metrics-svc
+  name: fake-log-gen-metrics-svc
   namespace: tigera-fluentd
   labels:
     role: prometheus-servicemonitor
@@ -59,7 +59,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      k8s-app: flow-log-gen
+      k8s-app: fake-log-gen
   endpoints:
   - port: metrics
     interval: 10s
@@ -73,7 +73,7 @@ spec:
 # spec:
 #   selector:
 #     matchLabels:
-#       k8s-app: flow-log-gen
+#       k8s-app: fake-log-gen
 #   podMetricsEndpoints:
 #   - port: metrics
 # ---

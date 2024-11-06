@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish flow-log-generator images
+name: Publish fake-log-generator images
 agent:
   machine:
     type: f1-standard-2
@@ -32,7 +32,7 @@ global_job_config:
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
-  - name: Publish flow-log-generator images
+  - name: Publish fake-log-generator images
     dependencies: []
     skip:
       when: "branch !~ '.+'"
@@ -40,14 +40,14 @@ blocks:
       jobs:
         - name: Linux multi-arch
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C test-tools/flow-log-generator cd CONFIRM=true; fi
-  - name: Publish flow-log-generator multi-arch manifests
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C test-tools/fake-log-generator cd CONFIRM=true; fi
+  - name: Publish fake-log-generator multi-arch manifests
     dependencies:
-      - Publish flow-log-generator images
+      - Publish fake-log-generator images
     skip:
       when: "branch !~ '.+'"
     task:
       jobs:
         - name: Linux multi-arch manifests
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C test-tools/flow-log-generator push-manifests-with-tag CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C test-tools/fake-log-generator push-manifests-with-tag CONFIRM=true; fi

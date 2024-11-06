@@ -20,5 +20,5 @@ docker run --rm -ti --network="host" -v "$(pwd)"/certs:/certs \
   -e FLOW_LOG_FILE="./flows.log" \
   -e LOG_LEVEL="DEBUG" \
   --add-host tigera-linseed.tigera-elasticsearch.svc:127.0.0.1 \
-  flow-log-generator:latest-amd64
+  fake-log-generator:latest-amd64
 pkill -9 kubectl

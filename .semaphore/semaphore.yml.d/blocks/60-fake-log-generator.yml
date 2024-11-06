@@ -1,0 +1,13 @@
+- name: Fake log generator
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/test-tools/fake-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd test-tools/fake-log-generator
+    jobs:
+      - name: Fake log generator
+        commands:
+          - ../../.semaphore/run-and-monitor make-ci.log make ci

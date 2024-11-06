@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	logutils.ConfigureFormatter("flowgen")
+	logutils.ConfigureFormatter("fake-log-gen")
 }
 
 func CreateConfig(directoutput bool) Config {

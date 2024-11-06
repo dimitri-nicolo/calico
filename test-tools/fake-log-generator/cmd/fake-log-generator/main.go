@@ -100,7 +100,7 @@ func main() {
 
 	// Replace logrus' formatter with a custom one using our time format,
 	// shared with the Python code.
-	logutils.ConfigureFormatter("flowgen")
+	logutils.ConfigureFormatter("fake-log-gen")
 
 	var cfg Config
 	cfg.loaded = loadConfig()

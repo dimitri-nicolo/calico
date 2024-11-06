@@ -216,8 +216,8 @@ promotions:
     pipeline_file: push-images/fake-guardian.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push flow-log-generator images
-    pipeline_file: push-images/flow-log-generator.yml
+  - name: Push fake-log-generator images
+    pipeline_file: push-images/fake-log-generator.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push mock-node images
@@ -1964,17 +1964,17 @@ blocks:
       - name: Fake guardian
         commands:
           - ../../.semaphore/run-and-monitor make-ci.log make ci
-- name: Flow log generator
+- name: Fake log generator
   run:
-    when: "false or change_in(['/*', '/test-tools/flow-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/*', '/test-tools/fake-log-generator/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
     prologue:
       commands:
-        - cd test-tools/flow-log-generator
+        - cd test-tools/fake-log-generator
     jobs:
-      - name: Flow log generator
+      - name: Fake log generator
         commands:
           - ../../.semaphore/run-and-monitor make-ci.log make ci
 - name: Mock node

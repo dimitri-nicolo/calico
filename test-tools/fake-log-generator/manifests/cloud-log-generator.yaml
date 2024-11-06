@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flow-log-gen
+  name: fake-log-gen
   namespace: tigera-fluentd
 spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      k8s-app: flow-log-gen
+      k8s-app: fake-log-gen
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: flow-log-gen
-        k8s-app: flow-log-gen
+        app.kubernetes.io/name: fake-log-gen
+        k8s-app: fake-log-gen
     spec:
       containers:
       - env:
@@ -39,7 +39,7 @@ spec:
         ports:
         - name: metrics
           containerPort: 2112
-        image: gcr.io/unique-caldron-775/cnx/tigera/flow-log-generator:master
+        image: gcr.io/unique-caldron-775/cnx/tigera/fake-log-generator:master
         imagePullPolicy: Always
         name: log-generator
         volumeMounts:

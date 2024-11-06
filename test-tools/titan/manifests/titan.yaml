@@ -117,7 +117,7 @@ spec:
           value: /tigera-fluentd-prometheus-tls/tls.crt
         - name: LINSEED_TOKEN
           value: /var/run/secrets/tigera.io/linseed/token
-        image: gcr.io/unique-caldron-775/cnx/tigera/flow-log-generator:master
+        image: gcr.io/unique-caldron-775/cnx/tigera/fake-log-generator:master
         imagePullPolicy: Always
         volumeMounts:
         - mountPath: /etc/pki/tls/certs

@@ -1,8 +1,8 @@
 include ../../metadata.mk
 
-PACKAGE_NAME?=github.com/projectcalico/calico/test-tools/flow-log-generator
+PACKAGE_NAME?=github.com/projectcalico/calico/test-tools/fake-log-generator
 
-IMAGE_NAME  ?=flow-log-generator
+IMAGE_NAME  ?=fake-log-generator
 BUILD_IMAGES          ?=$(IMAGE_NAME)
 
 ###############################################################################
@@ -16,7 +16,7 @@ test: ut ## Run the tests for the current platform/architecture
 ###############################################################################
 CONTAINER_CREATED=.container.created-$(ARCH)
 # Files that go into the image
-BINARY=./bin/flow-log-generator-$(ARCH)
+BINARY=./bin/fake-log-generator-$(ARCH)
 # Files to be built
 SRC_FILES=$(shell find . -name '*.go' | grep -v vendor)
 
@@ -47,14 +47,14 @@ LDFLAGS = -X main.VERSION=$(GIT_VERSION)
 
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
-build-all: $(addprefix bin/flow-log-generator-,$(VALIDARCHES))
+build-all: $(addprefix bin/fake-log-generator-,$(VALIDARCHES))
 
 .PHONY: build
 ## Build the binary for the current architecture and platform
 build: $(BINARY)
-bin/flow-log-generator-amd64: ARCH=amd64
-bin/flow-log-generator-%: $(SRC_FILES)
-	$(call build_binary, ./cmd/flow-log-generator, $@)
+bin/fake-log-generator-amd64: ARCH=amd64
+bin/fake-log-generator-%: $(SRC_FILES)
+	$(call build_binary, ./cmd/fake-log-generator, $@)
 
 ###############################################################################
 # Building the image

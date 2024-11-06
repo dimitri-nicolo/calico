@@ -23,11 +23,10 @@ Because the logs aren't completely realistic, service graph only shows a partial
 ```shell
 kubectl apply -f cloud-log-generator.yaml
 ```
-5. This will deploy the flow-log-gen pod. Wait a few minutes for the log generator to start pushing and uploading those logs to ES.
-6. Check ES kibana to know if flow log records got stored in ES and are showing up. You should notice that counts will increase per interval if the log generator is working. These fake flow logs are timestamped with `Dec 31, 1969` and based on services from the microservices-demo, see image below.
+5. This will deploy the fake-log-gen pod. Wait a few minutes for the log generator to start pushing and uploading those logs to ES.
+6. Check ES kibana to know if flow log records got stored in ES and are showing up. You should notice that counts will increase per interval if the log generator is working. If you generated flow logs, these fake flow logs are timestamped with `Dec 31, 1969` and based on services from the microservices-demo, see image below.
 
 ![Fake Flow Logs](images/kibana-fake-log.png)
-
 
 ## Local Test
 
