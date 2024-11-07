@@ -83,3 +83,5 @@ endif
 
 # Default branch prefix for release branches
 RELEASE_BRANCH_PREFIX ?= release-calient
+# The operator branch corresponding to this branch.
+OPERATOR_BRANCH=master
