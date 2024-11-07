@@ -95,6 +95,9 @@
     l7-collector:
       image: tigera/l7-collector
       version: master
+    l7-admission-controller:
+      image: tigera/l7-admission-controller
+      version: master
     license-agent:
       image: tigera/license-agent
       version: master
