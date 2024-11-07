@@ -246,9 +246,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp",
 						workload.WithIPv6Address("dead:beef::0:1"))
 					w[ii].Configure(client)
-					if BPFMode() {
-						ensureBPFProgramsAttached(tc.Felixes[0])
-					}
+				}
+				if BPFMode() {
+					ensureBPFProgramsAttached(tc.Felixes[0])
 				}
 			})
 
@@ -516,6 +516,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							return pfxs
 						}, "10s", "1s").Should(ContainElement("xyz.com"))
 					}
+					if BPFMode() {
+						Eventually(func() bool {
+							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+						}, "2s", "200ms").Should(BeTrue())
+					}
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
@@ -657,6 +662,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							}
 							_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 							Expect(err).NotTo(HaveOccurred())
+							if BPFMode() {
+								Eventually(func() bool {
+									return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+								}, "2s", "200ms").Should(BeTrue())
+							}
 						})
 
 						It("workload can ping etcd", func() {
@@ -710,6 +720,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							}
 							_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 							Expect(err).NotTo(HaveOccurred())
+							if BPFMode() {
+								Eventually(func() bool {
+									return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+								}, "2s", "200ms").Should(BeTrue())
+							}
 						})
 
 						Context("with a Felix restart", func() {
@@ -771,6 +786,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					}
 					_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 					Expect(err).NotTo(HaveOccurred())
+					if BPFMode() {
+						Eventually(func() bool {
+							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+						}, "2s", "200ms").Should(BeTrue())
+					}
 				})
 
 				It("workload can ping target after felix came up again", func() {
@@ -831,9 +851,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			iiStr := strconv.Itoa(ii)
 			w[ii] = workload.Run(tc.Felixes[0], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
-			if BPFMode() {
-				ensureBPFProgramsAttached(tc.Felixes[0])
-			}
+		}
+		if BPFMode() {
+			ensureBPFProgramsAttached(tc.Felixes[0])
 		}
 
 		// Start scapy, in the same namespace as Felix.
