@@ -45,7 +45,8 @@ type Config struct {
 	// ExpectedTenantID will be verified against x-tenant-id header for all API calls
 	// in a multi-tenant environment. If left empty, Linseed will not require the x-tenant-id
 	// header to be set on incoming requests. Note that ExpectedTenantID is set for both single-tenant management clusters in CC,
-	// as well as multi-tenant management clusters; but not when a CC customer is running their own Elastic, AKA "internal ES".
+	// as well as multi-tenant management clusters; except when a single tenant CC management
+	// cluster has Elastic running inside the management cluster, AKA "internal ES".
 	ExpectedTenantID string `default:"" split_words:"true"`
 
 	// TenantNamespace indicates the namespace in which this Linseed's tenant resides. If set, this means
