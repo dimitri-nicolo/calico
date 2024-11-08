@@ -63,6 +63,18 @@ check-gotchas:
 	  echo; \
 	  exit 1; \
 	fi
+	@if [ -e manifests/ocp/operator.tigera.io_tenants.yaml ]; then \
+		echo; \
+		echo "The operator Tenants CRD has been added to manifests/ocp/ but should only be included for multi-tenant purposes";\
+		echo; \
+		exit 1; \
+	fi
+	@if grep tenants\.operator\.tigera\.io manifests/tigera-operator.yaml > /dev/null ; then \
+		echo; \
+		echo "The operator manifest includes the Tenants CRD but should not, please investigate and remove whatever caused its inclusion";\
+		echo; \
+		exit 1; \
+	fi
 
 check-dockerfiles:
 	./hack/check-dockerfiles.sh
