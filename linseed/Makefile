@@ -118,7 +118,9 @@ st:
 ###############################################################################
 
 # Run Linseed as a local Docker container.
-# We run Linseed in multi-tenant mode, expecting all requests to have "tenant-a".
+# Normally we run Linseed in multi-tenant mode, expecting all requests to have "tenant-a".
+# But this can be overridden by pre-setting TENANT_ID_ENV.
+TENANT_ID_ENV ?= -e LINSEED_EXPECTED_TENANT_ID="tenant-a"
 run-image: stop-image run-elastic k8s-setup
 	docker run --detach \
 		--net=host \
@@ -135,7 +137,7 @@ run-image: stop-image run-elastic k8s-setup
 		-e ELASTIC_SCHEME="http" \
 		-e LINSEED_LOG_LEVEL="debug" \
 		-e LINSEED_ENABLE_METRICS="true" \
-		-e LINSEED_EXPECTED_TENANT_ID="tenant-a" \
+		$(TENANT_ID_ENV) \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests on its readiness port.
 	while ! curl -k http://localhost:8080/readiness; do echo "Waiting for linseed to come up..."; sleep 2; done
