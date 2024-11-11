@@ -181,7 +181,7 @@ EOF
 
             # Create a Local type NodePort service with a single replica.
             local_svc = "nginx-local"
-            self.deploy("nginx:1.7.9", local_svc, server_ns, 80)
+            self.deploy("nginx:latest", local_svc, server_ns, 80)
             self.wait_until_exists(local_svc, "svc", server_ns)
 
             # Get clusterIP.
