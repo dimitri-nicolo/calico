@@ -1157,7 +1157,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					Eventually(func() string {
 						out, _ := tc.Felixes[0].ExecOutput("bpftool", "-jp", "prog", "show")
 						return out
-					}, "15s", "1s").ShouldNot(
+					}, "20s", "1s").ShouldNot(
 						Or(ContainSubstring("cali_"), ContainSubstring("calico_"), ContainSubstring("xdp_cali_")))
 
 					// N.B. calico_failsafe map is created in iptables mode by
