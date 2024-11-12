@@ -68,9 +68,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ endpoint-to-host-action tes
 		}
 
 		cc = &connectivity.Checker{}
-		if BPFMode() {
-			ensureAllNodesBPFProgramsAttached(tc.Felixes)
-		}
 	})
 
 	AfterEach(func() {
@@ -195,6 +192,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ endpoint-to-host-action tes
 				f.TriggerDelayedStart()
 			}
 
+			if BPFMode() {
+				ensureAllNodesBPFProgramsAttached(tc.Felixes)
+			}
 			// Now add the default allow profile, which should give us WEP-to-WEP connectivity.
 			// When we get WEp-to-WEP, we know that Felix has finished programming so the
 			// WEP-to-host test is valid.
