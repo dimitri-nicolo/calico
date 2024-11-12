@@ -68,6 +68,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ endpoint-to-host-action tes
 		}
 
 		cc = &connectivity.Checker{}
+		if BPFMode() {
+			ensureAllNodesBPFProgramsAttached(tc.Felixes)
+		}
 	})
 
 	AfterEach(func() {
