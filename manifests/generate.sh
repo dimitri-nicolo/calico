@@ -182,7 +182,7 @@ ${HELM} template --include-crds \
 	../charts/tigera-operator/ \
 	--output-dir ocp \
 	--no-hooks \
-	--set installation.kubernetesProvider=openshift \
+	--set installation.kubernetesProvider=OpenShift \
 	--set installation.enabled=false \
 	--set apiServer.enabled=false \
 	--set apiServer.enabled=false \
