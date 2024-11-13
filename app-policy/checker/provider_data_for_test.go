@@ -29,10 +29,10 @@ func perHostCheckProviderScenarios() []*checkAuthScenario {
 
 	basicUpdates := append(
 		[]*proto.ToDataplane{
-			wepUpdate("pod-1", []string{"10.0.1.1/32"}, []string{"default"}, nil),
-			wepUpdate("pod-2", []string{"10.0.2.2/32"}, []string{"default"}, nil),
-			wepUpdate("pod-3", []string{"10.0.3.3/32"}, []string{"default"}, alpSidecar),
-			ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1/32", "10.0.2.2/32", "10.0.3.3/32"}),
+			wepUpdate("pod-1", []string{"10.0.1.1"}, []string{"default"}, nil),
+			wepUpdate("pod-2", []string{"10.0.2.2"}, []string{"default"}, nil),
+			wepUpdate("pod-3", []string{"10.0.3.3"}, []string{"default"}, alpSidecar),
+			ipsetUpdate(tproxydefs.ApplicationLayerPolicyIPSet, []string{"10.0.1.1", "10.0.2.2", "10.0.3.3"}),
 		},
 		policyAndProfileUpdate("secure", "default", inboundRule)...,
 	)

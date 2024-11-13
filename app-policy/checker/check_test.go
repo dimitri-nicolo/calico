@@ -15,6 +15,8 @@
 package checker
 
 import (
+	"fmt"
+	"net"
 	"testing"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -22,8 +24,204 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/rules"
 )
+
+func TestEvaluateNoEndpoint(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+
+	tuple := &tuple.Tuple{}
+	flow := NewTupleToFlowAdapter(tuple)
+	trace := Evaluate(rules.RuleDirIngress, store, nil, flow)
+	Expect(trace).To(BeNil())
+}
+
+func TestEvaluateEndpointNoTiersNoProfiles(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+
+	ep := &proto.WorkloadEndpoint{}
+	tuple := &tuple.Tuple{}
+	flow := NewTupleToFlowAdapter(tuple)
+	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
+	Expect(trace).To(HaveLen(1))
+	Expect(trace[0].Action).To(Equal(rules.RuleActionDeny))
+	Expect(trace[0].Direction).To(Equal(rules.RuleDirIngress))
+	Expect(trace[0].Index).To(Equal(-1))
+	Expect(trace[0].Tier).To(Equal("default"))
+	Expect(trace[0].Name).To(Equal("__PROFILE__"))
+	Expect(trace[0].Namespace).To(Equal(""))
+}
+
+func TestEvaluateEndpointWithMatchingPolicy(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+
+	ep := &proto.WorkloadEndpoint{
+		Tiers: []*proto.TierInfo{
+			{
+				Name:            "tier1",
+				IngressPolicies: []string{"policy1"},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+			},
+		},
+	}
+	tuple := &tuple.Tuple{Proto: 6, L4Dst: 80}
+	flow := NewTupleToFlowAdapter(tuple)
+	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
+	Expect(trace).To(HaveLen(1))
+	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
+	Expect(trace[0].Direction).To(Equal(rules.RuleDirIngress))
+	Expect(trace[0].Index).To(Equal(0))
+	Expect(trace[0].Tier).To(Equal("tier1"))
+	Expect(trace[0].Name).To(Equal("policy1"))
+	Expect(trace[0].Namespace).To(Equal(""))
+}
+
+func TestEvaluateEndpointWithNonMatchingPolicy(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+
+	ep := &proto.WorkloadEndpoint{
+		Tiers: []*proto.TierInfo{
+			{
+				Name:            "tier1",
+				IngressPolicies: []string{"policy1"},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+			},
+		},
+	}
+	tuple := &tuple.Tuple{Proto: 6, L4Dst: 443}
+	flow := NewTupleToFlowAdapter(tuple)
+	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
+	Expect(trace).To(HaveLen(1))
+	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
+	Expect(trace[0].Direction).To(Equal(rules.RuleDirIngress))
+	Expect(trace[0].Index).To(Equal(0))
+	Expect(trace[0].Tier).To(Equal("tier1"))
+	Expect(trace[0].Name).To(Equal("policy1"))
+	Expect(trace[0].Namespace).To(Equal(""))
+}
+
+func TestEvaluateEndpointWithMatchingProfile(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+
+	ep := &proto.WorkloadEndpoint{
+		ProfileIds: []string{"profile1"},
+	}
+	store.ProfileByID[proto.ProfileID{Name: "profile1"}] = &proto.Profile{
+		InboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+			},
+		},
+	}
+	tuple := &tuple.Tuple{Proto: 6, L4Dst: 80}
+	flow := NewTupleToFlowAdapter(tuple)
+	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
+	Expect(trace).To(HaveLen(1))
+	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
+	Expect(trace[0].Direction).To(Equal(rules.RuleDirIngress))
+	Expect(trace[0].Index).To(Equal(0))
+	Expect(trace[0].Tier).To(Equal("default"))
+	Expect(trace[0].Name).To(Equal("profile1"))
+	Expect(trace[0].Namespace).To(Equal(""))
+}
+
+func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+
+	ep := &proto.WorkloadEndpoint{
+		Tiers: []*proto.TierInfo{
+			{
+				Name:           "tier1",
+				EgressPolicies: []string{"policy1"},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Name: "policy1", Tier: "tier1"}] = &proto.Policy{
+		OutboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+				SrcNet: []string{"10.0.0.0/24"},
+				DstPorts: []*proto.PortRange{
+					{First: 80, Last: 80},
+				},
+			},
+			{
+				Action: "deny",
+				SrcNet: []string{"192.168.1.0/24"},
+				DstPorts: []*proto.PortRange{
+					{First: 441, Last: 444},
+				},
+			},
+		},
+	}
+
+	ip_10_0_0_1 := net.ParseIP("10.0.0.1")
+	ip_10_0_0_2 := net.ParseIP("10.0.0.2")
+	ip_192_168_1_1 := net.ParseIP("192.168.1.1")
+	ip_192_168_1_2 := net.ParseIP("192.168.1.2")
+
+	tuple1 := &tuple.Tuple{Proto: 6, L4Src: 80, L4Dst: 443, Src: [16]byte(ip_10_0_0_1.To16()), Dst: [16]byte(ip_192_168_1_1.To16())}
+	flow1 := NewTupleToFlowAdapter(tuple1)
+	trace := Evaluate(rules.RuleDirEgress, store, ep, flow1)
+	Expect(trace).To(HaveLen(1))
+	Expect(trace[0].Action).To(Equal(rules.RuleActionDeny))
+	Expect(trace[0].Direction).To(Equal(rules.RuleDirEgress))
+	Expect(trace[0].Index).To(Equal(-1))
+	Expect(trace[0].Tier).To(Equal("tier1"))
+	Expect(trace[0].Name).To(Equal("policy1"))
+	Expect(trace[0].Namespace).To(Equal(""))
+
+	// Test with a matching source IP and destination port 80
+	tuple2 := &tuple.Tuple{Proto: 6, L4Src: 443, L4Dst: 80, Src: [16]byte(ip_10_0_0_1.To16()), Dst: [16]byte(ip_192_168_1_1.To16())}
+	flow2 := NewTupleToFlowAdapter(tuple2)
+	trace = Evaluate(rules.RuleDirEgress, store, ep, flow2)
+	Expect(trace).To(HaveLen(1))
+	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
+	Expect(trace[0].Direction).To(Equal(rules.RuleDirEgress))
+	Expect(trace[0].Index).To(Equal(0))
+	Expect(trace[0].Tier).To(Equal("tier1"))
+	Expect(trace[0].Name).To(Equal("policy1"))
+	Expect(trace[0].Namespace).To(Equal(""))
+
+	// Test with a matching source IP and destination port 443
+	tuple3 := &tuple.Tuple{Proto: 6, L4Dst: 443, L4Src: 80, Src: [16]byte(ip_192_168_1_2.To16()), Dst: [16]byte(ip_10_0_0_2.To16())}
+	flow3 := NewTupleToFlowAdapter(tuple3)
+	trace = Evaluate(rules.RuleDirEgress, store, ep, flow3)
+	Expect(trace).To(HaveLen(1))
+	Expect(trace[0].Action).To(Equal(rules.RuleActionDeny))
+	Expect(trace[0].Direction).To(Equal(rules.RuleDirEgress))
+	Expect(trace[0].Index).To(Equal(1))
+	Expect(trace[0].Tier).To(Equal("tier1"))
+	Expect(trace[0].Name).To(Equal("policy1"))
+	Expect(trace[0].Namespace).To(Equal(""))
+}
 
 // actionFromString should parse strings in case-insensitive mode.
 func TestActionFromString(t *testing.T) {
@@ -55,9 +253,11 @@ func TestCheckPolicyNoRules(t *testing.T) {
 			Principal: "spiffe://cluster.local/ns/default/sa/sue",
 		},
 	}}
-	reqCache, err := NewRequestCache(store, req)
-	Expect(err).To(Succeed())
-	Expect(checkPolicy(policy, reqCache)).To(Equal(NO_MATCH))
+	flow := NewCheckRequestToFlowAdapter(req)
+	reqCache := NewRequestCache(store, flow)
+	st, idx := checkPolicy(policy, rules.RuleDirIngress, reqCache)
+	Expect(st).To(Equal(NO_MATCH))
+	Expect(idx).To(Equal(endOfTierDenyIndex))
 }
 
 // If rules exist, but none match, we should get NO_MATCH
@@ -97,16 +297,22 @@ func TestCheckPolicyRules(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "HEAD"},
 		},
 	}}
-	reqCache, err := NewRequestCache(policystore.NewPolicyStore(), req)
-	Expect(err).To(Succeed())
-	Expect(checkPolicy(policy, reqCache)).To(Equal(NO_MATCH))
+	flow := NewCheckRequestToFlowAdapter(req)
+	reqCache := NewRequestCache(policystore.NewPolicyStore(), flow)
+	st, idx := checkPolicy(policy, rules.RuleDirIngress, reqCache)
+	Expect(st).To(Equal(NO_MATCH))
+	Expect(idx).To(Equal(endOfTierDenyIndex))
 
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Method = "POST"
-	Expect(checkPolicy(policy, reqCache)).To(Equal(ALLOW))
+	st, idx = checkPolicy(policy, rules.RuleDirIngress, reqCache)
+	Expect(st).To(Equal(ALLOW))
+	Expect(idx).To(Equal(1))
 
 	http.Method = "GET"
-	Expect(checkPolicy(policy, reqCache)).To(Equal(DENY))
+	st, idx = checkPolicy(policy, rules.RuleDirIngress, reqCache)
+	Expect(st).To(Equal(DENY))
+	Expect(idx).To(Equal(2))
 }
 
 // If tiers have no ingress policies, we should not get NO_MATCH.
@@ -156,8 +362,8 @@ func TestCheckNoIngressPolicyRulesInTier(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
 		},
 	}}
-
-	status := checkTiers(store, store.Endpoint, req)
+	flow := NewCheckRequestToFlowAdapter(req)
+	status, _ := checkTiers(store, store.Endpoint, rules.RuleDirIngress, flow)
 	expectedStatus := rpc.Status{Code: OK}
 	Expect(status.Code).To(Equal(expectedStatus.Code))
 	Expect(status.Message).To(Equal(expectedStatus.Message))
@@ -180,7 +386,8 @@ func TestCheckStoreNoEndpoint(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "HEAD"},
 		},
 	}}
-	status := checkStore(store, nil, req)
+	flow := NewCheckRequestToFlowAdapter(req)
+	status := checkStore(store, nil, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -203,7 +410,8 @@ func TestCheckStoreNoTiers(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "HEAD"},
 		},
 	}}
-	status := checkStore(store, store.Endpoint, req)
+	flow := NewCheckRequestToFlowAdapter(req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -248,14 +456,15 @@ func TestCheckStorePolicyMatch(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Method = "HEAD"
 
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -296,14 +505,15 @@ func TestCheckStoreProfileOnly(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Method = "HEAD"
 
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -349,8 +559,9 @@ func TestCheckStorePolicyDefaultDeny(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
@@ -406,8 +617,9 @@ func TestCheckStorePass(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -431,24 +643,25 @@ func TestCheckStoreInitFails(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
 	//Check that we get PERMISSION_DENIED for DROP and LOG_AND_DROP values
 	// for DropActionOverride, and OK for ACCEPT and LOG_AND_ACCEPT. Default
 	// value is DROP.
 	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -486,23 +699,24 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET", Path: "foo"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
 	// Check that we get INVALID_ARGUMENT for DROP and LOG_AND_DROP values
 	// for DropActionOverride, and OK for ACCEPT and LOG_AND_ACCEPT.
 	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
 
 	store.DropActionOverride = policystore.LOG_AND_DROP
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
 
 	store.DropActionOverride = policystore.ACCEPT
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 
 	store.DropActionOverride = policystore.LOG_AND_ACCEPT
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -579,21 +793,22 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "GET", Path: "/foo"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 
 	// Change to a bad path, and check that we get PERMISSION_DENIED
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Path = "/bad"
 
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	// Change to a path that hits tier2 default Pass action, and then is allowed in tier3
 	http.Path = "/bar"
 
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
 }
 
@@ -654,13 +869,86 @@ func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
 			Http: &authz.AttributeContext_HttpRequest{Method: "HEAD", Path: "/foo"},
 		},
 	}}
+	flow := NewCheckRequestToFlowAdapter(req)
 
-	status := checkStore(store, store.Endpoint, req)
+	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Method = "GET"
 
-	status = checkStore(store, store.Endpoint, req)
+	status = checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(OK))
+}
+
+func TestLookupEndpointKeysFromSrcDstNoStore(t *testing.T) {
+	RegisterTestingT(t)
+
+	src, dst, err := LookupEndpointKeysFromSrcDst(nil, "10.0.0.1", "192.168.1.1")
+	Expect(err).To(HaveOccurred())
+	Expect(src).To(BeNil())
+	Expect(dst).To(BeNil())
+}
+
+func TestLookupEndpointKeysFromSrcDst(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+	store.IPToIndexes.Update(ip.MustParseCIDROrIP("10.0.0.1/32").Addr(), &proto.WorkloadEndpointUpdate{Id: &proto.WorkloadEndpointID{OrchestratorId: "default", WorkloadId: "wep1", EndpointId: "ep1"}, Endpoint: &proto.WorkloadEndpoint{ProfileIds: []string{"profile1"}}})
+	store.IPToIndexes.Update(ip.MustParseCIDROrIP("10.0.0.2/32").Addr(), &proto.WorkloadEndpointUpdate{Id: &proto.WorkloadEndpointID{OrchestratorId: "default", WorkloadId: "wep2", EndpointId: "ep2"}, Endpoint: &proto.WorkloadEndpoint{ProfileIds: []string{"profile2"}}})
+	store.IPToIndexes.Update(ip.MustParseCIDROrIP("192.168.1.1/32").Addr(), &proto.WorkloadEndpointUpdate{Id: &proto.WorkloadEndpointID{OrchestratorId: "default", WorkloadId: "wep3", EndpointId: "ep3"}, Endpoint: &proto.WorkloadEndpoint{ProfileIds: []string{"profile3"}}})
+	store.IPToIndexes.Update(ip.MustParseCIDROrIP("192.168.1.2/32").Addr(), &proto.WorkloadEndpointUpdate{Id: &proto.WorkloadEndpointID{OrchestratorId: "default", WorkloadId: "wep4", EndpointId: "ep4"}, Endpoint: &proto.WorkloadEndpoint{ProfileIds: []string{"profile4"}}})
+
+	tests := []struct {
+		src, dst                 string
+		expectedSrc, expectedDst []proto.WorkloadEndpointID
+	}{
+		{
+			src: "10.0.0.1", dst: "192.168.1.1",
+			expectedSrc: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep1", EndpointId: "ep1"}},
+			expectedDst: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep3", EndpointId: "ep3"}},
+		},
+		{
+			src: "10.0.0.2", dst: "10.0.0.1",
+			expectedSrc: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep2", EndpointId: "ep2"}},
+			expectedDst: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep1", EndpointId: "ep1"}},
+		},
+		{
+			src: "10.0.0.3", dst: "192.168.1.1",
+			expectedSrc: nil,
+			expectedDst: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep3", EndpointId: "ep3"}},
+		},
+		{
+			src: "10.0.0.1", dst: "192.168.1.2",
+			expectedSrc: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep1", EndpointId: "ep1"}},
+			expectedDst: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep4", EndpointId: "ep4"}},
+		},
+		{
+			src: "192.168.1.1", dst: "10.0.0.2",
+			expectedSrc: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep3", EndpointId: "ep3"}},
+			expectedDst: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep2", EndpointId: "ep2"}},
+		},
+		{
+			src: "192.168.1.2", dst: "10.0.0.1",
+			expectedSrc: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep4", EndpointId: "ep4"}},
+			expectedDst: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep1", EndpointId: "ep1"}},
+		},
+		{
+			src: "192.168.1.3", dst: "10.0.0.1",
+			expectedSrc: nil,
+			expectedDst: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep1", EndpointId: "ep1"}},
+		},
+		{
+			src: "10.0.0.1", dst: "192.168.1.3",
+			expectedSrc: []proto.WorkloadEndpointID{{OrchestratorId: "default", WorkloadId: "wep1", EndpointId: "ep1"}},
+			expectedDst: nil,
+		},
+	}
+
+	for i, test := range tests {
+		src, dst, err := LookupEndpointKeysFromSrcDst(store, test.src, test.dst)
+		Expect(err).To(BeNil(), fmt.Sprintf("Test case %d", i))
+		Expect(src).To(Equal(test.expectedSrc), fmt.Sprintf("Test case %d", i))
+		Expect(dst).To(Equal(test.expectedDst), fmt.Sprintf("Test case %d", i))
+	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 type CheckProvider interface {
@@ -97,9 +98,10 @@ func (c *ALPCheckProvider) Check(ps *policystore.PolicyStore, req *authz.CheckRe
 func defaultPerHostPolicyCheck(ps *policystore.PolicyStore) checkFn {
 	return func(req *authz.CheckRequest) (*authz.CheckResponse, error) {
 		resp := &authz.CheckResponse{Status: &status.Status{Code: UNKNOWN}}
+		flow := NewCheckRequestToFlowAdapter(req)
 		// let checkRequest decide if it's a known source to let it proceed to dest checker; or
 		// if it's a known dest to actually run policy
-		st := checkRequest(ps, req)
+		st := checkRequest(ps, flow)
 		resp.Status = &st
 		return resp, nil
 	}
@@ -112,7 +114,9 @@ func defaultPerPodPolicyCheck(ps *policystore.PolicyStore) checkFn {
 		if ps.Endpoint == nil {
 			return resp, errors.New("endpoint is nil. sync must not have happened yet")
 		}
-		st := checkStore(ps, ps.Endpoint, req)
+
+		flow := NewCheckRequestToFlowAdapter(req)
+		st := checkStore(ps, ps.Endpoint, rules.RuleDirIngress, flow)
 		resp.Status = &st
 		return resp, nil
 	}

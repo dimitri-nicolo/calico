@@ -12,7 +12,7 @@ import (
 )
 
 // ProcessUpdate -  Update the PolicyStore with the information passed over the Sync API.
-func (store *PolicyStore) ProcessUpdate(subscriptionType string, update *proto.ToDataplane) {
+func (store *PolicyStore) ProcessUpdate(subscriptionType string, update *proto.ToDataplane, storeStaged bool) {
 	// TODO: maybe coalesce-ing updater fits here
 	switch payload := update.Payload.(type) {
 	case *proto.ToDataplane_InSync:
@@ -28,7 +28,7 @@ func (store *PolicyStore) ProcessUpdate(subscriptionType string, update *proto.T
 	case *proto.ToDataplane_ActiveProfileRemove:
 		store.processActiveProfileRemove(payload.ActiveProfileRemove)
 	case *proto.ToDataplane_ActivePolicyUpdate:
-		if model.PolicyIsStaged(payload.ActivePolicyUpdate.Id.Name) {
+		if !storeStaged && model.PolicyIsStaged(payload.ActivePolicyUpdate.Id.Name) {
 			log.WithFields(log.Fields{
 				"id": payload.ActivePolicyUpdate.Id,
 			}).Debug("Skipping StagedPolicy ActivePolicyUpdate")
@@ -38,7 +38,7 @@ func (store *PolicyStore) ProcessUpdate(subscriptionType string, update *proto.T
 
 		store.processActivePolicyUpdate(payload.ActivePolicyUpdate)
 	case *proto.ToDataplane_ActivePolicyRemove:
-		if model.PolicyIsStaged(payload.ActivePolicyRemove.Id.Name) {
+		if !storeStaged && model.PolicyIsStaged(payload.ActivePolicyRemove.Id.Name) {
 			log.WithFields(log.Fields{
 				"id": payload.ActivePolicyRemove.Id,
 			}).Debug("Skipping StagedPolicy ActivePolicyRemove")
