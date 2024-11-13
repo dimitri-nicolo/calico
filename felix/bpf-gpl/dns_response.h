@@ -240,7 +240,7 @@ static long dns_update_sets_with_ip(__unused void *map, const void *key, __unuse
 	int ret = cali_ip_sets_update_elem(&k, &v, 0);
 
 	if (ret) {
-		struct cali_tc_ctx *ctx = ictx->ctx;
+		__unused struct cali_tc_ctx *ctx = ictx->ctx;
 		CALI_DEBUG("DNS: Failed to update ipset 0x%x err %d\n", sk->set_id, ret);
 	}
 
@@ -270,7 +270,7 @@ static long dns_update_sets_with_ip6(__unused void *map, const void *key, __unus
 	int ret = cali_v6_ip_sets_update_elem(&k, &v, 0);
 
 	if (ret) {
-		struct cali_tc_ctx *ctx = ictx->ctx;
+		__unused struct cali_tc_ctx *ctx = ictx->ctx;
 		CALI_DEBUG("DNS: Failed to update v6 ipset 0x%x err %d\n", sk->set_id, ret);
 	}
 
