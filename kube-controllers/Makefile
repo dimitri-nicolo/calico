@@ -46,6 +46,8 @@ KUBE_CONTROLLER_CONTAINER_MARKER=$(KUBE_CONTROLLER_CONTAINER_CREATED)
 BINDIR=bin
 endif
 
+LIBBPF_FILE_CREATED=../felix/bpf-gpl/.libbpf-$(LIBBPF_VERSION)
+
 ###############################################################################
 
 ## Removes all build artifacts.
@@ -90,6 +92,9 @@ $(BINDIR)/kubectl-$(ARCH):
 	curl -sSf -L --retry 5 -o $@ https://dl.k8s.io/release/$(K8S_VERSION)/bin/linux/$(ARCH)/kubectl
 	chmod +x $@
 
+LIBBPF_FILE_CREATED:
+	make -C ../felix clone-libbpf
+
 ###############################################################################
 # Building the image
 ###############################################################################
@@ -116,6 +121,8 @@ $(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED): register Dockerfile docker-image/flan
 # Static checks
 ###############################################################################
 # Make sure that a copyright statement exists on all go files.
+
+LOCAL_CHECKS = LIBBPF_FILE_CREATED
 check-copyright:
 	./check-copyrights.sh
 
