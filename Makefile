@@ -159,7 +159,7 @@ tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
 multi-tenant-crds-release: bin/multi-tenant-crds-$(chartVersion).tgz
-bin/multi-tenant-crds-$(chartVersion).tgz:
+bin/multi-tenant-crds-$(chartVersion).tgz: bin/helm
 	bin/helm package ./charts/multi-tenant-crds \
 	--destination ./bin/ \
 	--version $(chartVersion) \
@@ -179,7 +179,7 @@ bin/tigera-operator-%.tgz: bin/helm $(shell find ./charts/tigera-operator -type 
 
 # Build the tigera-prometheus-operator.tgz helm chart.
 tigera-prometheus-operator-release: bin/tigera-prometheus-operator-$(chartVersion).tgz
-bin/tigera-prometheus-operator-$(chartVersion).tgz:
+bin/tigera-prometheus-operator-$(chartVersion).tgz: bin/helm
 	bin/helm package ./charts/tigera-prometheus-operator \
 	--destination ./bin/ \
 	--version $(chartVersion) \
