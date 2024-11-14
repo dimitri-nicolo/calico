@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	log "github.com/sirupsen/logrus"
 
 	syncapi "github.com/projectcalico/calico/felix/proto"
@@ -43,8 +42,8 @@ type IPSet interface {
 	// NET         - Each member is a CIDR. Only removes exact matches.
 	RemoveString(ip string)
 
-	// Test if the address is contained in the set.
-	ContainsAddress(addr *envoyapi.Address) bool
+	// Test if the key is contained in the set.
+	Contains(string) bool
 
 	// Members
 	Members() []string
@@ -79,14 +78,9 @@ func (m ipMapSet) RemoveString(ip string) {
 	delete(m, ip)
 }
 
-func (m ipMapSet) ContainsAddress(addr *envoyapi.Address) bool {
-	sck := addr.GetSocketAddress()
-	key := sck.GetAddress() + "/32"
-	log.WithFields(log.Fields{
-		"proto": addr.String(),
-		"key":   key,
-	}).Debug("Finding address in ipMapSet", addr)
-	return m[key]
+func (m ipMapSet) Contains(addr string) bool {
+	log.WithField("address", addr).Debug("Finding address in ipMapSet")
+	return m[addr]
 }
 
 func (m ipMapSet) Members() []string {
@@ -105,15 +99,9 @@ func (m ipPortMapSet) RemoveString(ip string) {
 	delete(m, ip)
 }
 
-func (m ipPortMapSet) ContainsAddress(addr *envoyapi.Address) bool {
-	sck := addr.GetSocketAddress()
-	p := strings.ToLower(sck.GetProtocol().String())
-	key := fmt.Sprintf("%v,%v:%d", sck.GetAddress(), p, sck.GetPortValue())
-	log.WithFields(log.Fields{
-		"proto": addr.String(),
-		"key":   key,
-	}).Debug("Finding address in ipPortMapSet", addr)
-	return m[key]
+func (m ipPortMapSet) Contains(protocol string) bool {
+	log.WithField("protocol", protocol).Debug("Finding address in ipPortMapSet")
+	return m[protocol]
 }
 
 func (m ipPortMapSet) Members() []string {
@@ -132,10 +120,9 @@ func (m portMapSet) RemoveString(port string) {
 	delete(m, port)
 }
 
-func (m portMapSet) ContainsAddress(addr *envoyapi.Address) bool {
-	sck := addr.GetSocketAddress()
-	key := fmt.Sprintf("%d", sck.GetPortValue())
-	_, ok := m[key]
+func (m portMapSet) Contains(port string) bool {
+	log.WithField("port", port).Debug("Finding address in portMapSet")
+	_, ok := m[port]
 	return ok
 }
 
@@ -198,8 +185,8 @@ func (m ipNetSet) RemoveString(network string) {
 	}
 }
 
-func (m ipNetSet) ContainsAddress(addr *envoyapi.Address) bool {
-	ip := net.ParseIP(addr.GetSocketAddress().GetAddress())
+func (m ipNetSet) Contains(addr string) bool {
+	ip := net.ParseIP(addr)
 	if ip == nil {
 		// Envoy should not send us malformed IP addresses, but its possible we could get requests from non-IP
 		// connections, like Pipes.

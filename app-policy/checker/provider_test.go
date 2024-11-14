@@ -21,7 +21,7 @@ func TestCheckAuthScenarios(t *testing.T) {
 		ps := policystore.NewPolicyStoreManager()
 		ps.Write(func(ps *policystore.PolicyStore) {
 			for _, update := range append(scenario.updates, inSync()) {
-				ps.ProcessUpdate(scenario.subscriptionType, update)
+				ps.ProcessUpdate(scenario.subscriptionType, update, false)
 			}
 		})
 		ps.OnInSync()

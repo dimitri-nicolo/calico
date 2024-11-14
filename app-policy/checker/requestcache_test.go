@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,12 +41,13 @@ func TestParseSpiffeIdOk(t *testing.T) {
 			Principal: "",
 		},
 	}}
-	uut, err := NewRequestCache(policystore.NewPolicyStore(), req)
-	Expect(err).To(Succeed())
-	Expect(uut.SourcePeer().Name).To(Equal(""))
-	Expect(uut.SourcePeer().Namespace).To(Equal(""))
-	Expect(uut.DestinationPeer().Name).To(Equal(""))
-	Expect(uut.DestinationPeer().Namespace).To(Equal(""))
+	flow := NewCheckRequestToFlowAdapter(req)
+	uut := NewRequestCache(policystore.NewPolicyStore(), flow)
+	Expect(uut).NotTo(BeNil())
+	Expect(uut.getSrcPeer().Name).To(Equal(""))
+	Expect(uut.getSrcPeer().Namespace).To(Equal(""))
+	Expect(uut.getDstPeer().Name).To(Equal(""))
+	Expect(uut.getDstPeer().Namespace).To(Equal(""))
 }
 
 // Unsuccessful parse should return an error.
@@ -69,8 +70,10 @@ func TestInitSourceBadSpiffe(t *testing.T) {
 			Principal: "spiffe://foo.bar.com/ns/sub/sa/ham",
 		},
 	}}
-	_, err := NewRequestCache(policystore.NewPolicyStore(), req)
-	Expect(err).ToNot(Succeed())
+	flow := NewCheckRequestToFlowAdapter(req)
+	rc := NewRequestCache(policystore.NewPolicyStore(), flow)
+	Expect(rc.getSrcPeer()).To(BeNil())
+	Expect(rc.getDstPeer()).To(Equal(&peer{Name: "ham", Namespace: "sub", Labels: map[string]string{}}))
 }
 
 func TestInitPeerRequestLabels(t *testing.T) {
@@ -86,14 +89,14 @@ func TestInitPeerRequestLabels(t *testing.T) {
 			Labels:    map[string]string{"k3": "v3", "k4": "v4"},
 		},
 	}}
-	uut, err := NewRequestCache(policystore.NewPolicyStore(), req)
-	Expect(err).To(Succeed())
-	Expect(uut.SourcePeer().Name).To(Equal("bacon"))
-	Expect(uut.SourcePeer().Namespace).To(Equal("sandwich"))
-	Expect(uut.SourcePeer().Labels).To(Equal(map[string]string{"k1": "v1", "k2": "v2"}))
-	Expect(uut.DestinationPeer().Name).To(Equal("ham"))
-	Expect(uut.DestinationPeer().Namespace).To(Equal("sub"))
-	Expect(uut.DestinationPeer().Labels).To(Equal(map[string]string{"k3": "v3", "k4": "v4"}))
+	flow := NewCheckRequestToFlowAdapter(req)
+	uut := NewRequestCache(policystore.NewPolicyStore(), flow)
+	Expect(uut.getSrcPeer().Name).To(Equal("bacon"))
+	Expect(uut.getSrcPeer().Namespace).To(Equal("sandwich"))
+	Expect(uut.getSrcPeer().Labels).To(Equal(map[string]string{"k1": "v1", "k2": "v2"}))
+	Expect(uut.getDstPeer().Name).To(Equal("ham"))
+	Expect(uut.getDstPeer().Namespace).To(Equal("sub"))
+	Expect(uut.getDstPeer().Labels).To(Equal(map[string]string{"k3": "v3", "k4": "v4"}))
 }
 
 func TestInitPeerStoreLabels(t *testing.T) {
@@ -120,14 +123,14 @@ func TestInitPeerStoreLabels(t *testing.T) {
 		Id:     &id,
 		Labels: map[string]string{"k7": "v7", "k8": "v8"},
 	}
-	uut, err := NewRequestCache(store, req)
-	Expect(err).To(Succeed())
-	Expect(uut.SourcePeer().Name).To(Equal("bacon"))
-	Expect(uut.SourcePeer().Namespace).To(Equal("sandwich"))
-	Expect(uut.SourcePeer().Labels).To(Equal(map[string]string{"k5": "v5", "k6": "v6"}))
-	Expect(uut.DestinationPeer().Name).To(Equal("ham"))
-	Expect(uut.DestinationPeer().Namespace).To(Equal("sub"))
-	Expect(uut.DestinationPeer().Labels).To(Equal(map[string]string{"k7": "v7", "k8": "v8"}))
+	flow := NewCheckRequestToFlowAdapter(req)
+	uut := NewRequestCache(store, flow)
+	Expect(uut.getSrcPeer().Name).To(Equal("bacon"))
+	Expect(uut.getSrcPeer().Namespace).To(Equal("sandwich"))
+	Expect(uut.getSrcPeer().Labels).To(Equal(map[string]string{"k5": "v5", "k6": "v6"}))
+	Expect(uut.getDstPeer().Name).To(Equal("ham"))
+	Expect(uut.getDstPeer().Namespace).To(Equal("sub"))
+	Expect(uut.getDstPeer().Labels).To(Equal(map[string]string{"k7": "v7", "k8": "v8"}))
 }
 
 func TestInitPeerBothLabels(t *testing.T) {
@@ -154,14 +157,14 @@ func TestInitPeerBothLabels(t *testing.T) {
 		Id:     &id,
 		Labels: map[string]string{"k7": "v7", "k8": "v8"},
 	}
-	uut, err := NewRequestCache(store, req)
-	Expect(err).To(Succeed())
-	Expect(uut.SourcePeer().Name).To(Equal("bacon"))
-	Expect(uut.SourcePeer().Namespace).To(Equal("sandwich"))
-	Expect(uut.SourcePeer().Labels).To(Equal(map[string]string{"k1": "v1", "k2": "v2", "k5": "v5", "k6": "v6"}))
-	Expect(uut.DestinationPeer().Name).To(Equal("ham"))
-	Expect(uut.DestinationPeer().Namespace).To(Equal("sub"))
-	Expect(uut.DestinationPeer().Labels).To(Equal(map[string]string{"k3": "v3", "k4": "v4", "k7": "v7", "k8": "v8"}))
+	flow := NewCheckRequestToFlowAdapter(req)
+	uut := NewRequestCache(store, flow)
+	Expect(uut.getSrcPeer().Name).To(Equal("bacon"))
+	Expect(uut.getSrcPeer().Namespace).To(Equal("sandwich"))
+	Expect(uut.getSrcPeer().Labels).To(Equal(map[string]string{"k1": "v1", "k2": "v2", "k5": "v5", "k6": "v6"}))
+	Expect(uut.getDstPeer().Name).To(Equal("ham"))
+	Expect(uut.getDstPeer().Namespace).To(Equal("sub"))
+	Expect(uut.getDstPeer().Labels).To(Equal(map[string]string{"k3": "v3", "k4": "v4", "k7": "v7", "k8": "v8"}))
 }
 
 func TestInitDestinationBadSpiffe(t *testing.T) {
@@ -176,8 +179,10 @@ func TestInitDestinationBadSpiffe(t *testing.T) {
 			Principal: "http://foo.bar.com/ns/sandwich/sa/bacon",
 		},
 	}}
-	_, err := NewRequestCache(policystore.NewPolicyStore(), req)
-	Expect(err).ToNot(Succeed())
+	flow := NewCheckRequestToFlowAdapter(req)
+	rc := NewRequestCache(policystore.NewPolicyStore(), flow)
+	Expect(rc.getSrcPeer()).To(Equal(&peer{Name: "bacon", Namespace: "sandwich", Labels: map[string]string{}}))
+	Expect(rc.getDstPeer()).To(BeNil())
 }
 
 func TestNamespaceLabels(t *testing.T) {
@@ -202,10 +207,10 @@ func TestNamespaceLabels(t *testing.T) {
 		Id:     &id,
 		Labels: map[string]string{"k7": "v7", "k8": "v8"},
 	}
-	uut, err := NewRequestCache(store, req)
-	Expect(err).To(Succeed())
-	Expect(uut.SourceNamespace().Name).To(Equal("sandwich"))
-	Expect(uut.SourceNamespace().Labels).To(Equal(map[string]string{"k5": "v5", "k6": "v6"}))
-	Expect(uut.DestinationNamespace().Name).To(Equal("sub"))
-	Expect(uut.DestinationNamespace().Labels).To(Equal(map[string]string{"k7": "v7", "k8": "v8"}))
+	flow := NewCheckRequestToFlowAdapter(req)
+	uut := NewRequestCache(store, flow)
+	Expect(uut.getSrcNamespace().Name).To(Equal("sandwich"))
+	Expect(uut.getSrcNamespace().Labels).To(Equal(map[string]string{"k5": "v5", "k6": "v6"}))
+	Expect(uut.getDstNamespace().Name).To(Equal("sub"))
+	Expect(uut.getDstNamespace().Labels).To(Equal(map[string]string{"k7": "v7", "k8": "v8"}))
 }
