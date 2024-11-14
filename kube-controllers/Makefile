@@ -8,6 +8,7 @@ TESLA ?= false
 KUBE_CONTROLLERS_IMAGE  ?=kube-controllers
 FLANNEL_MIGRATION_IMAGE ?=flannel-migration-controller
 
+LOCAL_CHECKS = LIBBPF_FILE_CREATED
 ifdef RELEASE
 BUILD_IMAGES ?=$(KUBE_CONTROLLERS_IMAGE)
 else
@@ -122,7 +123,6 @@ $(KUBE_CONTROLLER_CONTAINER_FIPS_CREATED): register Dockerfile docker-image/flan
 ###############################################################################
 # Make sure that a copyright statement exists on all go files.
 
-LOCAL_CHECKS = LIBBPF_FILE_CREATED
 check-copyright:
 	./check-copyrights.sh
 
