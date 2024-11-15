@@ -403,7 +403,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//
 	polResolver := NewPolicyResolver()
 	// Hook up the inputs to the policy resolver.
-	activeRulesCalc.PolicyMatchListeners = append(activeRulesCalc.PolicyMatchListeners, polResolver)
+	activeRulesCalc.RegisterPolicyMatchListener(polResolver)
 	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
 	// And hook its output to the callbacks.
 	polResolver.RegisterCallback(callbacks)
@@ -590,7 +590,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		tproxyResolver.RegisterWithAllUpdates(allUpdDispatcher, localEndpointDispatcher)
 		tproxyWEPIPSetCalc := NewL7WorkloadIPSetCalculator(callbacks)
 		tproxyWEPIPSetCalc.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
-		activeRulesCalc.PolicyMatchListeners = append(activeRulesCalc.PolicyMatchListeners, tproxyWEPIPSetCalc)
+		activeRulesCalc.RegisterPolicyMatchListener(tproxyWEPIPSetCalc)
 	}
 
 	// Register for IP Pool updates. EncapsulationResolver will send a message to the
