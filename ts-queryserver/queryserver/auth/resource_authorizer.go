@@ -112,6 +112,14 @@ func convertV1KindToResourceType(kind string, name string) string {
 		return "tiers"
 	case "pods", "pod":
 		return "pods"
+	case "namespace", "namespaces":
+		return "namespaces"
+	case "serviceaccounts", "serviceaccount":
+		return "serviceaccounts"
+	case "managedclusters", "managedcluster":
+		return "managedclusters"
+	case "globalthreatfeeds", "globalthreatfeed":
+		return "globalthreatfeeds"
 	default:
 		return kind
 	}

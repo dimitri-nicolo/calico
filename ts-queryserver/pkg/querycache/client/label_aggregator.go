@@ -260,7 +260,7 @@ func (l *label) GetNamespacesLabels(permissions authhandler.Permission, ctx cont
 			},
 		}
 		// check logged-in users permission and add resource labels to allLabels
-		if permissions.IsAuthorized(interface{}(namespaceresource).(api.Resource), nil, []string{"list"}) {
+		if permissions.IsAuthorized(namespaceresource, nil, []string{"list"}) {
 			for key, value := range item.Labels {
 				allLabels.SetLabels(key, value)
 			}
