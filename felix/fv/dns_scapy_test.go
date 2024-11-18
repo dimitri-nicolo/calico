@@ -497,10 +497,12 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					// Allow 2s for Felix to see and process that policy.
+					// Since felix is restarted, it might be busy attaching programs before applying policy.
+					// Hence a longer wait time.
 					if BPFMode() {
 						Eventually(func() bool {
 							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
-						}, "10s", "200ms").Should(BeTrue())
+						}, "20s", "200ms").Should(BeTrue())
 					} else {
 						time.Sleep(2 * time.Second)
 					}
