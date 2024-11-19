@@ -19,11 +19,13 @@ EOF
 if [[ "$GTM_INTEGRATION" == 'enabled' ]]; then
   cat >>${KIBANA_CONFIG} <<EOF
 # Google Tag Manager configuration
-csp.rules:
-  - "script-src 'unsafe-eval' 'self' 'unsafe-inline' https://www.googletagmanager.com"
-  - "img-src www.googletagmanager.com 'self' data:"
+csp:
+  script_src:
+    - https://www.googletagmanager.com
+  img_src:
+    - https://www.googletagmanager.com
 
-googletagmanager.enabled: true
-googletagmanager.container: "GTM-TCNXTCJ"
+google_tag_manager.enabled: true
+google_tag_manager.container: "GTM-TCNXTCJ"
 EOF
 fi

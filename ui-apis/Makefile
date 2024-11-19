@@ -82,15 +82,21 @@ ut:
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
-fv: image run-k8s-apiserver run-elastic
+fv: image run-k8s-apiserver stop-elastic run-elastic copy-es-cacert
 	APISERVER_NAME=$(APISERVER_NAME) \
 	PACKAGE_NAME=${PACKAGE_NAME} \
-		test/setup_k8s_auth.sh
+	test/setup_k8s_auth.sh
 
 	PACKAGE_NAME=${PACKAGE_NAME} \
-		test/setup_elasticsearch_index.sh
+		ELASTIC_PASSWORD=$(ELASTIC_PASSWORD) test/setup_elasticsearch_index.sh
 
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r test/'
+
+# Copy certificate from the Elasticsearch container
+.PHONY: copy-es-cacert
+copy-es-cacert:
+	docker cp tigera-elastic:/usr/share/elasticsearch/config/certs/http_ca.crt test/http_ca.crt
+	chmod +r test/http_ca.crt
 
 ###############################################################################
 # CI/CD

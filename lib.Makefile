@@ -1439,6 +1439,10 @@ help:
 ###############################################################################
 # Common functions for launching a local Elastic instance.
 ###############################################################################
+ELASTIC_USERNAME := elastic
+BOOTSTRAP_PASSWORD := $(shell cat /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | head -c16)
+ELASTIC_PASSWORD := $(BOOTSTRAP_PASSWORD)
+
 ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(shell grep -o '^ELASTIC_VERSION=[0-9\.]*' $(REPO_ROOT)/third_party/elasticsearch/Makefile | cut -d "=" -f 2)
 
 ## Run elasticsearch as a container (tigera-elastic)
@@ -1451,15 +1455,17 @@ $(REPO_ROOT)/.elasticsearch.created:
 	--net=host \
 	--name=tigera-elastic \
 	-e "discovery.type=single-node" \
+	-e "ELASTIC_USERNAME=${ELASTIC_USERNAME}" \
+	-e "ELASTIC_PASSWORD=${ELASTIC_PASSWORD}" \
 	$(ELASTIC_IMAGE)
 
 	# Wait until ES is accepting requests.
-	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
+	@while ! docker exec tigera-elastic curl https://localhost:9200 --cacert /usr/share/elasticsearch/config/certs/http_ca.crt -u "${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}" 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
 	touch $@
 
 	# Configure elastic to ignore high watermark errors, since this is just for tests.
-	curl -XPUT -H "Content-Type: application/json" http://localhost:9200/_cluster/settings -d '{"transient": {"cluster.routing.allocation.disk.threshold_enabled": false }}'
-	curl -XPUT -H "Content-Type: application/json" http://localhost:9200/_all/_settings -d '{"index.blocks.read_only_allow_delete": null}'
+	curl -k -XPUT -H "Content-Type: application/json" https://localhost:9200/_cluster/settings -u "${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}" -d '{"transient": {"cluster.routing.allocation.disk.threshold_enabled": false }}'
+	curl -k -XPUT -H "Content-Type: application/json" https://localhost:9200/_all/_settings -u "${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}" -d '{"index.blocks.read_only_allow_delete": null}'
 
 ## Stop elasticsearch with name tigera-elastic
 .PHONY: stop-elastic

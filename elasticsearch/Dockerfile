@@ -1,6 +1,6 @@
 ARG THIRD_PARTY_REGISTRY
 
-FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v7.17.25 AS elastic
+FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.15.3 AS elastic
 
 FROM scratch AS source
 
@@ -39,6 +39,23 @@ COPY --from=elastic /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=elastic /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=elastic /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
+COPY --from=elastic /lib64/libzstd.so.1 /lib64/libzstd.so.1
+COPY --from=elastic /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
+COPY --from=elastic /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
+COPY --from=elastic /lib64/libsystemd.so.0 /lib64/libsystemd.so.0
+COPY --from=elastic /lib64/liblzma.so.5 /lib64/liblzma.so.5
+COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
+
+COPY --from=elastic /lib64/liblzma.so.5 /lib64/liblzma.so.5
+COPY --from=elastic /lib64/liblz4.so.1 /lib64/liblz4.so.1
+COPY --from=elastic /lib64/libgcrypt.so.20 /lib64/libgcrypt.so.20
+COPY --from=elastic /lib64/libpthread.so.0 /lib64/libpthread.so.0
+COPY --from=elastic /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=elastic /lib64/libgpg-error.so.0 /lib64/libgpg-error.so.0
+
+COPY --from=elastic /lib64/libmount.so.1 /lib64/libmount.so.1
+COPY --from=elastic /lib64/libblkid.so.1 /lib64/libblkid.so.1
+COPY --from=elastic /lib64/libuuid.so.1 /lib64/libuuid.so.1
 
 # required by jvm
 COPY --from=elastic /lib64/libm.so.6 /lib64/libm.so.6
@@ -52,6 +69,7 @@ COPY --from=elastic /etc/shadow /etc/shadow
 # elasticsearch jars and binaries
 COPY --from=elastic /usr/share/elasticsearch /usr/share/elasticsearch/
 COPY --from=elastic /usr/bin/tini /usr/bin/tini
+
 # tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-${TARGETARCH} /usr/bin/readiness-probe
 

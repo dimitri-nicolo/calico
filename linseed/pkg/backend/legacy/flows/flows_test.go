@@ -62,7 +62,8 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
+	esClient, err := backendutils.CreateElasticClient()
+
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
 	cache = templates.NewCachedInitializer(client, 1, 0)
@@ -1080,6 +1081,7 @@ func TestElasticResponses(t *testing.T) {
 
 		// Configure the elastic client to use the URL of our test server.
 		esClient, err := elastic.NewSimpleClient(elastic.SetURL(server.URL))
+
 		require.NoError(t, err)
 		client = lmaelastic.NewWithClient(esClient)
 

@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/elasticsearch
 ELASTICSEARCH_IMAGE   ?=elasticsearch
 BUILD_IMAGES          ?=$(ELASTICSEARCH_IMAGE)
 
-ELASTIC_VERSION=7.17.25
+ELASTIC_VERSION=8.15.3
 TINI_VERSION=0.19.0
 
 # required for ci/cd
@@ -30,7 +30,6 @@ init-elastic: $(ELASTIC_DOWNLOADED)
 $(ELASTIC_DOWNLOADED):
 	mkdir -p build
 	curl -sfL https://github.com/elastic/elasticsearch/archive/refs/tags/v$(ELASTIC_VERSION).tar.gz | tar xz -C build/
-	patch -d build/elasticsearch-$(ELASTIC_VERSION) -p1 < patches/elastic-7.17.x-Update-dependencies-to-reduce-CVEs.patch
 	touch $@
 
 GRADLE_TASK=:distribution:archives:linux-tar:assemble

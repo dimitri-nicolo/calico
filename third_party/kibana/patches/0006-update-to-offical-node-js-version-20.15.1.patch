@@ -1,0 +1,75 @@
+From 09012097402bb2438c6866f188f91feb993c87d9 Mon Sep 17 00:00:00 2001
+From: Vara <vara@tigera.io>
+Date: Wed, 6 Nov 2024 09:55:47 -0800
+Subject: [PATCH] update to offical node js version 20.15.1
+
+---
+ .buildkite/scripts/common/setup_node.sh          | 2 +-
+ WORKSPACE.bazel                                  | 6 +++---
+ src/dev/build/tasks/nodejs/node_download_info.ts | 2 +-
+ src/dev/build/tasks/nodejs/node_shasums.ts       | 2 +-
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/.buildkite/scripts/common/setup_node.sh b/.buildkite/scripts/common/setup_node.sh
+index 8675537b8..a487d7c7d 100755
+--- a/.buildkite/scripts/common/setup_node.sh
++++ b/.buildkite/scripts/common/setup_node.sh
+@@ -32,7 +32,7 @@ elif [[ "$UNAME" == "Darwin" ]]; then
+ fi
+ echo " -- Running on OS: $OS"
+ 
+-nodeUrl="https://us-central1-elastic-kibana-184716.cloudfunctions.net/kibana-ci-proxy-cache/dist/v$NODE_VERSION/node-v$NODE_VERSION-${OS}-${classifier}"
++nodeUrl="https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-${OS}-${classifier}"
+ 
+ echo " -- node: version=v${NODE_VERSION} dir=$NODE_DIR"
+ 
+diff --git a/WORKSPACE.bazel b/WORKSPACE.bazel
+index c1bae6c54..775a3035b 100644
+--- a/WORKSPACE.bazel
++++ b/WORKSPACE.bazel
+@@ -24,13 +24,13 @@ node_repositories(
+   node_repositories = {
+     "20.15.1-darwin_amd64": ("node-v20.15.1-darwin-x64.tar.gz", "node-v20.15.1-darwin-x64", "f5379772ffae1404cfd1fcc8cf0c6c5971306b8fb2090d348019047306de39dc"),
+     "20.15.1-darwin_arm64": ("node-v20.15.1-darwin-arm64.tar.gz", "node-v20.15.1-darwin-arm64", "4743bc042f90ba5d9edf09403207290a9cdd2f6061bdccf7caaa0bbfd49f343e"),
+-    "20.15.1-linux_arm64": ("node-v20.15.1-linux-arm64.tar.xz", "node-v20.15.1-linux-arm64", "c049d670df0c27ae2fd53446df79b6227ab23aff930e38daf0ab3da41c396db5"),
+-    "20.15.1-linux_amd64": ("node-v20.15.1-linux-x64.tar.xz", "node-v20.15.1-linux-x64", "a854c291c7b775bedab54251e1e273cfee1adf1dba25435bc52305ef41f143ab"),
++    "20.15.1-linux_arm64": ("node-v20.15.1-linux-arm64.tar.xz", "node-v20.15.1-linux-arm64", "10d47a46ef208b3e4b226e4d595a82659123b22397ed77b7975d989114ec317e"),
++    "20.15.1-linux_amd64": ("node-v20.15.1-linux-x64.tar.xz", "node-v20.15.1-linux-x64", "26700f8d3e78112ad4a2618a9c8e2816e38a49ecf0213ece80e54c38cb02563f"),
+     "20.15.1-windows_amd64": ("node-v20.15.1-win-x64.zip", "node-v20.15.1-win-x64", "ba6c3711e2c3d0638c5f7cea3c234553808a73c52a5962a6cdb47b5210b70b04"),
+   },
+   node_version = "20.15.1",
+   node_urls = [
+-    "https://us-central1-elastic-kibana-184716.cloudfunctions.net/kibana-ci-proxy-cache/dist/v{version}/{filename}",
++    "https://nodejs.org/dist/v{version}/{filename}"
+   ],
+   yarn_repositories = {
+     "1.22.21": ("yarn-v1.22.21.tar.gz", "yarn-v1.22.21", "a55bb4e85405f5dfd6e7154a444e7e33ad305d7ca858bad8546e932a6688df08"),
+diff --git a/src/dev/build/tasks/nodejs/node_download_info.ts b/src/dev/build/tasks/nodejs/node_download_info.ts
+index 489ff1fc0..f44b1cc7d 100644
+--- a/src/dev/build/tasks/nodejs/node_download_info.ts
++++ b/src/dev/build/tasks/nodejs/node_download_info.ts
+@@ -26,7 +26,7 @@ export function getNodeDownloadInfo(config: Config, platform: Platform) {
+ 
+     let variantPath = '';
+     if (variant === 'pointer-compression') variantPath = 'node-pointer-compression/';
+-    const url = `https://us-central1-elastic-kibana-184716.cloudfunctions.net/kibana-ci-proxy-cache/${variantPath}dist/v${version}/${downloadName}`;
++    const url = `https://nodejs.org/dist/v${version}/${downloadName}`;
+     const downloadPath = config.resolveFromRepo(
+       '.node_binaries',
+       version,
+diff --git a/src/dev/build/tasks/nodejs/node_shasums.ts b/src/dev/build/tasks/nodejs/node_shasums.ts
+index 7e2590818..b8bee8da0 100644
+--- a/src/dev/build/tasks/nodejs/node_shasums.ts
++++ b/src/dev/build/tasks/nodejs/node_shasums.ts
+@@ -14,7 +14,7 @@ const cache: Record<string, Record<string, string>> = {};
+ export async function getNodeShasums(log: ToolingLog, nodeVersion: string, variant: string | null) {
+   let variantPath = '';
+   if (variant === 'pointer-compression') variantPath = 'node-pointer-compression/';
+-  const url = `https://us-central1-elastic-kibana-184716.cloudfunctions.net/kibana-ci-proxy-cache/${variantPath}dist/v${nodeVersion}/SHASUMS256.txt`;
++  const url = `https://nodejs.org/dist/v${nodeVersion}/SHASUMS256.txt`;
+ 
+   if (cache[url]) {
+     log.debug('Returning cached shasum values for node version', nodeVersion, 'from', url);
+-- 
+2.25.1
+

@@ -5,14 +5,10 @@ PACKAGE_NAME?=github.com/projectcalico/calico/kibana
 KIBANA_IMAGE?=kibana
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-# Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
-# accidentally enable the integration
-GTM_INTEGRATION?=disabled
-
 ifeq ($(TESLA),true)
-GTM_INTEGRATION=enabled
 IMAGETAG_PREFIX?=tesla
 endif
+
 
 ###############################################################################
 # Include lib.Makefile before anything else
@@ -36,8 +32,8 @@ image: $(KIBANA_IMAGE)
 
 $(KIBANA_IMAGE): $(KIBANA_IMAGE_MARKER)
 
-$(KIBANA_IMAGE_MARKER): register docker-image/Dockerfile docker-image/create_kibana_config.sh docker-image/gtm_setup.sh
-	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) --build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) \
+$(KIBANA_IMAGE_MARKER): register docker-image/Dockerfile docker-image/create_kibana_config.sh
+	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
 		-t $(KIBANA_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile docker-image
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

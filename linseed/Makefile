@@ -108,7 +108,7 @@ MOCKERY_FILE_PATHS= \
 ut: stop-elastic run-elastic ut-fast
 ut-fast:
 	# We run the tests 5 times to try and weed out test flakes.
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ELASTIC_USERNAME=$(ELASTIC_USERNAME) ELASTIC_PASSWORD=$(ELASTIC_PASSWORD) go test ./... -cover -count 1'
 
 st:
 	@echo "No STs"
@@ -121,7 +121,7 @@ st:
 # Normally we run Linseed in multi-tenant mode, expecting all requests to have "tenant-a".
 # But this can be overridden by pre-setting TENANT_ID_ENV.
 TENANT_ID_ENV ?= -e LINSEED_EXPECTED_TENANT_ID="tenant-a"
-run-image: stop-image run-elastic k8s-setup
+run-image: stop-image stop-elastic run-elastic k8s-setup copy-es-cacert
 	docker run --detach \
 		--net=host \
 		--name=tigera-$(LINSEED_IMAGE) \
@@ -131,11 +131,14 @@ run-image: stop-image run-elastic k8s-setup
 		-v $(CERTS_PATH)/ca.pem:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
 		-v $(REPO_ROOT)/linseed/fv/linseed-token:/var/run/secrets/kubernetes.io/serviceaccount/token \
 		-v $(REPO_ROOT)/linseed/fv/tenant-namespace:/var/run/secrets/kubernetes.io/serviceaccount/namespace \
+		-v $(REPO_ROOT)/linseed/fv/cert/http_ca.crt:/certs/elasticsearch/tls.crt \
 		-e KUBERNETES_SERVICE_HOST=127.0.0.1 \
 		-e KUBERNETES_SERVICE_PORT=6443 \
 		-e ELASTIC_HOST="localhost" \
-		-e ELASTIC_SCHEME="http" \
-		-e LINSEED_LOG_LEVEL="debug" \
+		-e ELASTIC_SCHEME="https" \
+		-e ELASTIC_USERNAME=$(ELASTIC_USERNAME) \
+		-e ELASTIC_PASSWORD=$(ELASTIC_PASSWORD) \
+		-e LINSEED_LOG_LEVEL="trace" \
 		-e LINSEED_ENABLE_METRICS="true" \
 		$(TENANT_ID_ENV) \
 		tigera/$(LINSEED_IMAGE):latest
@@ -147,9 +150,15 @@ stop-image:
 
 ## Run the FVs
 WHAT=.
-fv: clean image run-elastic k8s-setup fv-fast
+fv: clean image run-elastic k8s-setup  copy-es-cacert fv-fast
 fv-fast: build-tests
-	 cd fv && ./fv.test -test.run $(WHAT)
+	 cd fv && ELASTIC_USERNAME=$(ELASTIC_USERNAME) ELASTIC_PASSWORD=$(ELASTIC_PASSWORD) ./fv.test -test.run $(WHAT)
+
+
+# Copy certificate from the Elasticsearch container
+copy-es-cacert:
+	docker cp tigera-elastic:/usr/share/elasticsearch/config/certs/http_ca.crt fv/cert/http_ca.crt
+	chmod +r fv/cert/http_ca.crt
 
 ## Perform all the necessary setup for a local Kubernetes API server used in the Linseed FVs.
 k8s-setup: linseed-token-file fv-token-file auth
