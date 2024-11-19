@@ -13,7 +13,8 @@ import (
 // GetJWTAuth returns an lma JWT authenticator.
 func GetJWTAuth(cfg *config.Config, restcfg *rest.Config, k8sclient kubernetes.Interface) (lmaauth.JWTAuth, error) {
 	var options []lmaauth.JWTAuthOption
-	if cfg.DexEnabled {
+
+	if cfg.OIDCAuthEnabled {
 		log.Info("Configuring Dex for authentication")
 		opts := []lmaauth.DexOption{
 			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
