@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -22,13 +22,14 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/cache"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/labelhandler"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewQueryInterface returns a queryable resource cache.
@@ -406,7 +407,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 			}
 		}
 
-		if !req.Permissions.IsAuthorized(p.GetResource(), []string{"get", "list"}) {
+		resource, tier := getActualResourceAndTierFromCachedPolicyForRBAC(p)
+		if !req.Permissions.IsAuthorized(resource, "get", tier) {
 			return nil, errors.ErrorOperationNotSupported{
 				Operation:  "Get",
 				Identifier: req.Policy,
@@ -495,25 +497,10 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				log.Info("Filter out matched policy")
 				continue
 			}
-			// if policy is not of type native kubernetes and tier is not default, check authorization to tier resource.
-			if p.GetResource().GetObjectKind().GroupVersionKind().Group == "networking.k8s.io" && p.GetTier() != names.DefaultTierName {
-				tierResource := apiv3.Tier{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Tier",
-						APIVersion: "projectcalico.org",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name: p.GetTier(),
-					},
-				}
-
-				if !req.Permissions.IsAuthorized(interface{}(tierResource).(api.Resource), []string{"get", "list"}) {
-					continue
-				}
-			}
 
 			// check authorization to the policy resource.
-			if req.Permissions.IsAuthorized(p.GetResource(), []string{"get", "list"}) {
+			resource, tier := getActualResourceAndTierFromCachedPolicyForRBAC(p)
+			if req.Permissions.IsAuthorized(resource, "get", tier) {
 				items = append(items, *c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector))
 			}
 		}
@@ -685,6 +672,34 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 	}
 
 	return node
+}
+
+// getActualResourceAndTierFromCachedPolicyForRBAC returns the proper resource version/kind and tier for non-tiered
+// policies. Kubernetes and StageKubernetes policies are technically non-tiered specially when it comes to checking
+// RBAC against them. Thus, before checking authorization to these policies we need to get the correct tier and
+// resource type values
+func getActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource, string) {
+	resource := p.GetResource()
+	tier := p.GetTier()
+	if strings.HasPrefix(p.GetResource().GetObjectMeta().GetName(), "knp") {
+		resource = &v1.NetworkPolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "NetworkPolicy",
+				APIVersion: "networking.k8s.io/v1",
+			},
+		}
+		tier = ""
+	} else if strings.HasPrefix(p.GetResource().GetObjectMeta().GetName(), "staged:knp") {
+		resource = &apiv3.StagedKubernetesNetworkPolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "StagedKubernetesNetworkPolicy",
+				APIVersion: "projectcalico.org/v3",
+			},
+		}
+		tier = ""
+	}
+
+	return resource, tier
 }
 
 // getNodeIPAddresses returns the ip addresses defined in nr as a list of strings,  Empty list if nr.Addresses contains no addresses

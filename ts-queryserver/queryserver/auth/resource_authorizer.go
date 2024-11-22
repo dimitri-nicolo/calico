@@ -16,36 +16,41 @@ import (
 )
 
 type Permission interface {
-	IsAuthorized(res api.Resource, verbs []string) bool
+	IsAuthorized(res api.Resource, verb, tier string) bool
 }
 type permission struct {
-	APIGroupsPermissions map[string]ResourcePermissions
+	APIGroupsPermissions map[string]ResourcePermissions // apiGroup string --> ResourcePermission
 }
 
-type ResourcePermissions map[string]NamespacePermissions
-type NamespacePermissions map[string]VerbPermissions
-type VerbPermissions map[string]bool
+type ResourcePermissions map[string]VerbPermissions          // resource name string -->
+type VerbPermissions map[string][]v3.AuthorizedResourceGroup // verb string --> []ResourceGroup
 
 // IsAuthorized is checking if current users' permissions allows either of the verbs passed in the param on the resource passed in.
-func (p *permission) IsAuthorized(res api.Resource, verbs []string) bool {
-	if resourceMap, ok := p.APIGroupsPermissions[getAPIGroup(res.GetObjectKind().GroupVersionKind().Group)]; ok {
-		if nsMap, ok := resourceMap[convertV1KindToResourceType(res.GetObjectKind().GroupVersionKind().Kind,
+func (p *permission) IsAuthorized(res api.Resource, verb, tier string) bool {
+	if rscMap, ok := p.APIGroupsPermissions[getAPIGroup(res.GetObjectKind().GroupVersionKind().Group)]; ok {
+		if verbsMap, ok := rscMap[convertV1KindToResourceType(res.GetObjectKind().GroupVersionKind().Kind,
 			res.GetObjectMeta().GetName())]; ok {
-			// check if access is granted to all namespaces
-			var verbsMap map[string]bool
-			if _, ok := nsMap[""]; ok {
-				verbsMap = nsMap[""]
-			} else if _, ok := nsMap[res.GetObjectMeta().GetNamespace()]; ok {
-				verbsMap = nsMap[res.GetObjectMeta().GetNamespace()]
-			}
-			for _, v := range verbs {
-				if verbsMap[v] {
-					return true
+			if authorizedRscGrps, ok := verbsMap[verb]; ok {
+				for _, r := range authorizedRscGrps {
+					// check namespace and tier
+					if isNamespaceAllowed(r, res) && isTierAllowed(r, tier) {
+						return true
+					}
 				}
 			}
 		}
 	}
 	return false
+}
+
+func isNamespaceAllowed(authorizedRscGrp v3.AuthorizedResourceGroup, res api.Resource) bool {
+
+	return authorizedRscGrp.Namespace == "" || (authorizedRscGrp.Namespace == res.GetObjectMeta().GetNamespace())
+
+}
+
+func isTierAllowed(authorizedRscGrp v3.AuthorizedResourceGroup, tier string) bool {
+	return authorizedRscGrp.Tier == "" || authorizedRscGrp.Tier == tier
 }
 
 func getAPIGroup(apigroup string) string {
@@ -149,14 +154,16 @@ func convertAuthorizationReviewStatusToPermissions(authorizedResourceVerbs []v3.
 			permMap.APIGroupsPermissions[rAtt.APIGroup] = ResourcePermissions{}
 		}
 		if _, ok := permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource]; !ok {
-			permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource] = NamespacePermissions{}
+			permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource] = map[string][]v3.AuthorizedResourceGroup{}
 		}
 		for _, verb := range rAtt.Verbs {
 			for _, rg := range verb.ResourceGroups {
-				if _, ok := permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][rg.Namespace]; !ok {
-					permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][rg.Namespace] = VerbPermissions{}
+				if _, ok := permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb]; !ok {
+					permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb] = make([]v3.AuthorizedResourceGroup, 0)
 				}
-				permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][rg.Namespace][verb.Verb] = true
+				resourceGroups := permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb]
+				resourceGroups = append(resourceGroups, rg)
+				permMap.APIGroupsPermissions[rAtt.APIGroup][rAtt.Resource][verb.Verb] = resourceGroups
 			}
 		}
 	}
@@ -179,12 +186,4 @@ var PolicyAuthReviewAttrList = []v3.AuthorizationReviewResourceAttributes{
 		Resources: []string{"networkpolicies"},
 		Verbs:     []string{"watch", "get", "delete", "create", "update", "list", "patch"},
 	},
-	{
-		APIGroup: "types.kubefed.io",
-		Resources: []string{
-			"federatednamespaces", "federatedtiers", "federatednetworkpolicies",
-			"federatedglobalnetworkpolicies", "federatedstagednetworkpolicies",
-			"federatedstagedglobalnetworkpolicies", "federatedstagedKubernetesnetworkpolicies",
-		},
-		Verbs: []string{"watch", "get", "delete", "create", "update", "list", "patch"},
-	}}
+}
