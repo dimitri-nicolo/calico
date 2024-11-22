@@ -21,11 +21,14 @@ BUILD_IMAGES          ?=$(NODE_IMAGE)
 endif
 
 # Paths within the build container for BPF source.
-LIBBPF_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/include/libbpf/src/
+LIBBPF_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/libbpf/src/
 BPFGPL_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl/
+LIBBPF_FILE_CREATED=../felix/bpf-gpl/.libbpf-$(LIBBPF_VERSION)
+
+LOCAL_CHECKS = LIBBPF_FILE_CREATED
 
 # Paths within the repository for BPF source.
-LIBBPF_A=../felix/bpf-gpl/include/libbpf/src/$(ARCH)/libbpf.a
+LIBBPF_A=../felix/bpf-gpl/libbpf/src/$(ARCH)/libbpf.a
 
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
@@ -219,7 +222,7 @@ filesystem/etc/calico/confd/templates: $(shell find ../confd/etc/calico/confd/te
 	rm -rf $@ && cp -r ../confd/etc/calico/confd/templates $@
 	chmod +w $@
 
-$(LIBBPF_A): $(shell find ../felix/bpf-gpl/include/libbpf -type f -name '*.[ch]')
+$(LIBBPF_A): $(shell find ../felix/bpf-gpl/libbpf -type f -name '*.[ch]')
 	make -C ../felix libbpf ARCH=$(ARCH)
 
 filesystem/usr/lib/calico/bpf: $(shell find ../felix/bpf-gpl -type f) $(shell find ../felix/bpf-apache -type f)
@@ -250,6 +253,9 @@ else
 	$(call build_binary, ./cmd/calico-node/main.go, $@)
 endif
 endif
+
+LIBBPF_FILE_CREATED:
+	make -C ../felix clone-libbpf
 
 $(WINDOWS_BINARY): $(SRC_FILES)
 	$(call build_cgo_windows_binary, ./cmd/calico-node/main.go, $@)

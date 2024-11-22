@@ -514,8 +514,7 @@ blocks:
     jobs:
       - name: Build binary
         commands:
-          # Skip building protofbufs because the build fails on ARM due to missing image.
-          # We know they are up-to-date because an earlier build job checks already.
+          # Skipping protobuf build because it fails on ARM (but the pre-flight check ensures it's up-to-date).
           - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64 SKIP_PROTOBUF=true
 
 - name: "Felix: Build Windows binaries"

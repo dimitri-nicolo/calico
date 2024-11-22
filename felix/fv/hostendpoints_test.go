@@ -470,6 +470,9 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 				hep.Spec.Profiles = []string{defaultProfileName}
 				_, err := client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
+				if bpfEnabled {
+					Eventually(f.NumTCBPFProgsEth0, "30s", "200ms").Should(Equal(2))
+				}
 			}
 		})
 
@@ -489,6 +492,12 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", tc.Felixes[0].Hostname)
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+
+			if BPFMode() {
+				Eventually(func() bool {
+					return bpfCheckIfPolicyProgrammed(tc.Felixes[0], "eth0", "egress", "default.f0-egress", "deny", false)
+				}, "2s", "200ms").Should(BeTrue())
+			}
 
 			// Egress from containers.Felix[0] denied
 			cc.ExpectNone(tc.Felixes[0], hostW[1])

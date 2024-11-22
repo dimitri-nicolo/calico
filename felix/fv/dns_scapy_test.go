@@ -497,7 +497,15 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					// Allow 2s for Felix to see and process that policy.
-					time.Sleep(2 * time.Second)
+					// Since felix is restarted, it might be busy attaching programs before applying policy.
+					// Hence a longer wait time.
+					if BPFMode() {
+						Eventually(func() bool {
+							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
+						}, "20s", "200ms").Should(BeTrue())
+					} else {
+						time.Sleep(2 * time.Second)
+					}
 
 					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
@@ -515,11 +523,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							}
 							return pfxs
 						}, "10s", "1s").Should(ContainElement("xyz.com"))
-					}
-					if BPFMode() {
-						Eventually(func() bool {
-							return bpfCheckIfPolicyProgrammed(tc.Felixes[0], w[0].InterfaceName, "egress", "default.allow-xyz", "allow", true)
-						}, "2s", "200ms").Should(BeTrue())
 					}
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
