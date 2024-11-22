@@ -129,6 +129,10 @@ func (arc *ActiveRulesCalculator) RegisterWith(localEndpointDispatcher, allUpdDi
 	allUpdDispatcher.RegisterStatusHandler(arc.OnStatusUpdate)
 }
 
+func (arc *ActiveRulesCalculator) RegisterPolicyMatchListener(listener PolicyMatchListener) {
+	arc.PolicyMatchListeners = append(arc.PolicyMatchListeners, listener)
+}
+
 // forceProgrammedDummyKey is a special value used in place of an endpoint key
 // when recording that the policy is force-programmed.
 const forceProgrammedDummyKey = "PolicyAlwaysProgrammed"

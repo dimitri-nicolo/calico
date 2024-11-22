@@ -1,194 +1,145 @@
-From 2ea8afe1d32fe12dd7bbe63f75ce3d972667dff7 Mon Sep 17 00:00:00 2001
-From: Jiawei Huang <jiawei@tigera.io>
-Date: Tue, 28 Feb 2023 22:15:50 -0800
-Subject: [PATCH 1/1] Apply Tigera customizations to Kibana
+From f31157b2d150588614693929eac4d43a75e65c91 Mon Sep 17 00:00:00 2001
+From: Vara <vara@tigera.io>
+Date: Fri, 8 Nov 2024 17:14:23 -0800
+Subject: [PATCH] apply tigera customization to kibana
 
-This patch contains Tigera Kibana customizations for Calico Enterprise.
-Changes are taken from the tigera/kibana fork [1] in the tigera-7.17
-branch. For future upgrades, please apply this patch to the upstream
-Kibana target release and recreate a new patch file.
-
-[1] https://github.com/tigera/kibana/commits/tigera-7.17
 ---
- config/kibana.yml                             |  10 +
- src/core/public/chrome/chrome_service.tsx     |   4 +
- .../public/chrome/ui/header/header.test.tsx   |   1 +
- src/core/public/chrome/ui/header/header.tsx   |   3 +
- .../public/chrome/ui/header/header_logo.tsx   |  20 +-
- src/core/public/core_system.ts                |   1 +
- src/core/server/rendering/views/template.tsx  |  17 +-
+ config/kibana.yml                             |  19 +
+ .../src/chrome_service.tsx                    |   4 +
+ .../src/ui/header/header.test.tsx             |   1 +
+ .../src/ui/header/header.tsx                  |   3 +
+ .../src/ui/header/header_logo.tsx             |  38 +-
  .../tigera_icons/calico_cloud_logo_square.svg | 551 ++++++++++++++
- .../tigera_icons/calico_cloud_logo_square.tsx | 493 +++++++++++++
  .../calico_enterprise_logo_square.svg         | 648 +++++++++++++++++
+ .../src/views/template.tsx                    |  16 +-
+ .../tigera_icons/calico_cloud_logo_square.tsx | 493 +++++++++++++
  .../calico_enterprise_logo_square.tsx         | 674 ++++++++++++++++++
- src/core/tigera_icons/calico_logo.svg         |  55 ++
- src/core/tsconfig.json                        |   5 +-
- src/plugins/google_tag_manager/.eslintrc.js   |   7 +
- src/plugins/google_tag_manager/.gitignore     |   2 +
- src/plugins/google_tag_manager/README.md      |  19 +
- .../google_tag_manager/common/index.ts        |   2 +
- src/plugins/google_tag_manager/config.ts      |   8 +
- src/plugins/google_tag_manager/kibana.json    |  13 +
- src/plugins/google_tag_manager/package.json   |  10 +
- .../google_tag_manager/public/index.ts        |   8 +
- .../google_tag_manager/public/plugin.ts       |  29 +
- .../google_tag_manager/server/index.ts        |  15 +
- .../google_tag_manager/server/plugin.ts       |  13 +
- src/plugins/google_tag_manager/tsconfig.json  |  24 +
- src/plugins/tigera/.eslintrc.js               |   7 +
- src/plugins/tigera/.gitignore                 |   2 +
- src/plugins/tigera/README.md                  |  19 +
- src/plugins/tigera/common/index.ts            |   2 +
- src/plugins/tigera/config.ts                  |  11 +
- src/plugins/tigera/kibana.json                |  13 +
- src/plugins/tigera/package.json               |  10 +
- src/plugins/tigera/public/_header.scss        |  37 +
- src/plugins/tigera/public/_sidenav.scss       |  31 +
- src/plugins/tigera/public/index.scss          |   5 +
- src/plugins/tigera/public/index.ts            |  10 +
- src/plugins/tigera/public/plugin.ts           |  13 +
- src/plugins/tigera/server/index.ts            |  15 +
- src/plugins/tigera/server/plugin.ts           |  24 +
- src/plugins/tigera/tsconfig.json              |  24 +
- .../public/components/search_bar.test.tsx     |   3 +
- .../public/components/search_bar.tsx          |   5 +-
- .../global_search_bar/public/plugin.tsx       |   4 +
+ .../tsconfig.json                             |   1 +
+ .../src/core_system.ts                        |   1 +
+ plugins/.empty                                |   0
+ .../public/components/search_bar.tsx          |  20 +-
+ .../public/components/types.ts                |   1 +
+ .../global_search_bar/public/plugin.tsx       |   2 +
  .../public/authentication/login/login_app.ts  |   1 +
- .../authentication/login/login_page.tsx       |  11 +-
- x-pack/plugins/security/tsconfig.json         |   8 +-
- 46 files changed, 2870 insertions(+), 17 deletions(-)
- create mode 100644 src/core/tigera_icons/calico_cloud_logo_square.svg
- create mode 100644 src/core/tigera_icons/calico_cloud_logo_square.tsx
- create mode 100644 src/core/tigera_icons/calico_enterprise_logo_square.svg
- create mode 100644 src/core/tigera_icons/calico_enterprise_logo_square.tsx
- create mode 100644 src/core/tigera_icons/calico_logo.svg
- create mode 100644 src/plugins/google_tag_manager/.eslintrc.js
- create mode 100644 src/plugins/google_tag_manager/.gitignore
- create mode 100644 src/plugins/google_tag_manager/README.md
- create mode 100644 src/plugins/google_tag_manager/common/index.ts
- create mode 100644 src/plugins/google_tag_manager/config.ts
- create mode 100644 src/plugins/google_tag_manager/kibana.json
- create mode 100644 src/plugins/google_tag_manager/package.json
- create mode 100644 src/plugins/google_tag_manager/public/index.ts
- create mode 100644 src/plugins/google_tag_manager/public/plugin.ts
- create mode 100644 src/plugins/google_tag_manager/server/index.ts
- create mode 100644 src/plugins/google_tag_manager/server/plugin.ts
- create mode 100644 src/plugins/google_tag_manager/tsconfig.json
- create mode 100644 src/plugins/tigera/.eslintrc.js
- create mode 100644 src/plugins/tigera/.gitignore
- create mode 100644 src/plugins/tigera/README.md
- create mode 100644 src/plugins/tigera/common/index.ts
- create mode 100644 src/plugins/tigera/config.ts
- create mode 100644 src/plugins/tigera/kibana.json
- create mode 100644 src/plugins/tigera/package.json
- create mode 100644 src/plugins/tigera/public/_header.scss
- create mode 100644 src/plugins/tigera/public/_sidenav.scss
- create mode 100644 src/plugins/tigera/public/index.scss
- create mode 100644 src/plugins/tigera/public/index.ts
- create mode 100644 src/plugins/tigera/public/plugin.ts
- create mode 100644 src/plugins/tigera/server/index.ts
- create mode 100644 src/plugins/tigera/server/plugin.ts
- create mode 100644 src/plugins/tigera/tsconfig.json
+ .../authentication/login/login_page.tsx       |  22 +-
+ .../security/tigera_icons/calico_logo.svg     |  55 ++
+ x-pack/plugins/security/tsconfig.json         |   1 +
+ 20 files changed, 2515 insertions(+), 36 deletions(-)
+ create mode 100644 packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg
+ create mode 100644 packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg
+ create mode 100644 packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx
+ create mode 100644 packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx
+ delete mode 100644 plugins/.empty
+ create mode 100644 x-pack/plugins/security/tigera_icons/calico_logo.svg
 
 diff --git a/config/kibana.yml b/config/kibana.yml
-index 9e2c9bf41be..6c4deeb1409 100644
+index c816337f8..1b6f431bd 100644
 --- a/config/kibana.yml
 +++ b/config/kibana.yml
-@@ -113,3 +113,13 @@
- # Specifies locale to be used for all localizable strings, dates and number formats.
- # Supported languages are the following: English - en , by default , Chinese - zh-CN .
- #i18n.locale: "en"
+@@ -181,3 +181,22 @@
+ # Maximum number of documents loaded by each shard to generate autocomplete suggestions.
+ # This value must be a whole number greater than zero. Defaults to 100_000
+ #unifiedSearch.autocomplete.valueSuggestions.terminateAfter: 100000
++#
++#
++#
++#
 +
-+# Settings for Google Tag Manager plugin
-+csp.rules:
-+    - "script-src 'unsafe-eval' 'self' 'unsafe-inline' https://www.googletagmanager.com"
-+    - "img-src www.googletagmanager.com 'self' data:"
++#Custom tigera plugin
 +tigera.enabled: true
 +tigera.licenseEdition: "enterpriseEdition"
 +
-+googletagmanager.enabled: true
-+googletagmanager.container: "GTM-TCNXTCJ"
-diff --git a/src/core/public/chrome/chrome_service.tsx b/src/core/public/chrome/chrome_service.tsx
-index 8c8b264b094..daeb08b2937 100644
---- a/src/core/public/chrome/chrome_service.tsx
-+++ b/src/core/public/chrome/chrome_service.tsx
-@@ -32,6 +32,7 @@ import {
-   InternalChromeStart,
-   ChromeUserBanner,
- } from './types';
-+import { IUiSettingsClient } from '../ui_settings';
++csp:
++  script_src:
++    - https://www.googletagmanager.com
++  img_src:
++    - https://www.googletagmanager.com
++
++
++google_tag_manager.enabled: true
++google_tag_manager.container: "GTM-TCNXTCJ"
++
+diff --git a/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx b/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
+index d2922b9a9..571f7f568 100644
+--- a/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
++++ b/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
+@@ -50,6 +50,7 @@ import { Header, LoadingIndicator, ProjectHeader } from './ui';
+ import { registerAnalyticsContextProvider } from './register_analytics_context_provider';
+ import type { InternalChromeStart } from './types';
+ import { HeaderTopBanner } from './ui/header/header_top_banner';
++import type { IUiSettingsClient } from '@kbn/core-ui-settings-browser';
  
- export type { ChromeNavControls, ChromeRecentlyAccessed, ChromeDocTitle };
- 
-@@ -49,6 +50,7 @@ interface StartDeps {
-   http: HttpStart;
-   injectedMetadata: InjectedMetadataStart;
+ const IS_LOCKED_KEY = 'core.chrome.isLocked';
+ const SNAPSHOT_REGEX = /-snapshot/i;
+@@ -71,6 +72,7 @@ export interface StartDeps {
+   injectedMetadata: InternalInjectedMetadataStart;
    notifications: NotificationsStart;
+   customBranding: CustomBrandingStart;
 +  uiSettings: IUiSettingsClient;
  }
  
  /** @internal */
-@@ -101,6 +103,7 @@ export class ChromeService {
-     http,
+@@ -185,6 +187,7 @@ export class ChromeService {
      injectedMetadata,
      notifications,
+     customBranding,
 +    uiSettings,
    }: StartDeps): Promise<InternalChromeStart> {
      this.initVisibility(application);
- 
-@@ -226,6 +229,7 @@ export class ChromeService {
-           navControlsRight$={navControls.getRight$()}
-           onIsLockedUpdate={setIsNavDrawerLocked}
-           isLocked$={getIsNavDrawerLocked$}
-+          licenseEdition={uiSettings.get('tigeratagmanager.licenseEdition')}
-         />
-       ),
- 
-diff --git a/src/core/public/chrome/ui/header/header.test.tsx b/src/core/public/chrome/ui/header/header.test.tsx
-index 2692f2dbd19..99ba0efa0e3 100644
---- a/src/core/public/chrome/ui/header/header.test.tsx
-+++ b/src/core/public/chrome/ui/header/header.test.tsx
-@@ -27,6 +27,7 @@ function mockProps() {
-     breadcrumbs$: new BehaviorSubject([]),
+     this.handleEuiFullScreenChanges();
+@@ -424,6 +427,7 @@ export class ChromeService {
+             onIsLockedUpdate={setIsNavDrawerLocked}
+             isLocked$={getIsNavDrawerLocked$}
+             customBranding$={customBranding$}
++            licenseEdition={uiSettings.get('tigeratagmanager.licenseEdition')}
+           />
+         );
+       };
+diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
+index ecc20cc3c..abef1b1be 100644
+--- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
++++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
+@@ -29,6 +29,7 @@ function mockProps() {
      breadcrumbsAppendExtension$: new BehaviorSubject(undefined),
      homeHref: '/',
+     customBranding$: new BehaviorSubject({}),
 +    licenseEdition: 'enterpriseEdition',
-     isVisible$: new BehaviorSubject(true),
      kibanaDocLink: '/docs',
+     docLinks: docLinksServiceMock.createStartContract(),
      navLinks$: new BehaviorSubject([]),
-diff --git a/src/core/public/chrome/ui/header/header.tsx b/src/core/public/chrome/ui/header/header.tsx
-index 578c87411e5..24292d136a4 100644
---- a/src/core/public/chrome/ui/header/header.tsx
-+++ b/src/core/public/chrome/ui/header/header.tsx
-@@ -70,6 +70,7 @@ export interface HeaderProps {
-   basePath: HttpStart['basePath'];
-   isLocked$: Observable<boolean>;
+diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
+index 67ff9af5f..d115ea201 100644
+--- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
++++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
+@@ -76,6 +76,7 @@ export interface HeaderProps {
    loadingCount$: ReturnType<HttpStart['getLoadingCount$']>;
-+  licenseEdition: string;
    onIsLockedUpdate: OnIsLockedUpdate;
+   customBranding$: Observable<CustomBranding>;
++  licenseEdition: string;
  }
  
-@@ -80,6 +81,7 @@ export function Header({
-   basePath,
-   onIsLockedUpdate,
-   homeHref,
-+  licenseEdition,
+ export function Header({
+@@ -89,6 +90,7 @@ export function Header({
    breadcrumbsAppendExtension$,
+   globalHelpExtensionMenuLinks$,
+   customBranding$,
++  licenseEdition,
    ...observables
  }: HeaderProps) {
-@@ -117,6 +119,7 @@ export function Header({
-                 items: [
-                   <HeaderLogo
-                     href={homeHref}
-+                    licenseEdition={licenseEdition}
-                     forceNavigation$={observables.forceAppSwitcherNavigation$}
-                     navLinks$={observables.navLinks$}
+   const [isNavOpen, setIsNavOpen] = useState(false);
+@@ -127,6 +129,7 @@ export function Header({
                      navigateToApp={application.navigateToApp}
-diff --git a/src/core/public/chrome/ui/header/header_logo.tsx b/src/core/public/chrome/ui/header/header_logo.tsx
-index bb9c2388b55..6d484d74840 100644
---- a/src/core/public/chrome/ui/header/header_logo.tsx
-+++ b/src/core/public/chrome/ui/header/header_logo.tsx
-@@ -7,15 +7,16 @@
+                     loadingCount$={observables.loadingCount$}
+                     customBranding$={customBranding$}
++                    licenseEdition={licenseEdition}
+                   />,
+                 ],
+               },
+diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
+index c3dd7ecf2..80504735d 100644
+--- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
++++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
+@@ -7,6 +7,7 @@
   */
  
  import './header_logo.scss';
@@ -196,127 +147,73 @@ index bb9c2388b55..6d484d74840 100644
  import { i18n } from '@kbn/i18n';
  import React from 'react';
  import useObservable from 'react-use/lib/useObservable';
- import { Observable } from 'rxjs';
- import Url from 'url';
- import { ChromeNavLink } from '../..';
+@@ -15,8 +16,9 @@ import Url from 'url';
+ import { CustomBranding } from '@kbn/core-custom-branding-common';
+ import type { HttpStart } from '@kbn/core-http-browser';
+ import type { ChromeNavLink } from '@kbn/core-chrome-browser';
 -import { ElasticMark } from './elastic_mark';
- import { HttpStart } from '../../../http';
 -import { LoadingIndicator } from '../loading_indicator';
-+import calicoEnterpriseLogoSquareIcon from '../../../../tigera_icons/calico_enterprise_logo_square.svg';
-+import calicoCloudLogoSquareIcon from '../../../../tigera_icons/calico_cloud_logo_square.svg';
++
++import calicoEnterpriseLogoSquareIcon from '../../../tigera_icons/calico_enterprise_logo_square.svg';
++import calicoCloudLogoSquareIcon from '../../../tigera_icons/calico_cloud_logo_square.svg';
  
  function findClosestAnchor(element: HTMLElement): HTMLAnchorElement | void {
    let current = element;
-@@ -79,28 +80,31 @@ function onClick(
- 
- interface Props {
-   href: string;
-+  licenseEdition: string;
-   navLinks$: Observable<ChromeNavLink[]>;
-   forceNavigation$: Observable<boolean>;
+@@ -79,34 +81,32 @@ interface Props {
    navigateToApp: (appId: string) => void;
    loadingCount$?: ReturnType<HttpStart['getLoadingCount$']>;
+   customBranding$: Observable<CustomBranding>;
++  licenseEdition: string;
  }
  
 -export function HeaderLogo({ href, navigateToApp, loadingCount$, ...observables }: Props) {
-+export function HeaderLogo({ href, licenseEdition, navigateToApp, loadingCount$, ...observables }: Props) {
++export function HeaderLogo({
++  href,
++  navigateToApp,
++  loadingCount$,
++  licenseEdition,
++  ...observables
++}: Props) {
 +  const isEnterprise = licenseEdition === 'enterpriseEdition';
-+
    const forceNavigation = useObservable(observables.forceNavigation$, false);
    const navLinks = useObservable(observables.navLinks$, []);
- 
+-  const customBranding = useObservable(observables.customBranding$, {});
+-  const { customizedLogo, logo } = customBranding;
++
    return (
 -    <a
 +    <EuiHeaderLogo
 +      data-test-subj="logo"
 +      iconType={isEnterprise ? calicoEnterpriseLogoSquareIcon : calicoCloudLogoSquareIcon}
        onClick={(e) => onClick(e, forceNavigation, navLinks, navigateToApp)}
-       className="euiHeaderLogo"
+       className="chrHeaderLogo"
        href={href}
 -      data-test-subj="logo"
        aria-label={i18n.translate('core.ui.chrome.headerGlobalNav.goHomePageIconAriaLabel', {
          defaultMessage: 'Elastic home',
        })}
      >
--      <LoadingIndicator loadingCount$={loadingCount$!} />
--      <ElasticMark className="chrHeaderLogo__mark" aria-hidden={true} />
+-      <LoadingIndicator loadingCount$={loadingCount$!} customLogo={logo} />
+-      {customizedLogo ? (
+-        <img
+-          src={customizedLogo}
+-          className="chrHeaderLogo__mark"
+-          style={{ maxWidth: '200px', maxHeight: '84px' }}
+-          alt="custom mark"
+-        />
+-      ) : (
+-        <ElasticMark className="chrHeaderLogo__mark" aria-hidden={true} />
+-      )}
 -    </a>
 +      {`Calico ${isEnterprise ? 'Enterprise' : 'Cloud'} Elastic`}
 +    </EuiHeaderLogo>
    );
  }
-diff --git a/src/core/public/core_system.ts b/src/core/public/core_system.ts
-index e5dcd8f817a..c8ebc849e31 100644
---- a/src/core/public/core_system.ts
-+++ b/src/core/public/core_system.ts
-@@ -199,6 +199,7 @@ export class CoreSystem {
-         http,
-         injectedMetadata,
-         notifications,
-+        uiSettings,
-       });
-       const deprecations = this.deprecations.start({ http });
- 
-diff --git a/src/core/server/rendering/views/template.tsx b/src/core/server/rendering/views/template.tsx
-index e1a9a8a8c3f..20c6c78c2f2 100644
---- a/src/core/server/rendering/views/template.tsx
-+++ b/src/core/server/rendering/views/template.tsx
-@@ -11,7 +11,8 @@ import React, { FunctionComponent, createElement } from 'react';
- import { RenderingMetadata } from '../types';
- import { Fonts } from './fonts';
- import { Styles } from './styles';
--import { Logo } from './logo';
-+import { CalicoEnterpriseLogoSquare } from '../../../tigera_icons/calico_enterprise_logo_square';
-+import { CalicoCloudLogoSquare } from '../../../tigera_icons/calico_cloud_logo_square';
- 
- interface Props {
-   metadata: RenderingMetadata;
-@@ -30,6 +31,12 @@ export const Template: FunctionComponent<Props> = ({
-     strictCsp,
-   },
- }) => {
-+  const licenseEdition =
-+    injectedMetadata.legacyMetadata.uiSettings.defaults['tigeratagmanager.licenseEdition'];
-+  const isEnterprise = licenseEdition.value === 'enterpriseEdition';
-+  const logo = isEnterprise ? <CalicoEnterpriseLogoSquare /> : <CalicoCloudLogoSquare />;
-+  const editionLabel = isEnterprise ? 'Enterprise' : 'Cloud';
-+
-   return (
-     <html lang={locale}>
-       <head>
-@@ -61,7 +68,7 @@ export const Template: FunctionComponent<Props> = ({
-           data-test-subj="kbnLoadingMessage"
-         >
-           <div className="kbnLoaderWrap">
--            <Logo />
-+            {logo}
-             <div
-               className="kbnWelcomeText"
-               data-error-message={i18n('core.ui.welcomeErrorMessage', {
-@@ -69,14 +76,16 @@ export const Template: FunctionComponent<Props> = ({
-                   'Elastic did not load properly. Check the server output for more information.',
-               })}
-             >
--              {i18n('core.ui.welcomeMessage', { defaultMessage: 'Loading Elastic' })}
-+              {i18n('core.ui.welcomeMessage', {
-+                defaultMessage: `Loading Calico ${editionLabel} Elastic`,
-+              })}
-             </div>
-             <div className="kbnProgress" />
-           </div>
-         </div>
- 
-         <div className="kbnWelcomeView" id="kbn_legacy_browser_error" style={{ display: 'none' }}>
--          <Logo />
-+          {logo}
- 
-           <h2 className="kbnWelcomeTitle">
-             {i18n('core.ui.legacyBrowserTitle', {
-diff --git a/src/core/tigera_icons/calico_cloud_logo_square.svg b/src/core/tigera_icons/calico_cloud_logo_square.svg
+diff --git a/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg
 new file mode 100644
-index 00000000000..ef8e0113a52
+index 000000000..ef8e0113a
 --- /dev/null
-+++ b/src/core/tigera_icons/calico_cloud_logo_square.svg
++++ b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg
 @@ -0,0 +1,551 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
@@ -869,510 +766,11 @@ index 00000000000..ef8e0113a52
 +	c-0.3-3.5-2-4.8-4.5-6.9l-25.9,15L126.9,113.2z"
 +  />
 +</svg>
-diff --git a/src/core/tigera_icons/calico_cloud_logo_square.tsx b/src/core/tigera_icons/calico_cloud_logo_square.tsx
+diff --git a/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg
 new file mode 100644
-index 00000000000..fbd02037e12
+index 000000000..0a31a68ef
 --- /dev/null
-+++ b/src/core/tigera_icons/calico_cloud_logo_square.tsx
-@@ -0,0 +1,493 @@
-+/*
-+ * Licensed to Elasticsearch B.V. under one or more contributor
-+ * license agreements. See the NOTICE file distributed with
-+ * this work for additional information regarding copyright
-+ * ownership. Elasticsearch B.V. licenses this file to you under
-+ * the Apache License, Version 2.0 (the "License"); you may
-+ * not use this file except in compliance with the License.
-+ * You may obtain a copy of the License at
-+ *
-+ *    http://www.apache.org/licenses/LICENSE-2.0
-+ *
-+ * Unless required by applicable law or agreed to in writing,
-+ * software distributed under the License is distributed on an
-+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-+ * KIND, either express or implied.  See the License for the
-+ * specific language governing permissions and limitations
-+ * under the License.
-+ */
-+
-+/* eslint-disable react/no-danger */
-+
-+import React from 'react';
-+
-+export function CalicoCloudLogoSquare() {
-+  return (
-+    <svg
-+      xmlns="http://www.w3.org/2000/svg"
-+      xmlnsXlink="http://www.w3.org/1999/xlink"
-+      viewBox="0 0 382.66 125.49"
-+    >
-+      <defs
-+        dangerouslySetInnerHTML={{
-+          __html: `
-+            <style>
-+            .cls-1,.cls-5{fill:none;}.cls-2{fill:url(#linear-gradient);}.cls-3
-+            {clip-path:url(#clip-path);}.cls-4{opacity:0.5;}.cls-5
-+            {stroke:#fff;stroke-linecap:'square';stroke-width:1.8px;}.cls-20,.cls-5
-+            {stroke-miter-limit:10;}.cls-20,.cls-6{fill:#fff;}.cls-21,.cls-7
-+            {fill:#23201f;}.cls-8{fill:#376ca3;}.cls-9{fill:#1a345f;}.cls-10
-+            {fill:#764e2a;}.cls-11{fill:#5f3a19;}.cls-12{fill:#f59222;}.cls-13
-+            {fill:#f17827;}.cls-14{fill:#3b2518;}.cls-15{fill:#603e1d;}.cls-16
-+            {fill:#573a1b;}.cls-17{fill:#53361a;}.cls-18{fill:#e5e6e6;}.cls-19
-+            {fill:#a6a7aa;}.cls-20{stroke:#23201f;strokeWidth:3px;}.cls-21
-+            {opacity:0.08;}.cls-22{fill:#000000;}
-+            </style>
-+            <linearGradient
-+              id="linear-gradient"
-+              x1="60.95"
-+              y1="124.07"
-+              x2="60.95"
-+              y2="5"
-+              gradientUnits="userSpaceOnUse"
-+            >
-+              <stop offset="0" stopColor="#0c8fc5" />
-+              <stop offset="1" stopColor="#b6dee7" />
-+            </linearGradient>
-+            <clipPath id="clip-path">
-+              <circle id="SVGID" className="cls-1" cx="60.95" cy="64.54" r="59.53" />
-+            </clipPath>
-+          `,
-+        }}
-+      />
-+      <g id="Layer_2" data-name="Layer 2">
-+        <g id="Layer_1-2" data-name="Layer 1">
-+          <circle className="cls-2" cx="60.95" cy="64.54" r="59.53" />
-+          <g className="cls-3">
-+            <g id="_8" data-name="8" className="cls-4">
-+              <polyline
-+                className="cls-5"
-+                points="33.91 80.5 33.91 93.79 13.97 93.79 13.97 78.55 33.91 78.55 33.91 78.55"
-+              />
-+              <path
-+                className="cls-5"
-+                d="M18.11,77.31V76.25a5.83,5.83,0,0,1,5.83-5.83h0a5.83,5.83,0,0,1,5.83,5.83v2.3H18.11V77.31"
-+              />
-+              <path className="cls-5" d="M26.9,78.55H21v-2.3a3,3,0,0,1,5.92,0v.6" />
-+              <path className="cls-5" d="M25.14,87.81V87.4a2.44,2.44,0,1,0-2.41,0v2.1h2.41" />
-+            </g>
-+            <g className="cls-4">
-+              <path
-+                className="cls-5"
-+                d="M108.53,54.74l3.14,3.82a2,2,0,0,1-.28,2.85,2,2,0,0,1-1.48.45,2,2,0,0,1-1.37-.73l-4.31-5.25"
-+              />
-+              <circle className="cls-5" cx="98.8" cy="46.01" r="8.15" />
-+              <circle className="cls-5" cx="98.8" cy="46.01" r="11.06" />
-+            </g>
-+            <g className="cls-4">
-+              <path
-+                className="cls-6"
-+                d="M17.51,59a4.57,4.57,0,1,1,4.57-4.57A4.57,4.57,0,0,1,17.51,59Zm0-8a3.43,3.43,0,1,0,3.43,3.42A3.42,3.42,0,0,0,17.51,51Z"
-+              />
-+              <path
-+                className="cls-6"
-+                d="M19,64.67H16a.59.59,0,0,1-.56-.44L14.91,62a9.53,9.53,0,0,1-.93-.38L12,62.8a.57.57,0,0,1-.7-.08L9.19,60.61a.58.58,0,0,1-.09-.7l1.19-2A6.61,6.61,0,0,1,9.91,57l-2.24-.56a.56.56,0,0,1-.43-.55v-3a.56.56,0,0,1,.43-.55l2.24-.56a5.74,5.74,0,0,1,.38-.92l-1.19-2a.58.58,0,0,1,.09-.7l2.11-2.11A.57.57,0,0,1,12,46l2,1.19a7.55,7.55,0,0,1,.93-.38l.55-2.24a.58.58,0,0,1,.56-.43h3a.57.57,0,0,1,.55.43l.55,2.24a5.84,5.84,0,0,1,.94.39L23,46a.56.56,0,0,1,.69.09l2.12,2.11a.57.57,0,0,1,.08.7l-1.19,2a6.14,6.14,0,0,1,.38.92l2.24.56a.57.57,0,0,1,.44.55v3a.57.57,0,0,1-.44.55L25.12,57a9.2,9.2,0,0,1-.39.93l1.19,2a.58.58,0,0,1-.08.7l-2.12,2.11a.56.56,0,0,1-.69.08l-2-1.18a9.53,9.53,0,0,1-.93.38l-.55,2.23A.57.57,0,0,1,19,64.67Zm-2.55-1.14h2.1l.52-2.12A.58.58,0,0,1,19.5,61h0a6.14,6.14,0,0,0,1.24-.52.58.58,0,0,1,.57,0l1.88,1.13,1.48-1.49-1.13-1.87a.58.58,0,0,1,0-.57,6.36,6.36,0,0,0,.54-1.28.58.58,0,0,1,.42-.42l2.12-.53V53.35l-2.12-.53a.54.54,0,0,1-.41-.39s0,0,0,0a6.31,6.31,0,0,0-.52-1.26.58.58,0,0,1,0-.57l1.13-1.88-1.49-1.48-1.87,1.13a.58.58,0,0,1-.57,0,6.72,6.72,0,0,0-1.28-.54.58.58,0,0,1-.43-.41l-.52-2.12h-2.1l-.52,2.12a.59.59,0,0,1-.38.4l-.06,0a7,7,0,0,0-1.26.52.56.56,0,0,1-.57,0l-1.88-1.12-1.48,1.48,1.12,1.88a.56.56,0,0,1,0,.57,6.78,6.78,0,0,0-.53,1.28.56.56,0,0,1-.41.42l-2.12.53v2.09L10.5,56a.56.56,0,0,1,.41.4s0,0,0,0a6,6,0,0,0,.52,1.25.55.55,0,0,1,0,.57l-1.12,1.88,1.48,1.49,1.88-1.13a.58.58,0,0,1,.57,0,6.78,6.78,0,0,0,1.28.53.58.58,0,0,1,.42.42Z"
-+              />
-+              <path
-+                className="cls-6"
-+                d="M31.21,53.25a3.43,3.43,0,1,1,3.43-3.43A3.43,3.43,0,0,1,31.21,53.25Zm0-5.71a2.29,2.29,0,1,0,2.29,2.28A2.29,2.29,0,0,0,31.21,47.54Z"
-+              />
-+              <path
-+                className="cls-6"
-+                d="M32.25,57.82H29.93a.57.57,0,0,1-.55-.43L29,55.74l-.31-.11a.57.57,0,0,1-.31-.75.57.57,0,0,1,.74-.31,4.75,4.75,0,0,0,.49.17.58.58,0,0,1,.42.41l.38,1.53h1.44l.38-1.53a.59.59,0,0,1,.38-.4l.06,0a4.6,4.6,0,0,0,.95-.38.54.54,0,0,1,.56,0l1.38.81,1-1-.82-1.34a.6.6,0,0,1,0-.58,4.33,4.33,0,0,0,.41-.95.57.57,0,0,1,.42-.41l1.54-.38V49.13l-1.55-.38a.57.57,0,0,1-.4-.37l0-.06a4.7,4.7,0,0,0-.39-.93.55.55,0,0,1,0-.57l.82-1.35-1-1-1.38.82a.59.59,0,0,1-.56,0,4.42,4.42,0,0,0-1-.4.58.58,0,0,1-.42-.42L31.81,43H30.37L30,44.49a.58.58,0,0,1-.38.41h-.06a4.89,4.89,0,0,0-.94.39.58.58,0,0,1-.57,0l-1.38-.81-1,1,.5.83a.58.58,0,0,1-.19.78.57.57,0,0,1-.79-.19l-.73-1.21a.56.56,0,0,1,.08-.7l1.65-1.62a.57.57,0,0,1,.69-.09l1.48.88A6.5,6.5,0,0,1,29,43.9l.42-1.64a.57.57,0,0,1,.55-.43h2.32a.57.57,0,0,1,.55.43l.42,1.64a5.32,5.32,0,0,1,.61.26l1.48-.88a.57.57,0,0,1,.7.08L37.65,45a.57.57,0,0,1,.09.7l-.89,1.45a6.14,6.14,0,0,1,.25.59l1.67.41a.57.57,0,0,1,.43.55V51a.57.57,0,0,1-.43.55l-1.67.41c-.07.2-.16.39-.25.59L37.74,54a.58.58,0,0,1-.09.7L36,56.29a.57.57,0,0,1-.69.08l-1.49-.87a6.44,6.44,0,0,1-.61.24l-.42,1.65A.57.57,0,0,1,32.25,57.82Z"
-+              />
-+            </g>
-+            <g className="cls-4">
-+              <path
-+                className="cls-6"
-+                d="M102.51,84a4.57,4.57,0,1,1,5.34-3.63A4.57,4.57,0,0,1,102.51,84Zm1.5-7.85a3.43,3.43,0,1,0,2.72,4A3.44,3.44,0,0,0,104,76.15Z"
-+              />
-+              <path
-+                className="cls-6"
-+                d="M102.9,89.89,100,89.33a.56.56,0,0,1-.46-.53l-.13-2.3a9.33,9.33,0,0,1-.84-.55l-2.17.79a.58.58,0,0,1-.67-.21L94,84.06a.56.56,0,0,1,0-.7l1.54-1.73a6.55,6.55,0,0,1-.2-1l-2.1-1a.56.56,0,0,1-.32-.62l.56-2.94a.56.56,0,0,1,.53-.46l2.3-.13a8,8,0,0,1,.55-.83l-.79-2.18a.58.58,0,0,1,.21-.67l2.47-1.68a.59.59,0,0,1,.7,0l1.73,1.54a6.55,6.55,0,0,1,1-.2l1-2.1a.58.58,0,0,1,.62-.32l2.94.56a.56.56,0,0,1,.46.53l.12,2.3a7.79,7.79,0,0,1,.85.56l2.17-.8a.58.58,0,0,1,.67.21L112.71,75a.57.57,0,0,1,0,.7l-1.54,1.73a8.35,8.35,0,0,1,.2,1l2.09,1a.58.58,0,0,1,.33.63l-.56,2.93a.56.56,0,0,1-.53.46l-2.31.13a6.38,6.38,0,0,1-.55.84l.8,2.17a.58.58,0,0,1-.21.67l-2.48,1.68a.57.57,0,0,1-.7,0l-1.73-1.54a6.55,6.55,0,0,1-1,.2l-1,2.1A.58.58,0,0,1,102.9,89.89Zm-2.28-1.6,2.06.39.91-2a.58.58,0,0,1,.49-.33h0a6.6,6.6,0,0,0,1.32-.28.58.58,0,0,1,.56.12l1.63,1.45,1.74-1.17-.76-2a.56.56,0,0,1,.09-.57,6.15,6.15,0,0,0,.77-1.16.57.57,0,0,1,.49-.33l2.18-.12.39-2.06-2-.91a.58.58,0,0,1-.33-.47v0a6.7,6.7,0,0,0-.28-1.33.58.58,0,0,1,.11-.55l1.46-1.64-1.18-1.73-2,.75a.57.57,0,0,1-.56-.09,5.7,5.7,0,0,0-1.16-.77.59.59,0,0,1-.34-.49l-.12-2.18-2-.39-.92,2a.58.58,0,0,1-.45.33h-.06a6.7,6.7,0,0,0-1.33.28.6.6,0,0,1-.56-.11L99.1,71.37l-1.74,1.18.75,2.06a.57.57,0,0,1-.1.56,5.83,5.83,0,0,0-.75,1.15.61.61,0,0,1-.49.34l-2.18.11-.39,2.06,2,.92a.57.57,0,0,1,.33.47v0a6,6,0,0,0,.28,1.32.57.57,0,0,1-.12.56l-1.45,1.63,1.17,1.74,2.06-.75a.56.56,0,0,1,.56.09,6.87,6.87,0,0,0,1.16.77.55.55,0,0,1,.33.48Z"
-+              />
-+            </g>
-+          </g>
-+          <path
-+            className="cls-7"
-+            d="M61,125.49a61,61,0,1,1,61-60.95A61,61,0,0,1,61,125.49ZM61,6.42a58.12,58.12,0,1,0,58.12,58.12A58.18,58.18,0,0,0,61,6.42Z"
-+          />
-+          <path
-+            className="cls-8"
-+            d="M89.59,102.88c-2.61,4.16-14.35,7.3-28.44,7.3S35.31,107,32.7,102.88c-3.38,1.3-5.35,2.86-5.35,4.52,0,4.63,15.13,8.38,33.8,8.38S94.94,112,94.94,107.4C94.94,105.74,93,104.18,89.59,102.88Z"
-+          />
-+          <path
-+            className="cls-9"
-+            d="M61.15,110.18c14.09,0,25.83-3.14,28.44-7.3-6-2.32-16.5-3.86-28.44-3.86s-22.44,1.54-28.45,3.86C35.31,107,47.05,110.18,61.15,110.18Z"
-+          />
-+          <path
-+            className="cls-10"
-+            d="M85.08,81.58a46.86,46.86,0,0,1,6.16-4.87C101.16,70,98.44,59.51,96,51c-1.72-6.06,6.49-7.7,9.65,9.89,3.11,17.3-16,30.88-21.18,30.88"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M84.51,92.64a.88.88,0,1,1,0-1.76c2.43,0,8.94-3.72,14-9.77,3.73-4.46,7.85-11.56,6.32-20.08-1.58-8.77-4.46-12.63-6.44-13.28a1.15,1.15,0,0,0-1.22.19c-.41.39-.7,1.34-.29,2.82,2.32,8.22,5.5,19.49-5.14,26.68a47.82,47.82,0,0,0-6,4.76.86.86,0,0,1-1.24,0,.87.87,0,0,1,0-1.24,47.26,47.26,0,0,1,6.29-5c9.59-6.48,6.61-17,4.44-24.75-.53-1.88-.25-3.59.76-4.56a2.87,2.87,0,0,1,3-.59c3.33,1.08,6.18,6.55,7.63,14.64,1.65,9.19-2.73,16.77-6.7,21.52C94.66,88.46,87.72,92.64,84.51,92.64Z"
-+          />
-+          <path
-+            className="cls-11"
-+            d="M99.5,47.76c2.08,5,7.11,18.76.09,27.59s-11.71,8.39-11.71,8.39l.67,6.7C96,86.63,108.23,75,105.69,60.88,104,51.58,101.78,48.5,99.5,47.76Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M84.51,92.64a.88.88,0,1,1,0-1.76c2.43,0,8.94-3.72,14-9.77,3.73-4.46,7.85-11.56,6.32-20.08-1.58-8.77-4.46-12.63-6.44-13.28a1.15,1.15,0,0,0-1.22.19c-.41.39-.7,1.34-.29,2.82,2.32,8.22,5.5,19.49-5.14,26.68a47.82,47.82,0,0,0-6,4.76.86.86,0,0,1-1.24,0,.87.87,0,0,1,0-1.24,47.26,47.26,0,0,1,6.29-5c9.59-6.48,6.61-17,4.44-24.75-.53-1.88-.25-3.59.76-4.56a2.87,2.87,0,0,1,3-.59c3.33,1.08,6.18,6.55,7.63,14.64,1.65,9.19-2.73,16.77-6.7,21.52C94.66,88.46,87.72,92.64,84.51,92.64Z"
-+          />
-+          <path
-+            className="cls-12"
-+            d="M89.8,82.2c0,17.93-13,28-29,28s-29-10.05-29-28,13-45.89,29-45.89S89.8,64.28,89.8,82.2Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M60.76,111C42.89,111,30.88,99.44,30.88,82.2c0-18.45,13.39-46.73,29.88-46.73S90.63,63.75,90.63,82.2C90.63,99.44,78.63,111,60.76,111Zm0-73.88c-4,0-12,2.06-19.81,15.81-5.18,9.1-8.4,20.31-8.4,29.25,0,16.24,11.34,27.15,28.21,27.15S89,98.44,89,82.2c0-8.94-3.22-20.15-8.39-29.25C72.74,39.2,64.8,37.14,60.76,37.14Z"
-+          />
-+          <path
-+            className="cls-13"
-+            d="M60.76,36.31c-.2,0-.39,0-.58,0,12.47.66,27.4,28.81,27.4,45.18,0,16.56-12.46,25.85-27.85,25.85-5.75,0-11-.09-15.32-1.38a32,32,0,0,0,16.35,4.19c16,0,29-10.05,29-28S76.8,36.31,60.76,36.31Z"
-+          />
-+          <path
-+            className="cls-13"
-+            d="M83.22,60.78l-4.57,4.06s5.16-1.11,5.37-2S83.22,60.78,83.22,60.78Z"
-+          />
-+          <path className="cls-13" d="M84.38,64.19l-5.31,4s6-1.1,6.25-2S84.38,64.19,84.38,64.19Z" />
-+          <path
-+            className="cls-13"
-+            d="M85.61,67.71,79.4,72.39s7-1.27,7.31-2.34S85.61,67.71,85.61,67.71Z"
-+          />
-+          <path
-+            className="cls-13"
-+            d="M85.35,95.24l-6.65-4s3.78,6.05,4.88,5.91S85.35,95.24,85.35,95.24Z"
-+          />
-+          <path
-+            className="cls-13"
-+            d="M88.27,91.83l-7.4-2.4s5.07,5,6.11,4.64S88.27,91.83,88.27,91.83Z"
-+          />
-+          <path
-+            className="cls-13"
-+            d="M37.09,60.78l5.41,4.06s-6.12-1.11-6.36-2S37.09,60.78,37.09,60.78Z"
-+          />
-+          <path className="cls-13" d="M35.7,64.19l6.29,4s-7.1-1.1-7.39-2S35.7,64.19,35.7,64.19Z" />
-+          <path
-+            className="cls-13"
-+            d="M34.25,67.71l7.35,4.68S33.29,71.12,33,70.05,34.25,67.71,34.25,67.71Z"
-+          />
-+          <path
-+            className="cls-6"
-+            d="M73.76,77.76C73.76,86.45,68.89,94,60,94S46.24,86.45,46.24,77.76,51.11,56.68,60,56.68,73.76,69.07,73.76,77.76Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M60,94.84c-8.58,0-14.57-7-14.57-17.08a30.58,30.58,0,0,1,3.65-14.2c2.76-5,6.64-7.69,10.92-7.69s8.16,2.73,10.92,7.69a30.46,30.46,0,0,1,3.65,14.2C74.57,87.81,68.58,94.84,60,94.84Zm0-37.35c-8.33,0-12.94,12-12.94,20.27,0,10.67,6.5,15.45,12.94,15.45s12.94-4.78,12.94-15.45C72.94,69.48,68.33,57.49,60,57.49Z"
-+          />
-+          <path
-+            className="cls-10"
-+            d="M86.33,25.77c-.11,1.46-2.84-.44-3.76.6l-19-11.61a24.79,24.79,0,0,1,1.9-3.83c4-6.56,12.63-13.21,16.94-8.41C85.35,5.79,87,17.3,86.33,25.77Z"
-+          />
-+          <path className="cls-14" d="M82.74,3,78.17,7s5.16-1.1,5.37-2S82.74,3,82.74,3Z" />
-+          <path
-+            className="cls-7"
-+            d="M82.74,27.51l-.63-.39-19.63-12,.27-.69a25.28,25.28,0,0,1,2-4C67.82,5.4,73.78,0,78.72,0a5.61,5.61,0,0,1,4.34,1.93c3.24,3.61,4.79,15.5,4.15,23.91a1.46,1.46,0,0,1-1.58,1.39,6.87,6.87,0,0,1-1.16-.16,5.68,5.68,0,0,0-1-.15c-.2,0-.25,0-.25,0Zm.74-2.35a7.33,7.33,0,0,1,1.34.18,6.31,6.31,0,0,0,.65.11c.61-8.72-1.18-19.51-3.72-22.34a3.85,3.85,0,0,0-3-1.35c-4.14,0-9.6,4.9-12.5,9.63a23.79,23.79,0,0,0-1.55,3L82.55,25.33A2.45,2.45,0,0,1,83.48,25.16Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M80.3,20c0,.48-8-4.21-8-4.21a8.33,8.33,0,0,1,.63-1.27c1.34-2.18,4.14-5.57,5.65-3.6A26.58,26.58,0,0,1,80.3,20Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M80.24,20.92c-.24,0-1,0-8.39-4.36l-.65-.38.27-.7a9.25,9.25,0,0,1,.7-1.41c.66-1.08,3-4.61,5.3-4.61a2.2,2.2,0,0,1,1.8.94c.65.84,2.13,6.85,1.91,9.67A.92.92,0,0,1,80.24,20.92Zm-6.82-5.48c2.29,1.33,4.69,2.67,6,3.33a29.23,29.23,0,0,0-1.58-7.34.42.42,0,0,0-.37-.21c-.84,0-2.5,1.65-3.79,3.77C73.59,15.14,73.5,15.29,73.42,15.44Z"
-+          />
-+          <path
-+            className="cls-12"
-+            d="M34.72,26.36c.11,1.45,2.84-.45,3.76.6l19-11.61a24.36,24.36,0,0,0-1.9-3.83C51.57,5,43-1.7,38.64,3.1,35.7,6.38,34.08,17.89,34.72,26.36Z"
-+          />
-+          <path className="cls-13" d="M37.72,5l5.41,4.06S37,8,36.77,7,37.72,5,37.72,5Z" />
-+          <path
-+            className="cls-13"
-+            d="M35.81,8.7l4.12,2.92s-4.66-.79-4.84-1.46S35.81,8.7,35.81,8.7Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M38.32,28.09l-.5-.55a.79.79,0,0,0-.25,0,5.72,5.72,0,0,0-1,.14,6,6,0,0,1-1.16.16h0a1.46,1.46,0,0,1-1.58-1.38C33.2,18,34.75,6.12,38,2.52A5.61,5.61,0,0,1,42.33.59c4.94,0,10.9,5.39,14,10.47a25.28,25.28,0,0,1,2,4l.27.68Zm4-25.74a3.87,3.87,0,0,0-3,1.34C36.76,6.53,35,17.33,35.58,26c.19,0,.42-.07.65-.11a4.27,4.27,0,0,1,2.27,0L56.38,15a22.51,22.51,0,0,0-1.55-3C51.93,7.24,46.47,2.35,42.33,2.35Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M40.75,20.59c0,.49,8-4.2,8-4.2a8.33,8.33,0,0,0-.63-1.27c-1.34-2.19-4.14-5.58-5.65-3.6A26.52,26.52,0,0,0,40.75,20.59Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M40.81,21.51h0a.93.93,0,0,1-.94-.85c-.22-2.83,1.26-8.83,1.91-9.68a2.23,2.23,0,0,1,1.8-.94c2.3,0,4.64,3.53,5.3,4.62a9.25,9.25,0,0,1,.7,1.41l.27.7-.64.38C41.81,21.49,41.05,21.51,40.81,21.51Zm2.77-9.71c-.07,0-.21,0-.4.25a30.23,30.23,0,0,0-1.55,7.3c1.31-.65,3.71-2,6-3.32a4.17,4.17,0,0,0-.26-.46C46.08,13.46,44.42,11.8,43.58,11.8Z"
-+          />
-+          <path
-+            className="cls-1"
-+            d="M60.76,25C60.39,40.75,55,54.24,46.94,59.54,55,54.24,60.76,40.76,60.76,25Z"
-+          />
-+          <path
-+            className="cls-15"
-+            d="M68.36,61.19a20.11,20.11,0,0,1,1.94,2.93C76,62.6,80.63,59.76,83.22,56.21c-.19-.41-.39-.8-.59-1.21a34.8,34.8,0,0,1-14.26,6.19Z"
-+          />
-+          <path
-+            className="cls-15"
-+            d="M49.84,63.86A20.52,20.52,0,0,1,51.79,61a35,35,0,0,1-13-5.74c-.22.43-.43.88-.65,1.32C40.6,59.77,44.75,62.35,49.84,63.86Z"
-+          />
-+          <path
-+            className="cls-16"
-+            d="M60.53,61.94A40.09,40.09,0,0,1,51.79,61h0a20.52,20.52,0,0,0-1.95,2.86h0a38.39,38.39,0,0,0,20.45.26h0a20.11,20.11,0,0,0-1.94-2.93A40.86,40.86,0,0,1,60.53,61.94Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M60,94.84c-8.58,0-14.57-7-14.57-17.08a30.58,30.58,0,0,1,3.65-14.2c2.76-5,6.64-7.69,10.92-7.69s8.16,2.73,10.92,7.69a30.46,30.46,0,0,1,3.65,14.2C74.57,87.81,68.58,94.84,60,94.84Zm0-37.35c-8.33,0-12.94,12-12.94,20.27,0,10.67,6.5,15.45,12.94,15.45s12.94-4.78,12.94-15.45C72.94,69.48,68.33,57.49,60,57.49Z"
-+          />
-+          <path
-+            className="cls-17"
-+            d="M84.89,53.11c-.71.66-1.47,1.29-2.26,1.89.2.41.4.8.59,1.21A12.29,12.29,0,0,0,84.89,53.11Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M60.76,111C42.89,111,30.88,99.44,30.88,82.2c0-18.45,13.39-46.73,29.88-46.73S90.63,63.75,90.63,82.2C90.63,99.44,78.63,111,60.76,111Zm0-73.88c-4,0-12,2.06-19.81,15.81-5.18,9.1-8.4,20.31-8.4,29.25,0,16.24,11.34,27.15,28.21,27.15S89,98.44,89,82.2c0-8.94-3.22-20.15-8.39-29.25C72.74,39.2,64.8,37.14,60.76,37.14Z"
-+          />
-+          <path
-+            className="cls-12"
-+            d="M82.35,33.68a11.85,11.85,0,0,1,5.05-9.53c-5.7-6.63-15.5-11-26.64-11l-1.12,0A44.21,44.21,0,0,1,60.76,25c0,15.81-5.74,29.29-13.82,34.59a40.05,40.05,0,0,0,13.82,2.4c14.14,0,26.12-7,30.29-16.81C86,43.33,82.35,38.88,82.35,33.68Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M60.76,62.82a40.44,40.44,0,0,1-14.12-2.46.84.84,0,0,1-.57-.72.88.88,0,0,1,.39-.84c8-5.26,13.42-18.87,13.42-33.84a43.14,43.14,0,0,0-1.09-11.57.84.84,0,0,1,.15-.75.88.88,0,0,1,.68-.36h.16l1,0c11,0,21.22,4.23,27.31,11.32a.87.87,0,0,1,.2.67.82.82,0,0,1-.35.61,11,11,0,0,0-4.69,8.82c0,4.71,3.19,8.87,8.11,10.62a.91.91,0,0,1,.52.48.94.94,0,0,1,0,.7C87.43,55.85,74.93,62.82,60.76,62.82ZM48.83,59.26a39.3,39.3,0,0,0,11.93,1.8c13.08,0,24.64-6.17,29.1-15.44-5.13-2.18-8.39-6.77-8.39-11.94A12.56,12.56,0,0,1,86.12,24C80.3,17.75,70.9,14,60.76,14h0a46.73,46.73,0,0,1,.89,11C61.64,39.87,56.66,53.07,48.83,59.26Z"
-+          />
-+          <path
-+            className="cls-10"
-+            d="M60.76,25a62,62,0,0,0-1.12-11.79c-17.08.46-30.76,11.19-30.76,24.38,0,9.69,7.38,18.06,18.06,22C55,54.24,60.39,40.75,60.76,25Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M46.94,60.42a.8.8,0,0,1-.3-.06C35.32,56.19,28,47.23,28,37.54c0-13.69,13.89-24.79,31.62-25.26a.89.89,0,0,1,.88.72,62.1,62.1,0,0,1,1.14,12c-.37,16-6,29.89-14.22,35.31A.83.83,0,0,1,46.94,60.42Zm12-46.35C42.51,14.8,29.76,25,29.76,37.54c0,8.83,6.69,17,17.06,21,7.6-5.28,12.7-18.4,13.06-33.62A61.09,61.09,0,0,0,58.91,14.07Z"
-+          />
-+          <path
-+            className="cls-14"
-+            d="M31.47,28.66l5.41,4.06s-6.12-1.1-6.36-2S31.47,28.66,31.47,28.66Z"
-+          />
-+          <path
-+            className="cls-14"
-+            d="M30.08,32.07l6.29,4.06s-7.1-1.1-7.39-2S30.08,32.07,30.08,32.07Z"
-+          />
-+          <path
-+            className="cls-13"
-+            d="M80.35,44.29a6,6,0,0,0-5.75-6.24,5.74,5.74,0,0,0-5.17,3.5c5,1.38,8.39,4,8.39,7.46,0,.16,0,.31,0,.47A6.38,6.38,0,0,0,80.35,44.29Z"
-+          />
-+          <path
-+            className="cls-10"
-+            d="M59.64,13.16A62,62,0,0,1,60.76,25,44.21,44.21,0,0,0,59.64,13.16Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M60.76,25.84h0a.88.88,0,0,1-.87-.88,60.35,60.35,0,0,0-1.11-11.63.88.88,0,0,1,1.72-.39,44.68,44.68,0,0,1,1.15,12A.88.88,0,0,1,60.76,25.84Z"
-+          />
-+          <path
-+            className="cls-10"
-+            d="M87.4,24.15a11.85,11.85,0,0,0-5.05,9.53c0,5.2,3.6,9.65,8.7,11.45a19.25,19.25,0,0,0,1.58-7.59A20.5,20.5,0,0,0,87.4,24.15Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M91.53,46.24,90.75,46c-5.64-2-9.28-6.82-9.28-12.28a12.69,12.69,0,0,1,5.41-10.24l.65-.48.54.62a21.31,21.31,0,0,1,5.44,14,20.25,20.25,0,0,1-1.65,7.94ZM87.27,25.38a10.8,10.8,0,0,0-4,8.3c0,4.45,2.85,8.42,7.33,10.32a18.28,18.28,0,0,0,1.19-6.46A19.39,19.39,0,0,0,87.27,25.38Z"
-+          />
-+          <ellipse
-+            className="cls-7"
-+            cx="51.76"
-+            cy="29.76"
-+            rx="7.42"
-+            ry="6.39"
-+            transform="translate(-3.36 6.81) rotate(-7.3)"
-+          />
-+          <ellipse
-+            className="cls-6"
-+            cx="52.08"
-+            cy="30.7"
-+            rx="5.39"
-+            ry="4.65"
-+            transform="translate(-3.48 6.86) rotate(-7.3)"
-+          />
-+          <ellipse
-+            className="cls-7"
-+            cx="52.08"
-+            cy="30.93"
-+            rx="2.02"
-+            ry="1.78"
-+            transform="translate(-3.5 6.85) rotate(-7.28)"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M46,25.06a.54.54,0,0,1-.22,0l-2-.8a.59.59,0,0,1,.43-1.09l2,.8A.59.59,0,0,1,46,25.06Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M47.63,23.68a.59.59,0,0,1-.33-.11l-2.46-1.72a.59.59,0,0,1,.68-1L48,22.61a.59.59,0,0,1,.15.82A.61.61,0,0,1,47.63,23.68Z"
-+          />
-+          <ellipse
-+            className="cls-7"
-+            cx="71.11"
-+            cy="29.76"
-+            rx="6.39"
-+            ry="7.42"
-+            transform="translate(32.56 96.51) rotate(-82.7)"
-+          />
-+          <ellipse
-+            className="cls-6"
-+            cx="70.78"
-+            cy="30.7"
-+            rx="4.65"
-+            ry="5.39"
-+            transform="translate(31.34 97.01) rotate(-82.7)"
-+          />
-+          <ellipse
-+            className="cls-7"
-+            cx="70.78"
-+            cy="30.93"
-+            rx="1.78"
-+            ry="2.02"
-+            transform="translate(31.13 97.23) rotate(-82.72)"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M76.86,25.06a.58.58,0,0,1-.21-1.13l2-.8a.59.59,0,0,1,.77.33.6.6,0,0,1-.34.76l-2,.8A.6.6,0,0,1,76.86,25.06Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M75.23,23.68a.61.61,0,0,1-.48-.25.6.6,0,0,1,.14-.82l2.46-1.73a.59.59,0,0,1,.68,1l-2.46,1.72A.6.6,0,0,1,75.23,23.68Z"
-+          />
-+          <path
-+            className="cls-6"
-+            d="M77.82,49c0,5.24-7.67,9.49-17.14,9.49S43.54,54.25,43.54,49s7.67-8.55,17.14-8.55S77.82,43.77,77.82,49Z"
-+          />
-+          <path
-+            className="cls-18"
-+            d="M60.77,56.68c-6.21,0-12-1.57-17.23-7.67.42,6.4,8.23,9.22,17,9.22,9.46,0,16.31-3.61,17.14-9.22C72.8,54.34,69.56,56.63,60.77,56.68Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M61,55.7a13.59,13.59,0,0,1-12.17-7,.59.59,0,1,1,1-.54A12.41,12.41,0,0,0,61,54.53h.16a12.48,12.48,0,0,0,10.91-6.24.58.58,0,1,1,1,.55A13.45,13.45,0,0,1,61.15,55.7Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M60.68,59.39c-10.11,0-18-4.56-18-10.38,0-5.55,7.41-9.43,18-9.43s18,3.88,18,9.43C78.7,54.83,70.79,59.39,60.68,59.39Zm0-18c-9.42,0-16.26,3.22-16.26,7.66,0,4.67,7.45,8.61,16.26,8.61S76.94,53.68,76.94,49C76.94,44.57,70.1,41.35,60.68,41.35Z"
-+          />
-+          <rect className="cls-7" x="60.26" y="44.04" width="1.37" height="11.37" />
-+          <path
-+            className="cls-7"
-+            d="M66,41c0,2.78-5,4.49-5,4.49s-5-1.71-5-4.49,2.24-2.45,5-2.45S66,38.26,66,41Z"
-+          />
-+          <ellipse className="cls-19" cx="60.95" cy="40.39" rx="3.27" ry="0.56" />
-+          <path
-+            className="cls-13"
-+            d="M77.94,99c0,2.46-1.12,13-7.42,12.19-3.4-.42-8.24-5.74-6.2-7.12s-2.17-9,.75-7.1S77.94,96.56,77.94,99Z"
-+          />
-+          <path
-+            className="cls-6"
-+            d="M74.56,108.31c0,2.47-2.33,3.34-6,3.34s-6.61-2-6.61-4.46,1.64-4.52,4.75-2.6S74.56,105.85,74.56,108.31Z"
-+          />
-+          <path
-+            className="cls-18"
-+            d="M68.18,109.31a17,17,0,0,1-6-3.78,3.46,3.46,0,0,0-.24,1.24c0,2.7,3.2,4.88,7.14,4.88A9.15,9.15,0,0,0,74,110.34,17.09,17.09,0,0,1,68.18,109.31Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M69.11,112.39c-4.34,0-7.88-2.52-7.88-5.62,0-2,1.4-3.75,3.7-4.77a29.38,29.38,0,0,1-.59-5,.72.72,0,0,1,.7-.76.74.74,0,0,1,.76.71,27.91,27.91,0,0,0,.69,5.31l.15.64-.61.22c-2.05.75-3.33,2.13-3.33,3.63,0,2.29,2.88,4.15,6.41,4.15,2.83,0,5.36-1.23,6.16-3a47.12,47.12,0,0,0,3.08-11.17.72.72,0,0,1,.83-.62.73.73,0,0,1,.62.83,47.87,47.87,0,0,1-3.18,11.54C75.56,110.84,72.55,112.39,69.11,112.39Z"
-+          />
-+          <path
-+            className="cls-10"
-+            d="M43.09,99c0,2.46,1.12,13,7.41,12.19,3.41-.42,8.24-5.74,6.2-7.12s1.33-9-1.58-7.1S43.09,96.56,43.09,99Z"
-+          />
-+          <path
-+            className="cls-6"
-+            d="M46.47,108.31c0,2.47,2.32,3.34,6,3.34s6.61-2,6.61-4.46-1.65-4.52-4.76-2.6S46.47,105.85,46.47,108.31Z"
-+          />
-+          <path
-+            className="cls-18"
-+            d="M53.48,109.53a16.83,16.83,0,0,0,5.77-4.08,3.71,3.71,0,0,1,.31,1.23c.13,2.7-3,5-6.89,5.25a9.23,9.23,0,0,1-4.92-1.07A17.06,17.06,0,0,0,53.48,109.53Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M51.91,112.39c-3.43,0-6.44-1.55-7.49-3.86A47.59,47.59,0,0,1,41.23,97a.73.73,0,1,1,1.45-.21,46.6,46.6,0,0,0,3.08,11.19c.8,1.75,3.33,3,6.15,3,3.54,0,6.41-1.86,6.41-4.15,0-1.5-1.27-2.88-3.33-3.63l-.61-.22.15-.64A27.91,27.91,0,0,0,55.22,97a.74.74,0,1,1,1.47,0,29.38,29.38,0,0,1-.59,5c2.29,1,3.69,2.81,3.69,4.77C59.79,109.87,56.26,112.39,51.91,112.39Z"
-+          />
-+          <circle className="cls-18" cx="71.22" cy="45.86" r="0.85" />
-+          <circle className="cls-18" cx="69.55" cy="43.76" r="0.85" />
-+          <circle className="cls-18" cx="69" cy="46.77" r="0.85" />
-+          <circle className="cls-18" cx="50.87" cy="45.93" r="0.85" />
-+          <circle className="cls-18" cx="53.12" cy="46.77" r="0.85" />
-+          <circle className="cls-18" cx="52.76" cy="44.04" r="0.85" />
-+          <path
-+            className="cls-7"
-+            d="M84,46.59h0l-12.2-.15a.59.59,0,1,1,0-1.17L84,45.41a.59.59,0,0,1,0,1.18Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M70.15,44.31a.59.59,0,0,1-.21-1.14l11.47-4.51a.58.58,0,0,1,.76.33.59.59,0,0,1-.33.76L70.37,44.26A.59.59,0,0,1,70.15,44.31Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M38.26,46.59a.59.59,0,0,1-.59-.58.6.6,0,0,1,.58-.6l12.2-.14h0a.59.59,0,0,1,0,1.17l-12.2.15Z"
-+          />
-+          <path
-+            className="cls-7"
-+            d="M52.13,44.31a.54.54,0,0,1-.21-.05L40.44,39.75a.59.59,0,1,1,.43-1.09l11.48,4.51a.59.59,0,0,1,.33.76A.59.59,0,0,1,52.13,44.31Z"
-+          />
-+          <path
-+            className="cls-20"
-+            d="M127.71,96.86c0-.28,0-.53,0-.73a12.51,12.51,0,0,0-12.51-12.52,12.27,12.27,0,0,0-7.37,2.55,13.93,13.93,0,0,0-3.72,4.2,7.18,7.18,0,0,0-3.3-.8,6.7,6.7,0,0,0-5,2.43,8.47,8.47,0,0,0-1.9,3.63,9.26,9.26,0,0,0-4,3,9,9,0,0,0-1.81,5.46,9.14,9.14,0,0,0,9.13,9.13v0h29.62a8.2,8.2,0,0,0,8.19-8.19A8.3,8.3,0,0,0,127.71,96.86Z"
-+          />
-+          <path
-+            className="cls-21"
-+            d="M126.86,113.23h0c4.51,0,8.51-3.69,8.19-8.19-.25-3.54-2-4.8-4.52-6.88l-25.93,15S126.86,113.23,126.86,113.23Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M172.59,40V32.18H155.44V64.9h17.15V56.14h9.07v6.64c0,4-.38,5.82-1.29,7.33-1.81,2.72-4,3.56-9.22,3.63H156.34c-5.51,0-7.93-1.13-9.52-4.31-.75-1.36-1-2.94-1-6.65V34.37c0-4.15.3-5.81,1.28-7.33,1.82-2.72,4-3.62,9.22-3.7h14.81c5.52.08,7.86,1.13,9.52,4.31.68,1.28,1,3.1,1,6.72V40Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M192.24,43.74V34.22c0-4.23.3-5.82,1.51-7.4,1.81-2.57,3.93-3.4,8.54-3.48h14.65c5,.08,7.33,1.13,9,4.16.83,1.36,1.05,3,1.05,6.72v31h4.54v8.54H212.86V65.2h4.54V52.58H201.83V65.2h4.54v8.54H187.7V65.2h4.54V52.58h-6.05V43.74Zm9.59,0H217.4V32.18H201.83Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M255.71,23.34v8.54h-4.53v33h12.54V56.14h9.07v17.6H237.05V65.2h4.53V31.88h-4.53V23.34Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M296,23.34v8.54h-4.54V65.2H296v8.54H277.32V65.2h4.54V31.88h-4.54V23.34Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M329.76,40V32.18H312.61V64.9h17.15V56.14h9.07v6.64c0,4-.38,5.82-1.28,7.33-1.82,2.72-4,3.56-9.22,3.63H313.52c-5.52,0-7.94-1.13-9.52-4.31-.76-1.36-1-2.94-1-6.65V34.37c0-4.15.31-5.81,1.29-7.33,1.81-2.72,4-3.62,9.22-3.7h14.81c5.51.08,7.86,1.13,9.52,4.31.68,1.28,1,3.1,1,6.72V40Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M370.57,23.34h1.58c5.52.08,7.94,1.13,9.53,4.31.75,1.28,1,3.1,1,6.72v16.1c0,4-.3,5.82-1.29,7.33-1.74,2.72-4,3.62-9.22,3.62H356.36c-5.51,0-7.93-1.05-9.52-4.23-.68-1.36-1-3.17-1-6.72V34.37c0-4.08.38-5.89,1.28-7.33,1.82-2.72,4-3.62,9.22-3.7h14.21ZM355.45,52.58h17.61V32.18H355.45Zm16.7,12.62v8.54H356.51V65.2Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M158.58,95.48a17.31,17.31,0,0,1-.18,3.69c-.23,1-.81,2.82-4,2.82a3.73,3.73,0,0,1-4.09-3.25,38.59,38.59,0,0,1-.18-5.68,36.89,36.89,0,0,1,.2-6c.15-.78.61-3.34,4.25-3.34a3.53,3.53,0,0,1,3.72,2.56,13.93,13.93,0,0,1,.17,3.29h-2.06V88.24c0-1.21,0-2.66-1.83-2.66s-2,1.5-2.11,2.18c-.15,1.28-.15,4-.15,5.33,0,1.08.05,4.67.15,5.38a1.9,1.9,0,0,0,2.06,1.66,1.84,1.84,0,0,0,1.88-1.69,15.49,15.49,0,0,0,.1-3Z"
-+          />
-+          <path className="cls-22" d="M210.6,101.73h-7.43V84h2.23V99.75h5.2Z" />
-+          <path
-+            className="cls-22"
-+            d="M262.94,97.36c-.13,2.24-.68,4.63-4.35,4.63a4.87,4.87,0,0,1-2.39-.51,3.54,3.54,0,0,1-1.71-2.63,45.57,45.57,0,0,1-.17-5.38c0-1.13.05-4.85.12-5.81s.43-3.94,4.45-3.94c3.7,0,4,2.76,4.1,3.71.15,1.51.1,4.7.1,5.18C263.09,94,263,96,262.94,97.36Zm-6.34-1.15c.06,1.7-.25,3.94,2.09,3.94,1.89,0,2-1.66,2-2.81.1-1.49.15-3.3.12-4.73s0-2.79-.05-4.17c0-1.11-.05-2.86-2-2.86s-2.09,1.93-2.14,2.84-.05,1.15-.05,5.42C256.58,95.05,256.58,95.07,256.6,96.21Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M316.93,84V96c0,2.19,0,3.07-.43,4-.8,1.88-2.94,2.06-3.87,2.06-1.91,0-3.29-.58-3.92-1.94-.35-.78-.4-1.28-.4-4V84h2.23V96.93c0,1.54,0,3.15,2.14,3.15,1.91,0,2-1.34,2-2.17s0-.85,0-2.16V84Z"
-+          />
-+          <path
-+            className="cls-22"
-+            d="M362.3,101.73V84h3.34c1.73,0,3.32,0,4.37,1.33.83,1,.91,2,.91,6.26,0,1,0,2.09-.05,4.5a8,8,0,0,1-.71,4c-1,1.6-2.66,1.6-4.57,1.6Zm2.21-2h1.43c1.41,0,2.42-.12,2.67-1.7.12-.83.15-3.32.15-4.25,0-1.64,0-2.26,0-4,0-1.94-.05-2.89-.83-3.45-.55-.37-1-.37-3.39-.37Z"
-+          />
-+        </g>
-+      </g>
-+    </svg>
-+  );
-+}
-diff --git a/src/core/tigera_icons/calico_enterprise_logo_square.svg b/src/core/tigera_icons/calico_enterprise_logo_square.svg
-new file mode 100644
-index 00000000000..0a31a68ef9d
---- /dev/null
-+++ b/src/core/tigera_icons/calico_enterprise_logo_square.svg
++++ b/packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg
 @@ -0,0 +1,648 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- Generator: Adobe Illustrator 24.1.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
@@ -2022,11 +1420,559 @@ index 00000000000..0a31a68ef9d
 +    />
 +  </g>
 +</svg>
-diff --git a/src/core/tigera_icons/calico_enterprise_logo_square.tsx b/src/core/tigera_icons/calico_enterprise_logo_square.tsx
+diff --git a/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx b/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
+index f1612e4ad..e15786c38 100644
+--- a/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
++++ b/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
+@@ -10,8 +10,9 @@ import React, { FunctionComponent, createElement } from 'react';
+ import { EUI_STYLES_GLOBAL, EUI_STYLES_UTILS } from '@kbn/core-base-common';
+ import { RenderingMetadata } from '../types';
+ import { Fonts } from './fonts';
+-import { Logo } from './logo';
+ import { Styles } from './styles';
++import { CalicoEnterpriseLogoSquare } from '../../tigera_icons/calico_enterprise_logo_square';
++import { CalicoCloudLogoSquare } from '../../tigera_icons/calico_cloud_logo_square';
+ 
+ interface Props {
+   metadata: RenderingMetadata;
+@@ -31,14 +32,23 @@ export const Template: FunctionComponent<Props> = ({
+     customBranding,
+   },
+ }) => {
++  // const licenseEdition: string = 'CloudenterpriseEdition';
++  const licenseEdition =
++    injectedMetadata.legacyMetadata.uiSettings.defaults['tigeratagmanager.licenseEdition'];
++  const isEnterprise = licenseEdition.value === 'enterpriseEdition';
+   const title = customBranding.pageTitle ?? 'Elastic';
+   const favIcon = customBranding.faviconSVG ?? `${uiPublicUrl}/favicons/favicon.svg`;
+   const favIconPng = customBranding.faviconPNG ?? `${uiPublicUrl}/favicons/favicon.png`;
+   const logo = customBranding.logo ? (
+     <img src={customBranding.logo} width="64" height="64" alt="logo" />
++  ) : isEnterprise ? (
++    <CalicoEnterpriseLogoSquare />
+   ) : (
+-    <Logo />
++    <CalicoCloudLogoSquare />
+   );
++
++  const editionLabel = isEnterprise ? 'Enterprise' : 'Cloud';
++
+   return (
+     <html lang={locale}>
+       <head>
+@@ -92,7 +102,7 @@ export const Template: FunctionComponent<Props> = ({
+               })}
+             >
+               {i18n('core.ui.welcomeMessage', {
+-                defaultMessage: 'Loading Elastic',
++                defaultMessage: `Loading Calico ${editionLabel} Elastic`,
+               })}
+             </div>
+             <div className="kbnProgress" />
+diff --git a/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx
 new file mode 100644
-index 00000000000..1af36ada86f
+index 000000000..fbd02037e
 --- /dev/null
-+++ b/src/core/tigera_icons/calico_enterprise_logo_square.tsx
++++ b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx
+@@ -0,0 +1,493 @@
++/*
++ * Licensed to Elasticsearch B.V. under one or more contributor
++ * license agreements. See the NOTICE file distributed with
++ * this work for additional information regarding copyright
++ * ownership. Elasticsearch B.V. licenses this file to you under
++ * the Apache License, Version 2.0 (the "License"); you may
++ * not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *    http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing,
++ * software distributed under the License is distributed on an
++ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied.  See the License for the
++ * specific language governing permissions and limitations
++ * under the License.
++ */
++
++/* eslint-disable react/no-danger */
++
++import React from 'react';
++
++export function CalicoCloudLogoSquare() {
++  return (
++    <svg
++      xmlns="http://www.w3.org/2000/svg"
++      xmlnsXlink="http://www.w3.org/1999/xlink"
++      viewBox="0 0 382.66 125.49"
++    >
++      <defs
++        dangerouslySetInnerHTML={{
++          __html: `
++            <style>
++            .cls-1,.cls-5{fill:none;}.cls-2{fill:url(#linear-gradient);}.cls-3
++            {clip-path:url(#clip-path);}.cls-4{opacity:0.5;}.cls-5
++            {stroke:#fff;stroke-linecap:'square';stroke-width:1.8px;}.cls-20,.cls-5
++            {stroke-miter-limit:10;}.cls-20,.cls-6{fill:#fff;}.cls-21,.cls-7
++            {fill:#23201f;}.cls-8{fill:#376ca3;}.cls-9{fill:#1a345f;}.cls-10
++            {fill:#764e2a;}.cls-11{fill:#5f3a19;}.cls-12{fill:#f59222;}.cls-13
++            {fill:#f17827;}.cls-14{fill:#3b2518;}.cls-15{fill:#603e1d;}.cls-16
++            {fill:#573a1b;}.cls-17{fill:#53361a;}.cls-18{fill:#e5e6e6;}.cls-19
++            {fill:#a6a7aa;}.cls-20{stroke:#23201f;strokeWidth:3px;}.cls-21
++            {opacity:0.08;}.cls-22{fill:#000000;}
++            </style>
++            <linearGradient
++              id="linear-gradient"
++              x1="60.95"
++              y1="124.07"
++              x2="60.95"
++              y2="5"
++              gradientUnits="userSpaceOnUse"
++            >
++              <stop offset="0" stopColor="#0c8fc5" />
++              <stop offset="1" stopColor="#b6dee7" />
++            </linearGradient>
++            <clipPath id="clip-path">
++              <circle id="SVGID" className="cls-1" cx="60.95" cy="64.54" r="59.53" />
++            </clipPath>
++          `,
++        }}
++      />
++      <g id="Layer_2" data-name="Layer 2">
++        <g id="Layer_1-2" data-name="Layer 1">
++          <circle className="cls-2" cx="60.95" cy="64.54" r="59.53" />
++          <g className="cls-3">
++            <g id="_8" data-name="8" className="cls-4">
++              <polyline
++                className="cls-5"
++                points="33.91 80.5 33.91 93.79 13.97 93.79 13.97 78.55 33.91 78.55 33.91 78.55"
++              />
++              <path
++                className="cls-5"
++                d="M18.11,77.31V76.25a5.83,5.83,0,0,1,5.83-5.83h0a5.83,5.83,0,0,1,5.83,5.83v2.3H18.11V77.31"
++              />
++              <path className="cls-5" d="M26.9,78.55H21v-2.3a3,3,0,0,1,5.92,0v.6" />
++              <path className="cls-5" d="M25.14,87.81V87.4a2.44,2.44,0,1,0-2.41,0v2.1h2.41" />
++            </g>
++            <g className="cls-4">
++              <path
++                className="cls-5"
++                d="M108.53,54.74l3.14,3.82a2,2,0,0,1-.28,2.85,2,2,0,0,1-1.48.45,2,2,0,0,1-1.37-.73l-4.31-5.25"
++              />
++              <circle className="cls-5" cx="98.8" cy="46.01" r="8.15" />
++              <circle className="cls-5" cx="98.8" cy="46.01" r="11.06" />
++            </g>
++            <g className="cls-4">
++              <path
++                className="cls-6"
++                d="M17.51,59a4.57,4.57,0,1,1,4.57-4.57A4.57,4.57,0,0,1,17.51,59Zm0-8a3.43,3.43,0,1,0,3.43,3.42A3.42,3.42,0,0,0,17.51,51Z"
++              />
++              <path
++                className="cls-6"
++                d="M19,64.67H16a.59.59,0,0,1-.56-.44L14.91,62a9.53,9.53,0,0,1-.93-.38L12,62.8a.57.57,0,0,1-.7-.08L9.19,60.61a.58.58,0,0,1-.09-.7l1.19-2A6.61,6.61,0,0,1,9.91,57l-2.24-.56a.56.56,0,0,1-.43-.55v-3a.56.56,0,0,1,.43-.55l2.24-.56a5.74,5.74,0,0,1,.38-.92l-1.19-2a.58.58,0,0,1,.09-.7l2.11-2.11A.57.57,0,0,1,12,46l2,1.19a7.55,7.55,0,0,1,.93-.38l.55-2.24a.58.58,0,0,1,.56-.43h3a.57.57,0,0,1,.55.43l.55,2.24a5.84,5.84,0,0,1,.94.39L23,46a.56.56,0,0,1,.69.09l2.12,2.11a.57.57,0,0,1,.08.7l-1.19,2a6.14,6.14,0,0,1,.38.92l2.24.56a.57.57,0,0,1,.44.55v3a.57.57,0,0,1-.44.55L25.12,57a9.2,9.2,0,0,1-.39.93l1.19,2a.58.58,0,0,1-.08.7l-2.12,2.11a.56.56,0,0,1-.69.08l-2-1.18a9.53,9.53,0,0,1-.93.38l-.55,2.23A.57.57,0,0,1,19,64.67Zm-2.55-1.14h2.1l.52-2.12A.58.58,0,0,1,19.5,61h0a6.14,6.14,0,0,0,1.24-.52.58.58,0,0,1,.57,0l1.88,1.13,1.48-1.49-1.13-1.87a.58.58,0,0,1,0-.57,6.36,6.36,0,0,0,.54-1.28.58.58,0,0,1,.42-.42l2.12-.53V53.35l-2.12-.53a.54.54,0,0,1-.41-.39s0,0,0,0a6.31,6.31,0,0,0-.52-1.26.58.58,0,0,1,0-.57l1.13-1.88-1.49-1.48-1.87,1.13a.58.58,0,0,1-.57,0,6.72,6.72,0,0,0-1.28-.54.58.58,0,0,1-.43-.41l-.52-2.12h-2.1l-.52,2.12a.59.59,0,0,1-.38.4l-.06,0a7,7,0,0,0-1.26.52.56.56,0,0,1-.57,0l-1.88-1.12-1.48,1.48,1.12,1.88a.56.56,0,0,1,0,.57,6.78,6.78,0,0,0-.53,1.28.56.56,0,0,1-.41.42l-2.12.53v2.09L10.5,56a.56.56,0,0,1,.41.4s0,0,0,0a6,6,0,0,0,.52,1.25.55.55,0,0,1,0,.57l-1.12,1.88,1.48,1.49,1.88-1.13a.58.58,0,0,1,.57,0,6.78,6.78,0,0,0,1.28.53.58.58,0,0,1,.42.42Z"
++              />
++              <path
++                className="cls-6"
++                d="M31.21,53.25a3.43,3.43,0,1,1,3.43-3.43A3.43,3.43,0,0,1,31.21,53.25Zm0-5.71a2.29,2.29,0,1,0,2.29,2.28A2.29,2.29,0,0,0,31.21,47.54Z"
++              />
++              <path
++                className="cls-6"
++                d="M32.25,57.82H29.93a.57.57,0,0,1-.55-.43L29,55.74l-.31-.11a.57.57,0,0,1-.31-.75.57.57,0,0,1,.74-.31,4.75,4.75,0,0,0,.49.17.58.58,0,0,1,.42.41l.38,1.53h1.44l.38-1.53a.59.59,0,0,1,.38-.4l.06,0a4.6,4.6,0,0,0,.95-.38.54.54,0,0,1,.56,0l1.38.81,1-1-.82-1.34a.6.6,0,0,1,0-.58,4.33,4.33,0,0,0,.41-.95.57.57,0,0,1,.42-.41l1.54-.38V49.13l-1.55-.38a.57.57,0,0,1-.4-.37l0-.06a4.7,4.7,0,0,0-.39-.93.55.55,0,0,1,0-.57l.82-1.35-1-1-1.38.82a.59.59,0,0,1-.56,0,4.42,4.42,0,0,0-1-.4.58.58,0,0,1-.42-.42L31.81,43H30.37L30,44.49a.58.58,0,0,1-.38.41h-.06a4.89,4.89,0,0,0-.94.39.58.58,0,0,1-.57,0l-1.38-.81-1,1,.5.83a.58.58,0,0,1-.19.78.57.57,0,0,1-.79-.19l-.73-1.21a.56.56,0,0,1,.08-.7l1.65-1.62a.57.57,0,0,1,.69-.09l1.48.88A6.5,6.5,0,0,1,29,43.9l.42-1.64a.57.57,0,0,1,.55-.43h2.32a.57.57,0,0,1,.55.43l.42,1.64a5.32,5.32,0,0,1,.61.26l1.48-.88a.57.57,0,0,1,.7.08L37.65,45a.57.57,0,0,1,.09.7l-.89,1.45a6.14,6.14,0,0,1,.25.59l1.67.41a.57.57,0,0,1,.43.55V51a.57.57,0,0,1-.43.55l-1.67.41c-.07.2-.16.39-.25.59L37.74,54a.58.58,0,0,1-.09.7L36,56.29a.57.57,0,0,1-.69.08l-1.49-.87a6.44,6.44,0,0,1-.61.24l-.42,1.65A.57.57,0,0,1,32.25,57.82Z"
++              />
++            </g>
++            <g className="cls-4">
++              <path
++                className="cls-6"
++                d="M102.51,84a4.57,4.57,0,1,1,5.34-3.63A4.57,4.57,0,0,1,102.51,84Zm1.5-7.85a3.43,3.43,0,1,0,2.72,4A3.44,3.44,0,0,0,104,76.15Z"
++              />
++              <path
++                className="cls-6"
++                d="M102.9,89.89,100,89.33a.56.56,0,0,1-.46-.53l-.13-2.3a9.33,9.33,0,0,1-.84-.55l-2.17.79a.58.58,0,0,1-.67-.21L94,84.06a.56.56,0,0,1,0-.7l1.54-1.73a6.55,6.55,0,0,1-.2-1l-2.1-1a.56.56,0,0,1-.32-.62l.56-2.94a.56.56,0,0,1,.53-.46l2.3-.13a8,8,0,0,1,.55-.83l-.79-2.18a.58.58,0,0,1,.21-.67l2.47-1.68a.59.59,0,0,1,.7,0l1.73,1.54a6.55,6.55,0,0,1,1-.2l1-2.1a.58.58,0,0,1,.62-.32l2.94.56a.56.56,0,0,1,.46.53l.12,2.3a7.79,7.79,0,0,1,.85.56l2.17-.8a.58.58,0,0,1,.67.21L112.71,75a.57.57,0,0,1,0,.7l-1.54,1.73a8.35,8.35,0,0,1,.2,1l2.09,1a.58.58,0,0,1,.33.63l-.56,2.93a.56.56,0,0,1-.53.46l-2.31.13a6.38,6.38,0,0,1-.55.84l.8,2.17a.58.58,0,0,1-.21.67l-2.48,1.68a.57.57,0,0,1-.7,0l-1.73-1.54a6.55,6.55,0,0,1-1,.2l-1,2.1A.58.58,0,0,1,102.9,89.89Zm-2.28-1.6,2.06.39.91-2a.58.58,0,0,1,.49-.33h0a6.6,6.6,0,0,0,1.32-.28.58.58,0,0,1,.56.12l1.63,1.45,1.74-1.17-.76-2a.56.56,0,0,1,.09-.57,6.15,6.15,0,0,0,.77-1.16.57.57,0,0,1,.49-.33l2.18-.12.39-2.06-2-.91a.58.58,0,0,1-.33-.47v0a6.7,6.7,0,0,0-.28-1.33.58.58,0,0,1,.11-.55l1.46-1.64-1.18-1.73-2,.75a.57.57,0,0,1-.56-.09,5.7,5.7,0,0,0-1.16-.77.59.59,0,0,1-.34-.49l-.12-2.18-2-.39-.92,2a.58.58,0,0,1-.45.33h-.06a6.7,6.7,0,0,0-1.33.28.6.6,0,0,1-.56-.11L99.1,71.37l-1.74,1.18.75,2.06a.57.57,0,0,1-.1.56,5.83,5.83,0,0,0-.75,1.15.61.61,0,0,1-.49.34l-2.18.11-.39,2.06,2,.92a.57.57,0,0,1,.33.47v0a6,6,0,0,0,.28,1.32.57.57,0,0,1-.12.56l-1.45,1.63,1.17,1.74,2.06-.75a.56.56,0,0,1,.56.09,6.87,6.87,0,0,0,1.16.77.55.55,0,0,1,.33.48Z"
++              />
++            </g>
++          </g>
++          <path
++            className="cls-7"
++            d="M61,125.49a61,61,0,1,1,61-60.95A61,61,0,0,1,61,125.49ZM61,6.42a58.12,58.12,0,1,0,58.12,58.12A58.18,58.18,0,0,0,61,6.42Z"
++          />
++          <path
++            className="cls-8"
++            d="M89.59,102.88c-2.61,4.16-14.35,7.3-28.44,7.3S35.31,107,32.7,102.88c-3.38,1.3-5.35,2.86-5.35,4.52,0,4.63,15.13,8.38,33.8,8.38S94.94,112,94.94,107.4C94.94,105.74,93,104.18,89.59,102.88Z"
++          />
++          <path
++            className="cls-9"
++            d="M61.15,110.18c14.09,0,25.83-3.14,28.44-7.3-6-2.32-16.5-3.86-28.44-3.86s-22.44,1.54-28.45,3.86C35.31,107,47.05,110.18,61.15,110.18Z"
++          />
++          <path
++            className="cls-10"
++            d="M85.08,81.58a46.86,46.86,0,0,1,6.16-4.87C101.16,70,98.44,59.51,96,51c-1.72-6.06,6.49-7.7,9.65,9.89,3.11,17.3-16,30.88-21.18,30.88"
++          />
++          <path
++            className="cls-7"
++            d="M84.51,92.64a.88.88,0,1,1,0-1.76c2.43,0,8.94-3.72,14-9.77,3.73-4.46,7.85-11.56,6.32-20.08-1.58-8.77-4.46-12.63-6.44-13.28a1.15,1.15,0,0,0-1.22.19c-.41.39-.7,1.34-.29,2.82,2.32,8.22,5.5,19.49-5.14,26.68a47.82,47.82,0,0,0-6,4.76.86.86,0,0,1-1.24,0,.87.87,0,0,1,0-1.24,47.26,47.26,0,0,1,6.29-5c9.59-6.48,6.61-17,4.44-24.75-.53-1.88-.25-3.59.76-4.56a2.87,2.87,0,0,1,3-.59c3.33,1.08,6.18,6.55,7.63,14.64,1.65,9.19-2.73,16.77-6.7,21.52C94.66,88.46,87.72,92.64,84.51,92.64Z"
++          />
++          <path
++            className="cls-11"
++            d="M99.5,47.76c2.08,5,7.11,18.76.09,27.59s-11.71,8.39-11.71,8.39l.67,6.7C96,86.63,108.23,75,105.69,60.88,104,51.58,101.78,48.5,99.5,47.76Z"
++          />
++          <path
++            className="cls-7"
++            d="M84.51,92.64a.88.88,0,1,1,0-1.76c2.43,0,8.94-3.72,14-9.77,3.73-4.46,7.85-11.56,6.32-20.08-1.58-8.77-4.46-12.63-6.44-13.28a1.15,1.15,0,0,0-1.22.19c-.41.39-.7,1.34-.29,2.82,2.32,8.22,5.5,19.49-5.14,26.68a47.82,47.82,0,0,0-6,4.76.86.86,0,0,1-1.24,0,.87.87,0,0,1,0-1.24,47.26,47.26,0,0,1,6.29-5c9.59-6.48,6.61-17,4.44-24.75-.53-1.88-.25-3.59.76-4.56a2.87,2.87,0,0,1,3-.59c3.33,1.08,6.18,6.55,7.63,14.64,1.65,9.19-2.73,16.77-6.7,21.52C94.66,88.46,87.72,92.64,84.51,92.64Z"
++          />
++          <path
++            className="cls-12"
++            d="M89.8,82.2c0,17.93-13,28-29,28s-29-10.05-29-28,13-45.89,29-45.89S89.8,64.28,89.8,82.2Z"
++          />
++          <path
++            className="cls-7"
++            d="M60.76,111C42.89,111,30.88,99.44,30.88,82.2c0-18.45,13.39-46.73,29.88-46.73S90.63,63.75,90.63,82.2C90.63,99.44,78.63,111,60.76,111Zm0-73.88c-4,0-12,2.06-19.81,15.81-5.18,9.1-8.4,20.31-8.4,29.25,0,16.24,11.34,27.15,28.21,27.15S89,98.44,89,82.2c0-8.94-3.22-20.15-8.39-29.25C72.74,39.2,64.8,37.14,60.76,37.14Z"
++          />
++          <path
++            className="cls-13"
++            d="M60.76,36.31c-.2,0-.39,0-.58,0,12.47.66,27.4,28.81,27.4,45.18,0,16.56-12.46,25.85-27.85,25.85-5.75,0-11-.09-15.32-1.38a32,32,0,0,0,16.35,4.19c16,0,29-10.05,29-28S76.8,36.31,60.76,36.31Z"
++          />
++          <path
++            className="cls-13"
++            d="M83.22,60.78l-4.57,4.06s5.16-1.11,5.37-2S83.22,60.78,83.22,60.78Z"
++          />
++          <path className="cls-13" d="M84.38,64.19l-5.31,4s6-1.1,6.25-2S84.38,64.19,84.38,64.19Z" />
++          <path
++            className="cls-13"
++            d="M85.61,67.71,79.4,72.39s7-1.27,7.31-2.34S85.61,67.71,85.61,67.71Z"
++          />
++          <path
++            className="cls-13"
++            d="M85.35,95.24l-6.65-4s3.78,6.05,4.88,5.91S85.35,95.24,85.35,95.24Z"
++          />
++          <path
++            className="cls-13"
++            d="M88.27,91.83l-7.4-2.4s5.07,5,6.11,4.64S88.27,91.83,88.27,91.83Z"
++          />
++          <path
++            className="cls-13"
++            d="M37.09,60.78l5.41,4.06s-6.12-1.11-6.36-2S37.09,60.78,37.09,60.78Z"
++          />
++          <path className="cls-13" d="M35.7,64.19l6.29,4s-7.1-1.1-7.39-2S35.7,64.19,35.7,64.19Z" />
++          <path
++            className="cls-13"
++            d="M34.25,67.71l7.35,4.68S33.29,71.12,33,70.05,34.25,67.71,34.25,67.71Z"
++          />
++          <path
++            className="cls-6"
++            d="M73.76,77.76C73.76,86.45,68.89,94,60,94S46.24,86.45,46.24,77.76,51.11,56.68,60,56.68,73.76,69.07,73.76,77.76Z"
++          />
++          <path
++            className="cls-7"
++            d="M60,94.84c-8.58,0-14.57-7-14.57-17.08a30.58,30.58,0,0,1,3.65-14.2c2.76-5,6.64-7.69,10.92-7.69s8.16,2.73,10.92,7.69a30.46,30.46,0,0,1,3.65,14.2C74.57,87.81,68.58,94.84,60,94.84Zm0-37.35c-8.33,0-12.94,12-12.94,20.27,0,10.67,6.5,15.45,12.94,15.45s12.94-4.78,12.94-15.45C72.94,69.48,68.33,57.49,60,57.49Z"
++          />
++          <path
++            className="cls-10"
++            d="M86.33,25.77c-.11,1.46-2.84-.44-3.76.6l-19-11.61a24.79,24.79,0,0,1,1.9-3.83c4-6.56,12.63-13.21,16.94-8.41C85.35,5.79,87,17.3,86.33,25.77Z"
++          />
++          <path className="cls-14" d="M82.74,3,78.17,7s5.16-1.1,5.37-2S82.74,3,82.74,3Z" />
++          <path
++            className="cls-7"
++            d="M82.74,27.51l-.63-.39-19.63-12,.27-.69a25.28,25.28,0,0,1,2-4C67.82,5.4,73.78,0,78.72,0a5.61,5.61,0,0,1,4.34,1.93c3.24,3.61,4.79,15.5,4.15,23.91a1.46,1.46,0,0,1-1.58,1.39,6.87,6.87,0,0,1-1.16-.16,5.68,5.68,0,0,0-1-.15c-.2,0-.25,0-.25,0Zm.74-2.35a7.33,7.33,0,0,1,1.34.18,6.31,6.31,0,0,0,.65.11c.61-8.72-1.18-19.51-3.72-22.34a3.85,3.85,0,0,0-3-1.35c-4.14,0-9.6,4.9-12.5,9.63a23.79,23.79,0,0,0-1.55,3L82.55,25.33A2.45,2.45,0,0,1,83.48,25.16Z"
++          />
++          <path
++            className="cls-7"
++            d="M80.3,20c0,.48-8-4.21-8-4.21a8.33,8.33,0,0,1,.63-1.27c1.34-2.18,4.14-5.57,5.65-3.6A26.58,26.58,0,0,1,80.3,20Z"
++          />
++          <path
++            className="cls-7"
++            d="M80.24,20.92c-.24,0-1,0-8.39-4.36l-.65-.38.27-.7a9.25,9.25,0,0,1,.7-1.41c.66-1.08,3-4.61,5.3-4.61a2.2,2.2,0,0,1,1.8.94c.65.84,2.13,6.85,1.91,9.67A.92.92,0,0,1,80.24,20.92Zm-6.82-5.48c2.29,1.33,4.69,2.67,6,3.33a29.23,29.23,0,0,0-1.58-7.34.42.42,0,0,0-.37-.21c-.84,0-2.5,1.65-3.79,3.77C73.59,15.14,73.5,15.29,73.42,15.44Z"
++          />
++          <path
++            className="cls-12"
++            d="M34.72,26.36c.11,1.45,2.84-.45,3.76.6l19-11.61a24.36,24.36,0,0,0-1.9-3.83C51.57,5,43-1.7,38.64,3.1,35.7,6.38,34.08,17.89,34.72,26.36Z"
++          />
++          <path className="cls-13" d="M37.72,5l5.41,4.06S37,8,36.77,7,37.72,5,37.72,5Z" />
++          <path
++            className="cls-13"
++            d="M35.81,8.7l4.12,2.92s-4.66-.79-4.84-1.46S35.81,8.7,35.81,8.7Z"
++          />
++          <path
++            className="cls-7"
++            d="M38.32,28.09l-.5-.55a.79.79,0,0,0-.25,0,5.72,5.72,0,0,0-1,.14,6,6,0,0,1-1.16.16h0a1.46,1.46,0,0,1-1.58-1.38C33.2,18,34.75,6.12,38,2.52A5.61,5.61,0,0,1,42.33.59c4.94,0,10.9,5.39,14,10.47a25.28,25.28,0,0,1,2,4l.27.68Zm4-25.74a3.87,3.87,0,0,0-3,1.34C36.76,6.53,35,17.33,35.58,26c.19,0,.42-.07.65-.11a4.27,4.27,0,0,1,2.27,0L56.38,15a22.51,22.51,0,0,0-1.55-3C51.93,7.24,46.47,2.35,42.33,2.35Z"
++          />
++          <path
++            className="cls-7"
++            d="M40.75,20.59c0,.49,8-4.2,8-4.2a8.33,8.33,0,0,0-.63-1.27c-1.34-2.19-4.14-5.58-5.65-3.6A26.52,26.52,0,0,0,40.75,20.59Z"
++          />
++          <path
++            className="cls-7"
++            d="M40.81,21.51h0a.93.93,0,0,1-.94-.85c-.22-2.83,1.26-8.83,1.91-9.68a2.23,2.23,0,0,1,1.8-.94c2.3,0,4.64,3.53,5.3,4.62a9.25,9.25,0,0,1,.7,1.41l.27.7-.64.38C41.81,21.49,41.05,21.51,40.81,21.51Zm2.77-9.71c-.07,0-.21,0-.4.25a30.23,30.23,0,0,0-1.55,7.3c1.31-.65,3.71-2,6-3.32a4.17,4.17,0,0,0-.26-.46C46.08,13.46,44.42,11.8,43.58,11.8Z"
++          />
++          <path
++            className="cls-1"
++            d="M60.76,25C60.39,40.75,55,54.24,46.94,59.54,55,54.24,60.76,40.76,60.76,25Z"
++          />
++          <path
++            className="cls-15"
++            d="M68.36,61.19a20.11,20.11,0,0,1,1.94,2.93C76,62.6,80.63,59.76,83.22,56.21c-.19-.41-.39-.8-.59-1.21a34.8,34.8,0,0,1-14.26,6.19Z"
++          />
++          <path
++            className="cls-15"
++            d="M49.84,63.86A20.52,20.52,0,0,1,51.79,61a35,35,0,0,1-13-5.74c-.22.43-.43.88-.65,1.32C40.6,59.77,44.75,62.35,49.84,63.86Z"
++          />
++          <path
++            className="cls-16"
++            d="M60.53,61.94A40.09,40.09,0,0,1,51.79,61h0a20.52,20.52,0,0,0-1.95,2.86h0a38.39,38.39,0,0,0,20.45.26h0a20.11,20.11,0,0,0-1.94-2.93A40.86,40.86,0,0,1,60.53,61.94Z"
++          />
++          <path
++            className="cls-7"
++            d="M60,94.84c-8.58,0-14.57-7-14.57-17.08a30.58,30.58,0,0,1,3.65-14.2c2.76-5,6.64-7.69,10.92-7.69s8.16,2.73,10.92,7.69a30.46,30.46,0,0,1,3.65,14.2C74.57,87.81,68.58,94.84,60,94.84Zm0-37.35c-8.33,0-12.94,12-12.94,20.27,0,10.67,6.5,15.45,12.94,15.45s12.94-4.78,12.94-15.45C72.94,69.48,68.33,57.49,60,57.49Z"
++          />
++          <path
++            className="cls-17"
++            d="M84.89,53.11c-.71.66-1.47,1.29-2.26,1.89.2.41.4.8.59,1.21A12.29,12.29,0,0,0,84.89,53.11Z"
++          />
++          <path
++            className="cls-7"
++            d="M60.76,111C42.89,111,30.88,99.44,30.88,82.2c0-18.45,13.39-46.73,29.88-46.73S90.63,63.75,90.63,82.2C90.63,99.44,78.63,111,60.76,111Zm0-73.88c-4,0-12,2.06-19.81,15.81-5.18,9.1-8.4,20.31-8.4,29.25,0,16.24,11.34,27.15,28.21,27.15S89,98.44,89,82.2c0-8.94-3.22-20.15-8.39-29.25C72.74,39.2,64.8,37.14,60.76,37.14Z"
++          />
++          <path
++            className="cls-12"
++            d="M82.35,33.68a11.85,11.85,0,0,1,5.05-9.53c-5.7-6.63-15.5-11-26.64-11l-1.12,0A44.21,44.21,0,0,1,60.76,25c0,15.81-5.74,29.29-13.82,34.59a40.05,40.05,0,0,0,13.82,2.4c14.14,0,26.12-7,30.29-16.81C86,43.33,82.35,38.88,82.35,33.68Z"
++          />
++          <path
++            className="cls-7"
++            d="M60.76,62.82a40.44,40.44,0,0,1-14.12-2.46.84.84,0,0,1-.57-.72.88.88,0,0,1,.39-.84c8-5.26,13.42-18.87,13.42-33.84a43.14,43.14,0,0,0-1.09-11.57.84.84,0,0,1,.15-.75.88.88,0,0,1,.68-.36h.16l1,0c11,0,21.22,4.23,27.31,11.32a.87.87,0,0,1,.2.67.82.82,0,0,1-.35.61,11,11,0,0,0-4.69,8.82c0,4.71,3.19,8.87,8.11,10.62a.91.91,0,0,1,.52.48.94.94,0,0,1,0,.7C87.43,55.85,74.93,62.82,60.76,62.82ZM48.83,59.26a39.3,39.3,0,0,0,11.93,1.8c13.08,0,24.64-6.17,29.1-15.44-5.13-2.18-8.39-6.77-8.39-11.94A12.56,12.56,0,0,1,86.12,24C80.3,17.75,70.9,14,60.76,14h0a46.73,46.73,0,0,1,.89,11C61.64,39.87,56.66,53.07,48.83,59.26Z"
++          />
++          <path
++            className="cls-10"
++            d="M60.76,25a62,62,0,0,0-1.12-11.79c-17.08.46-30.76,11.19-30.76,24.38,0,9.69,7.38,18.06,18.06,22C55,54.24,60.39,40.75,60.76,25Z"
++          />
++          <path
++            className="cls-7"
++            d="M46.94,60.42a.8.8,0,0,1-.3-.06C35.32,56.19,28,47.23,28,37.54c0-13.69,13.89-24.79,31.62-25.26a.89.89,0,0,1,.88.72,62.1,62.1,0,0,1,1.14,12c-.37,16-6,29.89-14.22,35.31A.83.83,0,0,1,46.94,60.42Zm12-46.35C42.51,14.8,29.76,25,29.76,37.54c0,8.83,6.69,17,17.06,21,7.6-5.28,12.7-18.4,13.06-33.62A61.09,61.09,0,0,0,58.91,14.07Z"
++          />
++          <path
++            className="cls-14"
++            d="M31.47,28.66l5.41,4.06s-6.12-1.1-6.36-2S31.47,28.66,31.47,28.66Z"
++          />
++          <path
++            className="cls-14"
++            d="M30.08,32.07l6.29,4.06s-7.1-1.1-7.39-2S30.08,32.07,30.08,32.07Z"
++          />
++          <path
++            className="cls-13"
++            d="M80.35,44.29a6,6,0,0,0-5.75-6.24,5.74,5.74,0,0,0-5.17,3.5c5,1.38,8.39,4,8.39,7.46,0,.16,0,.31,0,.47A6.38,6.38,0,0,0,80.35,44.29Z"
++          />
++          <path
++            className="cls-10"
++            d="M59.64,13.16A62,62,0,0,1,60.76,25,44.21,44.21,0,0,0,59.64,13.16Z"
++          />
++          <path
++            className="cls-7"
++            d="M60.76,25.84h0a.88.88,0,0,1-.87-.88,60.35,60.35,0,0,0-1.11-11.63.88.88,0,0,1,1.72-.39,44.68,44.68,0,0,1,1.15,12A.88.88,0,0,1,60.76,25.84Z"
++          />
++          <path
++            className="cls-10"
++            d="M87.4,24.15a11.85,11.85,0,0,0-5.05,9.53c0,5.2,3.6,9.65,8.7,11.45a19.25,19.25,0,0,0,1.58-7.59A20.5,20.5,0,0,0,87.4,24.15Z"
++          />
++          <path
++            className="cls-7"
++            d="M91.53,46.24,90.75,46c-5.64-2-9.28-6.82-9.28-12.28a12.69,12.69,0,0,1,5.41-10.24l.65-.48.54.62a21.31,21.31,0,0,1,5.44,14,20.25,20.25,0,0,1-1.65,7.94ZM87.27,25.38a10.8,10.8,0,0,0-4,8.3c0,4.45,2.85,8.42,7.33,10.32a18.28,18.28,0,0,0,1.19-6.46A19.39,19.39,0,0,0,87.27,25.38Z"
++          />
++          <ellipse
++            className="cls-7"
++            cx="51.76"
++            cy="29.76"
++            rx="7.42"
++            ry="6.39"
++            transform="translate(-3.36 6.81) rotate(-7.3)"
++          />
++          <ellipse
++            className="cls-6"
++            cx="52.08"
++            cy="30.7"
++            rx="5.39"
++            ry="4.65"
++            transform="translate(-3.48 6.86) rotate(-7.3)"
++          />
++          <ellipse
++            className="cls-7"
++            cx="52.08"
++            cy="30.93"
++            rx="2.02"
++            ry="1.78"
++            transform="translate(-3.5 6.85) rotate(-7.28)"
++          />
++          <path
++            className="cls-7"
++            d="M46,25.06a.54.54,0,0,1-.22,0l-2-.8a.59.59,0,0,1,.43-1.09l2,.8A.59.59,0,0,1,46,25.06Z"
++          />
++          <path
++            className="cls-7"
++            d="M47.63,23.68a.59.59,0,0,1-.33-.11l-2.46-1.72a.59.59,0,0,1,.68-1L48,22.61a.59.59,0,0,1,.15.82A.61.61,0,0,1,47.63,23.68Z"
++          />
++          <ellipse
++            className="cls-7"
++            cx="71.11"
++            cy="29.76"
++            rx="6.39"
++            ry="7.42"
++            transform="translate(32.56 96.51) rotate(-82.7)"
++          />
++          <ellipse
++            className="cls-6"
++            cx="70.78"
++            cy="30.7"
++            rx="4.65"
++            ry="5.39"
++            transform="translate(31.34 97.01) rotate(-82.7)"
++          />
++          <ellipse
++            className="cls-7"
++            cx="70.78"
++            cy="30.93"
++            rx="1.78"
++            ry="2.02"
++            transform="translate(31.13 97.23) rotate(-82.72)"
++          />
++          <path
++            className="cls-7"
++            d="M76.86,25.06a.58.58,0,0,1-.21-1.13l2-.8a.59.59,0,0,1,.77.33.6.6,0,0,1-.34.76l-2,.8A.6.6,0,0,1,76.86,25.06Z"
++          />
++          <path
++            className="cls-7"
++            d="M75.23,23.68a.61.61,0,0,1-.48-.25.6.6,0,0,1,.14-.82l2.46-1.73a.59.59,0,0,1,.68,1l-2.46,1.72A.6.6,0,0,1,75.23,23.68Z"
++          />
++          <path
++            className="cls-6"
++            d="M77.82,49c0,5.24-7.67,9.49-17.14,9.49S43.54,54.25,43.54,49s7.67-8.55,17.14-8.55S77.82,43.77,77.82,49Z"
++          />
++          <path
++            className="cls-18"
++            d="M60.77,56.68c-6.21,0-12-1.57-17.23-7.67.42,6.4,8.23,9.22,17,9.22,9.46,0,16.31-3.61,17.14-9.22C72.8,54.34,69.56,56.63,60.77,56.68Z"
++          />
++          <path
++            className="cls-7"
++            d="M61,55.7a13.59,13.59,0,0,1-12.17-7,.59.59,0,1,1,1-.54A12.41,12.41,0,0,0,61,54.53h.16a12.48,12.48,0,0,0,10.91-6.24.58.58,0,1,1,1,.55A13.45,13.45,0,0,1,61.15,55.7Z"
++          />
++          <path
++            className="cls-7"
++            d="M60.68,59.39c-10.11,0-18-4.56-18-10.38,0-5.55,7.41-9.43,18-9.43s18,3.88,18,9.43C78.7,54.83,70.79,59.39,60.68,59.39Zm0-18c-9.42,0-16.26,3.22-16.26,7.66,0,4.67,7.45,8.61,16.26,8.61S76.94,53.68,76.94,49C76.94,44.57,70.1,41.35,60.68,41.35Z"
++          />
++          <rect className="cls-7" x="60.26" y="44.04" width="1.37" height="11.37" />
++          <path
++            className="cls-7"
++            d="M66,41c0,2.78-5,4.49-5,4.49s-5-1.71-5-4.49,2.24-2.45,5-2.45S66,38.26,66,41Z"
++          />
++          <ellipse className="cls-19" cx="60.95" cy="40.39" rx="3.27" ry="0.56" />
++          <path
++            className="cls-13"
++            d="M77.94,99c0,2.46-1.12,13-7.42,12.19-3.4-.42-8.24-5.74-6.2-7.12s-2.17-9,.75-7.1S77.94,96.56,77.94,99Z"
++          />
++          <path
++            className="cls-6"
++            d="M74.56,108.31c0,2.47-2.33,3.34-6,3.34s-6.61-2-6.61-4.46,1.64-4.52,4.75-2.6S74.56,105.85,74.56,108.31Z"
++          />
++          <path
++            className="cls-18"
++            d="M68.18,109.31a17,17,0,0,1-6-3.78,3.46,3.46,0,0,0-.24,1.24c0,2.7,3.2,4.88,7.14,4.88A9.15,9.15,0,0,0,74,110.34,17.09,17.09,0,0,1,68.18,109.31Z"
++          />
++          <path
++            className="cls-7"
++            d="M69.11,112.39c-4.34,0-7.88-2.52-7.88-5.62,0-2,1.4-3.75,3.7-4.77a29.38,29.38,0,0,1-.59-5,.72.72,0,0,1,.7-.76.74.74,0,0,1,.76.71,27.91,27.91,0,0,0,.69,5.31l.15.64-.61.22c-2.05.75-3.33,2.13-3.33,3.63,0,2.29,2.88,4.15,6.41,4.15,2.83,0,5.36-1.23,6.16-3a47.12,47.12,0,0,0,3.08-11.17.72.72,0,0,1,.83-.62.73.73,0,0,1,.62.83,47.87,47.87,0,0,1-3.18,11.54C75.56,110.84,72.55,112.39,69.11,112.39Z"
++          />
++          <path
++            className="cls-10"
++            d="M43.09,99c0,2.46,1.12,13,7.41,12.19,3.41-.42,8.24-5.74,6.2-7.12s1.33-9-1.58-7.1S43.09,96.56,43.09,99Z"
++          />
++          <path
++            className="cls-6"
++            d="M46.47,108.31c0,2.47,2.32,3.34,6,3.34s6.61-2,6.61-4.46-1.65-4.52-4.76-2.6S46.47,105.85,46.47,108.31Z"
++          />
++          <path
++            className="cls-18"
++            d="M53.48,109.53a16.83,16.83,0,0,0,5.77-4.08,3.71,3.71,0,0,1,.31,1.23c.13,2.7-3,5-6.89,5.25a9.23,9.23,0,0,1-4.92-1.07A17.06,17.06,0,0,0,53.48,109.53Z"
++          />
++          <path
++            className="cls-7"
++            d="M51.91,112.39c-3.43,0-6.44-1.55-7.49-3.86A47.59,47.59,0,0,1,41.23,97a.73.73,0,1,1,1.45-.21,46.6,46.6,0,0,0,3.08,11.19c.8,1.75,3.33,3,6.15,3,3.54,0,6.41-1.86,6.41-4.15,0-1.5-1.27-2.88-3.33-3.63l-.61-.22.15-.64A27.91,27.91,0,0,0,55.22,97a.74.74,0,1,1,1.47,0,29.38,29.38,0,0,1-.59,5c2.29,1,3.69,2.81,3.69,4.77C59.79,109.87,56.26,112.39,51.91,112.39Z"
++          />
++          <circle className="cls-18" cx="71.22" cy="45.86" r="0.85" />
++          <circle className="cls-18" cx="69.55" cy="43.76" r="0.85" />
++          <circle className="cls-18" cx="69" cy="46.77" r="0.85" />
++          <circle className="cls-18" cx="50.87" cy="45.93" r="0.85" />
++          <circle className="cls-18" cx="53.12" cy="46.77" r="0.85" />
++          <circle className="cls-18" cx="52.76" cy="44.04" r="0.85" />
++          <path
++            className="cls-7"
++            d="M84,46.59h0l-12.2-.15a.59.59,0,1,1,0-1.17L84,45.41a.59.59,0,0,1,0,1.18Z"
++          />
++          <path
++            className="cls-7"
++            d="M70.15,44.31a.59.59,0,0,1-.21-1.14l11.47-4.51a.58.58,0,0,1,.76.33.59.59,0,0,1-.33.76L70.37,44.26A.59.59,0,0,1,70.15,44.31Z"
++          />
++          <path
++            className="cls-7"
++            d="M38.26,46.59a.59.59,0,0,1-.59-.58.6.6,0,0,1,.58-.6l12.2-.14h0a.59.59,0,0,1,0,1.17l-12.2.15Z"
++          />
++          <path
++            className="cls-7"
++            d="M52.13,44.31a.54.54,0,0,1-.21-.05L40.44,39.75a.59.59,0,1,1,.43-1.09l11.48,4.51a.59.59,0,0,1,.33.76A.59.59,0,0,1,52.13,44.31Z"
++          />
++          <path
++            className="cls-20"
++            d="M127.71,96.86c0-.28,0-.53,0-.73a12.51,12.51,0,0,0-12.51-12.52,12.27,12.27,0,0,0-7.37,2.55,13.93,13.93,0,0,0-3.72,4.2,7.18,7.18,0,0,0-3.3-.8,6.7,6.7,0,0,0-5,2.43,8.47,8.47,0,0,0-1.9,3.63,9.26,9.26,0,0,0-4,3,9,9,0,0,0-1.81,5.46,9.14,9.14,0,0,0,9.13,9.13v0h29.62a8.2,8.2,0,0,0,8.19-8.19A8.3,8.3,0,0,0,127.71,96.86Z"
++          />
++          <path
++            className="cls-21"
++            d="M126.86,113.23h0c4.51,0,8.51-3.69,8.19-8.19-.25-3.54-2-4.8-4.52-6.88l-25.93,15S126.86,113.23,126.86,113.23Z"
++          />
++          <path
++            className="cls-22"
++            d="M172.59,40V32.18H155.44V64.9h17.15V56.14h9.07v6.64c0,4-.38,5.82-1.29,7.33-1.81,2.72-4,3.56-9.22,3.63H156.34c-5.51,0-7.93-1.13-9.52-4.31-.75-1.36-1-2.94-1-6.65V34.37c0-4.15.3-5.81,1.28-7.33,1.82-2.72,4-3.62,9.22-3.7h14.81c5.52.08,7.86,1.13,9.52,4.31.68,1.28,1,3.1,1,6.72V40Z"
++          />
++          <path
++            className="cls-22"
++            d="M192.24,43.74V34.22c0-4.23.3-5.82,1.51-7.4,1.81-2.57,3.93-3.4,8.54-3.48h14.65c5,.08,7.33,1.13,9,4.16.83,1.36,1.05,3,1.05,6.72v31h4.54v8.54H212.86V65.2h4.54V52.58H201.83V65.2h4.54v8.54H187.7V65.2h4.54V52.58h-6.05V43.74Zm9.59,0H217.4V32.18H201.83Z"
++          />
++          <path
++            className="cls-22"
++            d="M255.71,23.34v8.54h-4.53v33h12.54V56.14h9.07v17.6H237.05V65.2h4.53V31.88h-4.53V23.34Z"
++          />
++          <path
++            className="cls-22"
++            d="M296,23.34v8.54h-4.54V65.2H296v8.54H277.32V65.2h4.54V31.88h-4.54V23.34Z"
++          />
++          <path
++            className="cls-22"
++            d="M329.76,40V32.18H312.61V64.9h17.15V56.14h9.07v6.64c0,4-.38,5.82-1.28,7.33-1.82,2.72-4,3.56-9.22,3.63H313.52c-5.52,0-7.94-1.13-9.52-4.31-.76-1.36-1-2.94-1-6.65V34.37c0-4.15.31-5.81,1.29-7.33,1.81-2.72,4-3.62,9.22-3.7h14.81c5.51.08,7.86,1.13,9.52,4.31.68,1.28,1,3.1,1,6.72V40Z"
++          />
++          <path
++            className="cls-22"
++            d="M370.57,23.34h1.58c5.52.08,7.94,1.13,9.53,4.31.75,1.28,1,3.1,1,6.72v16.1c0,4-.3,5.82-1.29,7.33-1.74,2.72-4,3.62-9.22,3.62H356.36c-5.51,0-7.93-1.05-9.52-4.23-.68-1.36-1-3.17-1-6.72V34.37c0-4.08.38-5.89,1.28-7.33,1.82-2.72,4-3.62,9.22-3.7h14.21ZM355.45,52.58h17.61V32.18H355.45Zm16.7,12.62v8.54H356.51V65.2Z"
++          />
++          <path
++            className="cls-22"
++            d="M158.58,95.48a17.31,17.31,0,0,1-.18,3.69c-.23,1-.81,2.82-4,2.82a3.73,3.73,0,0,1-4.09-3.25,38.59,38.59,0,0,1-.18-5.68,36.89,36.89,0,0,1,.2-6c.15-.78.61-3.34,4.25-3.34a3.53,3.53,0,0,1,3.72,2.56,13.93,13.93,0,0,1,.17,3.29h-2.06V88.24c0-1.21,0-2.66-1.83-2.66s-2,1.5-2.11,2.18c-.15,1.28-.15,4-.15,5.33,0,1.08.05,4.67.15,5.38a1.9,1.9,0,0,0,2.06,1.66,1.84,1.84,0,0,0,1.88-1.69,15.49,15.49,0,0,0,.1-3Z"
++          />
++          <path className="cls-22" d="M210.6,101.73h-7.43V84h2.23V99.75h5.2Z" />
++          <path
++            className="cls-22"
++            d="M262.94,97.36c-.13,2.24-.68,4.63-4.35,4.63a4.87,4.87,0,0,1-2.39-.51,3.54,3.54,0,0,1-1.71-2.63,45.57,45.57,0,0,1-.17-5.38c0-1.13.05-4.85.12-5.81s.43-3.94,4.45-3.94c3.7,0,4,2.76,4.1,3.71.15,1.51.1,4.7.1,5.18C263.09,94,263,96,262.94,97.36Zm-6.34-1.15c.06,1.7-.25,3.94,2.09,3.94,1.89,0,2-1.66,2-2.81.1-1.49.15-3.3.12-4.73s0-2.79-.05-4.17c0-1.11-.05-2.86-2-2.86s-2.09,1.93-2.14,2.84-.05,1.15-.05,5.42C256.58,95.05,256.58,95.07,256.6,96.21Z"
++          />
++          <path
++            className="cls-22"
++            d="M316.93,84V96c0,2.19,0,3.07-.43,4-.8,1.88-2.94,2.06-3.87,2.06-1.91,0-3.29-.58-3.92-1.94-.35-.78-.4-1.28-.4-4V84h2.23V96.93c0,1.54,0,3.15,2.14,3.15,1.91,0,2-1.34,2-2.17s0-.85,0-2.16V84Z"
++          />
++          <path
++            className="cls-22"
++            d="M362.3,101.73V84h3.34c1.73,0,3.32,0,4.37,1.33.83,1,.91,2,.91,6.26,0,1,0,2.09-.05,4.5a8,8,0,0,1-.71,4c-1,1.6-2.66,1.6-4.57,1.6Zm2.21-2h1.43c1.41,0,2.42-.12,2.67-1.7.12-.83.15-3.32.15-4.25,0-1.64,0-2.26,0-4,0-1.94-.05-2.89-.83-3.45-.55-.37-1-.37-3.39-.37Z"
++          />
++        </g>
++      </g>
++    </svg>
++  );
++}
+diff --git a/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx
+new file mode 100644
+index 000000000..1af36ada8
+--- /dev/null
++++ b/packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx
 @@ -0,0 +1,674 @@
 +/*
 + * Licensed to Elasticsearch B.V. under one or more contributor
@@ -2702,11 +2648,197 @@ index 00000000000..1af36ada86f
 +    </svg>
 +  );
 +}
-diff --git a/src/core/tigera_icons/calico_logo.svg b/src/core/tigera_icons/calico_logo.svg
+diff --git a/packages/core/rendering/core-rendering-server-internal/tsconfig.json b/packages/core/rendering/core-rendering-server-internal/tsconfig.json
+index e306dca24..8093be675 100644
+--- a/packages/core/rendering/core-rendering-server-internal/tsconfig.json
++++ b/packages/core/rendering/core-rendering-server-internal/tsconfig.json
+@@ -11,6 +11,7 @@
+   "include": [
+     "**/*.ts",
+     "**/*.tsx",
++    "tigera_icons/*/*"
+   ],
+   "kbn_references": [
+     "@kbn/i18n",
+diff --git a/packages/core/root/core-root-browser-internal/src/core_system.ts b/packages/core/root/core-root-browser-internal/src/core_system.ts
+index f06f1becb..d3c86d3b7 100644
+--- a/packages/core/root/core-root-browser-internal/src/core_system.ts
++++ b/packages/core/root/core-root-browser-internal/src/core_system.ts
+@@ -342,6 +342,7 @@ export class CoreSystem {
+         injectedMetadata,
+         notifications,
+         customBranding,
++        uiSettings,
+       });
+       const deprecations = this.deprecations.start({ http });
+ 
+diff --git a/plugins/.empty b/plugins/.empty
+deleted file mode 100644
+index e69de29bb..000000000
+diff --git a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
+index 726c41f39..67ad475fc 100644
+--- a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
++++ b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
+@@ -18,6 +18,7 @@ import {
+   euiSelectableTemplateSitewideRenderOptions,
+   useEuiTheme,
+ } from '@elastic/eui';
++import { i18n } from '@kbn/i18n';
+ import { EuiSelectableOnChangeEvent } from '@elastic/eui/src/components/selectable/selectable';
+ import { css } from '@emotion/react';
+ import type { GlobalSearchFindParams, GlobalSearchResult } from '@kbn/global-search-plugin/public';
+@@ -50,7 +51,15 @@ const EmptyMessage = () => (
+ );
+ 
+ export const SearchBar: FC<SearchBarProps> = (opts) => {
+-  const { globalSearch, taggingApi, navigateToUrl, reportEvent, chromeStyle$, ...props } = opts;
++  const {
++    globalSearch,
++    taggingApi,
++    navigateToUrl,
++    reportEvent,
++    chromeStyle$,
++    licenseEdition,
++    ...props
++  } = opts;
+ 
+   const isMounted = useMountedState();
+   const { euiTheme } = useEuiTheme();
+@@ -72,6 +81,7 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
+   const [showAppend, setShowAppend] = useState<boolean>(true);
+   const UNKNOWN_TAG_ID = '__unknown__';
+   const [isLoading, setIsLoading] = useState<boolean>(false);
++  const isEnterprise = licenseEdition === 'enterpriseEdition';
+ 
+   useEffect(() => {
+     if (initialLoad) {
+@@ -347,8 +357,12 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
+         'data-test-subj': 'nav-search-input',
+         inputRef: setSearchRef,
+         compressed: true,
+-        'aria-label': i18nStrings.placeholderText,
+-        placeholder: i18nStrings.placeholderText,
++        'aria-label': i18n.translate('xpack.globalSearchBar.searchBar.placeholder', {
++          defaultMessage: `Search Calico ${isEnterprise ? 'Enterprise' : 'Cloud'} Elastic`,
++        }),
++        placeholder: i18n.translate('xpack.globalSearchBar.searchBar.placeholder', {
++          defaultMessage: `Search Calico ${isEnterprise ? 'Enterprise' : 'Cloud'} Elastic`,
++        }),
+         onFocus: () => {
+           reportEvent.searchFocus();
+           setInitialLoad(true);
+diff --git a/x-pack/plugins/global_search_bar/public/components/types.ts b/x-pack/plugins/global_search_bar/public/components/types.ts
+index de0af3662..281d42f36 100644
+--- a/x-pack/plugins/global_search_bar/public/components/types.ts
++++ b/x-pack/plugins/global_search_bar/public/components/types.ts
+@@ -20,4 +20,5 @@ export interface SearchBarProps {
+   taggingApi?: SavedObjectTaggingPluginStart;
+   basePathUrl: string;
+   chromeStyle$: Observable<ChromeStyle>;
++  licenseEdition: string;
+ }
+diff --git a/x-pack/plugins/global_search_bar/public/plugin.tsx b/x-pack/plugins/global_search_bar/public/plugin.tsx
+index 00cddfb65..f7f8f1f3d 100644
+--- a/x-pack/plugins/global_search_bar/public/plugin.tsx
++++ b/x-pack/plugins/global_search_bar/public/plugin.tsx
+@@ -39,6 +39,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}, {}, GlobalSearchBar
+     const { core, globalSearch, savedObjectsTagging, usageCollection } = deps;
+     const { application, http, theme, i18n } = core;
+     const reportEvent = new EventReporter({ analytics: core.analytics, usageCollection });
++    const licenseEdition = core.uiSettings.get('tigeratagmanager.licenseEdition');
+ 
+     const navControl: ChromeNavControl = {
+       order: 1000,
+@@ -52,6 +53,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}, {}, GlobalSearchBar
+               basePathUrl={http.basePath.prepend('/plugins/globalSearchBar/assets/')}
+               chromeStyle$={core.chrome.getChromeStyle$()}
+               reportEvent={reportEvent}
++              licenseEdition={licenseEdition}
+             />
+           </KibanaRenderContextProvider>,
+           container
+diff --git a/x-pack/plugins/security/public/authentication/login/login_app.ts b/x-pack/plugins/security/public/authentication/login/login_app.ts
+index 495bd8d10..7e6db5d46 100644
+--- a/x-pack/plugins/security/public/authentication/login/login_app.ts
++++ b/x-pack/plugins/security/public/authentication/login/login_app.ts
+@@ -46,6 +46,7 @@ export const loginApp = Object.freeze({
+             fatalErrors: coreStart.fatalErrors,
+             loginAssistanceMessage: config.loginAssistanceMessage,
+             sameSiteCookies: config.sameSiteCookies,
++            licenseEdition: coreStart.uiSettings.get('tigeratagmanager.licenseEdition'),
+           }
+         );
+       },
+diff --git a/x-pack/plugins/security/public/authentication/login/login_page.tsx b/x-pack/plugins/security/public/authentication/login/login_page.tsx
+index 741f61016..b69e8e7d8 100644
+--- a/x-pack/plugins/security/public/authentication/login/login_page.tsx
++++ b/x-pack/plugins/security/public/authentication/login/login_page.tsx
+@@ -12,7 +12,6 @@ import {
+   EuiFlexGroup,
+   EuiFlexItem,
+   EuiIcon,
+-  EuiImage,
+   EuiSpacer,
+   EuiText,
+   EuiTitle,
+@@ -44,6 +43,7 @@ import {
+ } from '../../../common/constants';
+ import type { LoginState } from '../../../common/login_state';
+ import type { LogoutReason } from '../../../common/types';
++import calicoLogo from '../../../tigera_icons/calico_logo.svg';
+ import type { ConfigType } from '../../config';
+ 
+ interface Props {
+@@ -53,6 +53,7 @@ interface Props {
+   loginAssistanceMessage: string;
+   sameSiteCookies?: ConfigType['sameSiteCookies'];
+   customBranding: CustomBrandingStart;
++  licenseEdition?: string;
+ }
+ 
+ interface State {
+@@ -146,27 +147,26 @@ export class LoginPage extends Component<Props, State> {
+       ['loginWelcome__contentDisabledForm']: !loginIsSupported,
+     });
+ 
+-    const customLogo = this.state.customBranding?.logo;
+-    const logo = customLogo ? (
+-      <EuiImage src={customLogo} size={40} alt="logo" />
+-    ) : (
+-      <EuiIcon type="logoElastic" size="xxl" />
+-    );
+-    // custom logo needs to be centered
+-    const logoStyle = customLogo ? { padding: 0 } : {};
++    const logoStyle = { padding: 0 };
++
++    const welcomeTitle =
++      this.props.licenseEdition === 'enterpriseEdition'
++      ? 'Welcome to Calico Enterprise Elastic'
++      : 'Welcome to Calico Cloud Elastic';
++
+     return (
+       <div className="loginWelcome login-form">
+         <header className="loginWelcome__header">
+           <div className={contentHeaderClasses}>
+             <EuiSpacer size="xxl" />
+             <span className="loginWelcome__logo" style={logoStyle}>
+-              {logo}
++              <EuiIcon type={calicoLogo} size="original" />
+             </span>
+             <EuiTitle size="m" className="loginWelcome__title" data-test-subj="loginWelcomeTitle">
+               <h1>
+                 <FormattedMessage
+                   id="xpack.security.loginPage.welcomeTitle"
+-                  defaultMessage="Welcome to Elastic"
++                  defaultMessage={welcomeTitle}
+                 />
+               </h1>
+             </EuiTitle>
+diff --git a/x-pack/plugins/security/tigera_icons/calico_logo.svg b/x-pack/plugins/security/tigera_icons/calico_logo.svg
 new file mode 100644
-index 00000000000..9e0f3cbae77
+index 000000000..9e0f3cbae
 --- /dev/null
-+++ b/src/core/tigera_icons/calico_logo.svg
++++ b/x-pack/plugins/security/tigera_icons/calico_logo.svg
 @@ -0,0 +1,55 @@
 +<svg viewBox="0 0 125 125" fill="none" xmlns="http://www.w3.org/2000/svg">
 +<path d="M91.148 102.481C88.5518 106.625 76.8593 109.751 62.8203 109.751C48.7813 109.751 37.0788 106.625 34.4827 102.481C31.1177 103.779 29.1606 105.327 29.1606 106.985C29.1606 111.598 44.2281 115.333 62.8203 115.333C81.4125 115.333 96.47 111.598 96.47 106.985C96.47 105.327 94.5129 103.779 91.148 102.481Z" fill="#B0B2B8"/>
@@ -2763,740 +2895,18 @@ index 00000000000..9e0f3cbae77
 +<path d="M53.8835 44.13C53.8143 44.1442 53.743 44.1442 53.6738 44.13L42.2409 39.6361C42.1604 39.6149 42.0853 39.5769 42.0206 39.5246C41.9558 39.4722 41.9029 39.4068 41.8653 39.3325C41.8277 39.2583 41.8063 39.1769 41.8024 39.0937C41.7985 39.0106 41.8123 38.9275 41.8429 38.8501C41.8734 38.7727 41.92 38.7026 41.9796 38.6445C42.0392 38.5863 42.1104 38.5415 42.1886 38.5129C42.2668 38.4843 42.3501 38.4727 42.4331 38.4786C42.5161 38.4846 42.597 38.5081 42.6702 38.5476L54.1031 43.0415C54.2075 43.1041 54.2899 43.1975 54.339 43.3088C54.3882 43.4202 54.4016 43.544 54.3776 43.6633C54.3535 43.7826 54.293 43.8915 54.2046 43.9751C54.1161 44.0586 54.0039 44.1128 53.8835 44.13Z" fill="#141414"/>
 +<path fill-rule="evenodd" clip-rule="evenodd" d="M52.3805 61C51.7588 61.7962 51.175 62.6823 50.6346 63.6546C48.2865 68.0122 47.0388 72.877 47 77.8262C47 87.8061 52.9711 94.7921 61.5083 94.7921C70.0555 94.7921 76.0166 87.7962 76.0166 77.7863C75.97 72.852 74.7262 68.0027 72.392 63.6546C71.8496 62.6823 71.2642 61.7962 70.6413 61H68.529C72.3573 65.1436 74.399 72.2907 74.399 77.8062C74.399 88.4349 67.9187 93.1953 61.5083 93.1953C55.0979 93.1953 48.6176 88.4149 48.6176 77.7863C48.6176 72.2844 50.6636 65.1422 54.4914 61H52.3805Z" fill="#141414"/>
 +</svg>
-diff --git a/src/core/tsconfig.json b/src/core/tsconfig.json
-index 9c042577cfe..1e89352a963 100644
---- a/src/core/tsconfig.json
-+++ b/src/core/tsconfig.json
-@@ -8,11 +8,14 @@
-     "isolatedModules": true,
-   },
-   "include": [
-+    "../../typings/**/*",
-+    "../../typings/index.d.ts",
-     "public/**/*",
-     "server/**/*",
-     "types/**/*",
-     "test_helpers/**/*",
-     "utils/**/*",
--    "index.ts"
-+    "index.ts",
-+    "tigera_icons/**/*"
-   ]
- }
-diff --git a/src/plugins/google_tag_manager/.eslintrc.js b/src/plugins/google_tag_manager/.eslintrc.js
-new file mode 100644
-index 00000000000..b267018448b
---- /dev/null
-+++ b/src/plugins/google_tag_manager/.eslintrc.js
-@@ -0,0 +1,7 @@
-+module.exports = {
-+  root: true,
-+  extends: ['@elastic/eslint-config-kibana', 'plugin:@elastic/eui/recommended'],
-+  rules: {
-+    '@kbn/eslint/require-license-header': 'off',
-+  },
-+};
-diff --git a/src/plugins/google_tag_manager/.gitignore b/src/plugins/google_tag_manager/.gitignore
-new file mode 100644
-index 00000000000..c3dca1b96fc
---- /dev/null
-+++ b/src/plugins/google_tag_manager/.gitignore
-@@ -0,0 +1,2 @@
-+/build
-+/target
-diff --git a/src/plugins/google_tag_manager/README.md b/src/plugins/google_tag_manager/README.md
-new file mode 100644
-index 00000000000..1340683c16b
---- /dev/null
-+++ b/src/plugins/google_tag_manager/README.md
-@@ -0,0 +1,19 @@
-+# googletagmanager
-+
-+A Kibana plugin
-+
-+---
-+
-+## Development
-+
-+See the [kibana contributing guide](https://github.com/elastic/kibana/blob/master/CONTRIBUTING.md) for instructions setting up your development environment.
-+
-+## Scripts
-+
-+<dl>
-+  <dt><code>yarn kbn bootstrap</code></dt>
-+  <dd>Execute this to install node_modules and setup the dependencies in your plugin and in Kibana</dd>
-+
-+  <dt><code>yarn plugin-helpers build</code></dt>
-+  <dd>Execute this to create a distributable version of this plugin that can be installed in Kibana</dd>
-+</dl>
-diff --git a/src/plugins/google_tag_manager/common/index.ts b/src/plugins/google_tag_manager/common/index.ts
-new file mode 100644
-index 00000000000..6e4193c05c5
---- /dev/null
-+++ b/src/plugins/google_tag_manager/common/index.ts
-@@ -0,0 +1,2 @@
-+export const PLUGIN_ID = 'googletagmanager';
-+export const PLUGIN_NAME = 'GoogleTagManager';
-diff --git a/src/plugins/google_tag_manager/config.ts b/src/plugins/google_tag_manager/config.ts
-new file mode 100644
-index 00000000000..989f573d95b
---- /dev/null
-+++ b/src/plugins/google_tag_manager/config.ts
-@@ -0,0 +1,8 @@
-+import { schema, TypeOf } from '@kbn/config-schema';
-+
-+export const configSchema = schema.object({
-+  container: schema.string(),
-+  enabled: schema.boolean({ defaultValue: true }),
-+});
-+
-+export type ConfigSchema = TypeOf<typeof configSchema>;
-diff --git a/src/plugins/google_tag_manager/kibana.json b/src/plugins/google_tag_manager/kibana.json
-new file mode 100644
-index 00000000000..45f8d9ef9ab
---- /dev/null
-+++ b/src/plugins/google_tag_manager/kibana.json
-@@ -0,0 +1,13 @@
-+{
-+  "id": "googletagmanager",
-+  "version": "1.0.0",
-+  "kibanaVersion": "kibana",
-+  "server": true,
-+  "ui": true,
-+  "requiredPlugins": [],
-+  "optionalPlugins": [],
-+  "owner": {
-+    "name": "Google",
-+    "githubTeam": "google"
-+  }
-+}
-diff --git a/src/plugins/google_tag_manager/package.json b/src/plugins/google_tag_manager/package.json
-new file mode 100644
-index 00000000000..58787617d66
---- /dev/null
-+++ b/src/plugins/google_tag_manager/package.json
-@@ -0,0 +1,10 @@
-+{
-+  "name": "googletagmanager",
-+  "version": "0.0.0",
-+  "private": true,
-+  "scripts": {
-+    "build": "yarn plugin-helpers build",
-+    "plugin-helpers": "node ../../../scripts/plugin_helpers",
-+    "kbn": "node ../../../scripts/kbn"
-+  }
-+}
-diff --git a/src/plugins/google_tag_manager/public/index.ts b/src/plugins/google_tag_manager/public/index.ts
-new file mode 100644
-index 00000000000..187e66e8e6f
---- /dev/null
-+++ b/src/plugins/google_tag_manager/public/index.ts
-@@ -0,0 +1,8 @@
-+import { PluginInitializerContext } from 'kibana/public';
-+
-+import { ConfigSchema } from '../config';
-+import { GoogleTagManagerPlugin } from './plugin';
-+
-+export function plugin(context: PluginInitializerContext<ConfigSchema>) {
-+  return new GoogleTagManagerPlugin(context);
-+}
-diff --git a/src/plugins/google_tag_manager/public/plugin.ts b/src/plugins/google_tag_manager/public/plugin.ts
-new file mode 100644
-index 00000000000..5129bb7fd73
---- /dev/null
-+++ b/src/plugins/google_tag_manager/public/plugin.ts
-@@ -0,0 +1,29 @@
-+import { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from 'kibana/public';
-+
-+import { ConfigSchema } from '../config';
-+
-+export class GoogleTagManagerPlugin implements Plugin {
-+  constructor(private readonly initializerContext: PluginInitializerContext<ConfigSchema>) {}
-+
-+  public setup(_core: CoreSetup) {
-+    const config = this.initializerContext.config.get();
-+    initGoogleTagManager(config.container);
-+  }
-+
-+  public start(_core: CoreStart) {}
-+
-+  public stop() {}
-+}
-+
-+function initGoogleTagManager(containerId: string) {
-+  (function (w: any, d: any, s, l, i) {
-+    w[l] = w[l] || [];
-+    w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-+    const f = d.getElementsByTagName(s)[0];
-+    const j = d.createElement(s);
-+    const dl = l !== 'dataLayer' ? '&l=' + l : '';
-+    j.async = true;
-+    j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-+    f.parentNode.insertBefore(j, f);
-+  })(window, document, 'script', 'dataLayer', containerId);
-+}
-diff --git a/src/plugins/google_tag_manager/server/index.ts b/src/plugins/google_tag_manager/server/index.ts
-new file mode 100644
-index 00000000000..4569629bd9e
---- /dev/null
-+++ b/src/plugins/google_tag_manager/server/index.ts
-@@ -0,0 +1,15 @@
-+import { PluginConfigDescriptor, PluginInitializerContext } from 'kibana/server';
-+
-+import { configSchema, ConfigSchema } from '../config';
-+import { GoogleTagManagerPlugin } from './plugin';
-+
-+export const config: PluginConfigDescriptor<ConfigSchema> = {
-+  schema: configSchema,
-+  exposeToBrowser: {
-+    container: true,
-+  },
-+};
-+
-+export function plugin(context: PluginInitializerContext<ConfigSchema>) {
-+  return new GoogleTagManagerPlugin(context);
-+}
-diff --git a/src/plugins/google_tag_manager/server/plugin.ts b/src/plugins/google_tag_manager/server/plugin.ts
-new file mode 100644
-index 00000000000..77c201d7e6f
---- /dev/null
-+++ b/src/plugins/google_tag_manager/server/plugin.ts
-@@ -0,0 +1,13 @@
-+import { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from 'kibana/server';
-+
-+import { ConfigSchema } from '../config';
-+
-+export class GoogleTagManagerPlugin implements Plugin {
-+  constructor(_initializerContext: PluginInitializerContext<ConfigSchema>) {}
-+
-+  public setup(_core: CoreSetup) {}
-+
-+  public start(_core: CoreStart) {}
-+
-+  public stop() {}
-+}
-diff --git a/src/plugins/google_tag_manager/tsconfig.json b/src/plugins/google_tag_manager/tsconfig.json
-new file mode 100644
-index 00000000000..c9852136fa0
---- /dev/null
-+++ b/src/plugins/google_tag_manager/tsconfig.json
-@@ -0,0 +1,24 @@
-+{
-+  "extends": "../../../tsconfig.base.json",
-+  "compilerOptions": {
-+    "outDir": "./target/types",
-+    "skipLibCheck": true,
-+    "allowJs": true,
-+    "emitDeclarationOnly": true,
-+    "declaration": true,
-+    "declarationMap": true
-+  },
-+  "include": [
-+    "config.ts",
-+    "index.ts",
-+    "common/**/*.ts",
-+    "public/**/*.ts",
-+    "public/**/*.tsx",
-+    "server/**/*.ts",
-+    "../../../typings/**/*"
-+  ],
-+  "references": [
-+    { "path": "../../core/tsconfig.json" },
-+  ],
-+  "exclude": []
-+}
-diff --git a/src/plugins/tigera/.eslintrc.js b/src/plugins/tigera/.eslintrc.js
-new file mode 100644
-index 00000000000..b267018448b
---- /dev/null
-+++ b/src/plugins/tigera/.eslintrc.js
-@@ -0,0 +1,7 @@
-+module.exports = {
-+  root: true,
-+  extends: ['@elastic/eslint-config-kibana', 'plugin:@elastic/eui/recommended'],
-+  rules: {
-+    '@kbn/eslint/require-license-header': 'off',
-+  },
-+};
-diff --git a/src/plugins/tigera/.gitignore b/src/plugins/tigera/.gitignore
-new file mode 100644
-index 00000000000..c3dca1b96fc
---- /dev/null
-+++ b/src/plugins/tigera/.gitignore
-@@ -0,0 +1,2 @@
-+/build
-+/target
-diff --git a/src/plugins/tigera/README.md b/src/plugins/tigera/README.md
-new file mode 100644
-index 00000000000..1340683c16b
---- /dev/null
-+++ b/src/plugins/tigera/README.md
-@@ -0,0 +1,19 @@
-+# googletagmanager
-+
-+A Kibana plugin
-+
-+---
-+
-+## Development
-+
-+See the [kibana contributing guide](https://github.com/elastic/kibana/blob/master/CONTRIBUTING.md) for instructions setting up your development environment.
-+
-+## Scripts
-+
-+<dl>
-+  <dt><code>yarn kbn bootstrap</code></dt>
-+  <dd>Execute this to install node_modules and setup the dependencies in your plugin and in Kibana</dd>
-+
-+  <dt><code>yarn plugin-helpers build</code></dt>
-+  <dd>Execute this to create a distributable version of this plugin that can be installed in Kibana</dd>
-+</dl>
-diff --git a/src/plugins/tigera/common/index.ts b/src/plugins/tigera/common/index.ts
-new file mode 100644
-index 00000000000..1b5e7999857
---- /dev/null
-+++ b/src/plugins/tigera/common/index.ts
-@@ -0,0 +1,2 @@
-+export const PLUGIN_ID = 'tigera';
-+export const PLUGIN_NAME = 'tigera';
-diff --git a/src/plugins/tigera/config.ts b/src/plugins/tigera/config.ts
-new file mode 100644
-index 00000000000..ba8fb3ed857
---- /dev/null
-+++ b/src/plugins/tigera/config.ts
-@@ -0,0 +1,11 @@
-+import { schema, TypeOf } from '@kbn/config-schema';
-+
-+export const configSchema = schema.object({
-+  enabled: schema.boolean({ defaultValue: true }),
-+  licenseEdition: schema.oneOf([
-+    schema.literal('enterpriseEdition'),
-+    schema.literal('cloudEdition'),
-+  ]),
-+});
-+
-+export type ConfigSchema = TypeOf<typeof configSchema>;
-diff --git a/src/plugins/tigera/kibana.json b/src/plugins/tigera/kibana.json
-new file mode 100644
-index 00000000000..477fa3d5e6e
---- /dev/null
-+++ b/src/plugins/tigera/kibana.json
-@@ -0,0 +1,13 @@
-+{
-+  "id": "tigera",
-+  "version": "1.0.0",
-+  "kibanaVersion": "kibana",
-+  "server": true,
-+  "ui": true,
-+  "requiredPlugins": [],
-+  "optionalPlugins": [],
-+  "owner": {
-+    "name": "Tigera",
-+    "githubTeam": "tigera"
-+  }
-+}
-diff --git a/src/plugins/tigera/package.json b/src/plugins/tigera/package.json
-new file mode 100644
-index 00000000000..6ea4e07a1e9
---- /dev/null
-+++ b/src/plugins/tigera/package.json
-@@ -0,0 +1,10 @@
-+{
-+  "name": "tigera",
-+  "version": "0.0.0",
-+  "private": true,
-+  "scripts": {
-+    "build": "yarn plugin-helpers build",
-+    "plugin-helpers": "node ../../../scripts/plugin_helpers",
-+    "kbn": "node ../../../scripts/kbn"
-+  }
-+}
-diff --git a/src/plugins/tigera/public/_header.scss b/src/plugins/tigera/public/_header.scss
-new file mode 100644
-index 00000000000..bc19c810af5
---- /dev/null
-+++ b/src/plugins/tigera/public/_header.scss
-@@ -0,0 +1,37 @@
-+$header-background-color: #000;
-+$header-font-color: #fff;
-+$header-second-font-color: lightgray;
-+
-+@mixin darkHeader {
-+  .euiHeader {
-+    &--dark {
-+      background-color: $header-background-color;
-+      color: $header-font-color;
-+    }
-+  }
-+}
-+
-+@mixin defaultHeader {
-+  .euiHeader {
-+    &--default {
-+      background-color: $header-background-color;
-+      color: $header-font-color;
-+
-+      .euiBreadcrumb {
-+        color: $header-font-color;
-+
-+        &:hover {
-+          color: $header-font-color;
-+        }
-+
-+        &--last {
-+          color: $header-second-font-color;
-+
-+          &:hover {
-+            color: $header-second-font-color;
-+          }
-+        }
-+      }
-+    }
-+  }
-+}
-diff --git a/src/plugins/tigera/public/_sidenav.scss b/src/plugins/tigera/public/_sidenav.scss
-new file mode 100644
-index 00000000000..1e790522e8f
---- /dev/null
-+++ b/src/plugins/tigera/public/_sidenav.scss
-@@ -0,0 +1,31 @@
-+$sidebar-background-color: #3f5569;
-+$sidebar-font-color: #fff;
-+$sidebar-second-font-color: lightgray;
-+
-+@mixin sidenav {
-+  .euiCollapsibleNav {
-+    background-color: $sidebar-background-color;
-+    color: $sidebar-font-color;
-+
-+    .euiCollapsibleNavGroup {
-+      background-color: $sidebar-background-color;
-+      color: $sidebar-font-color;
-+    }
-+
-+    .euiTitle {
-+      color: $sidebar-font-color;
-+    }
-+
-+    .euiTextColor {
-+      color: $sidebar-font-color;
-+
-+      &--subdued {
-+        color: $sidebar-second-font-color;
-+      }
-+    }
-+
-+    .euiListGroupItem__button:not(:disabled) {
-+      color: $sidebar-font-color;
-+    }
-+  }
-+}
-diff --git a/src/plugins/tigera/public/index.scss b/src/plugins/tigera/public/index.scss
-new file mode 100644
-index 00000000000..70013e5335e
---- /dev/null
-+++ b/src/plugins/tigera/public/index.scss
-@@ -0,0 +1,5 @@
-+@import './header';
-+@import './sidenav';
-+
-+@include darkHeader();
-+@include sidenav();
-diff --git a/src/plugins/tigera/public/index.ts b/src/plugins/tigera/public/index.ts
-new file mode 100644
-index 00000000000..54fcbba7d30
---- /dev/null
-+++ b/src/plugins/tigera/public/index.ts
-@@ -0,0 +1,10 @@
-+import { PluginInitializerContext } from 'kibana/public';
-+
-+import { ConfigSchema } from '../config';
-+import { TigeraPlugin } from './plugin';
-+
-+import './index.scss';
-+
-+export function plugin(context: PluginInitializerContext<ConfigSchema>) {
-+  return new TigeraPlugin(context);
-+}
-diff --git a/src/plugins/tigera/public/plugin.ts b/src/plugins/tigera/public/plugin.ts
-new file mode 100644
-index 00000000000..968e1e429c6
---- /dev/null
-+++ b/src/plugins/tigera/public/plugin.ts
-@@ -0,0 +1,13 @@
-+import { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from 'kibana/public';
-+
-+import { ConfigSchema } from '../config';
-+
-+export class TigeraPlugin implements Plugin {
-+  constructor(_initializerContext: PluginInitializerContext<ConfigSchema>) {}
-+
-+  public setup(_core: CoreSetup) {}
-+
-+  public start(_core: CoreStart) {}
-+
-+  public stop() {}
-+}
-diff --git a/src/plugins/tigera/server/index.ts b/src/plugins/tigera/server/index.ts
-new file mode 100644
-index 00000000000..bf24985d688
---- /dev/null
-+++ b/src/plugins/tigera/server/index.ts
-@@ -0,0 +1,15 @@
-+import { PluginConfigDescriptor, PluginInitializerContext } from 'kibana/server';
-+
-+import { configSchema, ConfigSchema } from '../config';
-+import { TigeraPlugin } from './plugin';
-+
-+export const config: PluginConfigDescriptor<ConfigSchema> = {
-+  schema: configSchema,
-+  exposeToBrowser: {
-+    licenseEdition: true,
-+  },
-+};
-+
-+export function plugin(context: PluginInitializerContext<ConfigSchema>) {
-+  return new TigeraPlugin(context);
-+}
-diff --git a/src/plugins/tigera/server/plugin.ts b/src/plugins/tigera/server/plugin.ts
-new file mode 100644
-index 00000000000..bdfb37685e1
---- /dev/null
-+++ b/src/plugins/tigera/server/plugin.ts
-@@ -0,0 +1,24 @@
-+import { CoreSetup, CoreStart, Plugin, PluginInitializerContext } from 'kibana/server';
-+import { schema } from '@kbn/config-schema';
-+
-+import { ConfigSchema } from '../config';
-+
-+export class TigeraPlugin implements Plugin {
-+  constructor(private readonly initializerContext: PluginInitializerContext<ConfigSchema>) {}
-+
-+  public setup(core: CoreSetup) {
-+    const config$ = this.initializerContext.config.create();
-+    config$.subscribe((config) => {
-+      core.uiSettings.register({
-+        'tigeratagmanager.licenseEdition': {
-+          value: config.licenseEdition,
-+          schema: schema.string(),
-+        },
-+      });
-+    });
-+  }
-+
-+  public start(_core: CoreStart) {}
-+
-+  public stop() {}
-+}
-diff --git a/src/plugins/tigera/tsconfig.json b/src/plugins/tigera/tsconfig.json
-new file mode 100644
-index 00000000000..c9852136fa0
---- /dev/null
-+++ b/src/plugins/tigera/tsconfig.json
-@@ -0,0 +1,24 @@
-+{
-+  "extends": "../../../tsconfig.base.json",
-+  "compilerOptions": {
-+    "outDir": "./target/types",
-+    "skipLibCheck": true,
-+    "allowJs": true,
-+    "emitDeclarationOnly": true,
-+    "declaration": true,
-+    "declarationMap": true
-+  },
-+  "include": [
-+    "config.ts",
-+    "index.ts",
-+    "common/**/*.ts",
-+    "public/**/*.ts",
-+    "public/**/*.tsx",
-+    "server/**/*.ts",
-+    "../../../typings/**/*"
-+  ],
-+  "references": [
-+    { "path": "../../core/tsconfig.json" },
-+  ],
-+  "exclude": []
-+}
-diff --git a/x-pack/plugins/global_search_bar/public/components/search_bar.test.tsx b/x-pack/plugins/global_search_bar/public/components/search_bar.test.tsx
-index dd7b1f26669..5d64e78da7e 100644
---- a/x-pack/plugins/global_search_bar/public/components/search_bar.test.tsx
-+++ b/x-pack/plugins/global_search_bar/public/components/search_bar.test.tsx
-@@ -101,6 +101,7 @@ describe('SearchBar', () => {
-           basePathUrl={basePathUrl}
-           darkMode={darkMode}
-           trackUiMetric={jest.fn()}
-+          licenseEdition="enterpriseEdition"
-         />
-       </IntlProvider>
-     );
-@@ -129,6 +130,7 @@ describe('SearchBar', () => {
-           basePathUrl={basePathUrl}
-           darkMode={darkMode}
-           trackUiMetric={jest.fn()}
-+        licenseEdition="enterpriseEdition"
-         />
-       </IntlProvider>
-     );
-@@ -161,6 +163,7 @@ describe('SearchBar', () => {
-           basePathUrl={basePathUrl}
-           darkMode={darkMode}
-           trackUiMetric={jest.fn()}
-+          licenseEdition="enterpriseEdition"
-         />
-       </IntlProvider>
-     );
-diff --git a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
-index 97e19bab3d2..d408821e299 100644
---- a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
-+++ b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
-@@ -45,6 +45,7 @@ interface Props {
-   taggingApi?: SavedObjectTaggingPluginStart;
-   basePathUrl: string;
-   darkMode: boolean;
-+  licenseEdition: string;
- }
- 
- const isMac = navigator.platform.toLowerCase().indexOf('mac') >= 0;
-@@ -178,6 +179,7 @@ export function SearchBar({
-   trackUiMetric,
-   basePathUrl,
-   darkMode,
-+  licenseEdition,
- }: Props) {
-   const isMounted = useMountedState();
-   const [initialLoad, setInitialLoad] = useState(false);
-@@ -188,6 +190,7 @@ export function SearchBar({
-   const searchSubscription = useRef<Subscription | null>(null);
-   const [options, _setOptions] = useState<EuiSelectableTemplateSitewideOption[]>([]);
-   const [searchableTypes, setSearchableTypes] = useState<string[]>([]);
-+  const isEnterprise = licenseEdition === 'enterpriseEdition';
-   const UNKNOWN_TAG_ID = '__unknown__';
- 
-   useEffect(() => {
-@@ -415,7 +418,7 @@ export function SearchBar({
-           defaultMessage: 'Search Elastic',
-         }),
-         placeholder: i18n.translate('xpack.globalSearchBar.searchBar.placeholder', {
--          defaultMessage: 'Search Elastic',
-+          defaultMessage: `Search Calico ${isEnterprise ? 'Enterprise' : 'Cloud'} Elastic`,
-         }),
-         onFocus: () => {
-           trackUiMetric(METRIC_TYPE.COUNT, 'search_focus');
-diff --git a/x-pack/plugins/global_search_bar/public/plugin.tsx b/x-pack/plugins/global_search_bar/public/plugin.tsx
-index dfce09bd12e..1be8f701795 100644
---- a/x-pack/plugins/global_search_bar/public/plugin.tsx
-+++ b/x-pack/plugins/global_search_bar/public/plugin.tsx
-@@ -46,6 +46,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}> {
-           basePathUrl: core.http.basePath.prepend('/plugins/globalSearchBar/assets/'),
-           darkMode: core.uiSettings.get('theme:darkMode'),
-           trackUiMetric,
-+          licenseEdition: core.uiSettings.get('tigeratagmanager.licenseEdition'),
-         }),
-     });
-     return {};
-@@ -59,6 +60,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}> {
-     basePathUrl,
-     darkMode,
-     trackUiMetric,
-+    licenseEdition,
-   }: {
-     container: HTMLElement;
-     globalSearch: GlobalSearchPluginStart;
-@@ -67,6 +69,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}> {
-     basePathUrl: string;
-     darkMode: boolean;
-     trackUiMetric: (metricType: UiCounterMetricType, eventName: string | string[]) => void;
-+    licenseEdition: string;
-   }) {
-     ReactDOM.render(
-       <I18nProvider>
-@@ -77,6 +80,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}> {
-           basePathUrl={basePathUrl}
-           darkMode={darkMode}
-           trackUiMetric={trackUiMetric}
-+          licenseEdition={licenseEdition}
-         />
-       </I18nProvider>,
-       container
-diff --git a/x-pack/plugins/security/public/authentication/login/login_app.ts b/x-pack/plugins/security/public/authentication/login/login_app.ts
-index 141d8e746d7..df7947c924e 100644
---- a/x-pack/plugins/security/public/authentication/login/login_app.ts
-+++ b/x-pack/plugins/security/public/authentication/login/login_app.ts
-@@ -42,6 +42,7 @@ export const loginApp = Object.freeze({
-           fatalErrors: coreStart.fatalErrors,
-           loginAssistanceMessage: config.loginAssistanceMessage,
-           sameSiteCookies: config.sameSiteCookies,
-+          licenseEdition: coreStart.uiSettings.get('tigeratagmanager.licenseEdition'),
-         });
-       },
-     });
-diff --git a/x-pack/plugins/security/public/authentication/login/login_page.tsx b/x-pack/plugins/security/public/authentication/login/login_page.tsx
-index 9be6a76db70..29487a7879b 100644
---- a/x-pack/plugins/security/public/authentication/login/login_page.tsx
-+++ b/x-pack/plugins/security/public/authentication/login/login_page.tsx
-@@ -33,6 +33,7 @@ import type { LoginState } from '../../../common/login_state';
- import type { LogoutReason } from '../../../common/types';
- import type { ConfigType } from '../../config';
- import type { LoginFormProps } from './components';
-+import calicoLogo from '../../../../../../src/core/tigera_icons/calico_logo.svg';
- import { DisabledLoginForm, LoginForm, LoginFormMessageType } from './components';
- 
- interface Props {
-@@ -41,6 +42,7 @@ interface Props {
-   fatalErrors: FatalErrorsStart;
-   loginAssistanceMessage: string;
-   sameSiteCookies?: ConfigType['sameSiteCookies'];
-+  licenseEdition?: string;
- }
- 
- interface State {
-@@ -115,19 +117,24 @@ export class LoginPage extends Component<Props, State> {
-       ['loginWelcome__contentDisabledForm']: !loginIsSupported,
-     });
- 
-+    const welcomeTitle =
-+      this.props.licenseEdition === 'enterpriseEdition'
-+        ? 'Welcome to Calico Enterprise Elastic'
-+        : 'Welcome to Calico Cloud Elastic'
-+
-     return (
-       <div className="loginWelcome login-form">
-         <header className="loginWelcome__header">
-           <div className={contentHeaderClasses}>
-             <EuiSpacer size="xxl" />
-             <span className="loginWelcome__logo">
--              <EuiIcon type="logoElastic" size="xxl" />
-+              <EuiIcon type={calicoLogo} size="original" />
-             </span>
-             <EuiTitle size="m" className="loginWelcome__title">
-               <h1>
-                 <FormattedMessage
-                   id="xpack.security.loginPage.welcomeTitle"
--                  defaultMessage="Welcome to Elastic"
-+                  defaultMessage={welcomeTitle}
-                 />
-               </h1>
-             </EuiTitle>
 diff --git a/x-pack/plugins/security/tsconfig.json b/x-pack/plugins/security/tsconfig.json
-index 5cc25bbb440..9092295e14a 100644
+index 64d162839..f6c596f18 100644
 --- a/x-pack/plugins/security/tsconfig.json
 +++ b/x-pack/plugins/security/tsconfig.json
-@@ -6,7 +6,13 @@
-     "declaration": true,
-     "declarationMap": true
-   },
--  "include": ["common/**/*", "public/**/*", "server/**/*"],
-+  "include": [
-+      "common/**/*",
-+      "public/**/*",
-+      "server/**/*",
-+      "../../../typings/**/*",
-+      "../../../typings/index.d.ts",
-+  ],
-   "references": [
-     { "path": "../features/tsconfig.json" },
-     { "path": "../licensing/tsconfig.json" },
+@@ -8,6 +8,7 @@
+     "public/**/*",
+     "server/**/*",
+     "__mocks__/**/*",
++    "tigera_icons/**/*"
+   ],
+   "kbn_references": [
+     "@kbn/cloud-plugin",
 -- 
-2.39.2
+2.25.1
 

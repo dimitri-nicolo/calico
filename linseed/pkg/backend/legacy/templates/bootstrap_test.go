@@ -18,13 +18,14 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 )
 
 var (
-	client  *elastic.Client
-	ctx     context.Context
-	cluster string
+	esClient *elastic.Client
+	ctx      context.Context
+	cluster  string
 )
 
 func setupTest(t *testing.T, indices ...bapi.Index) func() {
@@ -32,10 +33,12 @@ func setupTest(t *testing.T, indices ...bapi.Index) func() {
 	config.ConfigureLogging("DEBUG")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
 
+	var err error
+
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	var err error
-	client, err = elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
+	esClient, err = backendutils.CreateElasticClient()
+
 	require.NoError(t, err)
 
 	// Create a random cluster name for each test to make sure we don't
@@ -50,7 +53,7 @@ func setupTest(t *testing.T, indices ...bapi.Index) func() {
 	return func() {
 		// Cleanup after ourselves.
 		for _, idx := range indices {
-			err = testutils.CleanupIndices(context.Background(), client, idx.IsSingleIndex(), idx, info)
+			err = testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, info)
 			require.NoError(t, err)
 		}
 
@@ -67,7 +70,7 @@ func TestBootstrapLegacyFlowTemplate(t *testing.T) {
 	// index_patterns, ILM policy, mappings and shards and replicas
 	templateConfig := templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
-	templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+	templ, err := templates.DefaultBootstrapper(ctx, esClient, templateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templ)
 	require.Len(t, templ.IndexPatterns, 1)
@@ -84,11 +87,11 @@ func TestBootstrapFlowTemplate(t *testing.T) {
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
 	templateConfig := templates.NewTemplateConfig(idx, info)
-	templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+	templ, err := templates.DefaultBootstrapper(ctx, esClient, templateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templ)
 	require.Len(t, templ.IndexPatterns, 1)
-	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info, "000001", "1", "0", "tigera_secure_ee_flows_policy")
+	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, esClient, idx, info, "000001", "1", "0", "tigera_secure_ee_flows_policy")
 }
 
 func TestBootstrapFlowTemplateAsync(t *testing.T) {
@@ -105,7 +108,7 @@ func TestBootstrapFlowTemplateAsync(t *testing.T) {
 	numRoutines := 10
 	for i := 0; i < numRoutines; i++ {
 		go func() {
-			templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+			templ, err := templates.DefaultBootstrapper(ctx, esClient, templateConfig)
 			if err != nil {
 				errs <- err
 			} else {
@@ -127,7 +130,7 @@ func TestBootstrapFlowTemplateAsync(t *testing.T) {
 	}
 
 	// Check that the resulting template in ES is correct.
-	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, client, idx, info, "000001", "1", "0", "tigera_secure_ee_flows_policy")
+	testutils.CheckSingleIndexTemplateBootstrapping(t, ctx, esClient, idx, info, "000001", "1", "0", "tigera_secure_ee_flows_policy")
 }
 
 func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application, cluster, indexNumber string, expectedNumberIndices int, templateNameEndsInDot bool) {
@@ -137,18 +140,18 @@ func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application
 	if templateNameEndsInDot {
 		templateName = fmt.Sprintf("%s.%s.", indexPrefix, cluster)
 	}
-	templateExists, err := client.IndexTemplateExists(templateName).Do(ctx)
+	templateExists, err := esClient.IndexTemplateExists(templateName).Do(ctx)
 	require.NoError(t, err)
 	require.True(t, templateExists)
 
 	// Check that the bootstrap index exists
 	index := fmt.Sprintf("%s.%s.%s-%s-%s", indexPrefix, cluster, application, time.Now().UTC().Format("20060102"), indexNumber)
-	indexExists, err := client.IndexExists(index).Do(ctx)
+	indexExists, err := esClient.IndexExists(index).Do(ctx)
 	require.NoError(t, err)
 	require.True(t, indexExists, "index doesn't exist: %s", index)
 
 	// Check that write alias exists.
-	responseAlias, err := client.CatAliases().Do(ctx)
+	responseAlias, err := esClient.CatAliases().Do(ctx)
 	require.NoError(t, err)
 	require.Greater(t, len(responseAlias), 0)
 	hasAlias := false
@@ -173,7 +176,7 @@ func checkMultiIndexTemplateBootstrapping(t *testing.T, indexPrefix, application
 	// We may have some non-write index (if we rollover)
 	require.Equal(t, expectedNumberIndices-1, numNonWriteIndex)
 
-	responseSettings, err := client.IndexGetSettings(index).Do(ctx)
+	responseSettings, err := esClient.IndexGetSettings(index).Do(ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, responseSettings)
 	require.Contains(t, responseSettings, index)
@@ -202,12 +205,12 @@ func TestBootstrapAuditTemplates(t *testing.T) {
 	auditKubeTemplateConfig := templates.NewTemplateConfig(index.AuditLogKubeMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 	auditEETemplateConfig := templates.NewTemplateConfig(index.AuditLogEEMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
-	templKubeAudit, err := templates.DefaultBootstrapper(ctx, client, auditKubeTemplateConfig)
+	templKubeAudit, err := templates.DefaultBootstrapper(ctx, esClient, auditKubeTemplateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templKubeAudit)
 	require.Len(t, templKubeAudit.IndexPatterns, 1)
 
-	templEEAudit, err := templates.DefaultBootstrapper(ctx, client, auditEETemplateConfig)
+	templEEAudit, err := templates.DefaultBootstrapper(ctx, esClient, auditEETemplateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templEEAudit)
 	require.Len(t, templEEAudit.IndexPatterns, 1)
@@ -223,18 +226,18 @@ func TestBootstrapEventsBackwardsCompatibility(t *testing.T) {
 
 	// Create an old index that has the same name as the one defined in 3.16
 	oldIndexName := fmt.Sprintf("tigera_secure_ee_events.%s.lma", cluster)
-	resultIndex, err := client.CreateIndex(oldIndexName).Do(ctx)
+	resultIndex, err := esClient.CreateIndex(oldIndexName).Do(ctx)
 	require.NoError(t, err)
 	require.True(t, resultIndex.Acknowledged)
 
 	aliasName := fmt.Sprintf("tigera_secure_ee_events.%s.", cluster)
-	resultAlias, err := client.Alias().Action(elastic.NewAliasAddAction(aliasName).
+	resultAlias, err := esClient.Alias().Action(elastic.NewAliasAddAction(aliasName).
 		Index(oldIndexName).IsWriteIndex(true)).Do(ctx)
 	require.NoError(t, err)
 	require.True(t, resultAlias.Acknowledged)
 
 	eventsTemplateConfig := templates.NewTemplateConfig(index.EventsMultiIndex, bapi.ClusterInfo{Cluster: cluster})
-	templEvents, err := templates.DefaultBootstrapper(ctx, client, eventsTemplateConfig)
+	templEvents, err := templates.DefaultBootstrapper(ctx, esClient, eventsTemplateConfig)
 	require.NoError(t, err)
 	require.NotNil(t, templEvents)
 	require.Len(t, templEvents.IndexPatterns, 1)
@@ -250,7 +253,7 @@ func TestBootstrapTemplateMultipleTimes(t *testing.T) {
 	templateConfig := templates.NewTemplateConfig(index.FlowLogMultiIndex, bapi.ClusterInfo{Cluster: cluster})
 
 	for i := 0; i < 10; i++ {
-		_, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+		_, err := templates.DefaultBootstrapper(ctx, esClient, templateConfig)
 		require.NoError(t, err)
 		checkMultiIndexTemplateBootstrapping(t, "tigera_secure_ee_flows", "fluentd", cluster, "000001", 1, true)
 	}
@@ -286,7 +289,7 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 
 	// Simulate 10 restarts and make sure we end up with 1 index (no rollover)
 	for i := 0; i < 10; i++ {
-		templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+		templ, err := templates.DefaultBootstrapper(ctx, esClient, templateConfig)
 		require.NoError(t, err)
 		require.NotNil(t, templ)
 		require.Len(t, templ.IndexPatterns, 1)
@@ -295,7 +298,7 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 	}
 
 	// We now have an older index (without "dest_domains")
-	is, err := client.IndexGet(templateConfig.Alias()).Do(ctx)
+	is, err := esClient.IndexGet(templateConfig.Alias()).Do(ctx)
 	require.NoError(t, err)
 
 	indexName := fmt.Sprintf("%s.%s.%s-%s-%s", "tigera_secure_ee_flows", cluster, "fluentd", time.Now().UTC().Format("20060102"), "000001")
@@ -319,7 +322,7 @@ func TestBootstrapTemplateNewMappings(t *testing.T) {
 
 	// Simulate 10 restarts and make sure we end up with 2 indices (rolled-over only once)
 	for i := 0; i < 10; i++ {
-		templ, err := templates.DefaultBootstrapper(ctx, client, templateConfig)
+		templ, err := templates.DefaultBootstrapper(ctx, esClient, templateConfig)
 		require.NoError(t, err)
 		require.NotNil(t, templ)
 		require.Len(t, templ.IndexPatterns, 1)
@@ -361,11 +364,11 @@ func TestMappingsValidity(t *testing.T) {
 			template, err := config.Template()
 			require.NoError(t, err)
 
-			_, err = client.IndexPutTemplate(config.TemplateName()).BodyJson(template).Do(ctx)
+			_, err = esClient.IndexPutTemplate(config.TemplateName()).BodyJson(template).Do(ctx)
 			require.NoError(t, err)
 
 			// Get initial indexInfo
-			indexInfo, err := templates.GetIndexInfo(ctx, client, config)
+			indexInfo, err := templates.GetIndexInfo(ctx, esClient, config)
 			require.NoError(t, err)
 
 			// Sanity check that the index does not exists
@@ -373,11 +376,11 @@ func TestMappingsValidity(t *testing.T) {
 			require.False(t, indexInfo.IndexExists)
 
 			// Create the bootstrap index and mark it to be used for writes
-			err = templates.CreateIndexAndAlias(ctx, client, config)
+			err = templates.CreateIndexAndAlias(ctx, esClient, config)
 			require.NoError(t, err)
 
 			// Update indexInfo following index creation
-			indexInfo, err = templates.GetIndexInfo(ctx, client, config)
+			indexInfo, err = templates.GetIndexInfo(ctx, esClient, config)
 			require.NoError(t, err)
 
 			require.True(t, indexInfo.WriteIndexDeclared)

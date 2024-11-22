@@ -1,0 +1,381 @@
+From 14c1d37dcddc4efa36bbebbf11859f7bfab8b18f Mon Sep 17 00:00:00 2001
+From: Vara <vara@tigera.io>
+Date: Thu, 14 Nov 2024 14:29:36 -0800
+Subject: [PATCH] tigera plugin changes
+
+---
+ .gitignore                          |  1 -
+ plugins/tigera/.eslintrc.js         |  9 +++++++
+ plugins/tigera/.gitignore           |  2 ++
+ plugins/tigera/README.md            | 22 +++++++++++++++++
+ plugins/tigera/common/index.ts      | 16 +++++++++++++
+ plugins/tigera/kibana.json          | 14 +++++++++++
+ plugins/tigera/package.json         | 13 ++++++++++
+ plugins/tigera/public/_header.scss  | 37 +++++++++++++++++++++++++++++
+ plugins/tigera/public/_sidenav.scss | 31 ++++++++++++++++++++++++
+ plugins/tigera/public/index.scss    |  5 ++++
+ plugins/tigera/public/index.ts      | 11 +++++++++
+ plugins/tigera/public/plugin.ts     | 12 ++++++++++
+ plugins/tigera/server/index.ts      | 18 ++++++++++++++
+ plugins/tigera/server/plugin.ts     | 31 ++++++++++++++++++++++++
+ plugins/tigera/tsconfig.json        | 24 +++++++++++++++++++
+ 15 files changed, 245 insertions(+), 1 deletion(-)
+ create mode 100644 plugins/tigera/.eslintrc.js
+ create mode 100644 plugins/tigera/.gitignore
+ create mode 100755 plugins/tigera/README.md
+ create mode 100644 plugins/tigera/common/index.ts
+ create mode 100644 plugins/tigera/kibana.json
+ create mode 100644 plugins/tigera/package.json
+ create mode 100644 plugins/tigera/public/_header.scss
+ create mode 100644 plugins/tigera/public/_sidenav.scss
+ create mode 100644 plugins/tigera/public/index.scss
+ create mode 100644 plugins/tigera/public/index.ts
+ create mode 100644 plugins/tigera/public/plugin.ts
+ create mode 100644 plugins/tigera/server/index.ts
+ create mode 100644 plugins/tigera/server/plugin.ts
+ create mode 100644 plugins/tigera/tsconfig.json
+
+diff --git a/.gitignore b/.gitignore
+index 4d674675c..9ead58637 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -53,7 +53,6 @@ __tmp__
+ 
+ /html_docs
+ .eslintcache
+-/plugins/
+ /data
+ disabledPlugins
+ webpackstats.json
+diff --git a/plugins/tigera/.eslintrc.js b/plugins/tigera/.eslintrc.js
+new file mode 100644
+index 000000000..dcd9ea0d0
+--- /dev/null
++++ b/plugins/tigera/.eslintrc.js
+@@ -0,0 +1,9 @@
++require('@kbn/babel-register').install();
++
++module.exports = {
++  root: true,
++  extends: ['@kbn/eslint-config', 'plugin:@elastic/eui/recommended'],
++  rules: {
++    '@kbn/eslint/require-license-header': 'off',
++  },
++};
+diff --git a/plugins/tigera/.gitignore b/plugins/tigera/.gitignore
+new file mode 100644
+index 000000000..c3dca1b96
+--- /dev/null
++++ b/plugins/tigera/.gitignore
+@@ -0,0 +1,2 @@
++/build
++/target
+diff --git a/plugins/tigera/README.md b/plugins/tigera/README.md
+new file mode 100755
+index 000000000..c832e70f0
+--- /dev/null
++++ b/plugins/tigera/README.md
+@@ -0,0 +1,22 @@
++# tigera
++
++A Kibana plugin
++
++---
++
++## Development
++
++See the [kibana contributing guide](https://github.com/elastic/kibana/blob/main/CONTRIBUTING.md) for instructions setting up your development environment.
++
++## Scripts
++
++<dl>
++  <dt><code>yarn kbn bootstrap</code></dt>
++  <dd>Execute this to install node_modules and setup the dependencies in your plugin and in Kibana</dd>
++
++  <dt><code>yarn plugin-helpers build</code></dt>
++  <dd>Execute this to create a distributable version of this plugin that can be installed in Kibana</dd>
++
++  <dt><code>yarn plugin-helpers dev --watch</code></dt>
++    <dd>Execute this to build your plugin ui browser side so Kibana could pick up when started in development</dd>
++</dl>
+diff --git a/plugins/tigera/common/index.ts b/plugins/tigera/common/index.ts
+new file mode 100644
+index 000000000..9dfca4592
+--- /dev/null
++++ b/plugins/tigera/common/index.ts
+@@ -0,0 +1,16 @@
++export const PLUGIN_ID = 'tigera';
++export const PLUGIN_NAME = 'tigera';
++
++
++import { schema, TypeOf } from '@kbn/config-schema';
++
++export const configSchema = schema.object({
++  enabled: schema.boolean({ defaultValue: true }),
++  licenseEdition: schema.oneOf([
++    schema.literal('enterpriseEdition'),
++    schema.literal('cloudEdition'),
++  ]),
++});
++
++export type ConfigSchema = TypeOf<typeof configSchema>;
++
+diff --git a/plugins/tigera/kibana.json b/plugins/tigera/kibana.json
+new file mode 100644
+index 000000000..4a6c90f52
+--- /dev/null
++++ b/plugins/tigera/kibana.json
+@@ -0,0 +1,14 @@
++{
++  "id": "tigera",
++  "version": "1.0.0",
++  "kibanaVersion": "kibana",
++  "owner": {
++    "name": "Tigera",
++    "githubTeam": "tigera"
++  },
++  "description": "Tigera plugin",
++  "server": true,
++  "ui": true,
++  "requiredPlugins": ["navigation"],
++  "optionalPlugins": []
++}
+diff --git a/plugins/tigera/package.json b/plugins/tigera/package.json
+new file mode 100644
+index 000000000..fa59dba1f
+--- /dev/null
++++ b/plugins/tigera/package.json
+@@ -0,0 +1,13 @@
++{
++  "name": "tigera",
++  "version": "0.0.0",
++  "private": true,
++  "scripts": {
++    "bootstrap": "yarn kbn bootstrap && yarn install",
++    "build": "yarn plugin-helpers build",
++    "dev": "yarn plugin-helpers dev",
++    "plugin-helpers": "node ../../scripts/plugin_helpers",
++    "kbn": "node ../../scripts/kbn"
++  },
++  "dependencies": {}
++}
+diff --git a/plugins/tigera/public/_header.scss b/plugins/tigera/public/_header.scss
+new file mode 100644
+index 000000000..bc19c810a
+--- /dev/null
++++ b/plugins/tigera/public/_header.scss
+@@ -0,0 +1,37 @@
++$header-background-color: #000;
++$header-font-color: #fff;
++$header-second-font-color: lightgray;
++
++@mixin darkHeader {
++  .euiHeader {
++    &--dark {
++      background-color: $header-background-color;
++      color: $header-font-color;
++    }
++  }
++}
++
++@mixin defaultHeader {
++  .euiHeader {
++    &--default {
++      background-color: $header-background-color;
++      color: $header-font-color;
++
++      .euiBreadcrumb {
++        color: $header-font-color;
++
++        &:hover {
++          color: $header-font-color;
++        }
++
++        &--last {
++          color: $header-second-font-color;
++
++          &:hover {
++            color: $header-second-font-color;
++          }
++        }
++      }
++    }
++  }
++}
+diff --git a/plugins/tigera/public/_sidenav.scss b/plugins/tigera/public/_sidenav.scss
+new file mode 100644
+index 000000000..1e790522e
+--- /dev/null
++++ b/plugins/tigera/public/_sidenav.scss
+@@ -0,0 +1,31 @@
++$sidebar-background-color: #3f5569;
++$sidebar-font-color: #fff;
++$sidebar-second-font-color: lightgray;
++
++@mixin sidenav {
++  .euiCollapsibleNav {
++    background-color: $sidebar-background-color;
++    color: $sidebar-font-color;
++
++    .euiCollapsibleNavGroup {
++      background-color: $sidebar-background-color;
++      color: $sidebar-font-color;
++    }
++
++    .euiTitle {
++      color: $sidebar-font-color;
++    }
++
++    .euiTextColor {
++      color: $sidebar-font-color;
++
++      &--subdued {
++        color: $sidebar-second-font-color;
++      }
++    }
++
++    .euiListGroupItem__button:not(:disabled) {
++      color: $sidebar-font-color;
++    }
++  }
++}
+diff --git a/plugins/tigera/public/index.scss b/plugins/tigera/public/index.scss
+new file mode 100644
+index 000000000..70013e533
+--- /dev/null
++++ b/plugins/tigera/public/index.scss
+@@ -0,0 +1,5 @@
++@import './header';
++@import './sidenav';
++
++@include darkHeader();
++@include sidenav();
+diff --git a/plugins/tigera/public/index.ts b/plugins/tigera/public/index.ts
+new file mode 100644
+index 000000000..714bcd37f
+--- /dev/null
++++ b/plugins/tigera/public/index.ts
+@@ -0,0 +1,11 @@
++import './index.scss';
++
++import { PluginInitializerContext } from '@kbn/core/public';
++import { ConfigSchema } from '../common';
++import { TigeraPlugin } from './plugin';
++
++// This exports static code and TypeScript types,
++// as well as, Kibana Platform `plugin()` initializer.
++export function plugin(initializerContext: PluginInitializerContext<ConfigSchema>) {
++  return new TigeraPlugin(initializerContext);
++}
+diff --git a/plugins/tigera/public/plugin.ts b/plugins/tigera/public/plugin.ts
+new file mode 100644
+index 000000000..16798c1ec
+--- /dev/null
++++ b/plugins/tigera/public/plugin.ts
+@@ -0,0 +1,12 @@
++import { PluginInitializerContext, CoreSetup, CoreStart, Plugin } from '@kbn/core/public';
++import { ConfigSchema } from '../common';
++
++export class TigeraPlugin implements Plugin {
++  constructor(_initializerContext: PluginInitializerContext<ConfigSchema>) {}
++
++  public setup(core: CoreSetup) {}
++
++  public start(core: CoreStart) {}
++
++  public stop() {}
++}
+diff --git a/plugins/tigera/server/index.ts b/plugins/tigera/server/index.ts
+new file mode 100644
+index 000000000..78d5b7523
+--- /dev/null
++++ b/plugins/tigera/server/index.ts
+@@ -0,0 +1,18 @@
++import { PluginConfigDescriptor, PluginInitializerContext } from '@kbn/core/server';
++import { configSchema, ConfigSchema } from '../common';
++
++//  This exports static code and TypeScript types,
++//  as well as, Kibana Platform `plugin()` initializer.
++
++export async function plugin(initializerContext: PluginInitializerContext<ConfigSchema>) {
++  const { TigeraPlugin } = await import('./plugin');
++  return new TigeraPlugin(initializerContext);
++}
++
++export const config: PluginConfigDescriptor<ConfigSchema> = {
++  schema: configSchema,
++  exposeToBrowser: {
++    licenseEdition: true,
++  },
++};
++
+diff --git a/plugins/tigera/server/plugin.ts b/plugins/tigera/server/plugin.ts
+new file mode 100644
+index 000000000..1184fc8bf
+--- /dev/null
++++ b/plugins/tigera/server/plugin.ts
+@@ -0,0 +1,31 @@
++import { PluginInitializerContext, CoreSetup, CoreStart, Plugin, Logger } from '@kbn/core/server';
++
++import { schema } from '@kbn/config-schema';
++import { ConfigSchema } from '../common';
++
++export class TigeraPlugin implements Plugin {
++  private readonly logger: Logger;
++  constructor(private readonly initializerContext: PluginInitializerContext<ConfigSchema>) {
++    this.logger = initializerContext.logger.get();
++  }
++
++  public setup(core: CoreSetup) {
++    this.logger.debug('Tigera plugin ser up')
++    const config$ = this.initializerContext.config.create();
++    config$.subscribe((config) => {
++      core.uiSettings.register({
++        'tigeratagmanager.licenseEdition': {
++          value: config.licenseEdition,
++          schema: schema.string(),
++        },
++      });
++    });
++  }
++
++  public start(core: CoreStart) {
++    this.logger.debug('Tigera plugin start up')
++    return {};
++  }
++
++  public stop() {}
++}
+diff --git a/plugins/tigera/tsconfig.json b/plugins/tigera/tsconfig.json
+new file mode 100644
+index 000000000..dcde19a1c
+--- /dev/null
++++ b/plugins/tigera/tsconfig.json
+@@ -0,0 +1,24 @@
++{
++  "extends": "../../tsconfig.json",
++  "compilerOptions": {
++    "outDir": "./target/types",
++    "skipLibCheck": true,
++    "allowJs": true,
++    "emitDeclarationOnly": true,
++    "declaration": true,
++    "declarationMap": true
++
++  },
++  "include": [
++    "index.ts",
++    "common/**/*.ts",
++    "public/**/*.ts",
++    "public/**/*.tsx",
++    "server/**/*.ts",
++    "../../typings/**/*"
++  ],
++  "references": [
++    { "path": "../../core/tsconfig.json" },
++  ],
++  "exclude": []
++}
+-- 
+2.25.1
+

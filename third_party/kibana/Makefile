@@ -5,12 +5,20 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/kibana
 KIBANA_IMAGE?=kibana-ubi
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-KIBANA_VERSION = 7.17.25
+KIBANA_VERSION = 8.15.3
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
 BRANCH_NAME = v$(KIBANA_VERSION)
 LATEST_IMAGE_TAG = $(BRANCH_NAME)
+
+# Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
+# accidentally enable the integration
+GTM_INTEGRATION?=disabled
+
+ifeq ($(TESLA),true)
+GTM_INTEGRATION=enabled
+endif
 
 ###############################################################################
 # Include lib.Makefile before anything else
@@ -27,13 +35,15 @@ KIBANA_DOWNLOADED=.kibana.downloaded
 .PHONY: init-source
 init-source: $(KIBANA_DOWNLOADED)
 $(KIBANA_DOWNLOADED):
-	mkdir -p kibana
-	curl -sfL https://github.com/elastic/kibana/archive/refs/tags/v$(KIBANA_VERSION).tar.gz | tar xz --strip-components 1 -C kibana
-	patch -d kibana -p1 < patches/0001-Apply-Tigera-customizations-to-Kibana.patch
-	patch -d kibana -p1 < patches/0002-Reduce-all-platforms-to-linux-variants-only.patch
-	patch -d kibana -p1 < patches/0003-Support-UBI-arm64-builds.patch
-	patch -d kibana -p1 < patches/0004-Update-packages.patch
+	git clone --depth 1 --branch v$(KIBANA_VERSION) --single-branch https://github.com/elastic/kibana.git
+	patch -d kibana -p1 < patches/0001-apply-tigera-customization-to-kibana.patch
+	patch -d kibana -p1 < patches/0002-tigera-plugin-changes.patch
+	patch -d kibana -p1 < patches/0003-google-tag-manager-plugin-changes.patch
+	patch -d kibana -p1 < patches/0004-Reduce-all-platforms-to-only-linux-variant.patch
+	patch -d kibana -p1 < patches/0005-support-ubi-arm64-builds.patch
+	patch -d kibana -p1 < patches/0006-update-to-offical-node-js-version-20.15.1.patch
 	touch $@
+
 
 # always register because build target will build images for all supported arches
 .PHONY: register
@@ -45,7 +55,32 @@ build: register $(KIBANA_DOWNLOADED)
 	cd kibana && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
 	BUILD_TS_REFS_CACHE_ENABLE=false yarn kbn bootstrap && \
-	yarn build --docker-images --docker-cross-compile --skip-docker-ubuntu --release
+	yarn build \
+		--docker-cross-compile --docker-images \
+		--skip-docker-cloud --skip-docker-contexts --skip-docker-fips \
+		--skip-docker-serverless --skip-docker-ubuntu --skip-docker-wolfi \
+		--release
+
+# Build Tigera plugin
+.PHONY: tigera-plugin
+tigera-plugin:
+	cd kibana/plugins/tigera/ && \
+	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
+	yarn kbn bootstrap && yarn build --kibana-version $(LATEST_IMAGE_TAG)
+
+
+# Build Google Tag Manager plugin
+.PHONY: gtm-plugin
+ifeq ($(GTM_INTEGRATION), true)
+gtm-plugin:
+	cd kibana/plugins/google_tag_manager/ && \
+	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
+	yarn kbn bootstrap && yarn build --kibana-version $(LATEST_IMAGE_TAG)
+else
+gtm-plugin:
+	@echo "GTM Integration is disabled. Skipping GTM plugin build."
+endif
+
 
 .PHONY: clean
 clean:
@@ -68,8 +103,14 @@ image: $(KIBANA_IMAGE)
 
 $(KIBANA_IMAGE): $(KIBANA_IMAGE_MARKER)
 
-$(KIBANA_IMAGE_MARKER):
-	docker tag docker.elastic.co/kibana/$(KIBANA_IMAGE):$(KIBANA_VERSION)-$(ARCH) $(KIBANA_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH)
+$(KIBANA_IMAGE_MARKER): tigera-plugin gtm-plugin
+	docker buildx build --load --platform=linux/$(ARCH) \
+		--build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) \
+		--build-arg KIBANA_VERSION=$(KIBANA_VERSION) \
+		--build-arg LATEST_IMAGE_TAG=$(LATEST_IMAGE_TAG) \
+		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
+		-t $(KIBANA_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) \
+		-f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
 

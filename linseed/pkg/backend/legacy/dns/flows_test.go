@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/google/gopacket/layers"
-	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -21,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/index"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	backendutils "github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -61,7 +60,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
+	esClient, err := backendutils.CreateElasticClient()
 	require.NoError(t, err)
 
 	// Create an elasticsearch client to use for the test. For this suite, we use a real

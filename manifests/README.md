@@ -34,7 +34,6 @@ commit your changes. **The following manifests are not auto generated:**
 - fortinet.yaml
 - ingress/*
 - licenseagent.yaml
-- non-cluster-host-clusterrole.yaml
 - ocp/00-namespace-tigera-operator.yaml
 - ocp/01-cr-apiserver.yaml
 - ocp/01-cr-installation.yaml

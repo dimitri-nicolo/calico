@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,7 +65,8 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
+	esClient, err := backendutils.CreateElasticClient()
+
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
 

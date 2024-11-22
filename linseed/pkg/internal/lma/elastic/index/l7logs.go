@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -168,7 +169,9 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 }
 
 func (h l7LogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From.Unix()).Lte(r.To.Unix())
+	fromStr := strconv.FormatInt(r.From.Unix(), 10)
+	toStr := strconv.FormatInt(r.To.Unix(), 10)
+	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(fromStr).Lte(toStr)
 }
 
 func (h l7LogsIndexHelper) GetTimeField() string {

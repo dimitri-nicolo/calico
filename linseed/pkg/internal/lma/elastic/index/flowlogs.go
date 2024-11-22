@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/olivere/elastic/v7"
@@ -191,8 +192,8 @@ func (h flowLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query
 		from = r.From
 		to = r.To
 	} else {
-		from = r.From.Unix()
-		to = r.To.Unix()
+		from = strconv.FormatInt(r.From.Unix(), 10)
+		to = strconv.FormatInt(r.To.Unix(), 10)
 	}
 	return elastic.NewRangeQuery(timeField).Gt(from).Lte(to)
 }

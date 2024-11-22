@@ -13,7 +13,6 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 )
 
 var _ = Describe("queryserver resource authorizer tests", func() {
@@ -81,15 +80,21 @@ var _ = Describe("queryserver resource authorizer tests", func() {
 				Name:      "netpolicy1",
 				Namespace: "ns-a",
 			}
+			networkpolicy1.Spec = v3.NetworkPolicySpec{
+				Tier: "default",
+			}
 
-			Expect(permissions.IsAuthorized(interface{}(networkpolicy1).(api.Resource), []string{"get"})).To(BeTrue())
+			Expect(permissions.IsAuthorized(networkpolicy1, "get", "default")).To(BeTrue())
 
 			networkpolicy1 = v3.NewNetworkPolicy()
 			networkpolicy1.ObjectMeta = metav1.ObjectMeta{
 				Name:      "netpolicy1",
 				Namespace: "ns-b",
 			}
-			Expect(permissions.IsAuthorized(interface{}(networkpolicy1).(api.Resource), []string{"get"})).To(BeFalse())
+			networkpolicy1.Spec = v3.NetworkPolicySpec{
+				Tier: "default",
+			}
+			Expect(permissions.IsAuthorized(networkpolicy1, "get", "default")).To(BeFalse())
 		})
 	})
 
