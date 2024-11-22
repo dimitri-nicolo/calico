@@ -36,7 +36,7 @@ func (lm *LabelsMap) GetLabels() map[string]set.Set[string] {
 	return lm.labels
 }
 
-func (lm *LabelsMap) SetLabels(key string, value ...string) map[string]set.Set[string] {
+func (lm *LabelsMap) SetLabels(key string, values ...string) map[string]set.Set[string] {
 	// add new key to the map
 	if lm.labels == nil {
 		lm.labels = map[string]set.Set[string]{}
@@ -47,7 +47,7 @@ func (lm *LabelsMap) SetLabels(key string, value ...string) map[string]set.Set[s
 	}
 
 	// add new value(s) for an existing key
-	lm.labels[key].AddAll(value)
+	lm.labels[key].AddAll(values)
 
 	return lm.labels
 }

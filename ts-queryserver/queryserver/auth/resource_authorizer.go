@@ -9,22 +9,53 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 )
 
+const (
+	ResourceServiceAccount  = "serviceaccount"
+	ResourceServiceAccounts = "serviceaccounts"
+	ResourceTier            = "tier"
+	ResourceTiers           = "tiers"
+	ResourceNamespace       = "namespace"
+	ResourceNamespaces      = "namespaces"
+	ResourcePod             = "pod"
+	ResourcePods            = "pods"
+
+	ResourceNetworkPolicy                   = "networkpolicy"
+	ResourceNetworkPolicies                 = "networkpolicies"
+	ResourceGlobalNetworkPolicy             = "globalnetworkpolicy"
+	ResourceGlobalNetworkPolicies           = "globalnetworkpolicies"
+	ResourceStageNetworkPolicy              = "stagednetworkpolicy"
+	ResourceStageNetworkPolicies            = "stagednetworkpolicies"
+	ResourceStagedGlobalNetworkPolicy       = "stagedglobalnetworkpolicy"
+	ResourceStagedGlobalNetworkPolicies     = "stagedglobalnetworkpolicies"
+	ResourceStagedKubernetesNetworkPolicy   = "stagedkubernetenetworkpolicy"
+	ResourceStagedKubernetesNetworkPolicies = "stagedkubernetenetworkpolicies"
+	ResourceNetworkSet                      = "networkset"
+	ResourceNetworkSets                     = "networksets"
+	ResourceGlobalNetworkSet                = "globalnetworkset"
+	ResourceGlobalNetworkSets               = "globalnetworksets"
+	ResourceManagedCluster                  = "managedcluster"
+	ResourceManagedClusters                 = "managedclusters"
+	ResourceGlobalThreatFeed                = "globalthreatfeed"
+	ResourceGlobalThreatFeeds               = "globalthreatfeeds"
+
+	ApiGroupK8sNetworking = "networking.k8s.io"
+)
+
 type Permission interface {
-	IsAuthorized(res api.Resource, tier *string, verbs []string) bool
+	IsAuthorized(res api.Resource, tier *string, verbs []rbac.Verb) bool
 }
 type permission struct {
-	APIGroupsPermissions map[string]ResourcePermissions // apiGroup string --> ResourcePermission
+	APIGroupsResourceNamePermissions map[APIGroupResourceName]VerbPermissions
 }
 
-type ResourcePermissions map[string]VerbPermissions          // resource name string -->
-type VerbPermissions map[string][]v3.AuthorizedResourceGroup // verb string --> []ResourceGroup
-type AuthorizationVerb string
+type VerbPermissions map[rbac.Verb][]v3.AuthorizedResourceGroup // verb string --> []ResourceGroup
 type APIGroupResourceName string
 
 func getCombinedName(apiGroup string, resourceName string) APIGroupResourceName {
@@ -32,51 +63,44 @@ func getCombinedName(apiGroup string, resourceName string) APIGroupResourceName 
 }
 
 // IsAuthorized is checking if current users' permissions allows either of the verbs passed in the param on the resource passed in.
-func (p *permission) IsAuthorized(res api.Resource, tier *string, verbs []string) bool {
+func (p *permission) IsAuthorized(res api.Resource, tier *string, verbs []rbac.Verb) bool {
 	combinedName := getCombinedName(
 		getAPIGroup(res.GetObjectKind().GroupVersionKind().Group),
 		convertV1KindToResourceType(res.GetObjectKind().GroupVersionKind().Kind, res.GetObjectMeta().GetName()))
 
-	if verbsMap, ok := p.APIGroupsResourceNamePermissions[combinedName]; ok {
-		for _, v := range verbs {
-			if resourceGrps, ok := verbsMap[AuthorizationVerb(v)]; ok {
-				for _, resourceGrp := range resourceGrps {
-					if resourceGrp.Namespace == "" && resourceGrp.Tier == "" {
-						return true
-					}
-					if resourceGrp.Namespace != "" && resourceGrp.Tier == "" {
-						if namespaceMatch(res.GetObjectMeta().GetNamespace(), resourceGrp.Namespace) {
-							return true
-						}
-					}
-					if resourceGrp.Namespace == "" && resourceGrp.Tier != "" {
-						if tier != nil {
-							if tierMatch(*tier, resourceGrp.Tier) {
-								return true
-							}
-						}
-					}
-					if resourceGrp.Namespace != "" && resourceGrp.Tier != "" {
-						if tier != nil {
-							if namespaceMatch(res.GetObjectMeta().GetNamespace(), resourceGrp.Namespace) &&
-								tierMatch(*tier, resourceGrp.Tier) {
-								return true
-							}
-						}
-					}
-				}
+	verbsMap, ok := p.APIGroupsResourceNamePermissions[combinedName]
+	if !ok {
+		return false
+	}
+
+	for _, v := range verbs {
+		resourceGrps, ok := verbsMap[v]
+		if !ok {
+			return false
+		}
+
+		for _, resourceGrp := range resourceGrps {
+			if namespaceMatch(resourceGrp.Namespace, res.GetObjectMeta().GetNamespace()) &&
+				tierMatch(resourceGrp.Tier, tier) {
+				return true
 			}
 		}
 	}
 	return false
 }
 
-func namespaceMatch(ns1, ns2 string) bool {
-	return ns1 == ns2
+func namespaceMatch(authzNS, rscNS string) bool {
+	return authzNS == "" || (authzNS == rscNS)
 }
 
-func tierMatch(tier1, tier2 string) bool {
-	return tier1 == tier2
+func tierMatch(authzTier string, rscTier *string) bool {
+	if authzTier == "" {
+		return true
+	}
+	if rscTier != nil && (authzTier == *rscTier) {
+		return true
+	}
+	return false
 }
 
 func getAPIGroup(apigroup string) string {
@@ -94,32 +118,32 @@ func convertV1KindToResourceType(kind string, name string) string {
 	}
 
 	switch kind {
-	case "stagedglobalnetworkpolicies", "stagedglobalnetworkpolicy":
-		return "stagedglobalnetworkpolicies"
-	case "stagednetworkpolicies", "stagednetworkpolicy":
-		return "stagednetworkpolicies"
-	case "stagedkubernetesnetworkpolicies", "stagedkubernetesnetworkpolicy":
-		return "stagedkubernetesnetworkpolicies"
-	case "globalnetworkpolicies", "globalnetworkpolicy":
-		return "globalnetworkpolicies"
-	case "networkpolicies", "networkpolicy":
-		return "networkpolicies"
-	case "globalnetworksets", "globalnetworkset":
-		return "globalnetworksets"
-	case "networksets", "networkset":
-		return "networksets"
-	case "tiers", "tier":
-		return "tiers"
-	case "pods", "pod":
-		return "pods"
-	case "namespace", "namespaces":
-		return "namespaces"
-	case "serviceaccounts", "serviceaccount":
-		return "serviceaccounts"
-	case "managedclusters", "managedcluster":
-		return "managedclusters"
-	case "globalthreatfeeds", "globalthreatfeed":
-		return "globalthreatfeeds"
+	case ResourceStagedGlobalNetworkPolicy, ResourceStagedGlobalNetworkPolicies:
+		return ResourceStagedGlobalNetworkPolicies
+	case ResourceStageNetworkPolicy, ResourceStageNetworkPolicies:
+		return ResourceStageNetworkPolicies
+	case ResourceStagedKubernetesNetworkPolicy, ResourceStagedKubernetesNetworkPolicies:
+		return ResourceStagedKubernetesNetworkPolicies
+	case ResourceGlobalNetworkPolicy, ResourceGlobalNetworkPolicies:
+		return ResourceGlobalNetworkPolicies
+	case ResourceNetworkPolicy, ResourceNetworkPolicies:
+		return ResourceNetworkPolicies
+	case ResourceGlobalNetworkSet, ResourceGlobalNetworkSets:
+		return ResourceGlobalNetworkSets
+	case ResourceNetworkSet, ResourceNetworkSets:
+		return ResourceNetworkSets
+	case ResourceTier, ResourceTiers:
+		return ResourceTiers
+	case ResourcePod, ResourcePods:
+		return ResourcePods
+	case ResourceNamespace, ResourceNamespaces:
+		return ResourceNamespaces
+	case ResourceServiceAccount, ResourceServiceAccounts:
+		return ResourceServiceAccounts
+	case ResourceManagedCluster, ResourceManagedClusters:
+		return ResourceManagedClusters
+	case ResourceGlobalThreatFeed, ResourceGlobalThreatFeeds:
+		return ResourceGlobalThreatFeeds
 	default:
 		return kind
 	}
@@ -185,20 +209,20 @@ func (authz *authorizer) PerformUserAuthorizationReview(ctx context.Context,
 // faster lookup.
 func convertAuthorizationReviewStatusToPermissions(authorizedResourceVerbs []v3.AuthorizedResourceVerbs) (Permission, error) {
 	permMap := permission{
-		APIGroupsResourceNamePermissions: map[APIGroupResourceName]map[AuthorizationVerb][]v3.AuthorizedResourceGroup{},
+		APIGroupsResourceNamePermissions: map[APIGroupResourceName]VerbPermissions{},
 	}
 	for _, rAtt := range authorizedResourceVerbs {
 		combinedName := getCombinedName(rAtt.APIGroup, rAtt.Resource)
 		if _, ok := permMap.APIGroupsResourceNamePermissions[combinedName]; !ok {
-			permMap.APIGroupsResourceNamePermissions[combinedName] = map[AuthorizationVerb][]v3.AuthorizedResourceGroup{}
+			permMap.APIGroupsResourceNamePermissions[combinedName] = VerbPermissions{}
 		}
 		for _, verb := range rAtt.Verbs {
-			resourceGroups := []v3.AuthorizedResourceGroup{}
-			if _, ok := permMap.APIGroupsResourceNamePermissions[combinedName][AuthorizationVerb(verb.Verb)]; ok {
-				resourceGroups = permMap.APIGroupsResourceNamePermissions[combinedName][AuthorizationVerb(verb.Verb)]
+			resourceGroups := make([]v3.AuthorizedResourceGroup, 0)
+			if _, ok := permMap.APIGroupsResourceNamePermissions[combinedName][rbac.Verb(verb.Verb)]; ok {
+				resourceGroups = permMap.APIGroupsResourceNamePermissions[combinedName][rbac.Verb(verb.Verb)]
 			}
 			resourceGroups = append(resourceGroups, verb.ResourceGroups...)
-			permMap.APIGroupsResourceNamePermissions[combinedName][AuthorizationVerb(verb.Verb)] = resourceGroups
+			permMap.APIGroupsResourceNamePermissions[combinedName][rbac.Verb(verb.Verb)] = resourceGroups
 		}
 	}
 
@@ -207,17 +231,17 @@ func convertAuthorizationReviewStatusToPermissions(authorizedResourceVerbs []v3.
 
 var PolicyAuthReviewAttrList = []v3.AuthorizationReviewResourceAttributes{
 	{
-		APIGroup: "projectcalico.org",
+		APIGroup: v3.Group,
 		Resources: []string{
-			"stagednetworkpolicies", "stagedglobalnetworkpolicies", "stagedkubernetesnetworkpolicies",
-			"globalnetworkpolicies", "networkpolicies", "networksets", "globalnetworksets",
-			"tiers",
+			ResourceStageNetworkPolicies, ResourceStagedGlobalNetworkPolicies, ResourceStagedKubernetesNetworkPolicies,
+			ResourceGlobalNetworkPolicies, ResourceNetworkPolicies, ResourceNetworkSets, ResourceGlobalNetworkSets,
+			ResourceTiers,
 		},
-		Verbs: []string{"watch", "get", "delete", "create", "update", "list", "patch"},
+		Verbs: []string{string(rbac.VerbWatch), string(rbac.VerbGet), string(rbac.VerbList)},
 	},
 	{
-		APIGroup:  "networking.k8s.io",
-		Resources: []string{"networkpolicies"},
-		Verbs:     []string{"watch", "get", "delete", "create", "update", "list", "patch"},
+		APIGroup:  ApiGroupK8sNetworking,
+		Resources: []string{ResourceNetworkPolicies},
+		Verbs:     []string{string(rbac.VerbWatch), string(rbac.VerbGet), string(rbac.VerbList)},
 	},
 }

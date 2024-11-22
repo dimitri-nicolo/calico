@@ -11,25 +11,27 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/cache"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
 	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type LabelAggregator interface {
-	GetAllPoliciesLabels(permissions authhandler.Permission, policiesCache cache.PoliciesCache) (*api.LabelsMap, []string, error)
-	GetGlobalThreatfeedsLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error)
-	GetAllNetworksetsLabels(permissions authhandler.Permission, setsCache cache.NetworkSetsCache) (*api.LabelsMap, []string, error)
-	GetManagedClustersLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error)
-	GetPodsLabels(permissions authhandler.Permission, cache cache.EndpointsCache) (*api.LabelsMap, []string, error)
-	GetNamespacesLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error)
-	GetServiceAccountsLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error)
+	GetAllPoliciesLabels(ctx context.Context, permissions authhandler.Permission, policiesCache cache.PoliciesCache) (*api.LabelsMap, []string, error)
+	GetGlobalThreatfeedsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
+	GetAllNetworkSetsLabels(ctx context.Context, permissions authhandler.Permission, setsCache cache.NetworkSetsCache) (*api.LabelsMap, []string, error)
+	GetManagedClustersLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
+	GetPodsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.EndpointsCache) (*api.LabelsMap, []string, error)
+	GetNamespacesLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
+	GetServiceAccountsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
 }
 
 type label struct {
@@ -44,29 +46,34 @@ func NewLabelsAggregator(k8sClient kubernetes.Interface, ci clientv3.Interface) 
 	}
 }
 
-// getAllNetworksetsLabels returns labels for both networksets and globalnetworksets combined in one map.
-func (l *label) GetAllNetworksetsLabels(permissions authhandler.Permission, cache cache.NetworkSetsCache) (*api.LabelsMap, []string, error) {
+// GetAllNetworkSetsLabels returns networkSets and globalNetworkSets from the cache. Labels are then extracted for both
+// types and returned in one map.
+func (l *label) GetAllNetworkSetsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.NetworkSetsCache) (*api.LabelsMap, []string, error) {
 	labelsResponse := &api.LabelsMap{}
 	allNetworkSets := cache.GetNetworkSets(set.New[model.Key]())
 
-	missingPermissionGlobalNetworkset, missingPermissionNetworkset := false, false
+	missingPermissionGlobalNetworkSet, missingPermissionNetworkSet := false, false
 
 	for _, ns := range allNetworkSets {
-		// check permissions for networkset
+		// check permissions for networkSets
+		kind := ns.GetObjectKind().GroupVersionKind().Kind
+
+		// There is no namespace for globalNetworkSets, but there is also no harm is setting the namespace for the
+		// benefit of same code path for both networkSets and globalNetworkSets
 		networkSetResource := &apiv3.NetworkSet{
 			TypeMeta: v1.TypeMeta{
-				Kind:       ns.GetObjectKind().GroupVersionKind().Kind,
-				APIVersion: "projectcalico.org/v3",
+				Kind:       kind,
+				APIVersion: apiv3.GroupVersionCurrent,
 			},
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: ns.GetObjectMeta().GetNamespace(),
 			},
 		}
-		if !permissions.IsAuthorized(networkSetResource, nil, []string{"list"}) {
-			if strings.ToLower(ns.GetObjectKind().GroupVersionKind().Kind) == "globalnetworkset" {
-				missingPermissionGlobalNetworkset = true
-			} else if strings.ToLower(ns.GetObjectKind().GroupVersionKind().Kind) == "networkset" {
-				missingPermissionNetworkset = true
+		if !permissions.IsAuthorized(networkSetResource, nil, []rbac.Verb{rbac.VerbList}) {
+			if strings.ToLower(kind) == "globalnetworkset" {
+				missingPermissionGlobalNetworkSet = true
+			} else if strings.ToLower(kind) == "networkset" {
+				missingPermissionNetworkSet = true
 			}
 			continue
 		}
@@ -78,13 +85,10 @@ func (l *label) GetAllNetworksetsLabels(permissions authhandler.Permission, cach
 	}
 
 	var warning []string
-	if missingPermissionGlobalNetworkset {
-		warning = []string{"missing \"list\" RBAC to globalnetworksets."}
+	if missingPermissionGlobalNetworkSet {
+		warning = append(warning, "missing \"list\" RBAC to globalnetworksets.")
 	}
-	if missingPermissionNetworkset {
-		if warning == nil {
-			warning = []string{}
-		}
+	if missingPermissionNetworkSet {
 		warning = append(warning, "missing \"list\" RBAC to networksets.")
 	}
 
@@ -93,78 +97,63 @@ func (l *label) GetAllNetworksetsLabels(permissions authhandler.Permission, cach
 
 // GetAllPoliciesLabels returns labels for all kinds of policies i.e. kubernetesnetworkpolicies, networkpolicies,
 // globalnetworkpolicies, and all the staged ones combined in one map.
-func (l *label) GetAllPoliciesLabels(permissions authhandler.Permission, policiesCache cache.PoliciesCache) (*api.LabelsMap, []string, error) {
-	labelsResponse := &api.LabelsMap{}
+func (l *label) GetAllPoliciesLabels(ctx context.Context, permissions authhandler.Permission, policiesCache cache.PoliciesCache) (*api.LabelsMap, []string, error) {
+	missingPermissionPolicy := false
 
-	missingPermissionTier, missingPermisionPolicy := false, false
-
-	// GetOrderdedPolicies returns all policies for an empty set of policy keys.
+	// Retriever policies form cache
 	allPolicies := policiesCache.GetOrderedPolicies(nil)
 
-	tierresource := &apiv3.Tier{
-		TypeMeta: v1.TypeMeta{
-			Kind:       "Tier",
-			APIVersion: "projectcalico.org/v3",
-		},
-	}
-	// check permission for tier
-	if !permissions.IsAuthorized(tierresource, nil, []string{"list"}) {
-		missingPermissionTier = true
-	}
-
+	allLabels := &api.LabelsMap{}
 	for _, tier := range allPolicies {
-		// iterator over policies within the tier
+		// Iterator over policies within the tier
 		policies := tier.GetOrderedPolicies()
 		for _, p := range policies {
-			tier := p.GetTier()
-			// check permission to tier for non-kubernetes policies
-			if !p.IsKubernetesType() && missingPermissionTier {
+			// Check permission to policy type & tier
+			resource, policyTier := utils.GetActualResourceAndTierFromCachedPolicyForRBAC(p)
+			if !permissions.IsAuthorized(resource, &policyTier, []rbac.Verb{rbac.VerbGet}) {
+				missingPermissionPolicy = true
 				continue
 			}
 
-			// check permission to policy type
-			if !permissions.IsAuthorized(p.GetResourceType(), &tier, []string{"list"}) {
-				missingPermisionPolicy = true
-				continue
-			}
+			// Add labels to allLabels
 			pLabels := p.GetResource().GetObjectMeta().GetLabels()
 			for k, v := range pLabels {
-				labelsResponse.SetLabels(k, v)
+				allLabels.SetLabels(k, v)
 			}
 		}
 	}
 
 	var warning []string
-	if missingPermissionTier {
-		warning = []string{"missing \"list\" RBAC to tiers."}
+	if missingPermissionPolicy {
+		warning = append(warning, "missing \"get\" RBAC to some policy types.")
 	}
-	if missingPermisionPolicy {
-		if warning == nil {
-			warning = []string{}
-		}
-		warning = append(warning, "missing \"list\" RBAC to some policy types.")
-	}
-	return labelsResponse, warning, nil
+	return allLabels, warning, nil
 }
 
-func (l *label) GetGlobalThreatfeedsLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error) {
+// GetGlobalThreatfeedsLabels gets GlobalThreatfeeds data directly from the datastore since they are not cached in
+// queryserver cache.
+// TODO: introduce caching layer for all objects to avoid direct calls to the datastore.
+func (l *label) GetGlobalThreatfeedsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+	// Check logged-in users permission to GlobalThreatFeeds
+	globalThreatFeedResource := &apiv3.GlobalThreatFeed{
+		TypeMeta: v1.TypeMeta{
+			Kind:       apiv3.KindGlobalThreatFeed,
+			APIVersion: apiv3.GroupVersionCurrent,
+		},
+	}
+
+	if !permissions.IsAuthorized(globalThreatFeedResource, nil, []rbac.Verb{rbac.VerbList}) {
+		warning := []string{"missing \"list\" RBAC to globalthreatfeeds."}
+		return nil, warning, nil
+	}
+
+	// Retrieve globalthreatfeeds from datastore
 	globalthreadfeeds, err := l.calicoClient.GlobalThreatFeeds().List(ctx, options.ListOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	globalthreatfeedresource := &apiv3.GlobalThreatFeed{
-		TypeMeta: v1.TypeMeta{
-			Kind:       "GlobalThreatFeeds",
-			APIVersion: "projectcalico.org/v3",
-		},
-	}
-	// check logged-in users permission to GlobalThreatFeeds
-	if !permissions.IsAuthorized(interface{}(globalthreatfeedresource).(api.Resource), nil, []string{"list"}) {
-		warning := []string{"missing \"list\" RBAC to globalthreatfeeds."}
-		return nil, warning, nil
-	}
-
+	// Populate allLabels
 	allLabels := api.NewLabelsMap()
 	for _, resource := range globalthreadfeeds.Items {
 		for key, value := range resource.Labels {
@@ -175,8 +164,23 @@ func (l *label) GetGlobalThreatfeedsLabels(permissions authhandler.Permission, c
 	return allLabels, nil, nil
 }
 
-func (l *label) GetManagedClustersLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error) {
-	// retrieve resource labels from cache
+// GetManagedClustersLabels get ManagedCluster data directly from the datastore since they are not cached in
+// queryserver cache.
+// TODO: introduce caching layer for all objects to avoid direct calls to datastore
+func (l *label) GetManagedClustersLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+	// Check logged-in users permission to ManagedClusters
+	managedClusterResource := &apiv3.ManagedCluster{
+		TypeMeta: v1.TypeMeta{
+			Kind:       apiv3.KindManagedCluster,
+			APIVersion: apiv3.GroupVersionCurrent,
+		},
+	}
+	if !permissions.IsAuthorized(managedClusterResource, nil, []rbac.Verb{rbac.VerbList}) {
+		warning := []string{"missing \"list\" RBAC to managedclusters."}
+		return nil, warning, nil
+	}
+
+	// Retrieve ManagedClusters
 	clusters, err := l.calicoClient.ManagedClusters().List(ctx, options.ListOptions{})
 	if err != nil {
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -185,18 +189,8 @@ func (l *label) GetManagedClustersLabels(permissions authhandler.Permission, ctx
 		return nil, nil, err
 	}
 
+	// Populate all labels
 	allLabels := api.NewLabelsMap()
-	managedClusterResource := &apiv3.ManagedCluster{
-		TypeMeta: v1.TypeMeta{
-			Kind:       "managedclusters",
-			APIVersion: "projectcalico.org/v3",
-		},
-	}
-	// check logged-in users permission to ManagedClusters
-	if !permissions.IsAuthorized(interface{}(managedClusterResource).(api.Resource), nil, []string{"list"}) {
-		warning := []string{"missing \"list\" RBAC to managedclusters."}
-		return nil, warning, nil
-	}
 	for _, resource := range clusters.Items {
 		for key, value := range resource.Labels {
 			allLabels.SetLabels(key, value)
@@ -206,39 +200,61 @@ func (l *label) GetManagedClustersLabels(permissions authhandler.Permission, ctx
 	return allLabels, nil, nil
 }
 
-func (l *label) GetPodsLabels(permissions authhandler.Permission, cache cache.EndpointsCache) (*api.LabelsMap, []string, error) {
+func (l *label) GetPodsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.EndpointsCache) (*api.LabelsMap, []string, error) {
+	// Retrieve pods from the cache
 	podsList := cache.GetEndpoints([]model.Key{})
 	missingPermission := false
 
 	allLabels := api.NewLabelsMap()
 	for _, item := range podsList {
-		podresource := &corev1.Pod{
+		// Check logged-in users permission
+		podResource := &corev1.Pod{
 			TypeMeta: v1.TypeMeta{
-				Kind:       "pod",
+				Kind:       apiv3.KindK8sPod,
 				APIVersion: "",
 			},
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: item.GetResource().GetObjectMeta().GetNamespace(),
 			},
 		}
-		// check logged-in users permission and add resource labels to allLabels
-		if permissions.IsAuthorized(interface{}(podresource).(api.Resource), nil, []string{"list"}) {
-			for key, value := range item.GetResource().GetObjectMeta().GetLabels() {
-				allLabels.SetLabels(key, value)
-			}
-		} else {
+		if !permissions.IsAuthorized(podResource, nil, []rbac.Verb{rbac.VerbList}) {
 			missingPermission = true
+			continue
+		}
+
+		// Add labels to allLabels
+		for key, value := range item.GetResource().GetObjectMeta().GetLabels() {
+			allLabels.SetLabels(key, value)
 		}
 	}
 
 	if missingPermission {
-		warning := []string{"missing \"list\" RBAC to some pods / namespaces."}
+		warning := []string{"missing \"list\" RBAC to some pods."}
 		return allLabels, warning, nil
 	}
 	return allLabels, nil, nil
 }
 
-func (l *label) GetNamespacesLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error) {
+// GetNamespacesLabels returns labels for namespaces directly from the datastore since there is no cache storing namespaces
+// in the queryserver.
+// It returns labels for all namespaces if user has "list" RBAC to "namespace" resource without any resourceNames
+// defined in a clusterRole, otherwise it returns a warning that user does not have the required RBAC for this operation.
+// TODO: caching to be implemented
+func (l *label) GetNamespacesLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+	// Check logged-in users permission
+	namespaceResource := &corev1.Namespace{
+		TypeMeta: v1.TypeMeta{
+			Kind:       apiv3.KindK8sNamespace,
+			APIVersion: "",
+		},
+	}
+	// check logged-in users permission and add resource labels to allLabels
+	if !permissions.IsAuthorized(namespaceResource, nil, []rbac.Verb{rbac.VerbList}) {
+		warning := []string{"missing \"list\" RBAC to namespaces."}
+		return nil, warning, nil
+	}
+
+	// Retrieve namespaces from the datastore
 	nsList, err := l.k8sClient.CoreV1().Namespaces().List(ctx, v1.ListOptions{})
 	if err != nil {
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
@@ -247,40 +263,23 @@ func (l *label) GetNamespacesLabels(permissions authhandler.Permission, ctx cont
 		return nil, nil, err
 	}
 
-	missingPermissionNamespace := false
 	allLabels := api.NewLabelsMap()
 	for _, item := range nsList.Items {
-		namespaceresource := &corev1.Namespace{
-			TypeMeta: v1.TypeMeta{
-				Kind:       "namespace",
-				APIVersion: "",
-			},
-			ObjectMeta: v1.ObjectMeta{
-				Name: item.Name,
-			},
-		}
-		// check logged-in users permission and add resource labels to allLabels
-		if permissions.IsAuthorized(namespaceresource, nil, []string{"list"}) {
-			for key, value := range item.Labels {
-				allLabels.SetLabels(key, value)
-			}
-		} else {
-			missingPermissionNamespace = true
+		for key, value := range item.Labels {
+			allLabels.SetLabels(key, value)
 		}
 	}
-
-	if missingPermissionNamespace {
-		warning := []string{"missing \"list\" RBAC to some namespaces."}
-		return allLabels, warning, nil
-	}
-
 	return allLabels, nil, nil
 }
 
-func (l *label) GetServiceAccountsLabels(permissions authhandler.Permission, ctx context.Context) (*api.LabelsMap, []string, error) {
+// GetServiceAccountsLabels returns labels for serviceAccounts directly from the datastore since htere is no cache storing
+// serviceAccounts in the queryserver.
+// TODO: caching to be implemented
+func (l *label) GetServiceAccountsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+	// Retrieve serviceAccounts from the datastore
 	saList, err := l.k8sClient.CoreV1().ServiceAccounts("").List(ctx, v1.ListOptions{
 		TypeMeta: v1.TypeMeta{
-			Kind:       "ServiceAccounts",
+			Kind:       apiv3.KindK8sServiceAccount,
 			APIVersion: "",
 		},
 	})
@@ -292,30 +291,31 @@ func (l *label) GetServiceAccountsLabels(permissions authhandler.Permission, ctx
 	}
 
 	missingPermissionServiceAccount := false
-
 	allLabels := api.NewLabelsMap()
 	for _, item := range saList.Items {
-		serviceaccountresource := &corev1.ServiceAccount{
+		// Check logged-in users permission
+		serviceAccountResource := &corev1.ServiceAccount{
 			TypeMeta: v1.TypeMeta{
-				Kind:       "serviceaccount",
+				Kind:       authhandler.ResourceServiceAccounts,
 				APIVersion: "",
 			},
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: item.Namespace,
 			},
 		}
-		// check logged-in users permission and add resource labels to allLabels
-		if permissions.IsAuthorized(interface{}(serviceaccountresource).(api.Resource), nil, []string{"list"}) {
-			for key, value := range item.Labels {
-				allLabels.SetLabels(key, value)
-			}
-		} else {
+		if !permissions.IsAuthorized(serviceAccountResource, nil, []rbac.Verb{rbac.VerbList}) {
 			missingPermissionServiceAccount = true
+			continue
+		}
+
+		// Add serviceAccount labels to allLabels
+		for key, value := range item.Labels {
+			allLabels.SetLabels(key, value)
 		}
 	}
 
 	if missingPermissionServiceAccount {
-		warning := []string{"missing \"list\" RBAC to some serviceaccounts / namespaces."}
+		warning := []string{"missing \"list\" RBAC to some serviceAccounts."}
 		return allLabels, warning, nil
 
 	}
@@ -324,23 +324,24 @@ func (l *label) GetServiceAccountsLabels(permissions authhandler.Permission, ctx
 
 var LabelsResourceAuthReviewAttrList = []apiv3.AuthorizationReviewResourceAttributes{
 	{
-		APIGroup: "projectcalico.org",
+		APIGroup: apiv3.Group,
 		Resources: []string{
-			"stagednetworkpolicies", "stagedglobalnetworkpolicies", "stagedkubernetesnetworkpolicies",
-			"globalnetworkpolicies", "networkpolicies", "networksets", "globalnetworksets",
-			"tiers", "managedclusters", "globalthreatfeeds",
+			authhandler.ResourceStageNetworkPolicies, authhandler.ResourceStagedGlobalNetworkPolicies,
+			authhandler.ResourceStagedKubernetesNetworkPolicies, authhandler.ResourceGlobalNetworkPolicies,
+			authhandler.ResourceNetworkPolicies, authhandler.ResourceNetworkSets, authhandler.ResourceGlobalNetworkSets,
+			authhandler.ResourceTiers, authhandler.ResourceManagedClusters, authhandler.ResourceGlobalThreatFeeds,
 		},
-		Verbs: []string{"list"},
+		Verbs: []string{string(rbac.VerbGet), string(rbac.VerbList)},
 	},
 	{
-		APIGroup:  "networking.k8s.io",
-		Resources: []string{"networkpolicies"},
-		Verbs:     []string{"list"},
+		APIGroup:  authhandler.ApiGroupK8sNetworking,
+		Resources: []string{authhandler.ResourceNetworkPolicies},
+		Verbs:     []string{string(rbac.VerbGet), string(rbac.VerbList)},
 	},
 	{
 		APIGroup: "",
 		Resources: []string{
-			"pods", "namespaces", "serviceaccounts",
+			authhandler.ResourcePods, authhandler.ResourceNamespaces, authhandler.ResourceServiceAccounts,
 		},
-		Verbs: []string{"list"},
+		Verbs: []string{string(rbac.VerbGet), string(rbac.VerbList)},
 	}}

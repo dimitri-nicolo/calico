@@ -179,13 +179,15 @@ func (c *endpointsCache) GetEndpoint(key model.Key) api.Endpoint {
 	return nil
 }
 
+// GetEndpoints return list of all endpoints including both workload endpoints and host endpoints.
 func (c *endpointsCache) GetEndpoints(keys []model.Key) []api.Endpoint {
 	if len(keys) == 0 {
 		eps := make([]api.Endpoint, 0)
+		// getAllEndpoints returns []*endpointsData, endpointsData implements api.Endpoint, thus the conversion
+		// is safe. Go doesn't do this conversion for the array though, and we need to iterate and append endpoints one by one.
 		for _, ep := range c.getAllEndpoints() {
 			eps = append(eps, ep)
 		}
-
 		return eps
 	} else {
 		eps := make([]api.Endpoint, len(keys))
@@ -283,6 +285,7 @@ func (c *endpointsCache) getEndpoint(key model.Key) *endpointData {
 	return ec.endpoints[key]
 }
 
+// getAllEndpoints returns a list of both workload endpoints and host endpoints
 func (c *endpointsCache) getAllEndpoints() []*endpointData {
 	endpointsResult := make([]*endpointData, 0)
 

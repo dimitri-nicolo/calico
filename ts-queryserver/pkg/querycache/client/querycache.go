@@ -9,12 +9,11 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/strings/slices"
 
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -414,8 +413,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 			}
 		}
 
-		resource, tier := getActualResourceAndTierFromCachedPolicyForRBAC(p)
-		if !req.Permissions.IsAuthorized(resource, "get", tier) {
+		resource, tier := utils.GetActualResourceAndTierFromCachedPolicyForRBAC(p)
+		if !req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbGet}) {
 			return nil, errors.ErrorOperationNotSupported{
 				Operation:  "Get",
 				Identifier: req.Policy,
@@ -506,8 +505,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 			}
 
 			// check authorization to the policy resource.
-			resource, tier := getActualResourceAndTierFromCachedPolicyForRBAC(p)
-			if req.Permissions.IsAuthorized(resource, "get", tier) {
+			resource, tier := utils.GetActualResourceAndTierFromCachedPolicyForRBAC(p)
+			if req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbGet}) {
 				items = append(items, *c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector))
 			}
 		}
@@ -656,21 +655,21 @@ func (c *cachedQuery) runQueryLabels(cxt context.Context, req QueryLabelsReq) (*
 	var warning []string
 	switch req.ResourceType {
 	case api.LabelsResourceTypePods:
-		allLabels, warning, err = c.labelAggregator.GetPodsLabels(req.Permission, c.endpoints)
+		allLabels, warning, err = c.labelAggregator.GetPodsLabels(cxt, req.Permission, c.endpoints)
 	case api.LabelsResourceTypeNamespaces:
-		allLabels, warning, err = c.labelAggregator.GetNamespacesLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetNamespacesLabels(cxt, req.Permission)
 	case api.LabelsResourceTypeServiceAccounts:
-		allLabels, warning, err = c.labelAggregator.GetServiceAccountsLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetServiceAccountsLabels(cxt, req.Permission)
 	case api.LabelsResourceTypeManagedClusters:
-		allLabels, warning, err = c.labelAggregator.GetManagedClustersLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetManagedClustersLabels(cxt, req.Permission)
 	case api.LabelsResourceTypeGlobalThreatFeeds:
-		allLabels, warning, err = c.labelAggregator.GetGlobalThreatfeedsLabels(req.Permission, cxt)
+		allLabels, warning, err = c.labelAggregator.GetGlobalThreatfeedsLabels(cxt, req.Permission)
 	// returns combined policy labels in one response
 	case api.LabelsResourceTypeAllPolicies:
-		allLabels, warning, err = c.labelAggregator.GetAllPoliciesLabels(req.Permission, c.policies)
+		allLabels, warning, err = c.labelAggregator.GetAllPoliciesLabels(cxt, req.Permission, c.policies)
 	// returns combined networkset / globalnetworkset labels in one response
 	case api.LabelsResourceTypeAllNetworkSets:
-		allLabels, warning, err = c.labelAggregator.GetAllNetworksetsLabels(req.Permission, c.networksets)
+		allLabels, warning, err = c.labelAggregator.GetAllNetworkSetsLabels(cxt, req.Permission, c.networksets)
 	}
 
 	if err != nil {
@@ -729,34 +728,6 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 	}
 
 	return node
-}
-
-// getActualResourceAndTierFromCachedPolicyForRBAC returns the proper resource version/kind and tier for non-tiered
-// policies. Kubernetes and StageKubernetes policies are technically non-tiered specially when it comes to checking
-// RBAC against them. Thus, before checking authorization to these policies we need to get the correct tier and
-// resource type values
-func getActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource, string) {
-	resource := p.GetResource()
-	tier := p.GetTier()
-	if strings.HasPrefix(p.GetResource().GetObjectMeta().GetName(), "knp") {
-		resource = &v1.NetworkPolicy{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "NetworkPolicy",
-				APIVersion: "networking.k8s.io/v1",
-			},
-		}
-		tier = ""
-	} else if strings.HasPrefix(p.GetResource().GetObjectMeta().GetName(), "staged:knp") {
-		resource = &apiv3.StagedKubernetesNetworkPolicy{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "StagedKubernetesNetworkPolicy",
-				APIVersion: "projectcalico.org/v3",
-			},
-		}
-		tier = ""
-	}
-
-	return resource, tier
 }
 
 // getNodeIPAddresses returns the ip addresses defined in nr as a list of strings,  Empty list if nr.Addresses contains no addresses

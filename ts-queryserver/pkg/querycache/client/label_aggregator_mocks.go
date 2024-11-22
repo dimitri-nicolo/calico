@@ -8,6 +8,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
@@ -20,7 +21,7 @@ type mockAuthorizer struct{}
 
 type mockPermission struct{}
 
-func (p *mockPermission) IsAuthorized(res api.Resource, tier *string, verbs []string) bool {
+func (p *mockPermission) IsAuthorized(res api.Resource, tier *string, verbs []rbac.Verb) bool {
 	return true
 }
 

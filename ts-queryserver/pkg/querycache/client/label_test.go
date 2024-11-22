@@ -28,32 +28,32 @@ var _ = Describe("", func() {
 
 			By("getting labels for All NetworkSets")
 			// TODO: need to mock networkset cache
-			// l.GetAllNetworksetsLabels(permissions, )
+			// l.GetAllNetworkSetsLabels(permissions, )
 
 			By("getting labels for Pods")
 			// TODO: need to mock endpoints cache
 			// l.GetPodsLabels(permissions, )
 
 			By("getting labels for Namespaces")
-			labels, warning, err := l.GetNamespacesLabels(permissions, context.Background())
+			labels, warning, err := l.GetNamespacesLabels(context.Background(), permissions)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(warning).To(HaveLen(0))
 			Expect(labels.GetLabels()).To(HaveLen(0))
 
 			By("getting labels for ServiceAccounts")
-			labels, warning, err = l.GetServiceAccountsLabels(permissions, context.Background())
+			labels, warning, err = l.GetServiceAccountsLabels(context.Background(), permissions)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(warning).To(HaveLen(0))
 			Expect(labels.GetLabels()).To(HaveLen(0))
 
 			By("getting labels for GlobalThreatFeeds")
-			labels, warning, err = l.GetGlobalThreatfeedsLabels(permissions, context.Background())
+			labels, warning, err = l.GetGlobalThreatfeedsLabels(context.Background(), permissions)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(warning).To(HaveLen(0))
 			Expect(labels.GetLabels()).To(HaveLen(1))
 
 			By("getting labels for ManagedClusters")
-			labels, warning, err = l.GetManagedClustersLabels(permissions, context.Background())
+			labels, warning, err = l.GetManagedClustersLabels(context.Background(), permissions)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(warning).To(HaveLen(0))
 			Expect(labels.GetLabels()).To(HaveLen(1))

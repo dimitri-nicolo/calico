@@ -57,13 +57,12 @@ func (c *networksetsCache) GetNetworkSet(key model.Key) api.Resource {
 func (c *networksetsCache) GetNetworkSets(keys set.Set[model.Key]) []api.Resource {
 	if keys == nil || keys.Len() == 0 {
 		return c.getAllNetworkSets()
-	} else {
-		networksets := make([]api.Resource, 0, keys.Len())
-		for _, key := range keys.Slice() {
-			networksets = append(networksets, c.getNetworkSet(key))
-		}
-		return networksets
 	}
+	networkSets := make([]api.Resource, 0, keys.Len())
+	for _, key := range keys.Slice() {
+		networkSets = append(networkSets, c.getNetworkSet(key))
+	}
+	return networkSets
 }
 
 func (c *networksetsCache) getNetworkSet(key model.Key) api.Resource {
