@@ -273,8 +273,14 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        default: ""
+                        description: 'Name of the referent. This field is effectively
+                          required, but due to backwards compatibility is allowed
+                          to be empty. Instances of this type with an empty value
+                          here are almost certainly wrong. TODO: Add other useful
+                          fields. apiVersion, kind, uid? More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Drop `kubebuilder:default` when controller-gen doesn''t
+                          need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -649,8 +655,14 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        default: ""
+                        description: 'Name of the referent. This field is effectively
+                          required, but due to backwards compatibility is allowed
+                          to be empty. Instances of this type with an empty value
+                          here are almost certainly wrong. TODO: Add other useful
+                          fields. apiVersion, kind, uid? More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Drop `kubebuilder:default` when controller-gen doesn''t
+                          need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -5059,10 +5071,16 @@ spec:
                                       description: The key to select.
                                       type: string
                                     name:
-                                      description: 'Name of the referent. More info:
+                                      default: ""
+                                      description: 'Name of the referent. This field
+                                        is effectively required, but due to backwards
+                                        compatibility is allowed to be empty. Instances
+                                        of this type with an empty value here are
+                                        almost certainly wrong. TODO: Add other useful
+                                        fields. apiVersion, kind, uid? More info:
                                         https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Add other useful fields. apiVersion,
-                                        kind, uid?'
+                                        TODO: Drop `kubebuilder:default` when controller-gen
+                                        doesn''t need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.'
                                       type: string
                                     optional:
                                       description: Specify whether the ConfigMap or
@@ -5080,10 +5098,16 @@ spec:
                                         from.  Must be a valid secret key.
                                       type: string
                                     name:
-                                      description: 'Name of the referent. More info:
+                                      default: ""
+                                      description: 'Name of the referent. This field
+                                        is effectively required, but due to backwards
+                                        compatibility is allowed to be empty. Instances
+                                        of this type with an empty value here are
+                                        almost certainly wrong. TODO: Add other useful
+                                        fields. apiVersion, kind, uid? More info:
                                         https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Add other useful fields. apiVersion,
-                                        kind, uid?'
+                                        TODO: Drop `kubebuilder:default` when controller-gen
+                                        doesn''t need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.'
                                       type: string
                                     optional:
                                       description: Specify whether the Secret or its
@@ -7568,8 +7592,14 @@ spec:
                               description: The key to select.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              default: ""
+                              description: 'Name of the referent. This field is effectively
+                                required, but due to backwards compatibility is allowed
+                                to be empty. Instances of this type with an empty
+                                value here are almost certainly wrong. TODO: Add other
+                                useful fields. apiVersion, kind, uid? More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Drop `kubebuilder:default` when controller-gen
+                                doesn''t need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.'
                               type: string
                             optional:
                               description: Specify whether the ConfigMap or its key
@@ -7586,8 +7616,14 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              default: ""
+                              description: 'Name of the referent. This field is effectively
+                                required, but due to backwards compatibility is allowed
+                                to be empty. Instances of this type with an empty
+                                value here are almost certainly wrong. TODO: Add other
+                                useful fields. apiVersion, kind, uid? More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Drop `kubebuilder:default` when controller-gen
+                                doesn''t need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -8708,6 +8744,7 @@ spec:
                             type: string
                         type: object
                       type: array
+                      x-kubernetes-list-type: atomic
                     to:
                       description: to is a list of destinations for outgoing traffic
                         of pods selected for this rule. Items in this list are combined
@@ -8737,6 +8774,7 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                                x-kubernetes-list-type: atomic
                             required:
                             - cidr
                             type: object
@@ -8777,11 +8815,13 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                   required:
                                   - key
                                   - operator
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               matchLabels:
                                 additionalProperties:
                                   type: string
@@ -8828,11 +8868,13 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                   required:
                                   - key
                                   - operator
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               matchLabels:
                                 additionalProperties:
                                   type: string
@@ -8845,6 +8887,7 @@ spec:
                             type: object
                         type: object
                       type: array
+                      x-kubernetes-list-type: atomic
                   type: object
                 type: array
               ingress:
@@ -8890,6 +8933,7 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                                x-kubernetes-list-type: atomic
                             required:
                             - cidr
                             type: object
@@ -8930,11 +8974,13 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                   required:
                                   - key
                                   - operator
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               matchLabels:
                                 additionalProperties:
                                   type: string
@@ -8981,11 +9027,13 @@ spec:
                                       items:
                                         type: string
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                   required:
                                   - key
                                   - operator
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               matchLabels:
                                 additionalProperties:
                                   type: string
@@ -8998,6 +9046,7 @@ spec:
                             type: object
                         type: object
                       type: array
+                      x-kubernetes-list-type: atomic
                     ports:
                       description: ports is a list of ports which should be made accessible
                         on the pods selected for this rule. Each item in this list
@@ -9036,6 +9085,7 @@ spec:
                             type: string
                         type: object
                       type: array
+                      x-kubernetes-list-type: atomic
                   type: object
                 type: array
               podSelector:
@@ -9072,11 +9122,13 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - key
                       - operator
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                   matchLabels:
                     additionalProperties:
                       type: string
@@ -43425,7 +43477,7 @@ rules:
   - apiGroups:
       - apps
     resourceNames:
-      - tigera-operator-enterprise
+      - default
     resources:
       - deployments/finalizers
     verbs:
