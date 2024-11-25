@@ -177,6 +177,7 @@ func releaseImages(version, operatorVersion, registry string, overrides []string
 		fmt.Sprintf("%scompliance-benchmarker:%s", registry, version),
 		fmt.Sprintf("%singress-collector:%s", registry, version),
 		fmt.Sprintf("%sl7-collector:%s", registry, version),
+		fmt.Sprintf("%sl7-admission-controller:%s", registry, version),
 		fmt.Sprintf("%slicense-agent:%s", registry, version),
 		fmt.Sprintf("%scni:%s", registry, version),
 		fmt.Sprintf("%sfirewall-integration:%s", registry, version),
