@@ -468,6 +468,7 @@ replace (
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.7
 	k8s.io/metrics => k8s.io/metrics v0.30.7
 	k8s.io/mount-utils => k8s.io/mount-utils v0.30.7
+	k8s.io/node-api => k8s.io/node-api v0.30.7
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.30.7
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.30.7
 )
