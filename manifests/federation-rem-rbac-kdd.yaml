@@ -38,4 +38,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: tigera-federation-remote-cluster
-  namespace: kube-system
+  namespace: calico-system

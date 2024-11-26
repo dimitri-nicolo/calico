@@ -2,4 +2,4 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: tigera-federation-remote-cluster
-  namespace: kube-system
+  namespace: calico-system
