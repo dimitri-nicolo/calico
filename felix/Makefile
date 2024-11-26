@@ -271,7 +271,7 @@ BPF_APACHE_O_FILES:=$(addprefix bpf-apache/bin/,$(notdir $(BPF_APACHE_C_FILES:.c
 ALL_BPF_PROGS=$(BPF_GPL_O_FILES) $(BPF_APACHE_O_FILES)
 
 .PHONY: build-bpf clean-bpf
-build-bpf:  $(ALL_BPF_PROGS)
+build-bpf:  $(LIBBPF_A) $(ALL_BPF_PROGS)
 
 # Mainly defer to the BPF Makefiles but try to guess a superset of the dependencies
 # to avoid unnecessary rebuilds. Note '&:' means "run this target once to produce
