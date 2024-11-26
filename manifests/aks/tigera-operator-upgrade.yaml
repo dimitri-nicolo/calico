@@ -43477,7 +43477,7 @@ rules:
   - apiGroups:
       - apps
     resourceNames:
-      - default
+      - tigera-operator-enterprise
     resources:
       - deployments/finalizers
     verbs:
