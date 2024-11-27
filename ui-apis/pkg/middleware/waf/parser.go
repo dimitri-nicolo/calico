@@ -16,7 +16,6 @@ import (
 )
 
 type Rule struct {
-	Comment        string       `json:"comment"`
 	Id             string       `json:"id"`
 	SecRule        string       `json:"secRule"`
 	Operator       string       `json:"operator"`
@@ -64,7 +63,6 @@ func Parse(f string) ([]Rule, error) {
 		rawLine = rawLine + line + "\n"
 
 		if line[0] == '#' {
-			currentRule.Comment += line
 			continue
 		}
 

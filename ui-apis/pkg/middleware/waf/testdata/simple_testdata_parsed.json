@@ -1,6 +1,5 @@
 [
     {
-        "comment": "",
         "id": "921180",
         "secRule": "SecRule",
         "operator": "\"@gt 1\"",
@@ -76,7 +75,6 @@
         ]
     },
     {
-        "comment": "",
         "id": "921180",
         "secRule": "SecRule",
         "operator": "\"@gt 1\"",
@@ -152,7 +150,6 @@
         ]
     },
     {
-        "comment": "",
         "id": "921017",
         "secRule": "SecRule",
         "operator": "\"@lt 4\"",
@@ -188,7 +185,6 @@
         ]
     },
     {
-        "comment": "",
         "id": "921018",
         "secRule": "SecRule",
         "operator": "\"@lt 4\"",
