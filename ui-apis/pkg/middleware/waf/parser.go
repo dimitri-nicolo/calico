@@ -92,7 +92,6 @@ func Parse(f string) ([]Rule, error) {
 					currentRule.Raw += rawLine
 					rules = append(rules, currentRule)
 					rawLine = ""
-					// logrus.Infof("Current rule : %+v", currentRule)
 				}
 
 				currentRule = Rule{}
