@@ -40,6 +40,7 @@ if [[ -z "$version" ]]; then
     if [[ "$is_master" = true ]]; then
         version="0.0.0"
     elif [[ "$is_prerelease" = true ]]; then
+        title=${title#v}
         version="${title//-/"~pre"}"
     else
         version=${title#v}
