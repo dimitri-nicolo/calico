@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	_ "embed"
-
 	"github.com/sirupsen/logrus"
 )
 
