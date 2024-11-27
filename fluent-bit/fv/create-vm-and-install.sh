@@ -40,7 +40,7 @@ delete_vm() {
 }
 
 copy_and_install() {
-    package=$(find package -name "calico-fluent-bit-$version-*.el8.x86_64.rpm")
+    package=$(find package -name "calico-fluent-bit-$version*.el8.x86_64.rpm")
     echo "scp $package to $vm_name ..."
     if gcloud --quiet compute scp --zone="$zone" "$package" "user@$vm_name:/tmp/"; then
         echo "install $package to $vm_name ..."

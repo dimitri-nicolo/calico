@@ -2,11 +2,11 @@
 
 Name: calico-fluent-bit
 Version: @VERSION@
-Release: @RELEASE@%{?dist}
+Release: 1%{?dist}
 Summary: Fluent Bit is a super fast, lightweight, and highly scalable logging and metrics processor and forwarder.
 License: Apache-2.0
 URL: https://www.tigera.io/
-Source0: https://github.com/fluent/fluent-bit/archive/refs/tags/v%{version}.tar.gz
+Source0: calico-fluent-bit.tar.gz
 Source1: calico-fluent-bit.conf
 Source2: calico-fluent-bit.env
 Source3: plugins.conf
@@ -36,7 +36,7 @@ Fluent Bit is a fast Log Processor and Forwarder for Linux, Embedded Linux, MacO
 family operating systems. It's part of the Fluentd Ecosystem and a CNCF sub-project.
 
 %prep
-%autosetup -p1
+%autosetup -n calico-fluent-bit -p1
 
 %build
 %cmake \

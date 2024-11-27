@@ -31,13 +31,11 @@ calico.pp: $(SRC_FILES) host-native-build
 .PHONY: calico-selinux.rhel8
 calico-selinux.rhel8: calico.pp
 	$(info *** Building SELinux RPM for RHEL 8)
-	sed 's/@CALICO_SELINUX_VERSION@/$(CALICO_SELINUX_VERSION)/g' rhel/calico-selinux.spec.in > rhel/calico-selinux.spec
 	$(call host_native_rpm_build,rhel8,calico-selinux,$(CALICO_SELINUX_VERSION))
 
 .PHONY: calico-selinux.rhel9
 calico-selinux.rhel9: calico.pp
 	$(info *** Building SELinux RPM for RHEL 9)
-	sed 's/@CALICO_SELINUX_VERSION@/$(CALICO_SELINUX_VERSION)/g' rhel/calico-selinux.spec.in > rhel/calico-selinux.spec
 	$(call host_native_rpm_build,rhel9,calico-selinux,$(CALICO_SELINUX_VERSION))
 
 publish: publish-rhel8 publish-rhel9

@@ -18,7 +18,7 @@ restorecon -FR /mnt/tigera
 
 Name:       calico-selinux
 Version:    @VERSION@
-Release:    @RELEASE@%{?dist}
+Release:    1%{?dist}
 Summary:    SELinux policy module for Calico
 
 Group:      System Environment/Base
