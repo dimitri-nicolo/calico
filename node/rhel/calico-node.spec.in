@@ -2,7 +2,7 @@
 
 Name: calico-node
 Version: @VERSION@
-Release: @RELEASE@%{?dist}
+Release: 1%{?dist}
 Summary: Calico node handles networking and policy for Calico.
 License: Proprietary
 URL: https://tigera.io/
