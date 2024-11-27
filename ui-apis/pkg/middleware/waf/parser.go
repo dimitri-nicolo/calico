@@ -1,4 +1,9 @@
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 package parser
+
+// The code in `parser.go` was inspired by code and code snippets of the
+// seclang module in the coraza https://github.com/corazawaf/coraza/tree/main
+// repo. Although heavily modified for our own custom needs.
 
 import (
 	"bufio"
@@ -109,9 +114,7 @@ func Parse(f string) ([]Rule, error) {
 	if currentRule.SecRule != "" || currentRule.Operator != "" {
 		rules = append(rules, currentRule)
 	}
-	// marhsalledRules, _ := json.MarshalIndent(rules, "", "    ")
-	// logrus.Infof("%+v", string(marhsalledRules))
-	//logrus.Infof("There are %v rules", len(rules))
+
 	return rules, nil
 }
 
@@ -234,12 +237,9 @@ func parseTransformers(actions string) ([]RuleAction, error) {
 func appendRuleAction(res []RuleAction, key string, val string) ([]RuleAction, error) {
 	key = strings.ToLower(strings.TrimSpace(key))
 	key = strings.Trim(key, "\"")
-	val = strings.TrimSpace(val) // We may want to keep case sensitive values (e.g. Messages)
+	val = strings.TrimSpace(val)
 	val = strings.Trim(val, "\"")
 
-	// There can only be one disruptive action per rule (if there are multiple disruptive
-	// actions present, or inherited, only the last one will take effect).
-	// Therefore, if we encounter another disruptive action, we replace the previous one.
 	res = append(res, RuleAction{
 		Key:   key,
 		Value: val,
