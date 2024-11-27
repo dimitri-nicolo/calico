@@ -33,6 +33,8 @@ type RuleAction struct {
 	Value string
 }
 
+// this function was inspired by `parseString` found in
+// https://github.com/corazawaf/coraza/blob/main/internal/seclang/parser.go
 func Parse(f string) ([]Rule, error) {
 
 	scanner := bufio.NewScanner(strings.NewReader(f))
@@ -173,6 +175,8 @@ func EvalLine(l string, rule *Rule) error {
 // parseTransformers will assign the function name, arguments and
 // function (pkg.actions) for each action split by comma (,)
 // Action arguments are allowed to wrap values between colons(”)
+// this function was inspired by parseActions found in
+// https://github.com/corazawaf/coraza/blob/main/internal/seclang/rule_parser.go
 func parseTransformers(actions string) ([]RuleAction, error) {
 	res := []RuleAction{}
 	var err error
