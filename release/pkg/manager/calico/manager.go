@@ -323,6 +323,11 @@ func (r *CalicoManager) BuildMetadata(dir string, overrides ...string) error {
 		CalicoVersion    string   `json:"calico_oss_version" yaml:"CalicoOSSVersion"`
 	}
 
+	if err := os.MkdirAll(dir, utils.DirPerms); err != nil {
+		logrus.WithError(err).Errorf("Failed to create metadata folder %s", dir)
+		return err
+	}
+
 	registry := r.getRegistryFromManifests()
 	m := metadata{
 		Version:          r.calicoVersion,
@@ -338,7 +343,7 @@ func (r *CalicoManager) BuildMetadata(dir string, overrides ...string) error {
 		return err
 	}
 
-	err = os.WriteFile(fmt.Sprintf("%s/metadata.yaml", dir), []byte(bs), 0o644)
+	err = os.WriteFile(filepath.Join(dir, "metadata.yaml"), []byte(bs), 0o644)
 	if err != nil {
 		return err
 	}

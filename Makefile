@@ -338,12 +338,12 @@ endif
 		python:3 \
 		bash -c '/usr/local/bin/python release/get-contributors.py >> /code/AUTHORS.md'
 
-release/release:
+.PHONY: release/bin/release
+release/bin/release:
 	$(MAKE) -C release
 
-bin/metadata.yaml: release/release
-	mkdir -p bin
-	./release/release release metadata --dir bin/
+release/metadata: release/bin/release var-require-all-METADATA_DIR
+	@release/bin/release release metadata
 
 ###############################################################################
 # Post-release validation

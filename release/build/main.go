@@ -500,7 +500,9 @@ func releaseSubCommands(cfg *config.Config) []*cli.Command {
 			Name:  "metadata",
 			Usage: "Generate metadata for release",
 			Flags: []cli.Flag{
-				&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to"},
+				&cli.StringFlag{Name: orgFlag, Usage: "Git organization", EnvVars: []string{"ORGANIZATION"}, Value: config.DefaultOrg},
+				&cli.StringFlag{Name: repoFlag, Usage: "Git repository", EnvVars: []string{"GIT_REPO"}, Value: config.DefaultRepo},
+				&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to", EnvVars: []string{"METADATA_DIR"}, Value: "", Required: true},
 			},
 			Action: func(c *cli.Context) error {
 				configureLogging("release-metadata.log")
@@ -518,6 +520,9 @@ func releaseSubCommands(cfg *config.Config) []*cli.Command {
 				// Configure the calico.
 				opts := []calico.Option{
 					calico.WithRepoRoot(cfg.RepoRootDir),
+					calico.WithGithubOrg(c.String(orgFlag)),
+					calico.WithRepoName(c.String(repoFlag)),
+					calico.WithRepoRemote(cfg.GitRemote),
 					calico.WithVersions(&version.Data{
 						ProductVersion:  ver,
 						OperatorVersion: operatorVer,

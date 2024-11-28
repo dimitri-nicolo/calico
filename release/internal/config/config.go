@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	DefaultOrg  = "projectcalico"
-	DefaultRepo = "calico"
+	DefaultOrg  = "tigera"
+	DefaultRepo = "calico-private"
 )
 
 type Config struct {
