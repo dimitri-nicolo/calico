@@ -25,13 +25,13 @@ import (
 )
 
 type LabelAggregator interface {
-	GetAllPoliciesLabels(ctx context.Context, permissions authhandler.Permission, policiesCache cache.PoliciesCache) (*api.LabelsMap, []string, error)
-	GetGlobalThreatfeedsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
-	GetAllNetworkSetsLabels(ctx context.Context, permissions authhandler.Permission, setsCache cache.NetworkSetsCache) (*api.LabelsMap, []string, error)
-	GetManagedClustersLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
-	GetPodsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.EndpointsCache) (*api.LabelsMap, []string, error)
-	GetNamespacesLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
-	GetServiceAccountsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error)
+	GetAllPoliciesLabels(ctx context.Context, permissions authhandler.Permission, policiesCache cache.PoliciesCache) (api.LabelsMapInterface, []string, error)
+	GetGlobalThreatfeedsLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error)
+	GetAllNetworkSetsLabels(ctx context.Context, permissions authhandler.Permission, setsCache cache.NetworkSetsCache) (api.LabelsMapInterface, []string, error)
+	GetManagedClustersLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error)
+	GetPodsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.EndpointsCache) (api.LabelsMapInterface, []string, error)
+	GetNamespacesLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error)
+	GetServiceAccountsLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error)
 }
 
 type label struct {
@@ -48,8 +48,8 @@ func NewLabelsAggregator(k8sClient kubernetes.Interface, ci clientv3.Interface) 
 
 // GetAllNetworkSetsLabels returns networkSets and globalNetworkSets from the cache. Labels are then extracted for both
 // types and returned in one map.
-func (l *label) GetAllNetworkSetsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.NetworkSetsCache) (*api.LabelsMap, []string, error) {
-	labelsResponse := &api.LabelsMap{}
+func (l *label) GetAllNetworkSetsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.NetworkSetsCache) (api.LabelsMapInterface, []string, error) {
+	labelsResponse := api.NewLabelsMap()
 	allNetworkSets := cache.GetNetworkSets(set.New[model.Key]())
 
 	missingPermissionGlobalNetworkSet, missingPermissionNetworkSet := false, false
@@ -97,13 +97,13 @@ func (l *label) GetAllNetworkSetsLabels(ctx context.Context, permissions authhan
 
 // GetAllPoliciesLabels returns labels for all kinds of policies i.e. kubernetesnetworkpolicies, networkpolicies,
 // globalnetworkpolicies, and all the staged ones combined in one map.
-func (l *label) GetAllPoliciesLabels(ctx context.Context, permissions authhandler.Permission, policiesCache cache.PoliciesCache) (*api.LabelsMap, []string, error) {
+func (l *label) GetAllPoliciesLabels(ctx context.Context, permissions authhandler.Permission, policiesCache cache.PoliciesCache) (api.LabelsMapInterface, []string, error) {
 	missingPermissionPolicy := false
 
 	// Retriever policies form cache
 	allPolicies := policiesCache.GetOrderedPolicies(nil)
 
-	allLabels := &api.LabelsMap{}
+	allLabels := api.NewLabelsMap()
 	for _, tier := range allPolicies {
 		// Iterator over policies within the tier
 		policies := tier.GetOrderedPolicies()
@@ -133,7 +133,7 @@ func (l *label) GetAllPoliciesLabels(ctx context.Context, permissions authhandle
 // GetGlobalThreatfeedsLabels gets GlobalThreatfeeds data directly from the datastore since they are not cached in
 // queryserver cache.
 // TODO: introduce caching layer for all objects to avoid direct calls to the datastore.
-func (l *label) GetGlobalThreatfeedsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+func (l *label) GetGlobalThreatfeedsLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error) {
 	// Check logged-in users permission to GlobalThreatFeeds
 	globalThreatFeedResource := &apiv3.GlobalThreatFeed{
 		TypeMeta: v1.TypeMeta{
@@ -167,7 +167,7 @@ func (l *label) GetGlobalThreatfeedsLabels(ctx context.Context, permissions auth
 // GetManagedClustersLabels get ManagedCluster data directly from the datastore since they are not cached in
 // queryserver cache.
 // TODO: introduce caching layer for all objects to avoid direct calls to datastore
-func (l *label) GetManagedClustersLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+func (l *label) GetManagedClustersLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error) {
 	// Check logged-in users permission to ManagedClusters
 	managedClusterResource := &apiv3.ManagedCluster{
 		TypeMeta: v1.TypeMeta{
@@ -200,7 +200,7 @@ func (l *label) GetManagedClustersLabels(ctx context.Context, permissions authha
 	return allLabels, nil, nil
 }
 
-func (l *label) GetPodsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.EndpointsCache) (*api.LabelsMap, []string, error) {
+func (l *label) GetPodsLabels(ctx context.Context, permissions authhandler.Permission, cache cache.EndpointsCache) (api.LabelsMapInterface, []string, error) {
 	// Retrieve pods from the cache
 	podsList := cache.GetEndpoints([]model.Key{})
 	missingPermission := false
@@ -240,7 +240,7 @@ func (l *label) GetPodsLabels(ctx context.Context, permissions authhandler.Permi
 // It returns labels for all namespaces if user has "list" RBAC to "namespace" resource without any resourceNames
 // defined in a clusterRole, otherwise it returns a warning that user does not have the required RBAC for this operation.
 // TODO: caching to be implemented
-func (l *label) GetNamespacesLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+func (l *label) GetNamespacesLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error) {
 	// Check logged-in users permission
 	namespaceResource := &corev1.Namespace{
 		TypeMeta: v1.TypeMeta{
@@ -275,7 +275,7 @@ func (l *label) GetNamespacesLabels(ctx context.Context, permissions authhandler
 // GetServiceAccountsLabels returns labels for serviceAccounts directly from the datastore since htere is no cache storing
 // serviceAccounts in the queryserver.
 // TODO: caching to be implemented
-func (l *label) GetServiceAccountsLabels(ctx context.Context, permissions authhandler.Permission) (*api.LabelsMap, []string, error) {
+func (l *label) GetServiceAccountsLabels(ctx context.Context, permissions authhandler.Permission) (api.LabelsMapInterface, []string, error) {
 	// Retrieve serviceAccounts from the datastore
 	saList, err := l.k8sClient.CoreV1().ServiceAccounts("").List(ctx, v1.ListOptions{
 		TypeMeta: v1.TypeMeta{

@@ -16,32 +16,28 @@ const (
 	LabelsResourceTypeGlobalThreatFeeds ResourceType = "globalThreatfeeds"
 )
 
-// LabelsMap keeps a map from keys to unique values.
-type LabelsMap struct {
+// labelsMap keeps a map from keys to unique values.
+type labelsMap struct {
 	labels map[string]set.Set[string]
 }
 
 type LabelsMapInterface interface {
 	GetLabels() map[string]set.Set[string]
-	SetLabels(labels map[string]set.Set[string]) map[string]set.Set[string]
+	SetLabels(key string, values ...string) map[string]set.Set[string]
 }
 
-func NewLabelsMap() *LabelsMap {
-	return &LabelsMap{
-		labels: map[string]set.Set[string]{},
+func NewLabelsMap() LabelsMapInterface {
+	return &labelsMap{
+		labels: make(map[string]set.Set[string]),
 	}
 }
 
-func (lm *LabelsMap) GetLabels() map[string]set.Set[string] {
+func (lm *labelsMap) GetLabels() map[string]set.Set[string] {
 	return lm.labels
 }
 
-func (lm *LabelsMap) SetLabels(key string, values ...string) map[string]set.Set[string] {
+func (lm *labelsMap) SetLabels(key string, values ...string) map[string]set.Set[string] {
 	// add new key to the map
-	if lm.labels == nil {
-		lm.labels = map[string]set.Set[string]{}
-	}
-
 	if lm.labels[key] == nil {
 		lm.labels[key] = set.New[string]()
 	}

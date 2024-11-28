@@ -189,14 +189,13 @@ func (c *endpointsCache) GetEndpoints(keys []model.Key) []api.Endpoint {
 			eps = append(eps, ep)
 		}
 		return eps
-	} else {
-		eps := make([]api.Endpoint, len(keys))
-		for _, key := range keys {
-			ep := c.getEndpoint(key)
-			eps = append(eps, ep)
-		}
-		return eps
 	}
+	eps := make([]api.Endpoint, len(keys))
+	for _, key := range keys {
+		ep := c.getEndpoint(key)
+		eps = append(eps, ep)
+	}
+	return eps
 }
 
 func (c *endpointsCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {

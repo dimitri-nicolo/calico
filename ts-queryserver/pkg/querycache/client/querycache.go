@@ -650,7 +650,7 @@ func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*Qu
 }
 
 func (c *cachedQuery) runQueryLabels(cxt context.Context, req QueryLabelsReq) (*QueryLabelsResp, error) {
-	var allLabels *api.LabelsMap
+	var allLabels api.LabelsMapInterface
 	var err error
 	var warning []string
 	switch req.ResourceType {
