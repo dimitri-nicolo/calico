@@ -26,7 +26,7 @@ func TestCheckStoreNoHTTP(t *testing.T) {
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies", true)))
 
 	psm.OnInSync()
-	psm.Write(func(s *policystore.PolicyStore) {
+	psm.DoWithLock(func(s *policystore.PolicyStore) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
@@ -62,7 +62,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies", true)))
 
 	psm.OnInSync()
-	psm.Write(func(s *policystore.PolicyStore) {
+	psm.DoWithLock(func(s *policystore.PolicyStore) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
@@ -112,7 +112,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: OK}}))
 
 	// Enable stats, re-run the request and this time check we do get stats updates.
-	psm.Write(func(ps *policystore.PolicyStore) {
+	psm.DoWithLock(func(ps *policystore.PolicyStore) {
 		ps.DataplaneStatsEnabledForAllowed = true
 	})
 	chk = func() *authz.CheckResponse {
@@ -133,7 +133,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 	uut := NewServer(ctx, psm, dpStats, WithRegisteredCheckProvider(NewALPCheckProvider("per-pod-policies", true)))
 
 	psm.OnInSync()
-	psm.Write(func(s *policystore.PolicyStore) {
+	psm.DoWithLock(func(s *policystore.PolicyStore) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
@@ -182,7 +182,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 	Eventually(chk, "2s", "50ms").Should(Equal(&authz.CheckResponse{Status: &status.Status{Code: PERMISSION_DENIED}}))
 
 	// Enable stats, re-run the request and this time check we do get stats updates.
-	psm.Write(func(ps *policystore.PolicyStore) {
+	psm.DoWithLock(func(ps *policystore.PolicyStore) {
 		ps.DataplaneStatsEnabledForDenied = true
 	})
 	chk = func() *authz.CheckResponse {

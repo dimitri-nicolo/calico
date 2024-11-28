@@ -142,7 +142,7 @@ func (s *SyncClient) sync(stream proto.PolicySync_SyncClient, ctx context.Contex
 			s.inSync = true
 			s.storeManager.OnInSync()
 		default:
-			s.storeManager.Write(func(ps *policystore.PolicyStore) {
+			s.storeManager.DoWithLock(func(ps *policystore.PolicyStore) {
 				ps.ProcessUpdate(s.subscriptionType, update, false)
 			})
 		}

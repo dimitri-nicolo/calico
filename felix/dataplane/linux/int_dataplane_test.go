@@ -57,6 +57,8 @@ func (_ *mockCollector) SetL7LogReporter(types.Reporter) {}
 
 func (_ *mockCollector) RegisterMetricsReporter(types.Reporter) {}
 
+func (_ *mockCollector) SetDataplaneInfoReader(collector.DataplaneInfoReader) {}
+
 func (_ *mockCollector) SetPacketInfoReader(collector.PacketInfoReader) {}
 
 func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}

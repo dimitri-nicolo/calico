@@ -8,6 +8,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 )
 
@@ -119,4 +120,11 @@ type ProcessInfoCache interface {
 type EgressDomainCache interface {
 	IterWatchedDomainsForIP(clientIP string, ip [16]byte, cb func(domain string) (stop bool))
 	GetTopLevelDomainsForIP(clientIP string, ip [16]byte) []string
+}
+
+// DataplaneInfoReader is an interface that provides information from the dataplane.
+type DataplaneInfoReader interface {
+	Start() error
+	Stop()
+	DataplaneInfoChan() <-chan proto.ToDataplane
 }

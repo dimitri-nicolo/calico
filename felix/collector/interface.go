@@ -21,6 +21,7 @@ type Collector interface {
 	SetL7LogReporter(types.Reporter)
 	LogL7(*proto.HTTPData, *Data, tuple.Tuple, int)
 	RegisterMetricsReporter(types.Reporter)
+	SetDataplaneInfoReader(DataplaneInfoReader)
 	SetPacketInfoReader(PacketInfoReader)
 	SetConntrackInfoReader(ConntrackInfoReader)
 	SetProcessInfoCache(ProcessInfoCache)

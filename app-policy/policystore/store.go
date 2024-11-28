@@ -87,7 +87,7 @@ type PolicyStoreManager interface {
 	Read(func(*PolicyStore))
 	// PolicyStoreManager writes to a current or pending policy store if
 	// syncher has an established and in-sync connection; or not, respectively.
-	Write(func(*PolicyStore))
+	DoWithLock(func(*PolicyStore))
 
 	// tells PSM of syncher state 'connection lost; reestablishing until inSync encountered'
 	OnReconnecting()
@@ -125,19 +125,21 @@ func (m *policyStoreManager) Read(cb func(*PolicyStore)) {
 	log.Tracef("storeManager Read(cb) done, going to release read lock")
 }
 
-func (m *policyStoreManager) Write(cb func(*PolicyStore)) {
-	log.Tracef("storeManager Write(cb) acquiring write lock")
+// DoWithLock acquires a lock and calls the callback with the current or pending store
+// depending on the state of the connection.
+func (m *policyStoreManager) DoWithLock(cb func(*PolicyStore)) {
+	log.Tracef("StoreManager acquiring lock")
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.toActive {
-		log.Debugf("storeManager writing to current store at %p", m.current)
+		log.Debugf("StoreManager calling callback on current store: %p", m.current)
 		cb(m.current)
 		return
 	}
 
-	log.Debugf("storeManager writing to pending store at %p", m.pending)
+	log.Debugf("StoreManager calling callback on pending store: %p", m.pending)
 	cb(m.pending)
-	log.Tracef("storeManager Write(cb) done, going to release write lock")
+	log.Tracef("StoreManager callback done, releasing lock")
 }
 
 func (m *policyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {

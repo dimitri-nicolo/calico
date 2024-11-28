@@ -74,7 +74,7 @@ func (mp *mockPolicyStoreManager) Read(func(*policystore.PolicyStore)) {
 	mp.callstack = append(mp.callstack, fmt.Sprint("read", mp.toActive, mp.rev))
 }
 
-func (mp *mockPolicyStoreManager) Write(func(*policystore.PolicyStore)) {
+func (mp *mockPolicyStoreManager) DoWithLock(func(*policystore.PolicyStore)) {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
 

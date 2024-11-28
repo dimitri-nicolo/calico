@@ -17,6 +17,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/api/core/v1"
 
+	policystore "github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
@@ -28,15 +29,18 @@ import (
 	"github.com/projectcalico/calico/felix/collector/utils"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/jitter"
-	logutil "github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
-// defaultGroupIP is used as the key for the DNS lookup info for all clients when
-// enableDestDomainsByClient is false.
-const DefaultGroupIP = "0.0.0.0"
+const (
+	// defaultGroupIP is used as the key for the DNS lookup info for all clients when
+	// enableDestDomainsByClient is false.
+	DefaultGroupIP = "0.0.0.0"
+	// perHostPolicySubscription is the subscription type for per-host-policy.
+	perHostPolicySubscription = "per-host-policies"
+)
 
 var (
 	// conntrack processing prometheus metrics
@@ -120,6 +124,7 @@ type Config struct {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
+	dataplaneInfoReader   DataplaneInfoReader
 	packetInfoReader      PacketInfoReader
 	conntrackInfoReader   ConntrackInfoReader
 	processInfoCache      ProcessInfoCache
@@ -134,6 +139,7 @@ type collector struct {
 	metricReporters       []types.Reporter
 	dnsLogReporter        types.Reporter
 	l7LogReporter         types.Reporter
+	policyStoreManager    policystore.PolicyStoreManager
 	displayDebugTraceLogs bool
 }
 
@@ -148,6 +154,7 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		config:                cfg,
 		dumpLog:               log.New(),
 		ds:                    make(chan *proto.DataplaneStats, 1000),
+		policyStoreManager:    policystore.NewPolicyStoreManager(),
 		displayDebugTraceLogs: cfg.DisplayDebugTraceLogs,
 	}
 }
@@ -181,6 +188,17 @@ func (c *collector) Start() error {
 	go c.startStatsCollectionAndReporting()
 	c.setupStatsDumping()
 
+	// Processes dataplane updates into the PolicyStore.
+	if c.dataplaneInfoReader != nil {
+		if err := c.dataplaneInfoReader.Start(); err != nil {
+			return fmt.Errorf("DataplaneInfoReader failed to start: %w", err)
+		}
+
+		go c.loopProcessingDataplaneInfoUpdates(c.dataplaneInfoReader.DataplaneInfoChan())
+	} else {
+		log.Warning("missing DataplaneInfoReader")
+	}
+
 	if c.dnsLogReporter != nil {
 		if err := c.dnsLogReporter.Start(); err != nil {
 			return err
@@ -211,12 +229,16 @@ func (c *collector) RegisterMetricsReporter(mr types.Reporter) {
 }
 
 func (c *collector) LogMetrics(mu metric.Update) {
-	logutil.Tracef(c.displayDebugTraceLogs, "Received metric update %v", mu)
+	log.Tracef("Received metric update %v", mu)
 	for _, r := range c.metricReporters {
 		if err := r.Report(mu); err != nil {
 			log.WithError(err).Debug("failed to report metric update")
 		}
 	}
+}
+
+func (c *collector) SetDataplaneInfoReader(dir DataplaneInfoReader) {
+	c.dataplaneInfoReader = dir
 }
 
 func (c *collector) SetPacketInfoReader(pir PacketInfoReader) {
@@ -236,8 +258,10 @@ func (c *collector) SetDomainLookup(dlu EgressDomainCache) {
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
-	var pktInfoC <-chan PacketInfo
-	var ctInfoC <-chan []ConntrackInfo
+	var (
+		pktInfoC <-chan PacketInfo
+		ctInfoC  <-chan []ConntrackInfo
+	)
 
 	if c.packetInfoReader != nil {
 		pktInfoC = c.packetInfoReader.PacketInfoChan()
@@ -255,15 +279,15 @@ func (c *collector) startStatsCollectionAndReporting() {
 		case ctInfos := <-ctInfoC:
 			conntrackProcessStart := time.Now()
 			for _, ctInfo := range ctInfos {
-				logutil.Tracef(c.displayDebugTraceLogs, "Collector event: %v", ctInfo)
+				log.Tracef("Collector event: %v", ctInfo)
 				c.handleCtInfo(ctInfo)
 			}
 			histogramConntrackLatency.Observe(float64(time.Since(conntrackProcessStart).Seconds()))
 		case pktInfo := <-pktInfoC:
-			log.WithField("PacketInfo", pktInfo).Debug("collector event")
-			processInfoProcessSttart := time.Now()
+			log.WithField("PacketInfo", pktInfo).Trace("Collector event")
+			processInfoProcessStart := time.Now()
 			c.applyPacketInfo(pktInfo)
-			histogramPacketInfoLatency.Observe(float64(time.Since(processInfoProcessSttart).Seconds()))
+			histogramPacketInfoLatency.Observe(float64(time.Since(processInfoProcessStart).Seconds()))
 		case <-c.ticker.Channel():
 			c.checkEpStats()
 		case <-c.sigChan:
@@ -274,6 +298,23 @@ func (c *collector) startStatsCollectionAndReporting() {
 			dataplaneStatsUpdateStart := time.Now()
 			c.convertDataplaneStatsAndApplyUpdate(ds)
 			histogramDataplaneStatsUpdate.Observe(float64(time.Since(dataplaneStatsUpdateStart).Seconds()))
+		}
+	}
+}
+
+// loopProcessingDataplaneInfoUpdates processes the dataplane info updates. The dataplaneInfoReader
+// is expected to be started before calling this function.
+func (c *collector) loopProcessingDataplaneInfoUpdates(dpInfoC <-chan proto.ToDataplane) {
+	for dpInfo := range dpInfoC {
+		c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
+			log.Infof("Dataplane update events: %v", dpInfo)
+			// Get the data and update the endpoints.
+			ps.ProcessUpdate(perHostPolicySubscription, &dpInfo, true)
+		})
+		if _, ok := dpInfo.Payload.(*proto.ToDataplane_InSync); ok {
+			// Sync the policy store. This will swap the pending store to the active store. Setting the
+			// pending store to nil will route the next writes to the current store.
+			c.policyStoreManager.OnInSync()
 		}
 	}
 }
@@ -497,14 +538,12 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 	// be post-DNAT, because of connecttime load balancer. Hence if the lookup with preDNAT tuple fails,
 	// do a lookup with post DNAT tuple.
 	if !ok && c.config.IsBPFDataplane {
-		logutil.Tracef(c.displayDebugTraceLogs,
-			"Lookup process cache for post DNAT tuple %+v for Outbound traffic", data.Tuple)
+		log.Tracef("Lookup process cache for post DNAT tuple %+v for Outbound traffic", data.Tuple)
 		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, types.TrafficDirOutbound)
 	}
 
 	if ok {
-		logutil.Tracef(c.displayDebugTraceLogs,
-			"Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
+		log.Tracef("Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
 		if !data.Reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
 			data.SetSourceProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
@@ -512,21 +551,20 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)
 			// Since we have read the data TCP stats data from the cache, set it to false
 			c.processInfoCache.Update(t, false)
-			logutil.Tracef(c.displayDebugTraceLogs,
+			log.Tracef(
 				"Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
 		}
 	}
 
 	processInfo, ok = c.processInfoCache.Lookup(t, types.TrafficDirInbound)
 	if !ok && c.config.IsBPFDataplane {
-		logutil.Tracef(c.displayDebugTraceLogs,
+		log.Tracef(
 			"Lookup process cache for post DNAT tuple %+v for Inbound traffic", data.Tuple)
 		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, types.TrafficDirInbound)
 	}
 
 	if ok {
-		logutil.Tracef(c.displayDebugTraceLogs,
-			"Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.Reverse())
+		log.Tracef("Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.Reverse())
 		if !data.Reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
 			data.SetDestProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
@@ -534,8 +572,7 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)
 			// Since we have read the data TCP stats data from the cache, set it to false
 			c.processInfoCache.Update(t, false)
-			logutil.Tracef(c.displayDebugTraceLogs,
-				"Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
+			log.Tracef("Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
 		}
 	}
 }
@@ -848,7 +885,7 @@ func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
 // convertDataplaneStatsAndApplyUpdate merges the proto.DataplaneStatistics into the current
 // data stored for the specific connection tuple.
 func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats) {
-	logutil.Tracef(c.displayDebugTraceLogs, "Received dataplane stats update %+v", d)
+	log.Tracef("Received dataplane stats update %+v", d)
 	// Create a Tuple representing the DataplaneStats.
 	t, err := extractTupleFromDataplaneStats(d)
 	if err != nil {
@@ -982,7 +1019,7 @@ func reportDataplaneStatsUpdateErrorMetrics(dataplaneErrorDelta uint32) {
 // When called, clear the contents of the file Config.StatsDumpFilePath before
 // writing the stats to it.
 func (c *collector) dumpStats() {
-	logutil.Tracef(c.displayDebugTraceLogs, "Dumping Stats to %v", c.config.StatsDumpFilePath)
+	log.Tracef("Dumping Stats to %v", c.config.StatsDumpFilePath)
 
 	_ = os.Truncate(c.config.StatsDumpFilePath, 0)
 	c.dumpLog.Infof("Stats Dump Started: %v", time.Now().Format("2006-01-02 15:04:05.000"))
@@ -1020,10 +1057,10 @@ func (c *collector) LogDNS(server, client net.IP, dns *layers.DNS, latencyIfKnow
 	if serverEP == nil {
 		serverEP, _ = c.luc.GetNetworkSet(utils.IpTo16Byte(server))
 	}
-	logutil.Tracef(c.displayDebugTraceLogs, "Src %v -> Server %v", server, serverEP)
-	logutil.Tracef(c.displayDebugTraceLogs, "Dst %v -> Client %v", client, clientEP)
+	log.Tracef("Src %v -> Server %v", server, serverEP)
+	log.Tracef("Dst %v -> Client %v", client, clientEP)
 	if latencyIfKnown != nil {
-		logutil.Tracef(c.displayDebugTraceLogs, "DNS-LATENCY: Log %v", *latencyIfKnown)
+		log.Tracef("DNS-LATENCY: Log %v", *latencyIfKnown)
 	}
 	update := dnslog.Update{
 		ClientIP:       client,

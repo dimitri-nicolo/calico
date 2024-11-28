@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/pkg/proxy"
 
+	policystore "github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
@@ -2651,3 +2652,130 @@ func (m mockProcessCache) Lookup(tpl tuple.Tuple, dir ctypes.TrafficDirection) (
 	return ProcessInfo{}, false
 }
 func (mockProcessCache) Update(tpl tuple.Tuple, dirty bool) {}
+
+func TestLoopDataplaneInfoUpdates(t *testing.T) {
+	RegisterTestingT(t)
+
+	// Setup helper function to initialize the collector and channel, and register cleanup.
+	setup := func(t *testing.T) (*collector, chan proto.ToDataplane) {
+		dpInfoChan := make(chan proto.ToDataplane, 10)
+		c := &collector{
+			policyStoreManager: policystore.NewPolicyStoreManager(),
+		}
+		// Register cleanup to be automatically called at the end of each test
+		t.Cleanup(func() {
+			close(dpInfoChan)
+		})
+
+		// Start the loop in a goroutine
+		go c.loopProcessingDataplaneInfoUpdates(dpInfoChan)
+
+		return c, dpInfoChan
+	}
+
+	insync := func(dpInfoChan chan proto.ToDataplane) {
+		// Ensure that the test channel is closed at the end of each test
+		dpInfo := proto.ToDataplane{
+			Payload: &proto.ToDataplane_InSync{
+				InSync: &proto.InSync{},
+			},
+		}
+		dpInfoChan <- dpInfo
+	}
+
+	t.Run("should process dataplane info updates and update the policy store", func(t *testing.T) {
+		c, dpInfoChan := setup(t)
+
+		id := proto.WorkloadEndpointID{
+			OrchestratorId: "test-orchestrator",
+			WorkloadId:     "test-workload",
+			EndpointId:     "test-endpoint",
+		}
+		dpInfo := proto.ToDataplane{
+			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
+				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
+					Id: &id,
+					Endpoint: &proto.WorkloadEndpoint{
+						Name: "test-endpoint",
+					},
+				},
+			},
+		}
+		dpInfoChan <- dpInfo
+		insync(dpInfoChan)
+
+		Eventually(func() bool {
+			validation := false
+			c.policyStoreManager.Read(func(store *policystore.PolicyStore) {
+				validation = len(store.Endpoints) == 1 && store.Endpoints[id].Name == "test-endpoint"
+			})
+			return validation
+		}, time.Duration(time.Second*5), time.Millisecond*1000).Should(BeTrue())
+	})
+
+	t.Run("should handle multiple dataplane info updates", func(t *testing.T) {
+		c, dpInfoChan := setup(t)
+
+		id1 := proto.WorkloadEndpointID{
+			OrchestratorId: "test-orchestrator1",
+			WorkloadId:     "test-workload1",
+			EndpointId:     "test-endpoint1",
+		}
+		id2 := proto.WorkloadEndpointID{
+			OrchestratorId: "test-orchestrator2",
+			WorkloadId:     "test-workload2",
+			EndpointId:     "test-endpoint2",
+		}
+
+		dpInfo1 := proto.ToDataplane{
+			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
+				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
+					Id: &id1,
+					Endpoint: &proto.WorkloadEndpoint{
+						Name: "test-endpoint1",
+					},
+				},
+			},
+		}
+		dpInfo2 := proto.ToDataplane{
+			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
+				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
+					Id: &id2,
+					Endpoint: &proto.WorkloadEndpoint{
+						Name: "test-endpoint2",
+					},
+				},
+			},
+		}
+		dpInfoChan <- dpInfo1
+		dpInfoChan <- dpInfo2
+		insync(dpInfoChan)
+
+		Eventually(func() bool {
+			validation := false
+			c.policyStoreManager.Read(func(store *policystore.PolicyStore) {
+				validation = len(store.Endpoints) == 2 &&
+					store.Endpoints[id1].Name == "test-endpoint1" &&
+					store.Endpoints[id2].Name == "test-endpoint2"
+			})
+			return validation
+		}, time.Duration(time.Second*5), time.Millisecond*1000).Should(BeTrue())
+
+	})
+
+	t.Run("should not panic when the channel is closed", func(t *testing.T) {
+		dpInfoChan := make(chan proto.ToDataplane, 10)
+		c := &collector{
+			policyStoreManager: policystore.NewPolicyStoreManager(),
+		}
+
+		close(dpInfoChan)
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("The code panicked, but it should not have: %v", r)
+			}
+		}()
+		// The loop should exit without panicking
+		c.loopProcessingDataplaneInfoUpdates(dpInfoChan)
+	})
+}

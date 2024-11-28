@@ -19,7 +19,7 @@ func TestCheckAuthScenarios(t *testing.T) {
 
 	for _, scenario := range perHostCheckProviderScenarios() {
 		ps := policystore.NewPolicyStoreManager()
-		ps.Write(func(ps *policystore.PolicyStore) {
+		ps.DoWithLock(func(ps *policystore.PolicyStore) {
 			for _, update := range append(scenario.updates, inSync()) {
 				ps.ProcessUpdate(scenario.subscriptionType, update, false)
 			}
