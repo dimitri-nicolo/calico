@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
+	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -777,4 +778,605 @@ func TestMatchNetBadCIDR(t *testing.T) {
 	ip := net.ParseIP("192.168.5.6")
 	nets := []string{"192.168.0.0.0/16"}
 	Expect(matchNet("test", nets, ip.Network().IP)).To(BeFalse())
+}
+
+func TestMatchNets(t *testing.T) {
+	RegisterTestingT(t)
+
+	testCases := []struct {
+		title     string
+		nets      []string
+		srcIP     string
+		dstIP     string
+		srcResult bool
+		dstResult bool
+	}{
+		{"empty nets", nil, "192.168.1.1", "192.168.1.1", true, true},
+		{"single net match", []string{"192.168.1.0/24"}, "192.168.1.1", "192.168.1.1", true, true},
+		{"single net no match", []string{"192.168.2.0/24"}, "192.168.1.1", "192.168.1.1", false, false},
+		{"multiple nets match", []string{"192.168.2.0/24", "192.168.1.0/24"}, "192.168.1.1", "192.168.1.1", true, true},
+		{"multiple nets no match", []string{"192.168.2.0/24", "192.168.3.0/24"}, "192.168.1.1", "192.168.1.1", false, false},
+		{"invalid net", []string{"invalid"}, "192.168.1.1", "192.168.1.1", false, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			srcIP := net.ParseIP(tc.srcIP)
+			dstIP := net.ParseIP(tc.dstIP)
+			srcFlow := NewTupleToFlowAdapter(&tuple.Tuple{Src: [16]byte(srcIP.To16())})
+			dstFlow := NewTupleToFlowAdapter(&tuple.Tuple{Dst: [16]byte(dstIP.To16())})
+
+			srcResult := matchSrcNet(&proto.Rule{SrcNet: tc.nets}, &requestCache{srcFlow, nil})
+			dstResult := matchDstNet(&proto.Rule{DstNet: tc.nets}, &requestCache{dstFlow, nil})
+
+			Expect(srcResult).To(Equal(tc.srcResult), "Test case: %s", tc.title)
+			Expect(dstResult).To(Equal(tc.dstResult), "Test case: %s", tc.title)
+		})
+	}
+}
+
+func TestMatchPorts(t *testing.T) {
+	RegisterTestingT(t)
+
+	testCases := []struct {
+		title              string
+		srcRanges          []*proto.PortRange
+		dstRanges          []*proto.PortRange
+		notSrcRanges       []*proto.PortRange
+		notDstRanges       []*proto.PortRange
+		srcNamedPortIds    []string
+		dstNamedPortIds    []string
+		notSrcNamedPortIds []string
+		notDstNamedPortIds []string
+		srcPort            int
+		dstPort            int
+		match              bool
+	}{
+		{
+			title:              "empty match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "single numeric src port match",
+			srcRanges:          []*proto.PortRange{{First: 12, Last: 12}},
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "single numeric dst port match",
+			srcRanges:          nil,
+			dstRanges:          []*proto.PortRange{{First: 80, Last: 80}},
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "single numeric src port no match",
+			srcRanges:          []*proto.PortRange{{First: 12, Last: 12}},
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            11,
+			dstPort:            80,
+			match:              false,
+		},
+		{
+			title:              "single numeric dst port no match",
+			srcRanges:          nil,
+			dstRanges:          []*proto.PortRange{{First: 80, Last: 80}},
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            81,
+			match:              false,
+		},
+		{
+			title:              "range src port match",
+			srcRanges:          []*proto.PortRange{{First: 10, Last: 20}},
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            15,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "range dst port match",
+			srcRanges:          nil,
+			dstRanges:          []*proto.PortRange{{First: 70, Last: 90}},
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "range src port no match",
+			srcRanges:          []*proto.PortRange{{First: 10, Last: 20}},
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            21,
+			dstPort:            80,
+			match:              false,
+		},
+		{
+			title:              "range dst port no match",
+			srcRanges:          nil,
+			dstRanges:          []*proto.PortRange{{First: 70, Last: 90}},
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            91,
+			match:              false,
+		},
+		{
+			title:              "single set src port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    []string{"set12"},
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "single set dst port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    []string{"set80"},
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "single set src port no match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    []string{"set12"},
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            13,
+			dstPort:            80,
+			match:              false,
+		},
+		{
+			title:              "single set dst port no match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    []string{"set80"},
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            81,
+			match:              false,
+		},
+		{
+			title:              "multi set src port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    []string{"set12", "set15"},
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            15,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "multi set dst port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    []string{"set80", "set85"},
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            85,
+			match:              true,
+		},
+		{
+			title:              "set no match, range src port match",
+			srcRanges:          []*proto.PortRange{{First: 15, Last: 15}},
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    []string{"set12"},
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            15,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "set no match, range dst port match",
+			srcRanges:          nil,
+			dstRanges:          []*proto.PortRange{{First: 85, Last: 85}},
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    []string{"set80"},
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            85,
+			match:              true,
+		},
+		{
+			title:              "set match, range src port no match",
+			srcRanges:          []*proto.PortRange{{First: 15, Last: 15}},
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    []string{"set12"},
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "set match, range dst port no match",
+			srcRanges:          nil,
+			dstRanges:          []*proto.PortRange{{First: 85, Last: 85}},
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    []string{"set80"},
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "set no match, range src port no match",
+			srcRanges:          []*proto.PortRange{{First: 15, Last: 15}},
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    []string{"set12"},
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            16,
+			dstPort:            80,
+			match:              false,
+		},
+		{
+			title:              "set no match, range dst port no match",
+			srcRanges:          nil,
+			dstRanges:          []*proto.PortRange{{First: 85, Last: 85}},
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    []string{"set80"},
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            86,
+			match:              false,
+		},
+		{
+			title:              "not src port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       []*proto.PortRange{{First: 15, Last: 15}},
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            16,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "not dst port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       []*proto.PortRange{{First: 85, Last: 85}},
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            86,
+			match:              true,
+		},
+		{
+			title:              "not src port no match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       []*proto.PortRange{{First: 15, Last: 15}},
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            15,
+			dstPort:            80,
+			match:              false,
+		},
+		{
+			title:              "not dst port no match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       []*proto.PortRange{{First: 85, Last: 85}},
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: nil,
+			srcPort:            12,
+			dstPort:            85,
+			match:              false,
+		},
+		{
+			title:              "not src named port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: []string{"set15"},
+			notDstNamedPortIds: nil,
+			srcPort:            16,
+			dstPort:            80,
+			match:              true,
+		},
+		{
+			title:              "not dst named port match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: []string{"set85"},
+			srcPort:            12,
+			dstPort:            86,
+			match:              true,
+		},
+		{
+			title:              "not src named port no match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: []string{"set15"},
+			notDstNamedPortIds: nil,
+			srcPort:            15,
+			dstPort:            80,
+			match:              false,
+		},
+		{
+			title:              "not dst named port no match",
+			srcRanges:          nil,
+			dstRanges:          nil,
+			notSrcRanges:       nil,
+			notDstRanges:       nil,
+			srcNamedPortIds:    nil,
+			dstNamedPortIds:    nil,
+			notSrcNamedPortIds: nil,
+			notDstNamedPortIds: []string{"set85"},
+			srcPort:            12,
+			dstPort:            85,
+			match:              false,
+		},
+	}
+
+	store := policystore.NewPolicyStore()
+	set12 := policystore.NewIPSet(proto.IPSetUpdate_PORTS)
+	set12.AddString("12")
+	set15 := policystore.NewIPSet(proto.IPSetUpdate_PORTS)
+	set15.AddString("15")
+	set80 := policystore.NewIPSet(proto.IPSetUpdate_PORTS)
+	set80.AddString("80")
+	set85 := policystore.NewIPSet(proto.IPSetUpdate_PORTS)
+	set85.AddString("85")
+	store.IPSetByID["set12"] = set12
+	store.IPSetByID["set15"] = set15
+	store.IPSetByID["set80"] = set80
+	store.IPSetByID["set85"] = set85
+
+	for i, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			fl := NewTupleToFlowAdapter(&tuple.Tuple{L4Src: tc.srcPort, L4Dst: tc.dstPort})
+			srcMatch := matchSrcPort(&proto.Rule{SrcPorts: tc.srcRanges, SrcNamedPortIpSetIds: tc.srcNamedPortIds, NotSrcPorts: tc.notSrcRanges, NotSrcNamedPortIpSetIds: tc.notSrcNamedPortIds}, &requestCache{fl, store})
+			dstMatch := matchDstPort(&proto.Rule{DstPorts: tc.dstRanges, DstNamedPortIpSetIds: tc.dstNamedPortIds, NotDstPorts: tc.notDstRanges, NotDstNamedPortIpSetIds: tc.notDstNamedPortIds}, &requestCache{fl, store})
+			Expect(srcMatch && dstMatch).To(Equal(tc.match), "Test case: %d", i)
+		})
+	}
+}
+
+func TestMatchDstIPPortSetIds(t *testing.T) {
+	RegisterTestingT(t)
+
+	testCases := []struct {
+		title    string
+		rule     *proto.Rule
+		destIP   string
+		destPort int
+		proto    int
+		expected bool
+	}{
+		{
+			title: "match IP in set80",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"set80"},
+			},
+			destIP:   "192.168.1.1",
+			destPort: 80,
+			proto:    6,
+			expected: true,
+		},
+		{
+			title: "no match IP in set80",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"set80"},
+			},
+			destIP:   "192.168.1.3",
+			destPort: 80,
+			proto:    6,
+			expected: false,
+		},
+		{
+			title: "match IP in set443",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"set443"},
+			},
+			destIP:   "192.168.1.2",
+			destPort: 443,
+			proto:    17,
+			expected: true,
+		},
+		{
+			title: "no match IP in set443",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"set443"},
+			},
+			destIP:   "192.168.1.4",
+			destPort: 443,
+			proto:    17,
+			expected: false,
+		},
+		{
+			title: "match IP in set with multiple entries",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"setMulti"},
+			},
+			destIP:   "192.168.1.5",
+			destPort: 8080,
+			proto:    6,
+			expected: true,
+		},
+		{
+			title: "no match IP in set with multiple entries",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"setMulti"},
+			},
+			destIP:   "192.168.1.6",
+			destPort: 8080,
+			proto:    6,
+			expected: false,
+		},
+		{
+			title: "match IP in set with different protocol",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"setProto"},
+			},
+			destIP:   "192.168.1.7",
+			destPort: 53,
+			proto:    17,
+			expected: true,
+		},
+		{
+			title: "no match IP in set with different protocol",
+			rule: &proto.Rule{
+				DstIpPortSetIds: []string{"setProto"},
+			},
+			destIP:   "192.168.1.7",
+			destPort: 53,
+			proto:    6,
+			expected: false,
+		},
+	}
+
+	store := policystore.NewPolicyStore()
+	set80 := policystore.NewIPSet(proto.IPSetUpdate_IP)
+	set80.AddString("192.168.1.1,tcp:80")
+	set443 := policystore.NewIPSet(proto.IPSetUpdate_IP)
+	set443.AddString("192.168.1.2,udp:443")
+	setMulti := policystore.NewIPSet(proto.IPSetUpdate_IP)
+	setMulti.AddString("192.168.1.5,tcp:8080")
+	setMulti.AddString("192.168.1.5,tcp:9090")
+	setProto := policystore.NewIPSet(proto.IPSetUpdate_IP)
+	setProto.AddString("192.168.1.7,udp:53")
+	store.IPSetByID["set80"] = set80
+	store.IPSetByID["set443"] = set443
+	store.IPSetByID["setMulti"] = setMulti
+	store.IPSetByID["setProto"] = setProto
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			fl := NewTupleToFlowAdapter(&tuple.Tuple{Dst: [16]byte(net.ParseIP(tc.destIP).To16()), L4Dst: tc.destPort, Proto: tc.proto})
+			req := &requestCache{fl, store}
+			Expect(matchDstIPPortSetIds(tc.rule, req)).To(Equal(tc.expected), "Test case: %s", tc.title)
+		})
+	}
 }
