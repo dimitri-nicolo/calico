@@ -338,8 +338,7 @@ endif
 		python:3 \
 		bash -c '/usr/local/bin/python release/get-contributors.py >> /code/AUTHORS.md'
 
-.PHONY: release/bin/release
-release/bin/release:
+release/bin/release: $(shell find ./release -type f -name '*.go')
 	$(MAKE) -C release
 
 release/metadata: release/bin/release var-require-all-METADATA_DIR

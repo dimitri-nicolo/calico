@@ -347,8 +347,10 @@ func hashreleaseSubCommands(cfg *config.Config) []*cli.Command {
 			Name:  "metadata",
 			Usage: "Generate metadata for a hashrelease",
 			Flags: []cli.Flag{
-				&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to"},
-				&cli.StringFlag{Name: "versions-file", Usage: "Path to the versions file"},
+				&cli.StringFlag{Name: orgFlag, Usage: "Git organization", EnvVars: []string{"ORGANIZATION"}, Value: config.DefaultOrg},
+				&cli.StringFlag{Name: repoFlag, Usage: "Git repository", EnvVars: []string{"GIT_REPO"}, Value: config.DefaultRepo},
+				&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to", EnvVars: []string{"METADATA_DIR"}, Value: "", Required: true},
+				&cli.StringFlag{Name: "versions-file", Usage: "Path to the versions file", EnvVars: []string{"VERSIONS_FILE"}, Value: "", Required: true},
 			},
 			Action: func(c *cli.Context) error {
 				configureLogging("hashrelease-metadata.log")
@@ -372,6 +374,9 @@ func hashreleaseSubCommands(cfg *config.Config) []*cli.Command {
 						ProductVersion:  version.New(versions.Title),
 						OperatorVersion: version.New(versions.TigeraOperator.Version),
 					}),
+					calico.WithGithubOrg(c.String(orgFlag)),
+					calico.WithRepoName(c.String(repoFlag)),
+					calico.WithRepoRemote(cfg.GitRemote),
 				}
 				r := calico.NewManager(opts...)
 				return r.BuildMetadata(c.String("dir"), imgs...)
