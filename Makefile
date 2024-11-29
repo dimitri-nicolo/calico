@@ -138,8 +138,14 @@ chartVersion:=$(GIT_VERSION)
 appVersion:=$(GIT_VERSION)
 endif
 
-publish: var-require-all-CHART_RELEASE-RELEASE_STREAM-REGISTRY publish-chart-release publish-release-archive
-	cd selinux && make publish
+publish: var-require-all-CHART_RELEASE-RELEASE_STREAM-REGISTRY publish-chart-release publish-release-archive publish-multi-tenant-crds publish-selinux
+
+# TODO: We're moving selinux RPMs into the same repository
+# as non-cluster host RPMs. We may want to remove this
+# location in the future, but we should keep it here in case
+# users actually use it.
+publish-selinux:
+	$(MAKE) -C selinux publish
 
 chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
 	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
@@ -158,12 +164,20 @@ chart: tigera-operator-release tigera-operator-master multi-tenant-crds-release 
 tigera-operator-release: bin/tigera-operator-$(chartVersion).tgz
 
 # Build the multi-tenant-crds helm chart.
-multi-tenant-crds-release: bin/multi-tenant-crds-$(chartVersion).tgz
-bin/multi-tenant-crds-$(chartVersion).tgz: bin/helm
+multi-tenant-crds-release: bin/multi-tenant-crds-$(chartVersion)-$(CHART_RELEASE).tgz
+bin/multi-tenant-crds-$(chartVersion)-$(CHART_RELEASE).tgz: bin/helm
 	bin/helm package ./charts/multi-tenant-crds \
 	--destination ./bin/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
+
+publish-multi-tenant-crds: multi-tenant-crds-release
+	aws --profile helm \
+		s3 cp \
+		bin/multi-tenant-crds-$(chartVersion)-$(CHART_RELEASE).tgz \
+		s3://tigera-public/ee/charts/ \
+		--acl public-read
+
 
 # If we run CD as master from semaphore, we want to also publish bin/tigera-operator-v0.0.tgz for the master docs.
 tigera-operator-master:
