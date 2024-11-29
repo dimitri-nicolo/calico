@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2024 Tigera, Inc. All rights reserved.
 
 package metric
 
@@ -106,7 +106,8 @@ type Update struct {
 	IsConnection bool
 
 	// Rules identification
-	RuleIDs []*calc.RuleID
+	RuleIDs        []*calc.RuleID
+	PendingRuleIDs []*calc.RuleID
 
 	// Whether the rules IDs contains a deny rule.
 	HasDenyRule bool

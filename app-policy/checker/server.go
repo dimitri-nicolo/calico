@@ -95,7 +95,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	// this call for consistency.
 	store := as.Store
 	logCtx.Debugf("attempting store read at %p", store)
-	store.Read(func(ps *policystore.PolicyStore) {
+	store.DoWithReadLock(func(ps *policystore.PolicyStore) {
 		if ps == nil {
 			panic("bug: policyStore is nil and shouldn't happen.. ever")
 		}

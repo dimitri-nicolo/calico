@@ -84,7 +84,7 @@ type policyStoreManager struct {
 type PolicyStoreManager interface {
 	// PolicyStoreManager reads from a current or pending policy store if
 	// syncher has an established and in-sync connection; or not, respectively.
-	Read(func(*PolicyStore))
+	DoWithReadLock(func(*PolicyStore))
 	// PolicyStoreManager writes to a current or pending policy store if
 	// syncher has an established and in-sync connection; or not, respectively.
 	DoWithLock(func(*PolicyStore))
@@ -114,15 +114,15 @@ func NewPolicyStoreManagerWithOpts(opts ...PolicyStoreManagerOption) *policyStor
 	return psm
 }
 
-func (m *policyStoreManager) Read(cb func(*PolicyStore)) {
-	log.Tracef("storeManager Read(cb) acquiring read lock")
+func (m *policyStoreManager) DoWithReadLock(cb func(*PolicyStore)) {
+	log.Tracef("StoreManager acquiring read lock")
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	log.Debugf("storeManager reading from current store at %p", m.current)
+	log.Debugf("StoreManager calling callback on current store: %p", m.current)
 
 	cb(m.current)
-	log.Tracef("storeManager Read(cb) done, going to release read lock")
+	log.Tracef("StoreManager callback done, going to release read lock")
 }
 
 // DoWithLock acquires a lock and calls the callback with the current or pending store

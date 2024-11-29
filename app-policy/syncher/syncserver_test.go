@@ -67,7 +67,7 @@ func (mp *mockPolicyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpoi
 	return nil
 }
 
-func (mp *mockPolicyStoreManager) Read(func(*policystore.PolicyStore)) {
+func (mp *mockPolicyStoreManager) DoWithReadLock(func(*policystore.PolicyStore)) {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
 

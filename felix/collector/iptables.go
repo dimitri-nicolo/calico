@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 //go:build linux
 // +build linux
@@ -90,12 +90,12 @@ func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacke
 func (r *NFLogReader) subscribe() error {
 	err := subscribeToNflog(r.netlinkIngressGroup, r.bufSize, r.IngressC, r.nfIngressDoneC, r.servicesEnabled)
 	if err != nil {
-		return fmt.Errorf("Error when subscribing to NFLOG (ingress): %w", err)
+		return fmt.Errorf("error when subscribing to NFLOG (ingress): %w", err)
 	}
 
 	err = subscribeToNflog(r.netlinkEgressGroup, r.bufSize, r.EgressC, r.nfEgressDoneC, r.servicesEnabled)
 	if err != nil {
-		return fmt.Errorf("Error when subscribing to NFLOG (egress): %w", err)
+		return fmt.Errorf("error when subscribing to NFLOG (egress): %w", err)
 	}
 
 	return nil
@@ -160,7 +160,7 @@ func ConvertCtEntryToConntrackInfo(ctEntry nfnetlink.CtEntry, markProxy uint32) 
 	if ctEntry.IsDNAT() {
 		ctTuple, err = ctEntry.OriginalTuplePostDNAT()
 		if err != nil {
-			return ConntrackInfo{}, fmt.Errorf("Error when extracting tuple without DNAT: %w", err)
+			return ConntrackInfo{}, fmt.Errorf("error when extracting tuple without DNAT: %w", err)
 		}
 	}
 

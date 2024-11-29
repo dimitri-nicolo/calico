@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2024 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -11,13 +11,16 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gavv/monotime"
 	"github.com/google/gopacket/layers"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+
 	kapiv1 "k8s.io/api/core/v1"
 
-	policystore "github.com/projectcalico/calico/app-policy/policystore"
+	"github.com/projectcalico/calico/app-policy/checker"
+	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/dnslog"
 	"github.com/projectcalico/calico/felix/collector/l7log"
@@ -110,6 +113,7 @@ type Config struct {
 	EnableNetworkSets         bool
 	EnableServices            bool
 	EnableDestDomainsByClient bool
+	FlowLogsFlushInterval     time.Duration
 
 	MaxOriginalSourceIPsIncluded int
 	IsBPFDataplane               bool
@@ -132,6 +136,7 @@ type collector struct {
 	luc                   *calc.LookupsCache
 	epStats               map[tuple.Tuple]*Data
 	ticker                jitter.TickerInterface
+	tickerPolicyEval      jitter.TickerInterface
 	sigChan               chan os.Signal
 	config                *Config
 	dumpLog               *log.Logger
@@ -150,6 +155,7 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		luc:                   lc,
 		epStats:               make(map[tuple.Tuple]*Data),
 		ticker:                jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
+		tickerPolicyEval:      jitter.NewTicker(cfg.FlowLogsFlushInterval*8/10, cfg.FlowLogsFlushInterval*1/10),
 		sigChan:               make(chan os.Signal, 1),
 		config:                cfg,
 		dumpLog:               log.New(),
@@ -284,7 +290,7 @@ func (c *collector) startStatsCollectionAndReporting() {
 			}
 			histogramConntrackLatency.Observe(float64(time.Since(conntrackProcessStart).Seconds()))
 		case pktInfo := <-pktInfoC:
-			log.WithField("PacketInfo", pktInfo).Trace("Collector event")
+			log.Tracef("Collector event: %v", pktInfo)
 			processInfoProcessStart := time.Now()
 			c.applyPacketInfo(pktInfo)
 			histogramPacketInfoLatency.Observe(float64(time.Since(processInfoProcessStart).Seconds()))
@@ -298,6 +304,8 @@ func (c *collector) startStatsCollectionAndReporting() {
 			dataplaneStatsUpdateStart := time.Now()
 			c.convertDataplaneStatsAndApplyUpdate(ds)
 			histogramDataplaneStatsUpdate.Observe(float64(time.Since(dataplaneStatsUpdateStart).Seconds()))
+		case <-c.tickerPolicyEval.Channel():
+			c.updatePendingRuleTraces()
 		}
 	}
 }
@@ -968,6 +976,66 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	}
 }
 
+// updatePendingRuleTraces evaluates each flow of epStats against the policies in the PolicyStore
+// to get the latest pending rule trace. It replaces the Data's copy if they are different.
+func (c *collector) updatePendingRuleTraces() {
+	// The epStats map may be quite large, so we chose to lock each entry individually to avoid
+	// locking the entire map.
+	for t, data := range c.epStats {
+		if data == nil {
+			continue
+		}
+
+		// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
+		flow := checker.NewTupleToFlowAdapter(&t)
+
+		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal {
+			// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
+			c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+				c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
+			})
+		}
+
+		if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal {
+			// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
+			c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+				c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
+			})
+		}
+	}
+}
+
+// evaluatePendingRuleTrace evaluates the pending rule trace for the given direction and endpoint,
+// and updates the ruleIDs if they are different.
+func (c *collector) evaluatePendingRuleTrace(direction rules.RuleDir, store *policystore.PolicyStore, ep *calc.EndpointData, flow *checker.TupleToFlowAdapter, ruleIDs *[]*calc.RuleID) {
+	// Get the proto.WorkloadEndpoint, needed for the evaluation, from the policy store.
+	if protoEp := c.lookupProtoWorkloadEndpoint(store, ep.Key); protoEp != nil {
+		trace := checker.Evaluate(direction, store, protoEp, flow)
+		if !equal(*ruleIDs, trace) {
+			*ruleIDs = append([]*calc.RuleID(nil), trace...)
+			log.Tracef("Updated pending %s, tuple: %v, rule trace: %v", direction, flow, ruleIDs)
+		}
+	} else {
+		log.WithField("endpoint", ep.Key).Trace("The endpoint is not yet tracked by the PolicyStore")
+	}
+}
+
+// lookupProtoWorkloadEndpoint returns the proto.WorkloadEndpoint from the policy store. Must be
+// called with the read lock on the policy store.
+func (c *collector) lookupProtoWorkloadEndpoint(store *policystore.PolicyStore, key model.Key) *proto.WorkloadEndpoint {
+	if store == nil || store.Endpoints == nil {
+		return nil
+	}
+
+	epKey := proto.WorkloadEndpointID{
+		OrchestratorId: getOrchestratorIDFromKey(key),
+		WorkloadId:     getWorkloadIDFromKey(key),
+		EndpointId:     getEndpointIDFromKey(key),
+	}
+
+	return store.Endpoints[epKey]
+}
+
 func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (tuple.Tuple, error) {
 	var protocol int32
 	switch n := d.Protocol.GetNumberOrName().(type) {
@@ -1176,7 +1244,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 		validService = isValidService
 
 		if isValidService {
-			svcPortName = getPortNameFromServicSpec(serviceSpec, port)
+			svcPortName = getPortNameFromServiceSpec(serviceSpec, port)
 		}
 	}
 
@@ -1199,13 +1267,57 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 	}
 }
 
-func getPortNameFromServicSpec(serviceSpec kapiv1.ServiceSpec, port int) string {
+// equal returns true if the rule IDs are equal. The order of the content should also the same for
+// equal to return true.
+func equal(a, b []*calc.RuleID) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !a[i].Equals(b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func getPortNameFromServiceSpec(serviceSpec kapiv1.ServiceSpec, port int) string {
 	for _, servicePort := range serviceSpec.Ports {
 		if servicePort.Port == int32(port) {
 			return servicePort.Name
 		}
 	}
 	return ""
+}
+
+// getEndpointIDFromKey returns the endpoint ID from the given key.
+func getEndpointIDFromKey(key model.Key) string {
+	switch k := key.(type) {
+	case model.WorkloadEndpointKey:
+		return k.EndpointID
+	default:
+		return ""
+	}
+}
+
+// getOrchestratorIDFromKey returns the orchestrator ID from the given key.
+func getOrchestratorIDFromKey(key model.Key) string {
+	switch k := key.(type) {
+	case model.WorkloadEndpointKey:
+		return k.OrchestratorID
+	default:
+		return ""
+	}
+}
+
+// getWorkloadIDFromKey returns the workload ID from the given key.
+func getWorkloadIDFromKey(key model.Key) string {
+	switch k := key.(type) {
+	case model.WorkloadEndpointKey:
+		return k.WorkloadID
+	default:
+		return ""
+	}
 }
 
 // NilProcessInfoCache implements the ProcessInfoCache interface and always returns false
