@@ -31,6 +31,7 @@ type EndpointsCache interface {
 	TotalWorkloadEndpointsByNamespace() map[string]api.EndpointSummary
 	TotalHostEndpoints() api.EndpointSummary
 	GetEndpoint(model.Key) api.Endpoint
+	GetEndpoints([]model.Key) []api.Endpoint
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 	RegisterWithLabelHandler(handler labelhandler.Interface)
 	RegisterWithSharedInformer(factory informers.SharedInformerFactory, stopCh <-chan struct{})
@@ -178,6 +179,25 @@ func (c *endpointsCache) GetEndpoint(key model.Key) api.Endpoint {
 	return nil
 }
 
+// GetEndpoints return list of all endpoints including both workload endpoints and host endpoints.
+func (c *endpointsCache) GetEndpoints(keys []model.Key) []api.Endpoint {
+	if len(keys) == 0 {
+		eps := make([]api.Endpoint, 0)
+		// getAllEndpoints returns []*endpointsData, endpointsData implements api.Endpoint, thus the conversion
+		// is safe. Go doesn't do this conversion for the array though, and we need to iterate and append endpoints one by one.
+		for _, ep := range c.getAllEndpoints() {
+			eps = append(eps, ep)
+		}
+		return eps
+	}
+	eps := make([]api.Endpoint, len(keys))
+	for _, key := range keys {
+		ep := c.getEndpoint(key)
+		eps = append(eps, ep)
+	}
+	return eps
+}
+
 func (c *endpointsCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
 	dispatcher.RegisterHandler(libapi.KindWorkloadEndpoint, c.onUpdate)
 	dispatcher.RegisterHandler(apiv3.KindHostEndpoint, c.onUpdate)
@@ -262,6 +282,27 @@ func (c *endpointsCache) getEndpoint(key model.Key) *endpointData {
 		return nil
 	}
 	return ec.endpoints[key]
+}
+
+// getAllEndpoints returns a list of both workload endpoints and host endpoints
+func (c *endpointsCache) getAllEndpoints() []*endpointData {
+	endpointsResult := make([]*endpointData, 0)
+
+	// add workloadEndpoints
+	for _, epcache := range c.workloadEndpointsByNamespace {
+		for _, ep := range epcache.endpoints {
+			endpointsResult = append(endpointsResult, ep)
+		}
+
+	}
+
+	// add hostendpoints
+	hostEPCache := c.hostEndpoints
+	for _, ep := range hostEPCache.endpoints {
+		endpointsResult = append(endpointsResult, ep)
+	}
+
+	return endpointsResult
 }
 
 func (c *endpointsCache) getEndpointCache(epKey model.Key, create bool) *endpointCache {

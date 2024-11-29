@@ -113,7 +113,7 @@ func (q *queryServerClient) SearchEndpoints(cfg *QueryServerConfig, reqBody *que
 	err = json.Unmarshal(respBytes, &qsResp)
 	if err != nil {
 		log.Errorf("Response: %s", string(respBytes))
-		log.WithError(err).Error("unmarshaling endpointsRespBody failed.")
+		log.WithError(err).Error("unmarshalling endpointsRespBody failed.")
 		return nil, err
 	}
 

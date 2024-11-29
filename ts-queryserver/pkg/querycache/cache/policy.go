@@ -5,18 +5,21 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/api/networking/v1"
 
 	"github.com/projectcalico/calico/felix/calc"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/labelhandler"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type PoliciesCache interface {
@@ -557,25 +560,20 @@ func (d *policyData) GetResource() api.Resource {
 }
 
 // GetTier returns the tier of the policy
-// if tier is empty, it is defaulted to "default"
 func (d *policyData) GetTier() string {
+	tier := ""
 	switch r := d.resource.(type) {
 	case *apiv3.NetworkPolicy:
-		tier := r.Spec.Tier
-		if r.Spec.Tier == "" {
-			tier = names.DefaultTierName
-		}
-		return tier
-
+		tier = r.Spec.Tier
 	case *apiv3.GlobalNetworkPolicy:
-		tier := r.Spec.Tier
-		if r.Spec.Tier == "" {
-			tier = names.DefaultTierName
-		}
-		return tier
+		tier = r.Spec.Tier
 	}
 
-	return ""
+	if tier == "" {
+		tier = names.DefaultTierName
+	}
+
+	return tier
 }
 
 func (d *policyData) GetOrder() *float64 {
@@ -628,6 +626,59 @@ func (d *policyData) getKey() model.Key {
 		Name:      d.resource.GetObjectMeta().GetName(),
 		Namespace: d.resource.GetObjectMeta().GetNamespace(),
 	}
+}
+
+func (d *policyData) GetResourceType() api.Resource {
+	cachedResource := d.resource
+	name := cachedResource.GetObjectMeta().GetName()
+	kind := cachedResource.GetObjectKind().GroupVersionKind().Kind
+
+	isStaged := model.PolicyIsStaged(name)
+	isK8s := strings.Contains(name, "knp")
+	isGlobal := kind == apiv3.KindGlobalNetworkPolicy
+
+	switch {
+	case isStaged && isK8s:
+		return &apiv3.StagedKubernetesNetworkPolicy{
+			TypeMeta: resources.TypeCalicoStagedKubernetesNetworkPolicies,
+		}
+	case !isStaged && isK8s:
+		return &v1.NetworkPolicy{
+			TypeMeta: resources.TypeK8sNetworkPolicies,
+		}
+	case isStaged && isGlobal:
+		return &apiv3.StagedGlobalNetworkPolicy{
+			TypeMeta: resources.TypeCalicoStagedGlobalNetworkPolicies,
+			Spec: apiv3.StagedGlobalNetworkPolicySpec{
+				Tier: d.GetTier(),
+			},
+		}
+	case isStaged:
+		return &apiv3.StagedNetworkPolicy{
+			TypeMeta: resources.TypeCalicoStagedNetworkPolicies,
+			Spec: apiv3.StagedNetworkPolicySpec{
+				Tier: d.GetTier(),
+			},
+		}
+	case isGlobal:
+		return &apiv3.GlobalNetworkPolicy{
+			TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+			Spec: apiv3.GlobalNetworkPolicySpec{
+				Tier: d.GetTier(),
+			},
+		}
+	default:
+		return &apiv3.NetworkPolicy{
+			TypeMeta: resources.TypeCalicoNetworkPolicies,
+			Spec: apiv3.NetworkPolicySpec{
+				Tier: d.GetTier(),
+			},
+		}
+	}
+}
+
+func (d *policyData) IsKubernetesType() bool {
+	return strings.ContainsAny(d.GetResource().GetObjectKind().GroupVersionKind().Kind, "kubernetes")
 }
 
 // tierData is used to hold policy data in the cache, and also implements the Policy interface

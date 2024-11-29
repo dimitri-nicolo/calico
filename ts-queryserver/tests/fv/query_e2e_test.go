@@ -17,10 +17,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -414,7 +416,7 @@ type mockAuthorizer struct {
 type mockPermissions struct {
 }
 
-func (p *mockPermissions) IsAuthorized(res api.Resource, verb, tier string) bool {
+func (p *mockPermissions) IsAuthorized(res api.Resource, tier *string, verbs []rbac.Verb) bool {
 	return true
 }
 

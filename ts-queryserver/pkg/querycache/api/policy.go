@@ -13,6 +13,8 @@ type Policy interface {
 	GetOrder() *float64
 	GetStagedAction() *v3.StagedAction
 	GetSelector() *string
+	GetResourceType() Resource
+	IsKubernetesType() bool
 }
 
 type PolicyCounts struct {

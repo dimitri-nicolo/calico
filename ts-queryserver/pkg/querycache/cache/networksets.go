@@ -7,6 +7,7 @@ import (
 
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/dispatcherv1v3"
 )
@@ -15,6 +16,7 @@ import (
 // This interface consists of both the query and the event update interface.
 type NetworkSetsCache interface {
 	GetNetworkSet(model.Key) api.Resource
+	GetNetworkSets(keys set.Set[model.Key]) []api.Resource
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 }
 
@@ -50,6 +52,19 @@ func (c *networksetsCache) GetNetworkSet(key model.Key) api.Resource {
 	return nil
 }
 
+// func GetNetworkSets gets list of networkset keys and returns corresponding (global)networksets resources.
+// if the input keys is empty or nil, it will return all networksets and global networksets
+func (c *networksetsCache) GetNetworkSets(keys set.Set[model.Key]) []api.Resource {
+	if keys == nil || keys.Len() == 0 {
+		return c.getAllNetworkSets()
+	}
+	networkSets := make([]api.Resource, 0, keys.Len())
+	for _, key := range keys.Slice() {
+		networkSets = append(networkSets, c.getNetworkSet(key))
+	}
+	return networkSets
+}
+
 func (c *networksetsCache) getNetworkSet(key model.Key) api.Resource {
 	nc := c.getNetworkSetCache(key, false)
 	if nc == nil {
@@ -74,6 +89,22 @@ func (c *networksetsCache) getNetworkSetCache(nsKey model.Key, create bool) *net
 	}
 	log.WithField("key", nsKey).Error("Unexpected resource in event type, expecting a v3 network set type")
 	return nil
+}
+
+func (c *networksetsCache) getAllNetworkSets() []api.Resource {
+	allNetworkSets := []api.Resource{}
+
+	for _, nc := range c.networkSetsByNamespace {
+		for _, ns := range nc.networksets {
+			allNetworkSets = append(allNetworkSets, ns)
+		}
+	}
+
+	for _, ns := range c.globalNetworkSets.networksets {
+		allNetworkSets = append(allNetworkSets, ns)
+	}
+
+	return allNetworkSets
 }
 
 func (c *networksetsCache) onUpdate(update dispatcherv1v3.Update) {

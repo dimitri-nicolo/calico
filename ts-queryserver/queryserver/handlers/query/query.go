@@ -21,7 +21,9 @@ import (
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/timeutils"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
@@ -82,6 +84,7 @@ type Query interface {
 	Endpoints(w http.ResponseWriter, r *http.Request)
 	Summary(w http.ResponseWriter, r *http.Request)
 	Metrics(w http.ResponseWriter, r *http.Request)
+	Labels(api.ResourceType) http.HandlerFunc
 }
 
 func NewQuery(qi client.QueryInterface, cfg *config.Config, authz authhandler.Authorizer) Query {
@@ -370,6 +373,25 @@ func (q *query) Node(w http.ResponseWriter, r *http.Request) {
 	}, true)
 }
 
+func (q *query) Labels(resourceType api.ResourceType) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+
+		permissions, err := q.authorizer.PerformUserAuthorizationReview(r.Context(), client.LabelsResourceAuthReviewAttrList)
+		if err != nil {
+			log.WithError(err).Debug("PerfomUserAuthorizationReview failed.")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		q.runQuery(w, r, client.QueryLabelsReq{
+			ResourceType: resourceType,
+			Permission:   permissions,
+		}, false)
+
+	}
+}
+
 // Convert a query parameter to a int. We are pretty relaxed about what we accept, using the
 // default or min value when the requested value is bogus.
 func getInt(r *http.Request, queryParm string, def int) int {
@@ -558,6 +580,8 @@ func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}
 		// This is an exact get and the resource does not exist. Return a 404 not found.
 		q.writeError(w, err, http.StatusNotFound)
 		return
+	} else if _, ok := err.(*httputils.HttpStatusError); ok {
+		q.writeError(w, err, err.(*httputils.HttpStatusError).Status)
 	} else if err != nil {
 		// All other errors return as a 400 Bad request.
 		q.writeError(w, err, http.StatusBadRequest)
