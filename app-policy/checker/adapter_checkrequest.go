@@ -20,35 +20,35 @@ func NewCheckRequestToFlowAdapter(req *authz.CheckRequest) *CheckRequestToFlowAd
 	return &CheckRequestToFlowAdapter{flow: req}
 }
 
-func (a *CheckRequestToFlowAdapter) getSourceIP() net.IP {
+func (a *CheckRequestToFlowAdapter) GetSourceIP() net.IP {
 	if a.flow == nil || a.flow.GetAttributes().GetSource().GetAddress().GetSocketAddress() == nil {
 		return nil
 	}
 	return net.ParseIP(a.flow.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetAddress())
 }
 
-func (a *CheckRequestToFlowAdapter) getDestIP() net.IP {
+func (a *CheckRequestToFlowAdapter) GetDestIP() net.IP {
 	if a.flow == nil || a.flow.GetAttributes().GetDestination().GetAddress().GetSocketAddress() == nil {
 		return nil
 	}
 	return net.ParseIP(a.flow.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetAddress())
 }
 
-func (a *CheckRequestToFlowAdapter) getSourcePort() int {
+func (a *CheckRequestToFlowAdapter) GetSourcePort() int {
 	if a.flow == nil || a.flow.GetAttributes().GetSource().GetAddress().GetSocketAddress() == nil {
 		return 0
 	}
 	return int(a.flow.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetPortValue())
 }
 
-func (a *CheckRequestToFlowAdapter) getDestPort() int {
+func (a *CheckRequestToFlowAdapter) GetDestPort() int {
 	if a.flow == nil || a.flow.GetAttributes().GetDestination().GetAddress().GetSocketAddress() == nil {
 		return 0
 	}
 	return int(a.flow.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetPortValue())
 }
 
-func (a *CheckRequestToFlowAdapter) getProtocol() int {
+func (a *CheckRequestToFlowAdapter) GetProtocol() int {
 	if a.flow == nil || a.flow.GetAttributes().GetDestination().GetAddress().GetSocketAddress() == nil {
 		// Default to TCP if protocol is not set.
 		return 6
@@ -61,7 +61,7 @@ func (a *CheckRequestToFlowAdapter) getProtocol() int {
 	return 6
 }
 
-func (a *CheckRequestToFlowAdapter) getHttpMethod() *string {
+func (a *CheckRequestToFlowAdapter) GetHttpMethod() *string {
 	if a.flow == nil || a.flow.GetAttributes().GetRequest().GetHttp() == nil {
 		return nil
 	}
@@ -69,7 +69,7 @@ func (a *CheckRequestToFlowAdapter) getHttpMethod() *string {
 	return &method
 }
 
-func (a *CheckRequestToFlowAdapter) getHttpPath() *string {
+func (a *CheckRequestToFlowAdapter) GetHttpPath() *string {
 	if a.flow == nil || a.flow.GetAttributes().GetRequest().GetHttp() == nil {
 		return nil
 	}
@@ -77,7 +77,7 @@ func (a *CheckRequestToFlowAdapter) getHttpPath() *string {
 	return &path
 }
 
-func (a *CheckRequestToFlowAdapter) getSourcePrincipal() *string {
+func (a *CheckRequestToFlowAdapter) GetSourcePrincipal() *string {
 	if a.flow == nil {
 		return nil
 	}
@@ -85,7 +85,7 @@ func (a *CheckRequestToFlowAdapter) getSourcePrincipal() *string {
 	return &principal
 }
 
-func (a *CheckRequestToFlowAdapter) getDestPrincipal() *string {
+func (a *CheckRequestToFlowAdapter) GetDestPrincipal() *string {
 	if a.flow == nil {
 		return nil
 	}
@@ -93,14 +93,14 @@ func (a *CheckRequestToFlowAdapter) getDestPrincipal() *string {
 	return &principal
 }
 
-func (a *CheckRequestToFlowAdapter) getSourceLabels() map[string]string {
+func (a *CheckRequestToFlowAdapter) GetSourceLabels() map[string]string {
 	if a.flow == nil {
 		return nil
 	}
 	return a.flow.GetAttributes().GetSource().GetLabels()
 }
 
-func (a *CheckRequestToFlowAdapter) getDestLabels() map[string]string {
+func (a *CheckRequestToFlowAdapter) GetDestLabels() map[string]string {
 	if a.flow == nil {
 		return nil
 	}

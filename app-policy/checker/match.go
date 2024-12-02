@@ -47,29 +47,31 @@ func (i *InvalidDataFromDataPlane) Error() string {
 	return "Invalid data from dataplane " + i.string
 }
 
-// l4Flow abstracts the common l4 data and behavior needed for the match algorithms.
-type l4Flow interface {
-	getSourceIP() net.IP
-	getDestIP() net.IP
-	getSourcePort() int
-	getDestPort() int
-	getProtocol() int
+// L4Flow abstracts the common l4 data and behavior needed for the match algorithms.
+type L4Flow interface {
+	GetSourceIP() net.IP
+	GetDestIP() net.IP
+	GetSourcePort() int
+	GetDestPort() int
+	GetProtocol() int
 }
 
-// l7Flow abstracts the common l7 data and behavior needed for the match algorithms.
-type l7Flow interface {
-	getHttpMethod() *string
-	getHttpPath() *string
-	getSourcePrincipal() *string
-	getDestPrincipal() *string
-	getSourceLabels() map[string]string
-	getDestLabels() map[string]string
+// L7Flow abstracts the common l7 data and behavior needed for the match algorithms.
+type L7Flow interface {
+	GetHttpMethod() *string
+	GetHttpPath() *string
+	GetSourcePrincipal() *string
+	GetDestPrincipal() *string
+	GetSourceLabels() map[string]string
+	GetDestLabels() map[string]string
 }
 
 // flow abstracts the common data and behavior needed for the match algorithms.
-type flow interface {
-	l4Flow
-	l7Flow
+//go:generate mockery --name=Flow --output=mocks --outpkg=mocks
+
+type Flow interface {
+	L4Flow
+	L7Flow
 }
 
 // match checks if the Rule matches the request. It returns true if the Rule matches, false otherwise.
@@ -77,19 +79,19 @@ func match(policyNamespace string, rule *proto.Rule, req *requestCache) bool {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{
 			"rule":       rule,
-			"Protocol":   req.getProtocol(),
-			"SourceIP":   req.getSourceIP(),
-			"DestIP":     req.getDestIP(),
-			"SourcePort": req.getSourcePort(),
-			"DestPort":   req.getDestPort(),
-			"HttpMethod": req.getHttpMethod(),
-			"HttpPath":   req.getHttpPath(),
+			"Protocol":   req.GetProtocol(),
+			"SourceIP":   req.GetSourceIP(),
+			"DestIP":     req.GetDestIP(),
+			"SourcePort": req.GetSourcePort(),
+			"DestPort":   req.GetDestPort(),
+			"HttpMethod": req.GetHttpMethod(),
+			"HttpPath":   req.GetHttpPath(),
 		}).Debug("Checking rule on request")
 	}
 	return matchSource(policyNamespace, rule, req) &&
 		matchDestination(policyNamespace, rule, req) &&
 		matchRequest(rule, req) &&
-		matchL4Protocol(rule, int32(req.getProtocol()))
+		matchL4Protocol(rule, int32(req.GetProtocol()))
 }
 
 // matchSource checks if the source part of the Rule matches the request. It returns true if the
@@ -156,7 +158,7 @@ func computeNamespaceMatch(
 // Rule matches, false otherwise.
 func matchRequest(rule *proto.Rule, req *requestCache) bool {
 	log.WithField("request", req).Debug("Matching request.")
-	return matchHTTP(rule.GetHttpMatch(), req.getHttpMethod(), req.getHttpPath())
+	return matchHTTP(rule.GetHttpMatch(), req.GetHttpMethod(), req.GetHttpPath())
 }
 
 // matchServiceAccounts checks if the service account part of the Rule matches the request. It
@@ -352,8 +354,8 @@ func matchSrcIPSets(r *proto.Rule, req *requestCache) bool {
 			"NotSrcIpSetIds": r.NotSrcIpSetIds,
 		}).Debug("matching source IP sets")
 	}
-	return matchIPSetsAll(r.SrcIpSetIds, req.getIPSet, req.getSourceIP().String()) &&
-		matchIPSetsNotAny(r.NotSrcIpSetIds, req.getIPSet, req.getSourceIP().String())
+	return matchIPSetsAll(r.SrcIpSetIds, req.getIPSet, req.GetSourceIP().String()) &&
+		matchIPSetsNotAny(r.NotSrcIpSetIds, req.getIPSet, req.GetSourceIP().String())
 }
 
 // matchDstIPPortSetIds checks if the destination IP, protocol and port is within the IP sets. It
@@ -364,9 +366,9 @@ func matchDstIPPortSetIds(r *proto.Rule, req *requestCache) bool {
 			"DstIpPortSetIds": r.GetDstIpPortSetIds(),
 		}).Debug("matching destination IP port sets")
 	}
-	protocolStr := protocolMapL4[int32(req.getProtocol())]
+	protocolStr := protocolMapL4[int32(req.GetProtocol())]
 	// The values compared against are of the for "ip,protocol:port".
-	ipProtoPort := fmt.Sprintf("%s,%s:%d", req.getDestIP(), protocolStr, req.getDestPort())
+	ipProtoPort := fmt.Sprintf("%s,%s:%d", req.GetDestIP(), protocolStr, req.GetDestPort())
 	return matchIPSetsAll(r.GetDstIpPortSetIds(), req.getIPSet, ipProtoPort)
 }
 
@@ -379,8 +381,8 @@ func matchDstIPSets(r *proto.Rule, req *requestCache) bool {
 			"NotDstIpSetIds": r.GetNotDstIpSetIds(),
 		}).Debug("matching destination IP sets")
 	}
-	return matchIPSetsAll(r.GetDstIpSetIds(), req.getIPSet, req.getDestIP().String()) &&
-		matchIPSetsNotAny(r.GetNotDstIpSetIds(), req.getIPSet, req.getDestIP().String())
+	return matchIPSetsAll(r.GetDstIpSetIds(), req.getIPSet, req.GetDestIP().String()) &&
+		matchIPSetsNotAny(r.GetNotDstIpSetIds(), req.getIPSet, req.GetDestIP().String())
 }
 
 // matchIPSetsAll returns true if the address matches all of the IP set ids, false otherwise.
@@ -409,15 +411,15 @@ func matchIPSetsNotAny(ids []string, ipsSetFunc func(string) policystore.IPSet, 
 // matchDstPort checks if the destination port is within the port ranges and named port sets. It
 // also checks if the destination port is not within the not port ranges and named port sets.
 func matchDstPort(r *proto.Rule, req *requestCache) bool {
-	return matchPort("dst", r.GetDstPorts(), r.GetDstNamedPortIpSetIds(), req.getIPSet, req.getDestPort()) &&
-		matchNotPort("dst", r.GetNotDstPorts(), r.GetNotDstNamedPortIpSetIds(), req.getIPSet, req.getDestPort())
+	return matchPort("dst", r.GetDstPorts(), r.GetDstNamedPortIpSetIds(), req.getIPSet, req.GetDestPort()) &&
+		matchNotPort("dst", r.GetNotDstPorts(), r.GetNotDstNamedPortIpSetIds(), req.getIPSet, req.GetDestPort())
 }
 
 // matchSrcPort checks if the source port is within the port ranges and named port sets. It also
 // checks if the source port is not within the not port ranges and named port sets.
 func matchSrcPort(r *proto.Rule, req *requestCache) bool {
-	return matchPort("src", r.GetSrcPorts(), r.GetSrcNamedPortIpSetIds(), req.getIPSet, req.getSourcePort()) &&
-		matchNotPort("src", r.GetNotSrcPorts(), r.GetNotSrcNamedPortIpSetIds(), req.getIPSet, req.getSourcePort())
+	return matchPort("src", r.GetSrcPorts(), r.GetSrcNamedPortIpSetIds(), req.getIPSet, req.GetSourcePort()) &&
+		matchNotPort("src", r.GetNotSrcPorts(), r.GetNotSrcNamedPortIpSetIds(), req.getIPSet, req.GetSourcePort())
 }
 
 // matchPort checks if the port is within the port ranges and named port sets. It returns true if
@@ -480,14 +482,14 @@ func matchNotPort(dir string, ranges []*proto.PortRange, namedPortSets []string,
 
 // matchDstNet checks if the destination IP is within the CIDRs and not in the not CIDRs.
 func matchDstNet(rule *proto.Rule, req *requestCache) bool {
-	return matchNet("dst", rule.GetDstNet(), req.getDestIP()) &&
-		matchNotNet("dst", rule.GetNotDstNet(), req.getDestIP())
+	return matchNet("dst", rule.GetDstNet(), req.GetDestIP()) &&
+		matchNotNet("dst", rule.GetNotDstNet(), req.GetDestIP())
 }
 
 // matchSrcNet checks if the source IP is within the CIDRs and not in the not CIDRs.
 func matchSrcNet(rule *proto.Rule, req *requestCache) bool {
-	return matchNet("src", rule.GetSrcNet(), req.getSourceIP()) &&
-		matchNotNet("src", rule.GetNotSrcNet(), req.getSourceIP())
+	return matchNet("src", rule.GetSrcNet(), req.GetSourceIP()) &&
+		matchNotNet("src", rule.GetNotSrcNet(), req.GetSourceIP())
 }
 
 // matchNet checks if the IP is within the CIDRs. It returns true if the IP matches, false

@@ -65,7 +65,7 @@ const (
 )
 
 // Evaluate evaluates the flow against the policy store and returns the trace of rules.
-func Evaluate(dir rules.RuleDir, store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, flow flow) []*calc.RuleID {
+func Evaluate(dir rules.RuleDir, store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, flow Flow) []*calc.RuleID {
 	_, trace := checkTiers(store, ep, dir, flow)
 	return trace
 }
@@ -96,7 +96,7 @@ func LookupEndpointKeysFromSrcDst(store *policystore.PolicyStore, src, dst strin
 }
 
 // checkRequest checks the request against the policy store.
-func checkRequest(store *policystore.PolicyStore, req flow) status.Status {
+func checkRequest(store *policystore.PolicyStore, req Flow) status.Status {
 	src, dst, err := lookupEndpointsFromRequest(store, req)
 	if err != nil {
 		return status.Status{Code: INTERNAL, Message: fmt.Sprintf("endpoint lookup error: %v", err)}
@@ -111,7 +111,7 @@ func checkRequest(store *policystore.PolicyStore, req flow) status.Status {
 				return status.Status{Code: UNKNOWN, Message: "cannot process ALP yet"}
 			}
 
-			if !alpIPset.Contains(req.getDestIP().String()) {
+			if !alpIPset.Contains(req.GetDestIP().String()) {
 				return status.Status{Code: UNKNOWN, Message: "ALP not enabled for this request destination"}
 			}
 
@@ -160,24 +160,24 @@ func checkRequest(store *policystore.PolicyStore, req flow) status.Status {
 }
 
 // lookupEndpointsFromRequest looks up the source and destination endpoints for the given flow.
-func lookupEndpointsFromRequest(store *policystore.PolicyStore, flow flow) (source, destination []*proto.WorkloadEndpoint, err error) {
+func lookupEndpointsFromRequest(store *policystore.PolicyStore, flow Flow) (source, destination []*proto.WorkloadEndpoint, err error) {
 	if store == nil {
 		return source, destination, types.ErrNoStore{}
 	}
 
 	// Map the destination
-	if destinationIp, err := ip.ParseCIDROrIP(flow.getDestIP().String()); err != nil {
-		rlog.WithError(err).Errorf("cannot process destination addr %s:%d", flow.getDestIP().String(), flow.getDestPort())
+	if destinationIp, err := ip.ParseCIDROrIP(flow.GetDestIP().String()); err != nil {
+		rlog.WithError(err).Errorf("cannot process destination addr %s:%d", flow.GetDestIP().String(), flow.GetDestPort())
 	} else {
-		log.Debugf("lookup endpoint for destination %v:%d", destinationIp, flow.getDestPort())
+		log.Debugf("lookup endpoint for destination %v:%d", destinationIp, flow.GetDestPort())
 		destination = ipToEndpoints(store, destinationIp.Addr())
 	}
 
 	// Map the source
-	if sourceIp, err := ip.ParseCIDROrIP(flow.getSourceIP().String()); err != nil {
-		rlog.WithError(err).Warnf("cannot process source addr %s:%d", flow.getSourceIP().String(), flow.getSourcePort())
+	if sourceIp, err := ip.ParseCIDROrIP(flow.GetSourceIP().String()); err != nil {
+		rlog.WithError(err).Warnf("cannot process source addr %s:%d", flow.GetSourceIP().String(), flow.GetSourcePort())
 	} else {
-		log.Debugf("lookup endpoint for source %s:%d", sourceIp.String(), flow.getSourcePort())
+		log.Debugf("lookup endpoint for source %s:%d", sourceIp.String(), flow.GetSourcePort())
 		source = ipToEndpoints(store, sourceIp.Addr())
 	}
 
@@ -196,7 +196,7 @@ func ipToEndpointKeys(store *policystore.PolicyStore, addr ip.Addr) []proto.Work
 
 // checkStore applies the tiered policy plus any config based corrections and returns OK if the
 // check passes or PERMISSION_DENIED if the check fails.
-func checkStore(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir flxrules.RuleDir, req flow) (s status.Status) {
+func checkStore(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir flxrules.RuleDir, req Flow) (s status.Status) {
 	// Check using the configured policy
 	s, _ = checkTiers(store, ep, dir, req)
 
@@ -218,7 +218,7 @@ func checkStore(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir 
 // checkTiers applies the tiered policy in the given store and returns OK if the check passes, or PERMISSION_DENIED if
 // the check fails. Note, if no policy matches, the default is PERMISSION_DENIED. It returns the trace of rules that
 // were evaluated.
-func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir flxrules.RuleDir, flow flow) (s status.Status, trace []*calc.RuleID) {
+func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir flxrules.RuleDir, flow Flow) (s status.Status, trace []*calc.RuleID) {
 	s = status.Status{Code: PERMISSION_DENIED}
 	if ep == nil {
 		return

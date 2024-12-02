@@ -24,7 +24,7 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 )
 
-const SPIFFE_ID_PATTERN = "^spiffe://[^/]+/ns/([^/]+)/sa/([^/]+)$"
+const SPIFFEIDPattern = "^spiffe://[^/]+/ns/([^/]+)/sa/([^/]+)$"
 
 var (
 	protocolMap = map[string]int{
@@ -38,7 +38,7 @@ var (
 )
 
 type requestCache struct {
-	flow
+	Flow
 	store *policystore.PolicyStore
 }
 
@@ -53,17 +53,17 @@ type namespace struct {
 	Labels map[string]string
 }
 
-func NewRequestCache(store *policystore.PolicyStore, request flow) *requestCache {
+func NewRequestCache(store *policystore.PolicyStore, request Flow) *requestCache {
 	return &requestCache{
-		flow:  request,
+		Flow:  request,
 		store: store,
 	}
 }
 
 // getSrcPeer returns the source peer.
 func (r *requestCache) getSrcPeer() *peer {
-	if principal := r.getSourcePrincipal(); principal != nil {
-		return r.initPeer(*principal, r.getSourceLabels())
+	if principal := r.GetSourcePrincipal(); principal != nil {
+		return r.initPeer(*principal, r.GetSourceLabels())
 	}
 
 	return nil
@@ -71,8 +71,8 @@ func (r *requestCache) getSrcPeer() *peer {
 
 // getDstPeer returns the destination peer.
 func (r *requestCache) getDstPeer() *peer {
-	if principal := r.getDestPrincipal(); principal != nil {
-		return r.initPeer(*principal, r.getDestLabels())
+	if principal := r.GetDestPrincipal(); principal != nil {
+		return r.initPeer(*principal, r.GetDestLabels())
 	}
 
 	return nil
@@ -150,11 +150,11 @@ func parseSpiffeID(id string) (p peer, err error) {
 		return p, nil
 	}
 	spiffeIdRegExpOnce.Do(func() {
-		spiffeIdRegExp, _ = regexp.Compile(SPIFFE_ID_PATTERN)
+		spiffeIdRegExp, _ = regexp.Compile(SPIFFEIDPattern)
 	})
 	match := spiffeIdRegExp.FindStringSubmatch(id)
 	if match == nil {
-		err = fmt.Errorf("expected match %s, got %s", SPIFFE_ID_PATTERN, id)
+		err = fmt.Errorf("expected match %s, got %s", SPIFFEIDPattern, id)
 	} else {
 		p.Name = match[2]
 		p.Namespace = match[1]

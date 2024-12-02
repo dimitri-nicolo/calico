@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
@@ -35,8 +34,7 @@ func TestEvaluateNoEndpoint(t *testing.T) {
 
 	store := policystore.NewPolicyStore()
 
-	tuple := &tuple.Tuple{}
-	flow := NewTupleToFlowAdapter(tuple)
+	flow := &MockFlow{}
 	trace := Evaluate(rules.RuleDirIngress, store, nil, flow)
 	Expect(trace).To(BeNil())
 }
@@ -47,8 +45,7 @@ func TestEvaluateEndpointNoTiersNoProfiles(t *testing.T) {
 	store := policystore.NewPolicyStore()
 
 	ep := &proto.WorkloadEndpoint{}
-	tuple := &tuple.Tuple{}
-	flow := NewTupleToFlowAdapter(tuple)
+	flow := &MockFlow{}
 	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
 	Expect(trace).To(HaveLen(1))
 	Expect(trace[0].Action).To(Equal(rules.RuleActionDeny))
@@ -79,8 +76,10 @@ func TestEvaluateEndpointWithMatchingPolicy(t *testing.T) {
 			},
 		},
 	}
-	tuple := &tuple.Tuple{Proto: 6, L4Dst: 80}
-	flow := NewTupleToFlowAdapter(tuple)
+	flow := &MockFlow{
+		Protocol: 6,
+		DestPort: 80,
+	}
 	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
 	Expect(trace).To(HaveLen(1))
 	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
@@ -111,8 +110,10 @@ func TestEvaluateEndpointWithNonMatchingPolicy(t *testing.T) {
 			},
 		},
 	}
-	tuple := &tuple.Tuple{Proto: 6, L4Dst: 443}
-	flow := NewTupleToFlowAdapter(tuple)
+	flow := &MockFlow{
+		Protocol: 6,
+		DestPort: 443,
+	}
 	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
 	Expect(trace).To(HaveLen(1))
 	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
@@ -138,8 +139,10 @@ func TestEvaluateEndpointWithMatchingProfile(t *testing.T) {
 			},
 		},
 	}
-	tuple := &tuple.Tuple{Proto: 6, L4Dst: 80}
-	flow := NewTupleToFlowAdapter(tuple)
+	flow := &MockFlow{
+		Protocol: 6,
+		DestPort: 80,
+	}
 	trace := Evaluate(rules.RuleDirIngress, store, ep, flow)
 	Expect(trace).To(HaveLen(1))
 	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
@@ -187,8 +190,13 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 	ip_192_168_1_1 := net.ParseIP("192.168.1.1")
 	ip_192_168_1_2 := net.ParseIP("192.168.1.2")
 
-	tuple1 := &tuple.Tuple{Proto: 6, L4Src: 80, L4Dst: 443, Src: [16]byte(ip_10_0_0_1.To16()), Dst: [16]byte(ip_192_168_1_1.To16())}
-	flow1 := NewTupleToFlowAdapter(tuple1)
+	flow1 := &MockFlow{
+		Protocol:   6,
+		SourcePort: 80,
+		DestPort:   443,
+		SourceIP:   ip_10_0_0_1,
+		DestIP:     ip_192_168_1_1,
+	}
 	trace := Evaluate(rules.RuleDirEgress, store, ep, flow1)
 	Expect(trace).To(HaveLen(1))
 	Expect(trace[0].Action).To(Equal(rules.RuleActionDeny))
@@ -199,8 +207,13 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 	Expect(trace[0].Namespace).To(Equal(""))
 
 	// Test with a matching source IP and destination port 80
-	tuple2 := &tuple.Tuple{Proto: 6, L4Src: 443, L4Dst: 80, Src: [16]byte(ip_10_0_0_1.To16()), Dst: [16]byte(ip_192_168_1_1.To16())}
-	flow2 := NewTupleToFlowAdapter(tuple2)
+	flow2 := &MockFlow{
+		Protocol:   6,
+		SourcePort: 443,
+		DestPort:   80,
+		SourceIP:   ip_10_0_0_1,
+		DestIP:     ip_192_168_1_1,
+	}
 	trace = Evaluate(rules.RuleDirEgress, store, ep, flow2)
 	Expect(trace).To(HaveLen(1))
 	Expect(trace[0].Action).To(Equal(rules.RuleActionAllow))
@@ -211,8 +224,13 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 	Expect(trace[0].Namespace).To(Equal(""))
 
 	// Test with a matching source IP and destination port 443
-	tuple3 := &tuple.Tuple{Proto: 6, L4Dst: 443, L4Src: 80, Src: [16]byte(ip_192_168_1_2.To16()), Dst: [16]byte(ip_10_0_0_2.To16())}
-	flow3 := NewTupleToFlowAdapter(tuple3)
+	flow3 := &MockFlow{
+		Protocol:   6,
+		SourcePort: 80,
+		DestPort:   443,
+		SourceIP:   ip_192_168_1_2,
+		DestIP:     ip_10_0_0_2,
+	}
 	trace = Evaluate(rules.RuleDirEgress, store, ep, flow3)
 	Expect(trace).To(HaveLen(1))
 	Expect(trace[0].Action).To(Equal(rules.RuleActionDeny))
@@ -870,7 +888,6 @@ func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
 		},
 	}}
 	flow := NewCheckRequestToFlowAdapter(req)
-
 	status := checkStore(store, store.Endpoint, rules.RuleDirIngress, flow)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
@@ -951,4 +968,63 @@ func TestLookupEndpointKeysFromSrcDst(t *testing.T) {
 		Expect(src).To(Equal(test.expectedSrc), fmt.Sprintf("Test case %d", i))
 		Expect(dst).To(Equal(test.expectedDst), fmt.Sprintf("Test case %d", i))
 	}
+}
+
+// MockFlow is a mock implementation of the Flow interface for testing purposes.
+type MockFlow struct {
+	SourceIP        net.IP
+	DestIP          net.IP
+	SourcePort      int
+	DestPort        int
+	Protocol        int
+	HttpMethod      *string
+	HttpPath        *string
+	SourcePrincipal *string
+	DestPrincipal   *string
+	SourceLabels    map[string]string
+	DestLabels      map[string]string
+}
+
+func (m *MockFlow) GetSourceIP() net.IP {
+	return m.SourceIP
+}
+
+func (m *MockFlow) GetDestIP() net.IP {
+	return m.DestIP
+}
+
+func (m *MockFlow) GetSourcePort() int {
+	return m.SourcePort
+}
+
+func (m *MockFlow) GetDestPort() int {
+	return m.DestPort
+}
+
+func (m *MockFlow) GetProtocol() int {
+	return m.Protocol
+}
+
+func (m *MockFlow) GetHttpMethod() *string {
+	return m.HttpMethod
+}
+
+func (m *MockFlow) GetHttpPath() *string {
+	return m.HttpPath
+}
+
+func (m *MockFlow) GetSourcePrincipal() *string {
+	return m.SourcePrincipal
+}
+
+func (m *MockFlow) GetDestPrincipal() *string {
+	return m.DestPrincipal
+}
+
+func (m *MockFlow) GetSourceLabels() map[string]string {
+	return m.SourceLabels
+}
+
+func (m *MockFlow) GetDestLabels() map[string]string {
+	return m.DestLabels
 }

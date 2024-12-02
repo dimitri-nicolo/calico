@@ -21,10 +21,10 @@ import (
 	auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/app-policy/checker/mocks"
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	libnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 var (
@@ -766,7 +766,7 @@ func TestMatchNet(t *testing.T) {
 		t.Run(tc.title, func(t *testing.T) {
 			RegisterTestingT(t)
 
-			ip := net.ParseIP(tc.ip)
+			ip := libnet.ParseIP(tc.ip)
 			Expect(matchNet("test", tc.nets, ip.Network().IP)).To(Equal(tc.match))
 		})
 	}
@@ -775,7 +775,7 @@ func TestMatchNet(t *testing.T) {
 func TestMatchNetBadCIDR(t *testing.T) {
 	RegisterTestingT(t)
 
-	ip := net.ParseIP("192.168.5.6")
+	ip := libnet.ParseIP("192.168.5.6")
 	nets := []string{"192.168.0.0.0/16"}
 	Expect(matchNet("test", nets, ip.Network().IP)).To(BeFalse())
 }
@@ -801,10 +801,14 @@ func TestMatchNets(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-			srcIP := net.ParseIP(tc.srcIP)
-			dstIP := net.ParseIP(tc.dstIP)
-			srcFlow := NewTupleToFlowAdapter(&tuple.Tuple{Src: [16]byte(srcIP.To16())})
-			dstFlow := NewTupleToFlowAdapter(&tuple.Tuple{Dst: [16]byte(dstIP.To16())})
+			srcIP := libnet.ParseIP(tc.srcIP).IP
+			dstIP := libnet.ParseIP(tc.dstIP).IP
+
+			srcFlow := &mocks.Flow{}
+			srcFlow.On("GetSourceIP").Return(srcIP)
+
+			dstFlow := &mocks.Flow{}
+			dstFlow.On("GetDestIP").Return(dstIP)
 
 			srcResult := matchSrcNet(&proto.Rule{SrcNet: tc.nets}, &requestCache{srcFlow, nil})
 			dstResult := matchDstNet(&proto.Rule{DstNet: tc.nets}, &requestCache{dstFlow, nil})
@@ -1256,7 +1260,10 @@ func TestMatchPorts(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-			fl := NewTupleToFlowAdapter(&tuple.Tuple{L4Src: tc.srcPort, L4Dst: tc.dstPort})
+			fl := &mocks.Flow{}
+			fl.On("GetSourcePort").Return(tc.srcPort)
+			fl.On("GetDestPort").Return(tc.dstPort)
+
 			srcMatch := matchSrcPort(&proto.Rule{SrcPorts: tc.srcRanges, SrcNamedPortIpSetIds: tc.srcNamedPortIds, NotSrcPorts: tc.notSrcRanges, NotSrcNamedPortIpSetIds: tc.notSrcNamedPortIds}, &requestCache{fl, store})
 			dstMatch := matchDstPort(&proto.Rule{DstPorts: tc.dstRanges, DstNamedPortIpSetIds: tc.dstNamedPortIds, NotDstPorts: tc.notDstRanges, NotDstNamedPortIpSetIds: tc.notDstNamedPortIds}, &requestCache{fl, store})
 			Expect(srcMatch && dstMatch).To(Equal(tc.match), "Test case: %d", i)
@@ -1374,7 +1381,11 @@ func TestMatchDstIPPortSetIds(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-			fl := NewTupleToFlowAdapter(&tuple.Tuple{Dst: [16]byte(net.ParseIP(tc.destIP).To16()), L4Dst: tc.destPort, Proto: tc.proto})
+			fl := &mocks.Flow{}
+			fl.On("GetDestIP").Return(libnet.ParseIP(tc.destIP).IP)
+			fl.On("GetDestPort").Return(tc.destPort)
+			fl.On("GetProtocol").Return(tc.proto)
+
 			req := &requestCache{fl, store}
 			Expect(matchDstIPPortSetIds(tc.rule, req)).To(Equal(tc.expected), "Test case: %s", tc.title)
 		})

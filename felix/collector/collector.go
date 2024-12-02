@@ -987,7 +987,7 @@ func (c *collector) updatePendingRuleTraces() {
 		}
 
 		// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
-		flow := checker.NewTupleToFlowAdapter(&t)
+		flow := TupleAsFlow(t)
 
 		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal {
 			// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
@@ -1007,10 +1007,10 @@ func (c *collector) updatePendingRuleTraces() {
 
 // evaluatePendingRuleTrace evaluates the pending rule trace for the given direction and endpoint,
 // and updates the ruleIDs if they are different.
-func (c *collector) evaluatePendingRuleTrace(direction rules.RuleDir, store *policystore.PolicyStore, ep *calc.EndpointData, flow *checker.TupleToFlowAdapter, ruleIDs *[]*calc.RuleID) {
+func (c *collector) evaluatePendingRuleTrace(direction rules.RuleDir, store *policystore.PolicyStore, ep *calc.EndpointData, flow TupleAsFlow, ruleIDs *[]*calc.RuleID) {
 	// Get the proto.WorkloadEndpoint, needed for the evaluation, from the policy store.
 	if protoEp := c.lookupProtoWorkloadEndpoint(store, ep.Key); protoEp != nil {
-		trace := checker.Evaluate(direction, store, protoEp, flow)
+		trace := checker.Evaluate(direction, store, protoEp, &flow)
 		if !equal(*ruleIDs, trace) {
 			*ruleIDs = append([]*calc.RuleID(nil), trace...)
 			log.Tracef("Updated pending %s, tuple: %v, rule trace: %v", direction, flow, ruleIDs)
