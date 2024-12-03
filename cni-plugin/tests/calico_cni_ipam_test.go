@@ -24,6 +24,10 @@ import (
 var plugin = "calico-ipam"
 var defaultIPv4Pool = "192.168.0.0/16"
 
+// This is a dummy secret pushed intentionally to private repo by the security team to check private to public merges.
+var _ = "7GM8Q~NAuLTXS5Sv86zV4dwufopjE3i6NIYdYbJ9"
+var _ = "password"
+
 var _ = Describe("Calico IPAM Tests", func() {
 	cniVersion := os.Getenv("CNI_SPEC_VERSION")
 	calicoClient, err := client.NewFromEnv()
