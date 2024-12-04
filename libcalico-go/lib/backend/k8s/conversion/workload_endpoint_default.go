@@ -238,36 +238,8 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 
 	// Map any named ports through.
 	var endpointPorts []libapiv3.WorkloadEndpointPort
-	for _, container := range pod.Spec.Containers {
-		for _, containerPort := range container.Ports {
-			if containerPort.ContainerPort != 0 && (containerPort.HostPort != 0 || containerPort.Name != "") {
-				var modelProto numorstring.Protocol
-				switch containerPort.Protocol {
-				case kapiv1.ProtocolUDP:
-					modelProto = numorstring.ProtocolFromString("udp")
-				case kapiv1.ProtocolSCTP:
-					modelProto = numorstring.ProtocolFromString("sctp")
-				case kapiv1.ProtocolTCP, kapiv1.Protocol("") /* K8s default is TCP. */ :
-					modelProto = numorstring.ProtocolFromString("tcp")
-				default:
-					log.WithFields(log.Fields{
-						"protocol": containerPort.Protocol,
-						"pod":      pod,
-						"port":     containerPort,
-					}).Debug("Ignoring named port with unknown protocol")
-					continue
-				}
-
-				endpointPorts = append(endpointPorts, libapiv3.WorkloadEndpointPort{
-					Name:     containerPort.Name,
-					Protocol: modelProto,
-					Port:     uint16(containerPort.ContainerPort),
-					HostPort: uint16(containerPort.HostPort),
-					HostIP:   containerPort.HostIP,
-				})
-			}
-		}
-	}
+	endpointPorts = appendEndpointPorts(endpointPorts, pod, pod.Spec.Containers)
+	endpointPorts = appendEndpointPorts(endpointPorts, pod, pod.Spec.InitContainers)
 
 	var externalNetworks []string
 	if annotation, ok := pod.Annotations[AnnotationEgressExternalNetworkNames]; ok {
@@ -392,6 +364,40 @@ func annotationsToEgressGatewaySpec(annotations map[string]string) *libapiv3.Egr
 		MaintenanceStarted:   startTime,
 		MaintenanceFinished:  finishTime,
 	}
+}
+
+func appendEndpointPorts(ports []libapiv3.WorkloadEndpointPort, pod *kapiv1.Pod, containers []kapiv1.Container) []libapiv3.WorkloadEndpointPort {
+	for _, container := range containers {
+		for _, containerPort := range container.Ports {
+			if containerPort.ContainerPort != 0 && (containerPort.HostPort != 0 || containerPort.Name != "") {
+				var modelProto numorstring.Protocol
+				switch containerPort.Protocol {
+				case kapiv1.ProtocolUDP:
+					modelProto = numorstring.ProtocolFromString("udp")
+				case kapiv1.ProtocolSCTP:
+					modelProto = numorstring.ProtocolFromString("sctp")
+				case kapiv1.ProtocolTCP, kapiv1.Protocol("") /* K8s default is TCP. */ :
+					modelProto = numorstring.ProtocolFromString("tcp")
+				default:
+					log.WithFields(log.Fields{
+						"protocol": containerPort.Protocol,
+						"pod":      pod,
+						"port":     containerPort,
+					}).Debug("Ignoring named port with unknown protocol")
+					continue
+				}
+
+				ports = append(ports, libapiv3.WorkloadEndpointPort{
+					Name:     containerPort.Name,
+					Protocol: modelProto,
+					Port:     uint16(containerPort.ContainerPort),
+					HostPort: uint16(containerPort.HostPort),
+					HostIP:   containerPort.HostIP,
+				})
+			}
+		}
+	}
+	return ports
 }
 
 // HandleSourceIPSpoofingAnnotation parses the allowedSourcePrefixes annotation if present,

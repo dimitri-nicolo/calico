@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"github.com/stretchr/testify/mock"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
@@ -13,8 +13,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/auth"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type mockAuthorizer struct{}

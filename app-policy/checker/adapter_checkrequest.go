@@ -5,9 +5,8 @@ import (
 	"net"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	log "github.com/sirupsen/logrus"
 )
 
 // CheckRequestToFlowAdapter adapts CheckRequest to the l4 and l7 flow interfaces for use in the

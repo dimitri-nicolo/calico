@@ -6,13 +6,12 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	"github.com/projectcalico/calico/linseed/pkg/client"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 const (

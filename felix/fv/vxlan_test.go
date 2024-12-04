@@ -50,6 +50,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 	}
 	for _, testConfig := range []testConf{
 		{api.VXLANModeCrossSubnet, "CalicoIPAM", true, true, OverlapTestType_None},
+		{api.VXLANModeCrossSubnet, "CalicoIPAM", false, true, OverlapTestType_None},
 		{api.VXLANModeCrossSubnet, "WorkloadIPs", false, true, OverlapTestType_None},
 		{api.VXLANModeCrossSubnet, "CalicoIPAM", true, false, OverlapTestType_None},
 		{api.VXLANModeCrossSubnet, "WorkloadIPs", false, false, OverlapTestType_None},
@@ -97,6 +98,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 
 					topologyOptions := createBaseTopologyOptions(vxlanMode, enableIPv6, routeSource, brokenXSum)
+					topologyOptions.FelixLogSeverity = "Debug"
 					if infraFactories.IsRemoteSetup() {
 						topologyOptions.WithTypha = true
 						if creatingRemote && overlap == OverlapTestType_None {
@@ -179,6 +181,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							}
 							felix.Exec("ip", "r")
 							felix.Exec("ip", "a")
+							if enableIPv6 {
+								felix.Exec("ip", "-6", "route")
+							}
 						}
 					}
 

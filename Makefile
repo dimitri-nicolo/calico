@@ -39,6 +39,7 @@ clean:
 	$(MAKE) -C libcalico-go clean
 	$(MAKE) -C node clean
 	$(MAKE) -C pod2daemon clean
+	$(MAKE) -C key-cert-provisioner clean
 	$(MAKE) -C typha clean
 	$(MAKE) -C release clean
 	rm -rf ./bin
@@ -52,6 +53,7 @@ ci-preflight-checks:
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
 	$(MAKE) check-release-cut-promotions
 	$(MAKE) generate
+	$(MAKE) fix-all
 	$(MAKE) check-dirty
 
 check-gotchas:
@@ -207,6 +209,7 @@ charts/tigera-operator/charts/tigera-prometheus-operator.tgz: bin/tigera-prometh
 # Build all Calico images for the current architecture.
 image:
 	$(MAKE) -C pod2daemon image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
+	$(MAKE) -C key-cert-provisioner image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C calicoctl image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C cni-plugin image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C apiserver image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)

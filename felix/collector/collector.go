@@ -11,12 +11,10 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/gavv/monotime"
 	"github.com/google/gopacket/layers"
 	"github.com/prometheus/client_golang/prometheus"
-
+	log "github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/calico/app-policy/checker"

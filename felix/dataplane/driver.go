@@ -392,6 +392,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				RouteSource:         configParams.RouteSource,
 				EncryptHostTraffic:  configParams.WireguardHostEncryptionEnabled,
 				PersistentKeepAlive: configParams.WireguardPersistentKeepAlive,
+				ThreadedNAPI:        configParams.WireguardThreadingEnabled,
 				RouteSyncDisabled:   configParams.RouteSyncDisabled,
 			},
 
