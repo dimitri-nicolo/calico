@@ -21,18 +21,21 @@ import (
 
 func TestCATypeFlagParsing(t *testing.T) {
 	testCases := []struct {
-		args                []string
-		expectedParsedValue string
+		args                                        []string
+		expectedmanagementClusterCAType             string
+		expectedEnableValidatingAdmissionController bool
 	}{
 		// When the CA type flag is not set, the parsed value should be "" to ensure the tls section is not rendered
 		// in the generated ManagementClusterConnection manifest (EV-2618)
-		{[]string{}, ""},
-		{[]string{"--managementClusterCAType=Tigera"}, "Tigera"},
-		{[]string{"--managementClusterCAType=Public"}, "Public"},
+		{[]string{}, "", true},
+		{[]string{"--managementClusterCAType=Tigera"}, "Tigera", true},
+		{[]string{"--managementClusterCAType=Public"}, "Public", true},
+		{[]string{"--enable-validating-admission-policy=true"}, "", true},
+		{[]string{"--enable-validating-admission-policy=false"}, "", false},
 	}
 
 	for _, testCase := range testCases {
-		cmd, err := NewCommandStartCalicoServer(os.Stdout)
+		cmd, opts, err := NewCommandStartCalicoServer(os.Stdout)
 		if err != nil {
 			t.Fatalf("Failed to create the server command: %v", err)
 		}
@@ -42,16 +45,30 @@ func TestCATypeFlagParsing(t *testing.T) {
 			t.Fatalf("Failed to parse flags from the server command: %v", err)
 		}
 
-		parsedValue, err := cmd.Flags().GetString("managementClusterCAType")
+		parsedManagementClusterCAType, err := cmd.Flags().GetString("managementClusterCAType")
 		if err != nil {
 			t.Fatalf("Failed to get managementClusterCAType flag from the server command: %v", err)
 		}
 
-		if parsedValue != testCase.expectedParsedValue {
+		if parsedManagementClusterCAType != testCase.expectedmanagementClusterCAType || opts.ManagementClusterCAType != testCase.expectedmanagementClusterCAType {
 			t.Fatalf(
 				"Parsed value %v for managementClusterCAType flag, expected %v for args %v",
-				parsedValue,
-				testCase.expectedParsedValue,
+				parsedManagementClusterCAType,
+				testCase.expectedmanagementClusterCAType,
+				testCase.args,
+			)
+		}
+
+		parsedEnableValidatingAdmissionController, err := cmd.Flags().GetBool("enable-validating-admission-policy")
+		if err != nil {
+			t.Fatalf("Failed to get enable-validating-admission-policy flag from the server command: %v", err)
+		}
+
+		if parsedEnableValidatingAdmissionController != testCase.expectedEnableValidatingAdmissionController || opts.EnableValidatingAdmissionPolicy != testCase.expectedEnableValidatingAdmissionController {
+			t.Fatalf(
+				"Parsed value %v for enable-validating-admission-policy flag, expected %v for args %v",
+				parsedEnableValidatingAdmissionController,
+				testCase.expectedEnableValidatingAdmissionController,
 				testCase.args,
 			)
 		}

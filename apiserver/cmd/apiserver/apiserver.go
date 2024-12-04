@@ -55,7 +55,7 @@ func main() {
 		logs.FlushLogs()
 	}
 
-	cmd, err := server.NewCommandStartCalicoServer(os.Stdout)
+	cmd, _, err := server.NewCommandStartCalicoServer(os.Stdout)
 	if err != nil {
 		klog.Errorf("Error creating server: %v", err)
 		logs.FlushLogs()

@@ -23,13 +23,15 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const defaultEtcdPathPrefix = ""
@@ -49,7 +51,7 @@ func logrusLevel() logrus.Level {
 }
 
 // NewCommandStartMaster provides a CLI handler for 'start master' command
-func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
+func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, *CalicoServerOptions, error) {
 	//	o := NewCalicoServerOptions(out, errOut)
 
 	// Create the command that runs the API server
@@ -89,5 +91,5 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 		}
 	}
 
-	return cmd, nil
+	return cmd, opts, nil
 }

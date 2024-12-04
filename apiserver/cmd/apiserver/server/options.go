@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-	"github.com/tigera/api/pkg/openapi"
+
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/authorization/authorizerfactory"
 	k8sopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
@@ -34,6 +34,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+
+	"github.com/tigera/api/pkg/openapi"
 
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 )
@@ -62,30 +64,32 @@ type CalicoServerOptions struct {
 	ManagementClusterCAType        string
 	TunnelSecretName               string
 
+	// This Kubernetes feature was made default in k8s 1.30, but may not be enabled prior.
+	EnableValidatingAdmissionPolicy bool
+
 	StopCh <-chan struct{}
 }
 
-func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
-	s.RecommendedOptions.AddFlags(flags)
-
-	flags.BoolVar(&s.EnableAdmissionController, "enable-admission-controller-support", s.EnableAdmissionController,
-		"If true, admission controller hooks will be enabled.")
-	flags.BoolVar(&s.PrintSwagger, "print-swagger", false,
+func (o *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
+	o.RecommendedOptions.AddFlags(flags)
+	flags.BoolVar(&o.PrintSwagger, "print-swagger", false,
 		"If true, prints swagger to stdout and exits.")
-	flags.StringVar(&s.SwaggerFilePath, "swagger-file-path", "./",
+	flags.StringVar(&o.SwaggerFilePath, "swagger-file-path", "./",
 		"If print-swagger is set true, then write swagger.json to location specified. Default is current directory.")
-	flags.BoolVar(&s.EnableManagedClustersCreateAPI, "enable-managed-clusters-create-api", false,
+	flags.BoolVar(&o.EnableManagedClustersCreateAPI, "enable-managed-clusters-create-api", false,
 		"If true, --set-managed-clusters-ca-cert and --set-managed-clusters-ca-key will be evaluated.")
-	flags.StringVar(&s.ManagementClusterAddr, "managementClusterAddr",
+	flags.StringVar(&o.ManagementClusterAddr, "managementClusterAddr",
 		"<your-management-cluster-address>",
 		"If set, manifests created for new managed clusters will use this value.")
-	flags.StringVar(&s.ManagementClusterCAType, "managementClusterCAType", "",
+	flags.StringVar(&o.ManagementClusterCAType, "managementClusterCAType", "",
 		"Controls the value of tls.ca in generated ManagementClusterConnection resources")
-	flags.StringVar(&s.TunnelSecretName, "tunnelSecretName", "tigera-management-cluster-connection",
+	flags.StringVar(&o.TunnelSecretName, "tunnelSecretName", "tigera-management-cluster-connection",
 		"Controls the value of secret name that contains the value x509 CA certificate for generating ManagementClusterConnection resources")
+	flags.BoolVar(&o.EnableValidatingAdmissionPolicy, "enable-validating-admission-policy", true,
+		"If true, establishes watches for ValidatingAdmissionPolicy at startup.")
 }
 
-func (o CalicoServerOptions) Validate(args []string) error {
+func (o *CalicoServerOptions) Validate(args []string) error {
 	errors := []error{}
 	errors = append(errors, o.RecommendedOptions.Validate()...)
 	return utilerrors.NewAggregate(errors)
