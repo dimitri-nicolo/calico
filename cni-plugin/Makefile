@@ -166,36 +166,8 @@ $(BIN)/host-local $(BIN)/loopback $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth 
 	-mkdir -p $(BIN)
 	@$(foreach file,$(CN_FILES),cp containernetworking-plugins/bin/$(file) $(BIN);)
 
-FLANNEL_CNI_PLUGIN_CLONED=.flannel-cni-plugin-$(FLANNEL_VERSION).cloned
-
-$(FLANNEL_CNI_PLUGIN_CLONED):
-	rm -rf flannel-cni-plugin .flannel-cni-plugin-*.cloned
-	-rm -rf $(BIN)/flannel $(WINDOWS_BIN)/flannel.exe
-	git clone --single-branch --branch $(FLANNEL_VERSION) https://github.com/projectcalico/flannel-cni-plugin.git
-	touch $@
-
-$(BIN)/flannel: $(FLANNEL_CNI_PLUGIN_CLONED)
-	docker run \
-		$(EXTRA_DOCKER_ARGS) \
-		-v $(CURDIR)/flannel-cni-plugin:/go/src/github.com/flannel-io/cni-plugin:z \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) -w /go/src/github.com/flannel-io/cni-plugin --rm $(CALICO_BUILD) \
-		/bin/sh -xe -c ' \
-			ARCH=$(ARCH) VERSION=$(FLANNEL_VERSION) make build_linux'
-	-mkdir -p $(BIN)
-	cp flannel-cni-plugin/dist/flannel-$(ARCH) $(BIN)/flannel
-
-$(WINDOWS_BIN)/flannel.exe: $(FLANNEL_CNI_PLUGIN_CLONED)
-	docker run \
-		-v $(CURDIR)/flannel-cni-plugin:/go/src/github.com/flannel-io/cni-plugin:z \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) -w /go/src/github.com/flannel-io/cni-plugin --rm $(CALICO_BUILD) \
-		/bin/sh -xe -c ' \
-			ARCH=$(ARCH) VERSION=$(FLANNEL_VERSION) make build_windows'
-	-mkdir -p $(WINDOWS_BIN)
-	cp flannel-cni-plugin/dist/flannel-$(ARCH).exe $(WINDOWS_BIN)/flannel.exe
-
-.PHONY: build-cni-bins build-win-cni-bins
-build-cni-bins: $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth
-build-win-cni-bins: $(WINDOWS_BIN)/flannel.exe
+.PHONY: build-cni-bins
+build-cni-bins: $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth
 
 ###############################################################################
 # Unit Tests
