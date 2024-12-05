@@ -234,6 +234,7 @@ type Config struct {
 	BPFDisableUnprivileged             bool
 	BPFKubeProxyIptablesCleanupEnabled bool
 	BPFLogLevel                        string
+	BPFConntrackLogLevel               string
 	BPFLogFilters                      map[string]string
 	BPFCTLBLogFilter                   string
 	BPFExtToServiceConnmark            int
@@ -241,6 +242,7 @@ type Config struct {
 	BPFL3IfacePattern                  *regexp.Regexp
 	XDPEnabled                         bool
 	XDPAllowGeneric                    bool
+	BPFConntrackCleanupMode            apiv3.BPFConntrackMode
 	BPFConntrackTimeouts               bpfconntrack.Timeouts
 	BPFCgroupV2                        string
 	BPFConnTimeLBEnabled               bool
@@ -252,6 +254,7 @@ type Config struct {
 	BPFPSNATPorts                      numorstring.Port
 	BPFMapSizeRoute                    int
 	BPFMapSizeConntrack                int
+	BPFMapSizeConntrackCleanupQueue    int
 	BPFMapSizeNATFrontend              int
 	BPFMapSizeNATBackend               int
 	BPFMapSizeNATAffinity              int
@@ -1036,6 +1039,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	bpfnat.SetMapSizes(config.BPFMapSizeNATFrontend, config.BPFMapSizeNATBackend, config.BPFMapSizeNATAffinity)
 	bpfroutes.SetMapSize(config.BPFMapSizeRoute)
 	bpfconntrack.SetMapSize(config.BPFMapSizeConntrack)
+	bpfconntrack.SetCleanupMapSize(config.BPFMapSizeConntrackCleanupQueue)
 	bpfifstate.SetMapSize(config.BPFMapSizeIfState)
 
 	var (
@@ -3325,8 +3329,8 @@ func startBPFDataplaneComponents(
 	failSafesKeyFromSlice := failsafes.KeyFromSlice
 	failSafesKey := failsafes.MakeKey
 
-	ctKey := conntrack.KeyFromBytes
-	ctVal := conntrack.ValueFromBytes
+	ctKey := bpfconntrack.KeyFromBytes
+	ctVal := bpfconntrack.ValueFromBytes
 
 	bpfproxyOpts := []bpfproxy.Option{
 		bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
@@ -3352,8 +3356,8 @@ func startBPFDataplaneComponents(
 		failSafesKeyFromSlice = failsafes.KeyV6FromSlice
 		failSafesKey = failsafes.MakeKeyV6
 
-		ctKey = conntrack.KeyV6FromBytes
-		ctVal = conntrack.ValueV6FromBytes
+		ctKey = bpfconntrack.KeyV6FromBytes
+		ctVal = bpfconntrack.ValueV6FromBytes
 
 		bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithIPFamily(6))
 	}
@@ -3398,8 +3402,11 @@ func startBPFDataplaneComponents(
 	bpfRTMgr := newBPFRouteManager(&config, bpfmaps, ipFamily, dp.loopSummarizer)
 	dp.RegisterManager(bpfRTMgr)
 
-	conntrackScanner := bpfconntrack.NewScanner(bpfmaps.CtMap, ctKey, ctVal,
-		bpfconntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled))
+	livenessScanner, err := createBPFConntrackLivenessScanner(ipFamily, config)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create conntrack liveness scanner.")
+	}
+	conntrackScanner := bpfconntrack.NewScanner(bpfmaps.CtMap, ctKey, ctVal, livenessScanner)
 
 	// Before we start, scan for all finished / timed out connections to
 	// free up the conntrack table asap as it may take time to sync up the
@@ -3424,4 +3431,43 @@ func startBPFDataplaneComponents(
 		log.Info("BPF enabled but no Kubernetes client available, unable to run kube-proxy module.")
 	}
 	return conntrackScanner, ipSets
+}
+
+func createBPFConntrackLivenessScanner(ipFamily proto.IPVersion, config Config) (bpfconntrack.EntryScanner, error) {
+	tryBPF := false
+	tryUserspace := false
+	if config.BPFConntrackCleanupMode == apiv3.BPFConntrackModeBPFProgram {
+		tryBPF = true
+	} else if config.BPFConntrackCleanupMode == apiv3.BPFConntrackModeUserspace {
+		tryUserspace = true
+	} else { /* Auto */
+		tryBPF = true
+		tryUserspace = true
+	}
+
+	var livenessScanner bpfconntrack.EntryScanner
+	var err error
+	if tryBPF {
+		ctLogLevel := bpfconntrack.BPFLogLevelNone
+		if config.BPFConntrackLogLevel == "debug" {
+			ctLogLevel = bpfconntrack.BPFLogLevelDebug
+		}
+		livenessScanner, err = bpfconntrack.NewBPFProgLivenessScanner(
+			int(ipFamily),
+			config.BPFConntrackTimeouts,
+			ctLogLevel,
+		)
+		if err == nil {
+			log.WithField("ipVersion", ipFamily).Info("Using BPF program-based conntrack liveness scanner.")
+			return livenessScanner, nil
+		}
+	}
+
+	if tryUserspace {
+		log.WithField("ipVersion", ipFamily).Info("Using userspace conntrack scanner.")
+		livenessScanner = bpfconntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled)
+		return livenessScanner, nil
+	}
+
+	return nil, err
 }

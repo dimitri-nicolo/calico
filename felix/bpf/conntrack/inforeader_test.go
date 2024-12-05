@@ -16,6 +16,8 @@ import (
 	"github.com/projectcalico/calico/felix/timeshim/mocktime"
 )
 
+var now = mocktime.StartKTime
+
 var _ = Describe("BPF Conntrack InfoReader", func() {
 
 	clientIP := net.IPv4(1, 1, 1, 1)

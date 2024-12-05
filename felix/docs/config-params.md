@@ -1432,6 +1432,33 @@ Deprecated: Use BPFConnectTimeLoadBalancing.
 | `FelixConfiguration` schema | Boolean. |
 | Default value (YAML) | none |
 
+### `BPFConntrackCleanupMode` (config file) / `bpfConntrackMode` (YAML)
+
+Controls how BPF conntrack entries are cleaned up. `Auto` will use a BPF program if supported, falling back to userspace if not. `Userspace` will always use the userspace cleanup code. `BPFProgram` will always use the BPF program (failing if not supported).
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_BPFConntrackCleanupMode` |
+| Encoding (env var/config file) | One of: <code>Auto</code>, <code>BPFProgram</code>, <code>Userspace</code> (case insensitive) |
+| Default value (above encoding) | `Auto` |
+| `FelixConfiguration` field | `bpfConntrackMode` (YAML) `BPFConntrackCleanupMode` (Go API) |
+| `FelixConfiguration` schema | One of: <code>"Auto"</code>, <code>"BPFProgram"</code>, <code>"Userspace"</code>. |
+| Default value (YAML) | `Auto` |
+
+### `BPFConntrackLogLevel` (config file) / `bpfConntrackLogLevel` (YAML)
+
+Controls the log level of the BPF conntrack cleanup program, which runs periodically to clean up expired BPF conntrack entries. .
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_BPFConntrackLogLevel` |
+| Encoding (env var/config file) | One of: <code>debug</code>, <code>off</code> (case insensitive) |
+| Default value (above encoding) | `off` |
+| `FelixConfiguration` field | `bpfConntrackLogLevel` (YAML) `BPFConntrackLogLevel` (Go API) |
+| `FelixConfiguration` schema | One of: <code>"Debug"</code>, <code>"Off"</code>. |
+| Default value (YAML) | `Off` |
+| Notes | Required. | 
+
 ### `BPFDNSPolicyMode` (config file) / `bpfDNSPolicyMode` (YAML)
 
 Specifies how DNS policy programming will be handled. Inline - BPF parses DNS response inline with DNS response packet processing. This guarantees the DNS rules reflect any change immediately. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
@@ -1712,6 +1739,20 @@ Sets the size for the conntrack map. This map must be large enough to hold an en
 | `FelixConfiguration` field | `bpfMapSizeConntrack` (YAML) `BPFMapSizeConntrack` (Go API) |
 | `FelixConfiguration` schema | Integer |
 | Default value (YAML) | `512000` |
+| Notes | Required. | 
+
+### `BPFMapSizeConntrackCleanupQueue` (config file) / `bpfMapSizeConntrackCleanupQueue` (YAML)
+
+Sets the size for the map used to hold NAT conntrack entries that are queued for cleanup. This should be big enough to hold all the NAT entries that expire within one cleanup interval.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_BPFMapSizeConntrackCleanupQueue` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `100000` |
+| `FelixConfiguration` field | `bpfMapSizeConntrackCleanupQueue` (YAML) `BPFMapSizeConntrackCleanupQueue` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `100000` |
 | Notes | Required. | 
 
 ### `BPFMapSizeIPSets` (config file) / `bpfMapSizeIPSets` (YAML)
