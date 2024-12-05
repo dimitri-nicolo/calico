@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-
+	"github.com/tigera/api/pkg/openapi"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/authorization/authorizerfactory"
 	k8sopenapi "k8s.io/apiserver/pkg/endpoints/openapi"
@@ -34,8 +34,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-
-	"github.com/tigera/api/pkg/openapi"
 
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 )
