@@ -349,7 +349,7 @@ $(FELIX_GPL_SOURCE): .felix-gpl-source.created
 ###############################################################################
 # FV Tests
 ###############################################################################
-K8ST_IMAGE_TARS=calico-apiserver.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar egress-gateway.tar
+K8ST_IMAGE_TARS=cnx-node.tar calico-typha.tar calico-apiserver.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar egress-gateway.tar
 
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 # Determine the tests to run using the test spider tool, which emits a list of impacted packages.
@@ -402,6 +402,10 @@ cnx-node.tar: $(NODE_CONTAINER_CREATED)
 	docker save --output $@ $(NODE_IMAGE):latest-$(ARCH)
 	docker tag $(NODE_IMAGE):latest-$(ARCH) gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
 	docker save --output cnx-node-retagged.tar gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
+
+calico-typha.tar: ../go.mod $(shell find ../typha -name '*.go') $(shell find ../libcalico-go -name '*.go')
+	make -C ../typha image
+	docker save --output $@ tigera/typha:latest-$(ARCH)
 
 calico-apiserver.tar: ../go.mod $(shell find ../apiserver -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../apiserver image
