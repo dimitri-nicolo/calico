@@ -59,7 +59,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 )
 
-func StartDataplaneDriver(configParams *config.Config,
+func StartDataplaneDriver(
+	configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
 	collector collector.Collector,
 	configChangedRestartCallback func(),
@@ -475,6 +476,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			BPFHostNetworkedNAT:                configParams.BPFHostNetworkedNATWithoutCTLB,
 			BPFKubeProxyIptablesCleanupEnabled: configParams.BPFKubeProxyIptablesCleanupEnabled,
 			BPFLogLevel:                        configParams.BPFLogLevel,
+			BPFConntrackLogLevel:               configParams.BPFConntrackLogLevel,
 			BPFLogFilters:                      configParams.BPFLogFilters,
 			BPFCTLBLogFilter:                   configParams.BPFCTLBLogFilter,
 			BPFExtToServiceConnmark:            configParams.BPFExtToServiceConnmark,
@@ -489,6 +491,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			BPFMapSizeNATBackend:               configParams.BPFMapSizeNATBackend,
 			BPFMapSizeNATAffinity:              configParams.BPFMapSizeNATAffinity,
 			BPFMapSizeConntrack:                configParams.BPFMapSizeConntrack,
+			BPFMapSizeConntrackCleanupQueue:    configParams.BPFMapSizeConntrackCleanupQueue,
 			BPFMapSizeIPSets:                   configParams.BPFMapSizeIPSets,
 			BPFMapSizeIfState:                  configParams.BPFMapSizeIfState,
 			BPFEnforceRPF:                      configParams.BPFEnforceRPF,
@@ -497,6 +500,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			XDPEnabled:                         configParams.XDPEnabled,
 			XDPAllowGeneric:                    configParams.GenericXDPEnabled,
 			BPFConntrackTimeouts:               conntrack.DefaultTimeouts(), // FIXME make timeouts configurable
+			BPFConntrackCleanupMode:            apiv3.BPFConntrackMode(configParams.BPFConntrackCleanupMode),
 			RouteTableManager:                  routeTableIndexAllocator,
 			MTUIfacePattern:                    configParams.MTUIfacePattern,
 			BPFExcludeCIDRsFromNAT:             configParams.BPFExcludeCIDRsFromNAT,

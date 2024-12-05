@@ -43,14 +43,6 @@ else
 GIT_REMOTE=$(ORGANIZATION)/calico
 endif
 
-# Part of the git remote that is common to git and HTTP representations.
-# Used to auto-detect the right remote.
-ifeq ($(ORGANIZATION),tigera)
-GIT_REMOTE=$(ORGANIZATION)/calico-private
-else
-GIT_REMOTE=$(ORGANIZATION)/calico
-endif
-
 # Configure git to access repositories using SSH.
 GIT_USE_SSH = true
 
