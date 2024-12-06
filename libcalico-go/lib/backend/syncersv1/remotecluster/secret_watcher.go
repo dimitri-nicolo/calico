@@ -234,7 +234,12 @@ type secretWatcherBackend struct {
 
 func (s *secretWatcherBackend) Watch(namespace, name string, handler cache.ResourceEventHandler, stopCh <-chan struct{}) {
 	watcher := cache.NewListWatchFromClient(s.k8sClientset.CoreV1().RESTClient(), "secrets", namespace, fields.OneTermEqualSelector("metadata.name", name))
-	_, controller := cache.NewInformer(watcher, &v1.Secret{}, 0, handler)
+	_, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: watcher,
+		ObjectType:    &v1.Secret{},
+		ResyncPeriod:  0,
+		Handler:       handler,
+	})
 	go controller.Run(stopCh)
 }
 

@@ -26,13 +26,13 @@ func (fr *fakeReconciler) Close() {}
 var _ = Describe("Abstract Worker Tests", func() {
 
 	var (
-		rateLimitInterface = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-		reconciler         = fakeReconciler{}
+		typedRateLimitInterface = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]())
+		reconciler              = fakeReconciler{}
 
 		newWorker = worker{
-			RateLimitingInterface: rateLimitInterface,
-			reconciler:            &reconciler,
-			maxRequeueAttempts:    DefaultMaxRequeueAttempts,
+			TypedRateLimitingInterface: typedRateLimitInterface,
+			reconciler:                 &reconciler,
+			maxRequeueAttempts:         DefaultMaxRequeueAttempts,
 		}
 	)
 

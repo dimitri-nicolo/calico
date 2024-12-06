@@ -44,7 +44,7 @@ type Worker interface {
 }
 
 type worker struct {
-	workqueue.RateLimitingInterface
+	workqueue.TypedRateLimitingInterface[any]
 
 	reconciler         Reconciler
 	watches            []watch
@@ -63,9 +63,9 @@ type watch struct {
 // New creates a new Worker implementation
 func New(reconciler Reconciler, options ...Option) Worker {
 	w := &worker{
-		RateLimitingInterface: workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		reconciler:            reconciler,
-		maxRequeueAttempts:    DefaultMaxRequeueAttempts,
+		TypedRateLimitingInterface: workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]()),
+		reconciler:                 reconciler,
+		maxRequeueAttempts:         DefaultMaxRequeueAttempts,
 	}
 
 	for _, option := range options {
@@ -139,8 +139,13 @@ func (w *worker) Run(workerCount int, stop chan struct{}) {
 	defer w.ShutDown()
 
 	for _, watch := range w.watches {
-		_, ctrl := cache.NewIndexerInformer(watch.listWatcher, watch.obj, w.resyncPeriod, w.resourceEventHandlerFuncs(watch.handlers...),
-			cache.Indexers{})
+		_, ctrl := cache.NewInformerWithOptions(cache.InformerOptions{
+			ListerWatcher: watch.listWatcher,
+			ObjectType:    watch.obj,
+			ResyncPeriod:  w.resyncPeriod,
+			Handler:       w.resourceEventHandlerFuncs(watch.handlers...),
+			Indexers:      cache.Indexers{},
+		})
 
 		go ctrl.Run(stop)
 		if !cache.WaitForNamedCacheSync(reflect.TypeOf(watch.obj).String(), stop, ctrl.HasSynced) {

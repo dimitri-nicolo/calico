@@ -41,7 +41,7 @@ type Worker interface {
 }
 
 type worker struct {
-	workqueue.RateLimitingInterface
+	workqueue.TypedRateLimitingInterface[any]
 
 	reconciler         Reconciler
 	watches            []watch
@@ -58,9 +58,9 @@ type watch struct {
 // New creates a new Worker implementation
 func New(reconciler Reconciler) Worker {
 	return &worker{
-		RateLimitingInterface: workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		reconciler:            reconciler,
-		maxRequeueAttempts:    DefaultMaxRequeueAttempts,
+		TypedRateLimitingInterface: workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]()),
+		reconciler:                 reconciler,
+		maxRequeueAttempts:         DefaultMaxRequeueAttempts,
 	}
 }
 
@@ -124,8 +124,13 @@ func (w *worker) Run(stop <-chan struct{}) {
 	defer w.ShutDown()
 
 	for _, watch := range w.watches {
-		_, ctrl := cache.NewIndexerInformer(watch.listWatcher, watch.obj, 0, w.resourceEventHandlerFuncs(),
-			cache.Indexers{})
+		_, ctrl := cache.NewInformerWithOptions(cache.InformerOptions{
+			ListerWatcher: watch.listWatcher,
+			ObjectType:    watch.obj,
+			ResyncPeriod:  0,
+			Handler:       w.resourceEventHandlerFuncs(),
+			Indexers:      cache.Indexers{},
+		})
 
 		go ctrl.Run(stop)
 

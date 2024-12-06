@@ -3,6 +3,7 @@ package authorizer_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -12,13 +13,17 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
 )
 
+func getAttributesMapkey(a k8sauth.Attributes) string {
+	return fmt.Sprintf("%s/%s", a.GetPath(), a.GetVerb())
+}
+
 type testAuth struct {
 	t      *testing.T
-	lookup map[k8sauth.Attributes]k8sauth.Decision
+	lookup map[string]k8sauth.Decision
 }
 
 func (t *testAuth) Authorize(ctx context.Context, a k8sauth.Attributes) (authorized k8sauth.Decision, reason string, err error) {
-	d, ok := t.lookup[a]
+	d, ok := t.lookup[getAttributesMapkey(a)]
 	if !ok {
 		t.t.Fatalf("Unexpected authz attributes: %v\n%v", a, t.lookup)
 	}
@@ -250,14 +255,14 @@ func createUISettingsError(verb string, cannotGetGroup bool) string {
 }
 
 func TestNetworkPolicyNoTierGet(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                k8sauth.DecisionDeny,
-		createNpAttr("create"):     k8sauth.DecisionAllow,
-		createNpTierAttr("create"): k8sauth.DecisionAllow,
-		createNpAttr("list"):       k8sauth.DecisionAllow,
-		createNpTierAttr("list"):   k8sauth.DecisionAllow,
-		createNpAttr("delete"):     k8sauth.DecisionAllow,
-		createNpTierAttr("delete"): k8sauth.DecisionAllow,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpAttr("create")):     k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpTierAttr("create")): k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpAttr("list")):       k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpTierAttr("list")):   k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpAttr("delete")):     k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpTierAttr("delete")): k8sauth.DecisionAllow,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createNpContext("create"), "test-tier.test-np", "test-tier",
@@ -285,14 +290,14 @@ func TestNetworkPolicyNoTierGet(t *testing.T) {
 }
 
 func TestGlobalNetworkPolicyNoTierGet(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                 k8sauth.DecisionDeny,
-		createGnpAttr("create"):     k8sauth.DecisionAllow,
-		createGnpTierAttr("create"): k8sauth.DecisionAllow,
-		createGnpAttr("list"):       k8sauth.DecisionAllow,
-		createGnpTierAttr("list"):   k8sauth.DecisionAllow,
-		createGnpAttr("get"):        k8sauth.DecisionAllow,
-		createGnpTierAttr("get"):    k8sauth.DecisionAllow,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                 k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpAttr("create")):     k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpTierAttr("create")): k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpAttr("list")):       k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpTierAttr("list")):   k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpAttr("get")):        k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpTierAttr("get")):    k8sauth.DecisionAllow,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createGnpContext("create"), "test-tier.test-gnp", "test-tier",
@@ -320,14 +325,14 @@ func TestGlobalNetworkPolicyNoTierGet(t *testing.T) {
 }
 
 func TestNetworkPolicyTierWildcard(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                k8sauth.DecisionAllow,
-		createNpAttr("create"):     k8sauth.DecisionDeny,
-		createNpTierAttr("create"): k8sauth.DecisionAllow,
-		createNpAttr("list"):       k8sauth.DecisionDeny,
-		createNpTierAttr("list"):   k8sauth.DecisionAllow,
-		createNpAttr("delete"):     k8sauth.DecisionDeny,
-		createNpTierAttr("delete"): k8sauth.DecisionAllow,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpAttr("create")):     k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpTierAttr("create")): k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpAttr("list")):       k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpTierAttr("list")):   k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpAttr("delete")):     k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpTierAttr("delete")): k8sauth.DecisionAllow,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createNpContext("create"), "test-tier.test-np", "test-tier",
@@ -349,14 +354,14 @@ func TestNetworkPolicyTierWildcard(t *testing.T) {
 }
 
 func TestGlobalNetworkPolicyTierWildcard(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                 k8sauth.DecisionAllow,
-		createGnpAttr("create"):     k8sauth.DecisionDeny,
-		createGnpTierAttr("create"): k8sauth.DecisionAllow,
-		createGnpAttr("list"):       k8sauth.DecisionDeny,
-		createGnpTierAttr("list"):   k8sauth.DecisionAllow,
-		createGnpAttr("delete"):     k8sauth.DecisionDeny,
-		createGnpTierAttr("delete"): k8sauth.DecisionAllow,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                 k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpAttr("create")):     k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpTierAttr("create")): k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpAttr("list")):       k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpTierAttr("list")):   k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpAttr("delete")):     k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpTierAttr("delete")): k8sauth.DecisionAllow,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createGnpContext("create"), "test-tier.test-gnp", "test-tier",
@@ -378,14 +383,14 @@ func TestGlobalNetworkPolicyTierWildcard(t *testing.T) {
 }
 
 func TestNetworkPolicyByName(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                k8sauth.DecisionAllow,
-		createNpAttr("create"):     k8sauth.DecisionAllow,
-		createNpTierAttr("create"): k8sauth.DecisionDeny,
-		createNpAttr("list"):       k8sauth.DecisionAllow,
-		createNpTierAttr("list"):   k8sauth.DecisionDeny,
-		createNpAttr("get"):        k8sauth.DecisionAllow,
-		createNpTierAttr("get"):    k8sauth.DecisionDeny,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpAttr("create")):     k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpTierAttr("create")): k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpAttr("list")):       k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpTierAttr("list")):   k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpAttr("get")):        k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpTierAttr("get")):    k8sauth.DecisionDeny,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createNpContext("create"), "test-tier.test-np", "test-tier",
@@ -407,14 +412,14 @@ func TestNetworkPolicyByName(t *testing.T) {
 }
 
 func TestGlobalNetworkPolicyByName(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                 k8sauth.DecisionAllow,
-		createGnpAttr("create"):     k8sauth.DecisionAllow,
-		createGnpTierAttr("create"): k8sauth.DecisionDeny,
-		createGnpAttr("list"):       k8sauth.DecisionAllow,
-		createGnpTierAttr("list"):   k8sauth.DecisionDeny,
-		createGnpAttr("get"):        k8sauth.DecisionAllow,
-		createGnpTierAttr("get"):    k8sauth.DecisionDeny,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                 k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpAttr("create")):     k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpTierAttr("create")): k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpAttr("list")):       k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpTierAttr("list")):   k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpAttr("get")):        k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpTierAttr("get")):    k8sauth.DecisionDeny,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createGnpContext("create"), "test-tier.test-gnp", "test-tier",
@@ -436,14 +441,14 @@ func TestGlobalNetworkPolicyByName(t *testing.T) {
 }
 
 func TestNetworkPolicyDenied(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                k8sauth.DecisionAllow,
-		createNpAttr("create"):     k8sauth.DecisionDeny,
-		createNpTierAttr("create"): k8sauth.DecisionDeny,
-		createNpAttr("list"):       k8sauth.DecisionDeny,
-		createNpTierAttr("list"):   k8sauth.DecisionDeny,
-		createNpAttr("delete"):     k8sauth.DecisionDeny,
-		createNpTierAttr("delete"): k8sauth.DecisionDeny,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                k8sauth.DecisionAllow,
+		getAttributesMapkey(createNpAttr("create")):     k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpTierAttr("create")): k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpAttr("list")):       k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpTierAttr("list")):   k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpAttr("delete")):     k8sauth.DecisionDeny,
+		getAttributesMapkey(createNpTierAttr("delete")): k8sauth.DecisionDeny,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createNpContext("create"), "test-tier.test-np", "test-tier",
@@ -471,14 +476,14 @@ func TestNetworkPolicyDenied(t *testing.T) {
 }
 
 func TestGlobalNetworkPolicyDenied(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getTierAttr:                 k8sauth.DecisionAllow,
-		createGnpAttr("create"):     k8sauth.DecisionDeny,
-		createGnpTierAttr("create"): k8sauth.DecisionDeny,
-		createGnpAttr("list"):       k8sauth.DecisionDeny,
-		createGnpTierAttr("list"):   k8sauth.DecisionDeny,
-		createGnpAttr("get"):        k8sauth.DecisionDeny,
-		createGnpTierAttr("get"):    k8sauth.DecisionDeny,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getTierAttr):                 k8sauth.DecisionAllow,
+		getAttributesMapkey(createGnpAttr("create")):     k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpTierAttr("create")): k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpAttr("list")):       k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpTierAttr("list")):   k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpAttr("get")):        k8sauth.DecisionDeny,
+		getAttributesMapkey(createGnpTierAttr("get")):    k8sauth.DecisionDeny,
 	}}
 	if err := authorizer.NewTierAuthorizer(ta).AuthorizeTierOperation(
 		createGnpContext("create"), "test-tier.test-gnp", "test-tier",
@@ -506,11 +511,11 @@ func TestGlobalNetworkPolicyDenied(t *testing.T) {
 }
 
 func TestUISettings(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getUISettingsGroupAttr:         k8sauth.DecisionAllow,
-		createUISettingsAttr("create"): k8sauth.DecisionAllow,
-		createUISettingsAttr("list"):   k8sauth.DecisionAllow,
-		createUISettingsAttr("get"):    k8sauth.DecisionAllow,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getUISettingsGroupAttr):         k8sauth.DecisionAllow,
+		getAttributesMapkey(createUISettingsAttr("create")): k8sauth.DecisionAllow,
+		getAttributesMapkey(createUISettingsAttr("list")):   k8sauth.DecisionAllow,
+		getAttributesMapkey(createUISettingsAttr("get")):    k8sauth.DecisionAllow,
 	}}
 	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
 		createUISettingsContext("create"), "my-group.my-settings", "my-group",
@@ -532,11 +537,11 @@ func TestUISettings(t *testing.T) {
 }
 
 func TestUISettingsDeny(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getUISettingsGroupAttr:         k8sauth.DecisionAllow,
-		createUISettingsAttr("create"): k8sauth.DecisionDeny,
-		createUISettingsAttr("list"):   k8sauth.DecisionDeny,
-		createUISettingsAttr("get"):    k8sauth.DecisionDeny,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getUISettingsGroupAttr):         k8sauth.DecisionAllow,
+		getAttributesMapkey(createUISettingsAttr("create")): k8sauth.DecisionDeny,
+		getAttributesMapkey(createUISettingsAttr("list")):   k8sauth.DecisionDeny,
+		getAttributesMapkey(createUISettingsAttr("get")):    k8sauth.DecisionDeny,
 	}}
 	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
 		createUISettingsContext("create"), "my-group.my-settings", "my-group",
@@ -564,11 +569,11 @@ func TestUISettingsDeny(t *testing.T) {
 }
 
 func TestUISettingsNoUISettingsGroupGet(t *testing.T) {
-	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
-		getUISettingsGroupAttr:         k8sauth.DecisionDeny,
-		createUISettingsAttr("create"): k8sauth.DecisionAllow,
-		createUISettingsAttr("list"):   k8sauth.DecisionAllow,
-		createUISettingsAttr("get"):    k8sauth.DecisionAllow,
+	ta := &testAuth{t, map[string]k8sauth.Decision{
+		getAttributesMapkey(getUISettingsGroupAttr):         k8sauth.DecisionDeny,
+		getAttributesMapkey(createUISettingsAttr("create")): k8sauth.DecisionAllow,
+		getAttributesMapkey(createUISettingsAttr("list")):   k8sauth.DecisionAllow,
+		getAttributesMapkey(createUISettingsAttr("get")):    k8sauth.DecisionAllow,
 	}}
 	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
 		createUISettingsContext("create"), "my-group.my-settings", "my-group",

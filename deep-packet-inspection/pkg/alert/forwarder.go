@@ -24,7 +24,7 @@ func NewForwarder(lsClient client.Client, retrySendInterval time.Duration, clust
 		lsClient:          lsClient,
 		clusterName:       clusterName,
 		retrySendInterval: retrySendInterval,
-		queue:             workqueue.New(),
+		queue:             workqueue.NewTyped[any](),
 	}
 	return fwd, nil
 }
