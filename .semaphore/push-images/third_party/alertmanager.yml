@@ -17,7 +17,7 @@ global_job_config:
     - name: google-service-account-for-gcr
   prologue:
     commands:
-      - sem-version go 1.21
+      - sem-version go 1.23.4
       - checkout
       # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
       # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given

@@ -6,7 +6,7 @@
   task:
     prologue:
       commands:
-        - sem-version go 1.22.0
+        - sem-version go 1.23.4
         - cd third_party/alertmanager
     jobs:
       - name: alertmanager tests
