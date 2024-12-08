@@ -93,7 +93,7 @@ func (rs *resourceStore) RequestWatchProgress(ctx context.Context) error {
 }
 
 func (rs *resourceStore) ReadinessCheck() error {
-	klog.Error("STUB: RedinessCheck() not supported by Calico client.")
+	logrus.Error("STUB: RedinessCheck() not supported by Calico client.")
 	return nil
 }
 
