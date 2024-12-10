@@ -765,6 +765,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			_, cidrNet, err := net.ParseCIDR(cidrString)
 			Expect(err).NotTo(HaveOccurred())
 
+			automatic := apiv3.Automatic
+
 			ipPool := apiv3.NewIPPool()
 			ipPool.Name = "my-ippool"
 			ipPool.Spec.CIDR = cidrString
@@ -773,6 +775,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			ipPool.Spec.BlockSize = 26
 			ipPool.Spec.NodeSelector = "all()"
 			ipPool.Spec.AllowedUses = []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel}
+			ipPool.Spec.AssignmentMode = &automatic
 			_, err = remoteClient.IPPools().Create(ctx, ipPool, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -794,6 +797,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 							Disabled:         false,
 							DisableBGPExport: false,
 							AWSSubnetID:      "",
+							AssignmentMode:   apiv3.Automatic,
 						},
 					},
 					UpdateType: api.UpdateTypeKVNew,

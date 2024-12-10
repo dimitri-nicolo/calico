@@ -169,6 +169,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.LicenseKeyList":                           schema_pkg_apis_projectcalico_v3_LicenseKeyList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.LicenseKeySpec":                           schema_pkg_apis_projectcalico_v3_LicenseKeySpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.LicenseKeyStatus":                         schema_pkg_apis_projectcalico_v3_LicenseKeyStatus(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.LoadBalancerControllerConfig":             schema_pkg_apis_projectcalico_v3_LoadBalancerControllerConfig(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedCluster":                           schema_pkg_apis_projectcalico_v3_ManagedCluster(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterList":                       schema_pkg_apis_projectcalico_v3_ManagedClusterList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ManagedClusterSpec":                       schema_pkg_apis_projectcalico_v3_ManagedClusterSpec(ref),
@@ -3692,11 +3693,17 @@ func schema_pkg_apis_projectcalico_v3_ControllersConfig(ref common.ReferenceCall
 							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.FederatedServicesControllerConfig"),
 						},
 					},
+					"loadBalancer": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancer enables and configures the LoadBalancer controller. Enabled by default, set to nil to disable.",
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.LoadBalancerControllerConfig"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.FederatedServicesControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NamespaceControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NodeControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.ServiceAccountControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.WorkloadEndpointControllerConfig"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.FederatedServicesControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.LoadBalancerControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NamespaceControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.NodeControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.ServiceAccountControllerConfig", "github.com/tigera/api/pkg/apis/projectcalico/v3.WorkloadEndpointControllerConfig"},
 	}
 }
 
@@ -9007,6 +9014,13 @@ func schema_pkg_apis_projectcalico_v3_IPPoolSpec(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"assignmentMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Determines the mode how IP addresses should be assigned from this pool",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"cidr"},
 			},
@@ -9566,6 +9580,24 @@ func schema_pkg_apis_projectcalico_v3_LicenseKeyStatus(ref common.ReferenceCallb
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_LoadBalancerControllerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"assignIPs": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

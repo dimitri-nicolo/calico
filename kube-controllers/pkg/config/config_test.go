@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017 - 2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -188,6 +188,9 @@ current-context: test-context`
 					ReconcilerPeriod: time.Minute * 5,
 					NumberOfWorkers:  1,
 				}))
+				Expect(rc.LoadBalancer).To(Equal(&config.LoadBalancerControllerConfig{
+					AssignIPs: v3.AllServices,
+				}))
 				close(done)
 			})
 
@@ -214,6 +217,9 @@ current-context: test-context`
 					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5}}))
 				Expect(c.ServiceAccount).To(Equal(&v3.ServiceAccountControllerConfig{
 					ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5}}))
+				Expect(c.LoadBalancer).To(Equal(&v3.LoadBalancerControllerConfig{
+					AssignIPs: v3.AllServices,
+				}))
 				close(done)
 			})
 		})
@@ -246,6 +252,9 @@ current-context: test-context`
 							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 32}},
 						ServiceAccount: &v3.ServiceAccountControllerConfig{
 							ReconcilerPeriod: &v1.Duration{Duration: time.Second * 33}},
+						LoadBalancer: &v3.LoadBalancerControllerConfig{
+							AssignIPs: v3.RequestedServicesOnly,
+						},
 					},
 				}
 				m = &mockKCC{get: kcc}
@@ -285,6 +294,9 @@ current-context: test-context`
 				Expect(rc.ServiceAccount).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 33,
 					NumberOfWorkers:  1,
+				}))
+				Expect(rc.LoadBalancer).To(Equal(&config.LoadBalancerControllerConfig{
+					AssignIPs: v3.RequestedServicesOnly,
 				}))
 				close(done)
 			})

@@ -2299,6 +2299,12 @@ func schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref common.ReferenceCallb
 							Format:  "",
 						},
 					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"cidr": {
 						SchemaProps: spec.SchemaProps{
 							Default: "",

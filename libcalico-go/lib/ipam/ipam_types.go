@@ -30,6 +30,9 @@ type AssignIPArgs struct {
 
 	// If specified, the attributes of reserved IPv4 addresses in the block.
 	HostReservedAttr *HostReservedAttr
+
+	// The intended use for the IP address.  Used to determine the affinityType of the host.
+	IntendedUse v3.IPPoolAllowedUse
 }
 
 // AutoAssignArgs defines the set of arguments for assigning one or more
@@ -180,6 +183,18 @@ type ReleaseOptions struct {
 	Handle         string
 	SequenceNumber *uint64
 }
+
+type AffinityConfig struct {
+	AffinityType AffinityType
+	Host         string
+}
+
+type AffinityType string
+
+const (
+	AffinityTypeHost    AffinityType = "host"
+	AffinityTypeVirtual AffinityType = "virtual"
+)
 
 func (opts *ReleaseOptions) AsNetIP() (*cnet.IP, error) {
 	ip := cnet.ParseIP(opts.Address)

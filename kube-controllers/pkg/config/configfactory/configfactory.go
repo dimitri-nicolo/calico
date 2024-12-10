@@ -33,6 +33,9 @@ func NewDefaultKubeControllersConfig(configName string) (*v3.KubeControllersConf
 			Namespace: &v3.NamespaceControllerConfig{
 				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
 			},
+			LoadBalancer: &v3.LoadBalancerControllerConfig{
+				AssignIPs: v3.AllServices,
+			},
 		},
 	}
 	return kubeControllersConfig, nil

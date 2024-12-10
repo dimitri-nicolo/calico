@@ -27429,6 +27429,8 @@ spec:
                 type: string
               state:
                 type: string
+              type:
+                type: string
             required:
             - cidr
             - deleted
@@ -32227,6 +32229,13 @@ spec:
                 items:
                   type: string
                 type: array
+              assignmentMode:
+                description: Determines the mode how IP addresses should be assigned
+                  from this pool
+                enum:
+                - Automatic
+                - Manual
+                type: string
               awsSubnetID:
                 description: 'AWSSubnetID if specified Calico will attempt to ensure
                   that IPs chosen from this IP pool are routed to the corresponding
@@ -32411,6 +32420,13 @@ spec:
                           [Default: 5m]'
                         type: string
                     type: object
+                  loadBalancer:
+                    description: LoadBalancer enables and configures the LoadBalancer
+                      controller. Enabled by default, set to nil to disable.
+                    properties:
+                      assignIPs:
+                        type: string
+                    type: object
                   namespace:
                     description: Namespace enables and configures the namespace controller.
                       Enabled by default, set to nil to disable.
@@ -32527,6 +32543,13 @@ spec:
                           reconcilerPeriod:
                             description: 'ReconcilerPeriod is the period to perform
                               reconciliation. [Default: 5m]'
+                            type: string
+                        type: object
+                      loadBalancer:
+                        description: LoadBalancer enables and configures the LoadBalancer
+                          controller. Enabled by default, set to nil to disable.
+                        properties:
+                          assignIPs:
                             type: string
                         type: object
                       namespace:

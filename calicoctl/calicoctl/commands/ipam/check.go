@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,16 +23,21 @@ import (
 	"sort"
 	"strings"
 
-	docopt "github.com/docopt/docopt-go"
+	"github.com/docopt/docopt-go"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/util"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/loadbalancer"
 	apiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
@@ -44,7 +49,7 @@ import (
 // IPAM takes keyword with an IP address then calls the subcommands.
 func Check(args []string, version string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  <BINARY_NAME> ipam check [--config=<CONFIG>] [--show-all-ips] [--show-problem-ips] [-o <FILE>] [--allow-version-mismatch]
+  <BINARY_NAME> ipam check [--config=<CONFIG>] [--show-all-ips] [--show-problem-ips] [-o <FILE>] [--kubeconfig <KUBECONFIG>] [--allow-version-mismatch]
 
 Options:
   -h --help                    Show this screen.
@@ -54,6 +59,7 @@ Options:
   -c --config=<CONFIG>         Path to the file containing connection configuration in
                                YAML or JSON format.
                                [default: ` + constants.DefaultConfigPath + `]
+     --kubeconfig=<KUBECONFIG> Path to Kubeconfig file
      --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
@@ -80,9 +86,38 @@ Description:
 
 	// Create clients from config or env vars.
 	cf := parsedArgs["--config"].(string)
-	kubeClient, client, bc, err := clientmgr.GetClients(cf)
+	_, client, bc, err := clientmgr.GetClients(cf)
 	if err != nil {
 		return fmt.Errorf("error creating clients: %w", err)
+	}
+	//bc := client.(accessor).Backend()
+
+	// Get a kube-client. If this is a kdd cluster, we can pull this from the backend.
+	// Otherwise, we need to build one ourselves.
+	var kubeClient *kubernetes.Clientset
+	if kc, ok := bc.(*k8s.KubeClient); ok {
+		// Pull from the kdd client.
+		kubeClient = kc.ClientSet
+	} else {
+		kubeConfigPath := os.Getenv("KUBECONFIG")
+
+		if parsedArgs["--kubeconfig"] != nil {
+			kubeConfigPath = parsedArgs["--kubeconfig"].(string)
+		}
+
+		if kubeConfigPath == "" {
+			return fmt.Errorf("KUBECONFIG environment variable or --kubeconfig parameter not set")
+		}
+
+		kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+		if err != nil {
+			return err
+		}
+
+		kubeClient, err = kubernetes.NewForConfig(kubeConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Pull out CLI args.
@@ -234,6 +269,32 @@ func (c *IPAMChecker) checkIPAM(ctx context.Context) error {
 			}
 		}
 		fmt.Printf("Found %d node tunnel IPs.\n", numNodeIPs)
+		fmt.Println()
+	}
+
+	{
+		fmt.Println("Loading all service load balancer IPs.")
+		services, err := c.k8sClient.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		kubeControllerConfig, err := c.v3Client.KubeControllersConfiguration().Get(ctx, "default", options.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		var lengthLoadBalancer int
+		for _, svc := range services.Items {
+			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer &&
+				loadbalancer.IsCalicoManagedLoadBalancer(&svc, kubeControllerConfig.Spec.Controllers.LoadBalancer.AssignIPs) {
+				lengthLoadBalancer++
+				for _, ingress := range svc.Status.LoadBalancer.Ingress {
+					c.recordInUseIP(ingress.IP, svc, svc.Name)
+				}
+			}
+		}
+		fmt.Printf("Found %d service load balancer.\n", lengthLoadBalancer)
 		fmt.Println()
 	}
 
