@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,6 +69,7 @@ type ControllersConfig struct {
 	ManagedCluster             *ManagedClusterControllerConfig
 	ManagedClusterLicensing    *ManagedClusterControllerConfig
 	Usage                      *UsageControllerConfig
+	LoadBalancer               *LoadBalancerControllerConfig
 }
 
 type GenericControllerConfig struct {
@@ -117,6 +118,11 @@ type UsageControllerConfig struct {
 	UsageReportsPerDay         int
 	UsageReportRetentionPeriod time.Duration
 	Kubeconfig                 string
+}
+
+type LoadBalancerControllerConfig struct {
+	// AssignIPs indicates if LoadBalancer controller will auto-assign all ip addresses or only if asked to do so via annotation
+	AssignIPs v3.AssignIPs
 }
 
 type RunConfigController struct {
@@ -437,6 +443,13 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 
 	rCfg.ShortLicensePolling = envCfg.DebugUseShortPollIntervals
 
+	if rc.LoadBalancer != nil {
+		if apiCfg.Controllers.LoadBalancer != nil {
+			rc.LoadBalancer.AssignIPs = apiCfg.Controllers.LoadBalancer.AssignIPs
+			status.RunningConfig.Controllers.LoadBalancer.AssignIPs = apiCfg.Controllers.LoadBalancer.AssignIPs
+		}
+	}
+
 	return rCfg, status
 }
 
@@ -611,6 +624,8 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 	s := ac.ServiceAccount
 	ns := ac.Namespace
 	f := ac.FederatedServices
+	lb := ac.LoadBalancer
+
 	v, p := envVars[EnvEnabledControllers]
 	if p {
 		status.EnvironmentVars[EnvEnabledControllers] = v
@@ -632,6 +647,9 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			case "serviceaccount":
 				rc.ServiceAccount = &GenericControllerConfig{}
 				sc.ServiceAccount = &v3.ServiceAccountControllerConfig{}
+			case "loadbalancer":
+				rc.LoadBalancer = &LoadBalancerControllerConfig{}
+				sc.LoadBalancer = &v3.LoadBalancerControllerConfig{}
 			case "flannelmigration":
 				log.WithField(EnvEnabledControllers, v).Fatal("cannot run flannelmigration with other controllers")
 			// Calico Enterprise controllers
@@ -694,6 +712,11 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 		if f != nil {
 			rc.FederatedServices = &GenericControllerConfig{}
 			sc.FederatedServices = &v3.FederatedServicesControllerConfig{}
+		}
+
+		if lb != nil {
+			rc.LoadBalancer = &LoadBalancerControllerConfig{}
+			sc.LoadBalancer = &v3.LoadBalancerControllerConfig{}
 		}
 	}
 

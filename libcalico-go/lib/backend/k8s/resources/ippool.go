@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -118,6 +118,11 @@ func IPPoolV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 		vxlanMode = encap.Undefined
 	}
 
+	if v3res.Spec.AssignmentMode == nil {
+		automatic := apiv3.Automatic
+		v3res.Spec.AssignmentMode = &automatic
+	}
+
 	return &model.KVPair{
 		Key: v1key,
 		Value: &model.IPPool{
@@ -130,6 +135,7 @@ func IPPoolV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 			Disabled:         v3res.Spec.Disabled,
 			DisableBGPExport: v3res.Spec.DisableBGPExport,
 			AWSSubnetID:      v3res.Spec.AWSSubnetID,
+			AssignmentMode:   *v3res.Spec.AssignmentMode,
 		},
 		Revision: kvp.Revision,
 	}, nil

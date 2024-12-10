@@ -307,7 +307,11 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							Expect(err).NotTo(HaveOccurred())
 						}
 
-						err = c.client.IPAM().ReleaseHostAffinities(context.TODO(), c.felixes[n].Hostname, true)
+						affinityCfg := ipam.AffinityConfig{
+							AffinityType: ipam.AffinityTypeHost,
+							Host:         c.felixes[n].Hostname,
+						}
+						err = c.client.IPAM().ReleaseHostAffinities(context.TODO(), affinityCfg, true)
 						Expect(err).NotTo(HaveOccurred())
 
 						Eventually(func() string {

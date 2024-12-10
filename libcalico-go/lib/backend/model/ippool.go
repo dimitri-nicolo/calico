@@ -1,4 +1,4 @@
-// Copyright (c) 2016,2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 
 package model
 
@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
@@ -84,13 +85,14 @@ func (options IPPoolListOptions) KeyFromDefaultPath(path string) Key {
 }
 
 type IPPool struct {
-	CIDR             net.IPNet  `json:"cidr"`
-	IPIPInterface    string     `json:"ipip"`
-	IPIPMode         encap.Mode `json:"ipip_mode"`
-	VXLANMode        encap.Mode `json:"vxlan_mode"`
-	Masquerade       bool       `json:"masquerade"`
-	IPAM             bool       `json:"ipam"`
-	Disabled         bool       `json:"disabled"`
-	DisableBGPExport bool       `json:"disableBGPExport"`
-	AWSSubnetID      string     `json:"aws_subnet_id"`
+	CIDR             net.IPNet         `json:"cidr"`
+	IPIPInterface    string            `json:"ipip"`
+	IPIPMode         encap.Mode        `json:"ipip_mode"`
+	VXLANMode        encap.Mode        `json:"vxlan_mode"`
+	Masquerade       bool              `json:"masquerade"`
+	IPAM             bool              `json:"ipam"`
+	Disabled         bool              `json:"disabled"`
+	DisableBGPExport bool              `json:"disableBGPExport"`
+	AWSSubnetID      string            `json:"aws_subnet_id"`
+	AssignmentMode   v3.AssignmentMode `json:"assignment_mode"`
 }

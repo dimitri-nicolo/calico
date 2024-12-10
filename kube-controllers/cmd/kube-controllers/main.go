@@ -52,6 +52,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/flannelmigration"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/loadbalancer"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/namespace"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/networkpolicy"
@@ -60,6 +61,7 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/service"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/serviceaccount"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/usage"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/status"
@@ -221,6 +223,8 @@ func main() {
 		informers:        make([]cache.SharedIndexInformer, 0),
 	}
 
+	dataFeed := utils.NewDataFeed(calicoClient)
+
 	var runCfg config.RunConfig
 	// flannelmigration doesn't use the datastore config API
 	v, ok := os.LookupEnv(config.EnvEnabledControllers)
@@ -255,7 +259,7 @@ func main() {
 
 		// any subsequent changes trigger a restart
 		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
-		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder)
+		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder, dataFeed)
 	}
 
 	if cfg.DatastoreType == "etcdv3" {
@@ -337,7 +341,7 @@ func main() {
 
 	// Run the controllers. This runs until a config change triggers a restart
 	// or a license change triggers a restart.
-	controllerCtrl.RunControllers()
+	controllerCtrl.RunControllers(dataFeed, runCfg)
 
 	// Shut down compaction, healthChecks, and configController
 	cancel()
@@ -567,7 +571,7 @@ type controllerState struct {
 }
 
 func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.RunConfig,
-	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder) {
+	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder, dataFeed *utils.DataFeed) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
 	// Create a shared informer factory to allow cache sharing between controllers monitoring the
@@ -575,6 +579,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 	factory := informers.NewSharedInformerFactory(k8sClientset, 0)
 	podInformer := factory.Core().V1().Pods().Informer()
 	nodeInformer := factory.Core().V1().Nodes().Informer()
+	serviceInformer := factory.Core().V1().Services().Informer()
 
 	if cfg.Controllers.WorkloadEndpoint != nil {
 		podController := pod.NewPodController(ctx, k8sClientset, calicoClient, *cfg.Controllers.WorkloadEndpoint, podInformer)
@@ -591,13 +596,19 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		cc.controllerStates["NetworkPolicy"] = &controllerState{controller: policyController}
 	}
 	if cfg.Controllers.Node != nil {
-		nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient, *cfg.Controllers.Node, nodeInformer, podInformer)
+		nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient, *cfg.Controllers.Node, nodeInformer, podInformer, dataFeed)
 		cc.controllerStates["Node"] = &controllerState{controller: nodeController}
 		cc.registerInformers(podInformer, nodeInformer)
 	}
 	if cfg.Controllers.ServiceAccount != nil {
 		serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, calicoClient, *cfg.Controllers.ServiceAccount)
 		cc.controllerStates["ServiceAccount"] = &controllerState{controller: serviceAccountController}
+	}
+
+	if cfg.Controllers.LoadBalancer != nil {
+		loadBalancerController := loadbalancer.NewLoadBalancerController(k8sClientset, calicoClient, *cfg.Controllers.LoadBalancer, serviceInformer, dataFeed)
+		cc.controllerStates["LoadBalancer"] = &controllerState{controller: loadBalancerController}
+		cc.registerInformers(serviceInformer)
 	}
 
 	// Calico Enterprise controllers:
@@ -812,7 +823,7 @@ func (cc *controllerControl) registerInformers(infs ...cache.SharedIndexInformer
 }
 
 // Runs all the controllers and blocks until we get a restart.
-func (cc *controllerControl) RunControllers() {
+func (cc *controllerControl) RunControllers(dataFeed *utils.DataFeed, cfg config.RunConfig) {
 	// Instantiate the license monitor values
 	lCtx, cancel := context.WithTimeout(cc.ctx, 10*time.Second)
 	err := cc.licenseMonitor.RefreshLicense(lCtx)
@@ -824,6 +835,11 @@ func (cc *controllerControl) RunControllers() {
 	if cc.shortLicensePolling {
 		log.Info("Using short license poll interval for FV")
 		cc.licenseMonitor.SetPollInterval(1 * time.Second)
+	}
+
+	if cfg.Controllers.Node != nil || cfg.Controllers.LoadBalancer != nil {
+		// Start dataFeed for controllers that need it
+		dataFeed.Start()
 	}
 
 	licenseChangedChan := make(chan struct{})
