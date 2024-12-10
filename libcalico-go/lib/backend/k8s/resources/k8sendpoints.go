@@ -118,9 +118,9 @@ func (c *endpointsClient) EnsureInitialized() error {
 	return nil
 }
 
-func (c *endpointsClient) Watch(ctx context.Context, list model.ListInterface, revision string) (api.WatchInterface, error) {
+func (c *endpointsClient) Watch(ctx context.Context, list model.ListInterface, opts api.WatchOptions) (api.WatchInterface, error) {
 	// Build watch options to pass to k8s.
-	opts := metav1.ListOptions{ResourceVersion: revision, Watch: true}
+	k8sOpts := metav1.ListOptions{ResourceVersion: opts.Revision, Watch: true}
 	rl, ok := list.(model.ResourceListOptions)
 	if !ok {
 		return nil, fmt.Errorf("ListInterface is not a ResourceListOptions: %s", list)
@@ -128,10 +128,10 @@ func (c *endpointsClient) Watch(ctx context.Context, list model.ListInterface, r
 	if len(rl.Name) != 0 {
 		// We've been asked to watch a specific endpoints resource.
 		log.WithField("name", rl.Name).Debug("Watching a single endpoints")
-		opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", rl.Name).String()
+		k8sOpts.FieldSelector = fields.OneTermEqualSelector("metadata.name", rl.Name).String()
 	}
 
-	k8sWatch, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).Watch(ctx, opts)
+	k8sWatch, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).Watch(ctx, k8sOpts)
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}
