@@ -562,7 +562,7 @@ blocks:
       - name: SEMAPHORE_ARTIFACT_EXPIRY
         value: 2w
       - name: CONTAINERD_VERSION
-        value: 1.7.13
+        value: 1.7.22
     jobs:
       - name: CAPZ - Windows FV
         commands:

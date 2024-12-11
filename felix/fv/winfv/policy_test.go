@@ -15,8 +15,10 @@
 package winfv_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os/exec"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -29,6 +31,44 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
+
+func Powershell(args ...string) string {
+	stdOut, stdErr, err := powershell(args...)
+	if err != nil {
+		log.Infof("Powershell() error: %s, stdOut: %s, stdErr: %s,", err, stdOut, stdErr)
+	}
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return stdOut
+}
+
+func PowershellWithError(args ...string) string {
+	stdOut, stdErr, err := powershell(args...)
+	log.Infof("PowershellWithError() error: %s, stdOut: %s, stdErr: %s,", err, stdOut, stdErr)
+	ExpectWithOffset(1, err).To(HaveOccurred())
+	return stdErr
+}
+
+func powershell(args ...string) (string, string, error) {
+	ps, err := exec.LookPath("powershell.exe")
+	if err != nil {
+		return "", "", err
+	}
+
+	args = append([]string{"-NoProfile", "-NonInteractive"}, args...)
+	cmd := exec.Command(ps, args...)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return stdout.String(), stderr.String(), err
+	}
+
+	return stdout.String(), stderr.String(), err
+}
 
 func getPodIP(name, namespace string) string {
 	cmd := fmt.Sprintf(`c:\k\kubectl.exe --kubeconfig=c:\k\config get pod %s -n %s -o jsonpath='{.status.podIP}'`,
