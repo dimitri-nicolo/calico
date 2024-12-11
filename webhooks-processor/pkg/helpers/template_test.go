@@ -4,10 +4,9 @@ package helpers_test
 
 import (
 	"encoding/json"
+	"html/template"
 	"testing"
 	"time"
-
-	"html/template"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"

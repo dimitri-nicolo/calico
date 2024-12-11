@@ -8,11 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"time"
-
-	"html/template"
 
 	"github.com/sirupsen/logrus"
 
