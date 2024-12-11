@@ -38,7 +38,8 @@ require (
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/dexidp/dex v2.40.0+incompatible
+	// dexidp/dex v2.40.0 release
+	github.com/dexidp/dex v0.0.0-20240603194342-23efe9200ccd
 	github.com/dexidp/dex/api/v2 v2.1.1-0.20240603194342-23efe9200ccd
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v27.3.1+incompatible
