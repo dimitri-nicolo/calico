@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +17,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
-	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/apiserver/pkg/helpers"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -81,22 +81,22 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		// certificates, as well the Voltron tunnel server certificate.
 		secret, err := resources.K8sClient.CoreV1().Secrets(namespace).Get(ctx, resources.TunnelSecretName, metav1.GetOptions{})
 		if err != nil {
-			klog.Errorf("Cannot get CA secret (%s) in namespace %s due to %s", resources.TunnelSecretName, namespace, err)
+			logrus.Errorf("Cannot get CA secret (%s) in namespace %s due to %s", resources.TunnelSecretName, namespace, err)
 			return nil, err
 		}
 
 		// Parse the certificate data into an x509 certificate.
 		caCert, caKey, err = helpers.DecodeCertAndKey(secret.Data["tls.crt"], secret.Data["tls.key"])
 		if err != nil {
-			klog.Errorf("Cannot parse CA certificate due to %s", err)
+			logrus.Errorf("Cannot parse CA certificate due to %s", err)
 			return nil, err
 		}
-		klog.Infof("Using CA certificate with CN=%s", caCert.Subject.CommonName)
+		logrus.Debugf("Using CA certificate with CN=%s", caCert.Subject.CommonName)
 
 		// Generate x509 certificate and private key for the managed cluster
 		certificate, privKey, err := helpers.Generate(caCert, caKey, res.ObjectMeta.Name)
 		if err != nil {
-			klog.Errorf("Cannot generate managed cluster certificate and key due to %s", err)
+			logrus.Errorf("Cannot generate managed cluster certificate and key due to %s", err)
 			return nil, cerrors.ErrorValidation{
 				ErroredFields: []cerrors.ErroredField{{
 					Name:   "Metadata.Name",

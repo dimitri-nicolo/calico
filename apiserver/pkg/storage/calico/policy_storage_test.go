@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/apitesting"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +25,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend"
-	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -385,7 +385,7 @@ func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 	}}
 
 	for i, tt := range tests {
-		klog.Infof("Start to run test on tt: %+v", tt)
+		logrus.Infof("Start to run test on tt: %+v", tt)
 		out := &v3.NetworkPolicy{}
 		selector := fmt.Sprintf("my_label == \"foo-%d\"", i)
 		if tt.expectNoUpdate {
@@ -616,18 +616,18 @@ func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 	codec := apitesting.TestCodec(codecs, v3.SchemeGroupVersion)
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
-		klog.Errorf("Failed to load client config: %q", err)
+		logrus.Errorf("Failed to load client config: %q", err)
 		os.Exit(1)
 	}
 	cfg.Spec.DatastoreType = "etcdv3"
 	cfg.Spec.EtcdEndpoints = "http://localhost:2379"
 	c, err := clientv3.New(*cfg)
 	if err != nil {
-		klog.Errorf("Failed creating client: %q", err)
+		logrus.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
 	}
 
-	klog.Infof("Client: %v", c)
+	logrus.Infof("Client: %v", c)
 	opts := Options{
 		RESTOptions: generic.RESTOptions{
 			StorageConfig: &storagebackend.ConfigForResource{
