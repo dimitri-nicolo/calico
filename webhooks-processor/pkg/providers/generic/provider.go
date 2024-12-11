@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"time"
 
+	"html/template"
+
 	"github.com/sirupsen/logrus"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -43,8 +45,8 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 			return err
 		}
 	}
-	if template, hasTemplate := config["template"]; hasTemplate {
-		if _, err := helpers.ParseTemplate(template); err != nil {
+	if templateData, hasTemplate := config["template"]; hasTemplate {
+		if _, err := template.New("template").Parse(templateData); err != nil {
 			return err
 		}
 	}
@@ -64,7 +66,7 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		// If template config is set, we will interpret its content as a go-template and use it
 		// to transform the event to match whatever format is defined in the template.
 		if templateData, ok := config["template"]; ok {
-			tmpl, err := helpers.ParseTemplate(templateData)
+			tmpl, err := template.New("template").Parse(templateData)
 			if err != nil {
 				// this is just defensive coding, we should never get here because the validation happens first:
 				return helpers.NewNoRetryError(err)
