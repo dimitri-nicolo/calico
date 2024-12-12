@@ -24,7 +24,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
-	queryserverclient "github.com/projectcalico/calico/ts-queryserver/queryserver/client"
+	queryserverclient "github.com/projectcalico/calico/queryserver/queryserver/client"
 	"github.com/projectcalico/calico/ui-apis/pkg/handler"
 	"github.com/projectcalico/calico/ui-apis/pkg/kibana"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"

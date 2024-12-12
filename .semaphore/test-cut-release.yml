@@ -152,7 +152,7 @@ promotions:
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut Queryserver Release
-    pipeline_file: ../ts-queryserver/.semaphore/test-cut-release.yml
+    pipeline_file: ../queryserver/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Test Cut Voltron Release
