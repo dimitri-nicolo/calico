@@ -4,7 +4,7 @@ FROM scratch AS source
 
 ARG TARGETARCH
 
-COPY bin/dex-${TARGETARCH} /dex
+COPY dex/bin/dex-${TARGETARCH} /usr/bin/dex
 COPY docker-image/web /srv/dex/web
 
 FROM calico/base
@@ -20,4 +20,4 @@ USER 10001:10001
 # In order to run this locally, replace /etc/dex/config.docker.yaml with
 # a config that uses K8S as a datastore as gomplate will not be invoked
 # to tailor the config file based on environment variables
-ENTRYPOINT ["/dex", "serve", "/etc/dex/config.docker.yaml"]
+ENTRYPOINT ["/usr/bin/dex", "serve", "/etc/dex/config.docker.yaml"]

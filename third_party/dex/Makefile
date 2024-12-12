@@ -9,7 +9,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/dex
 DEX_IMAGE    ?= dex
 BUILD_IMAGES ?= $(DEX_IMAGE)
 
-UPSTREAM_DEX_VERSION = v2.40.0
+DEX_VERSION = v2.41.1
 
 ###############################################################################
 # Include lib.Makefile
@@ -24,23 +24,20 @@ include ../../lib.Makefile
 # This section builds the output binaries.
 DEX_DOWNLOADED=.dex.downloaded
 
-build: bin/dex-$(ARCH)
+build: dex/bin/dex-$(ARCH)
 
 # Commit the changes made by init-cmd if the tree is dirty
-init-cmd: $(DEX_DOWNLOADED)
+init-source: $(DEX_DOWNLOADED)
 $(DEX_DOWNLOADED):
-	mkdir -p cmd/dex
-	(cd cmd/dex && curl -sSfL --remote-name-all --retry 5 https://raw.githubusercontent.com/dexidp/dex/$(UPSTREAM_DEX_VERSION)/cmd/dex/{config,main,serve,version}.go)
-	patch -p3 < patches/0001-cmd-changes.patch
+	mkdir -p dex
+	curl -sfL https://github.com/dexidp/dex/archive/refs/tags/$(DEX_VERSION).tar.gz | tar xz --strip-components 1 -C dex
+	patch -d dex -p1 < patches/0001-Remove-unused-code-that-requires-code-generation.patch
 	touch $@
 
-.PHONY: bin/dex-$(ARCH)
-bin/dex-$(ARCH): init-cmd
-ifeq ($(FIPS),true)
-	$(call build_cgo_boring_binary, cmd/dex/*.go, $@)
-else
-	$(call build_binary, cmd/dex/*.go, $@)
-endif
+.PHONY: dex/bin/dex-$(ARCH)
+dex/bin/dex-$(ARCH): init-source
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		cd dex && CGO_ENABLED=0 go build -o bin/dex-$(ARCH) -v -buildvcs=false -ldflags "-X main.version=$(DEX_VERSION) -s -w" ./cmd/dex/*.go'
 
 ###############################################################################
 # BUILD IMAGE
@@ -56,7 +53,7 @@ sub-image-%:
 image: $(DEX_IMAGE)
 
 $(DEX_IMAGE): $(DEX_CONTAINER_CREATED)
-$(DEX_CONTAINER_CREATED): bin/dex-$(ARCH)
+$(DEX_CONTAINER_CREATED): dex/bin/dex-$(ARCH)
 	$(DOCKER_BUILD) -t $(DEX_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
@@ -75,6 +72,6 @@ cd: image-all cd-common
 ###############################################################################
 
 clean:
-	rm -rf bin
+	rm -rf dex
 	rm -f $(DEX_DOWNLOADED) $(DEX_CONTAINER_CREATED)-*
 	-docker image rm -f $$(docker images $(DEX_IMAGE) -a -q)
