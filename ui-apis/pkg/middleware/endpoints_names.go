@@ -7,8 +7,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-	queryserverclient "github.com/projectcalico/calico/ts-queryserver/queryserver/client"
+	querycacheclient "github.com/projectcalico/calico/queryserver/pkg/querycache/client"
+	queryserverclient "github.com/projectcalico/calico/queryserver/queryserver/client"
 )
 
 type EndpointsNamesRequest struct {

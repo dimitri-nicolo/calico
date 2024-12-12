@@ -21,7 +21,7 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaapi "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	querycacheclient "github.com/projectcalico/calico/queryserver/pkg/querycache/client"
 )
 
 // The user authentication review mock struct implementing the authentication review interface.

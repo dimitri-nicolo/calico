@@ -17,9 +17,9 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-	qsutils "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/utils"
-	queryserverclient "github.com/projectcalico/calico/ts-queryserver/queryserver/client"
+	querycacheclient "github.com/projectcalico/calico/queryserver/pkg/querycache/client"
+	qsutils "github.com/projectcalico/calico/queryserver/pkg/querycache/utils"
+	queryserverclient "github.com/projectcalico/calico/queryserver/queryserver/client"
 	esauth "github.com/projectcalico/calico/ui-apis/pkg/auth"
 )
 

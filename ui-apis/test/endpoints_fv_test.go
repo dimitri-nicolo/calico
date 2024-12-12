@@ -22,8 +22,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	v1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	querycacheclient "github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-	"github.com/projectcalico/calico/ts-queryserver/queryserver/client"
+	querycacheclient "github.com/projectcalico/calico/queryserver/pkg/querycache/client"
+	"github.com/projectcalico/calico/queryserver/queryserver/client"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware"
 )
 

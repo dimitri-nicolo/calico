@@ -174,8 +174,8 @@ promotions:
     pipeline_file: push-images/prometheus-service.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Push ts-queryserver images
-    pipeline_file: push-images/ts-queryserver.yml
+  - name: Push queryserver images
+    pipeline_file: push-images/queryserver.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push typha images
@@ -1717,13 +1717,13 @@ blocks:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: queryserver
   run:
-    when: "false or change_in(['/*', '/ts-queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/*', '/queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
     prologue:
       commands:
-        - cd ts-queryserver
+        - cd queryserver
     jobs:
       - name: queryserver tests
         commands:
