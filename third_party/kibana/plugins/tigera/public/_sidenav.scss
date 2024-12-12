@@ -1,0 +1,31 @@
+$sidebar-background-color: #3f5569;
+$sidebar-font-color: #fff;
+$sidebar-second-font-color: lightgray;
+
+@mixin sidenav {
+  .euiCollapsibleNav {
+    background-color: $sidebar-background-color;
+    color: $sidebar-font-color;
+
+    .euiCollapsibleNavGroup {
+      background-color: $sidebar-background-color;
+      color: $sidebar-font-color;
+    }
+
+    .euiTitle {
+      color: $sidebar-font-color;
+    }
+
+    .euiTextColor {
+      color: $sidebar-font-color;
+
+      &--subdued {
+        color: $sidebar-second-font-color;
+      }
+    }
+
+    .euiListGroupItem__button:not(:disabled) {
+      color: $sidebar-font-color;
+    }
+  }
+}

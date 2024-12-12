@@ -1,23 +1,24 @@
-From 09ccbe4a942feea9607073115deabc2c4943e552 Mon Sep 17 00:00:00 2001
+From 5ec627e3b949e85fca1908f4d6ba5cd05cb1b539 Mon Sep 17 00:00:00 2001
 From: Vara <vara@tigera.io>
-Date: Tue, 5 Nov 2024 22:11:27 -0800
-Subject: [PATCH] Reduce all platforms to only linux variant
+Date: Tue, 10 Dec 2024 14:24:06 -0800
+Subject: [PATCH] reduce all platform to only linux variant
 
 ---
- src/dev/build/lib/platform.ts | 5 -----
- 1 file changed, 5 deletions(-)
+ src/dev/build/lib/platform.ts | 6 ------
+ 1 file changed, 6 deletions(-)
 
 diff --git a/src/dev/build/lib/platform.ts b/src/dev/build/lib/platform.ts
-index dc70fb47d..a4357d81b 100644
+index f1506eedd..aee82a8c1 100644
 --- a/src/dev/build/lib/platform.ts
 +++ b/src/dev/build/lib/platform.ts
-@@ -58,14 +58,9 @@ export class Platform {
+@@ -59,15 +59,9 @@ export class Platform {
  export const DOWNLOAD_PLATFORMS = [
    new Platform('linux', 'x64', 'linux-x86_64', null),
    new Platform('linux', 'arm64', 'linux-aarch64', null),
 -  new Platform('darwin', 'x64', 'darwin-x86_64', null),
 -  new Platform('darwin', 'arm64', 'darwin-aarch64', null),
 -  new Platform('win32', 'x64', 'windows-x86_64', null),
+-  new Platform('win32', 'arm64', 'windows-arm64', null),
  ];
  
  export const SERVERLESS_PLATFORMS = [

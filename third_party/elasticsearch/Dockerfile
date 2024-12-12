@@ -37,6 +37,6 @@ RUN /usr/share/elasticsearch/bin/elasticsearch-plugin install --batch repository
 # which has SELinux enabled by default, elasticsearch user get permissions errors on
 # accessing JDK files. This is not an issue on non-SELinux enabled hosts like Ubuntu.
 # Changing the folder ownership works on both hosts.
-RUN groupadd -g 1000 elasticsearch && \
-    adduser --uid 1000 --gid 1000 --home /usr/share/elasticsearch elasticsearch && \
-    chown -R 1000:1000 /usr/share/elasticsearch
+RUN groupadd -g 10001 elasticsearch && \
+    adduser --uid 10001 --gid 10001 --home /usr/share/elasticsearch elasticsearch && \
+    chown -R 10001:10001 /usr/share/elasticsearch

@@ -1,6 +1,6 @@
-From f31157b2d150588614693929eac4d43a75e65c91 Mon Sep 17 00:00:00 2001
+From 72fd478cb875dc6b807c9f8fee54de2c9e62a8eb Mon Sep 17 00:00:00 2001
 From: Vara <vara@tigera.io>
-Date: Fri, 8 Nov 2024 17:14:23 -0800
+Date: Wed, 11 Dec 2024 11:17:38 -0800
 Subject: [PATCH] apply tigera customization to kibana
 
 ---
@@ -11,12 +11,11 @@ Subject: [PATCH] apply tigera customization to kibana
  .../src/ui/header/header_logo.tsx             |  38 +-
  .../tigera_icons/calico_cloud_logo_square.svg | 551 ++++++++++++++
  .../calico_enterprise_logo_square.svg         | 648 +++++++++++++++++
- .../src/views/template.tsx                    |  16 +-
+ .../src/views/template.tsx                    |  15 +-
  .../tigera_icons/calico_cloud_logo_square.tsx | 493 +++++++++++++
  .../calico_enterprise_logo_square.tsx         | 674 ++++++++++++++++++
  .../tsconfig.json                             |   1 +
  .../src/core_system.ts                        |   1 +
- plugins/.empty                                |   0
  .../public/components/search_bar.tsx          |  20 +-
  .../public/components/types.ts                |   1 +
  .../global_search_bar/public/plugin.tsx       |   2 +
@@ -24,12 +23,11 @@ Subject: [PATCH] apply tigera customization to kibana
  .../authentication/login/login_page.tsx       |  22 +-
  .../security/tigera_icons/calico_logo.svg     |  55 ++
  x-pack/plugins/security/tsconfig.json         |   1 +
- 20 files changed, 2515 insertions(+), 36 deletions(-)
+ 19 files changed, 2514 insertions(+), 36 deletions(-)
  create mode 100644 packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_cloud_logo_square.svg
  create mode 100644 packages/core/chrome/core-chrome-browser-internal/tigera_icons/calico_enterprise_logo_square.svg
  create mode 100644 packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_cloud_logo_square.tsx
  create mode 100644 packages/core/rendering/core-rendering-server-internal/tigera_icons/calico_enterprise_logo_square.tsx
- delete mode 100644 plugins/.empty
  create mode 100644 x-pack/plugins/security/tigera_icons/calico_logo.svg
 
 diff --git a/config/kibana.yml b/config/kibana.yml
@@ -60,18 +58,18 @@ index c816337f8..1b6f431bd 100644
 +google_tag_manager.container: "GTM-TCNXTCJ"
 +
 diff --git a/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx b/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
-index d2922b9a9..571f7f568 100644
+index 434639b07..287348b1b 100644
 --- a/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
 +++ b/packages/core/chrome/core-chrome-browser-internal/src/chrome_service.tsx
-@@ -50,6 +50,7 @@ import { Header, LoadingIndicator, ProjectHeader } from './ui';
+@@ -54,6 +54,7 @@ import { Header, LoadingIndicator, ProjectHeader } from './ui';
  import { registerAnalyticsContextProvider } from './register_analytics_context_provider';
  import type { InternalChromeStart } from './types';
  import { HeaderTopBanner } from './ui/header/header_top_banner';
 +import type { IUiSettingsClient } from '@kbn/core-ui-settings-browser';
  
  const IS_LOCKED_KEY = 'core.chrome.isLocked';
- const SNAPSHOT_REGEX = /-snapshot/i;
-@@ -71,6 +72,7 @@ export interface StartDeps {
+ const IS_SIDENAV_COLLAPSED_KEY = 'core.chrome.isSideNavCollapsed';
+@@ -76,6 +77,7 @@ export interface StartDeps {
    injectedMetadata: InternalInjectedMetadataStart;
    notifications: NotificationsStart;
    customBranding: CustomBrandingStart;
@@ -79,7 +77,7 @@ index d2922b9a9..571f7f568 100644
  }
  
  /** @internal */
-@@ -185,6 +187,7 @@ export class ChromeService {
+@@ -237,6 +239,7 @@ export class ChromeService {
      injectedMetadata,
      notifications,
      customBranding,
@@ -87,7 +85,7 @@ index d2922b9a9..571f7f568 100644
    }: StartDeps): Promise<InternalChromeStart> {
      this.initVisibility(application);
      this.handleEuiFullScreenChanges();
-@@ -424,6 +427,7 @@ export class ChromeService {
+@@ -497,6 +500,7 @@ export class ChromeService {
              onIsLockedUpdate={setIsNavDrawerLocked}
              isLocked$={getIsNavDrawerLocked$}
              customBranding$={customBranding$}
@@ -96,10 +94,10 @@ index d2922b9a9..571f7f568 100644
          );
        };
 diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
-index ecc20cc3c..abef1b1be 100644
+index f6253e283..0da19b199 100644
 --- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
 +++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.test.tsx
-@@ -29,6 +29,7 @@ function mockProps() {
+@@ -30,6 +30,7 @@ function mockProps() {
      breadcrumbsAppendExtension$: new BehaviorSubject(undefined),
      homeHref: '/',
      customBranding$: new BehaviorSubject({}),
@@ -108,26 +106,26 @@ index ecc20cc3c..abef1b1be 100644
      docLinks: docLinksServiceMock.createStartContract(),
      navLinks$: new BehaviorSubject([]),
 diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
-index 67ff9af5f..d115ea201 100644
+index 62f2963ae..c5776ce3d 100644
 --- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
 +++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header.tsx
-@@ -76,6 +76,7 @@ export interface HeaderProps {
-   loadingCount$: ReturnType<HttpStart['getLoadingCount$']>;
+@@ -78,6 +78,7 @@ export interface HeaderProps {
    onIsLockedUpdate: OnIsLockedUpdate;
    customBranding$: Observable<CustomBranding>;
+   isServerless: boolean;
 +  licenseEdition: string;
  }
  
  export function Header({
-@@ -89,6 +90,7 @@ export function Header({
+@@ -91,6 +92,7 @@ export function Header({
    breadcrumbsAppendExtension$,
    globalHelpExtensionMenuLinks$,
    customBranding$,
 +  licenseEdition,
+   isServerless,
    ...observables
  }: HeaderProps) {
-   const [isNavOpen, setIsNavOpen] = useState(false);
-@@ -127,6 +129,7 @@ export function Header({
+@@ -130,6 +132,7 @@ export function Header({
                      navigateToApp={application.navigateToApp}
                      loadingCount$={observables.loadingCount$}
                      customBranding$={customBranding$}
@@ -136,10 +134,10 @@ index 67ff9af5f..d115ea201 100644
                  ],
                },
 diff --git a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
-index c3dd7ecf2..80504735d 100644
+index b7ceb4b52..d12375e38 100644
 --- a/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
 +++ b/packages/core/chrome/core-chrome-browser-internal/src/ui/header/header_logo.tsx
-@@ -7,6 +7,7 @@
+@@ -8,6 +8,7 @@
   */
  
  import './header_logo.scss';
@@ -147,7 +145,7 @@ index c3dd7ecf2..80504735d 100644
  import { i18n } from '@kbn/i18n';
  import React from 'react';
  import useObservable from 'react-use/lib/useObservable';
-@@ -15,8 +16,9 @@ import Url from 'url';
+@@ -16,8 +17,9 @@ import Url from 'url';
  import { CustomBranding } from '@kbn/core-custom-branding-common';
  import type { HttpStart } from '@kbn/core-http-browser';
  import type { ChromeNavLink } from '@kbn/core-chrome-browser';
@@ -159,7 +157,7 @@ index c3dd7ecf2..80504735d 100644
  
  function findClosestAnchor(element: HTMLElement): HTMLAnchorElement | void {
    let current = element;
-@@ -79,34 +81,32 @@ interface Props {
+@@ -80,34 +82,32 @@ interface Props {
    navigateToApp: (appId: string) => void;
    loadingCount$?: ReturnType<HttpStart['getLoadingCount$']>;
    customBranding$: Observable<CustomBranding>;
@@ -1421,11 +1419,11 @@ index 000000000..0a31a68ef
 +  </g>
 +</svg>
 diff --git a/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx b/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
-index f1612e4ad..e15786c38 100644
+index fdbade121..c3c1af3ab 100644
 --- a/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
 +++ b/packages/core/rendering/core-rendering-server-internal/src/views/template.tsx
-@@ -10,8 +10,9 @@ import React, { FunctionComponent, createElement } from 'react';
- import { EUI_STYLES_GLOBAL, EUI_STYLES_UTILS } from '@kbn/core-base-common';
+@@ -12,8 +12,9 @@ import { EUI_STYLES_GLOBAL, EUI_STYLES_UTILS } from '@kbn/core-base-common';
+ import { i18n } from '@kbn/i18n';
  import { RenderingMetadata } from '../types';
  import { Fonts } from './fonts';
 -import { Logo } from './logo';
@@ -1435,11 +1433,10 @@ index f1612e4ad..e15786c38 100644
  
  interface Props {
    metadata: RenderingMetadata;
-@@ -31,14 +32,23 @@ export const Template: FunctionComponent<Props> = ({
+@@ -32,14 +33,22 @@ export const Template: FunctionComponent<Props> = ({
      customBranding,
    },
  }) => {
-+  // const licenseEdition: string = 'CloudenterpriseEdition';
 +  const licenseEdition =
 +    injectedMetadata.legacyMetadata.uiSettings.defaults['tigeratagmanager.licenseEdition'];
 +  const isEnterprise = licenseEdition.value === 'enterpriseEdition';
@@ -1460,10 +1457,10 @@ index f1612e4ad..e15786c38 100644
    return (
      <html lang={locale}>
        <head>
-@@ -92,7 +102,7 @@ export const Template: FunctionComponent<Props> = ({
+@@ -93,7 +102,7 @@ export const Template: FunctionComponent<Props> = ({
                })}
              >
-               {i18n('core.ui.welcomeMessage', {
+               {i18n.translate('core.ui.welcomeMessage', {
 -                defaultMessage: 'Loading Elastic',
 +                defaultMessage: `Loading Calico ${editionLabel} Elastic`,
                })}
@@ -2649,7 +2646,7 @@ index 000000000..1af36ada8
 +  );
 +}
 diff --git a/packages/core/rendering/core-rendering-server-internal/tsconfig.json b/packages/core/rendering/core-rendering-server-internal/tsconfig.json
-index e306dca24..8093be675 100644
+index 28a22d3d5..4bfa83fdb 100644
 --- a/packages/core/rendering/core-rendering-server-internal/tsconfig.json
 +++ b/packages/core/rendering/core-rendering-server-internal/tsconfig.json
 @@ -11,6 +11,7 @@
@@ -2661,10 +2658,10 @@ index e306dca24..8093be675 100644
    "kbn_references": [
      "@kbn/i18n",
 diff --git a/packages/core/root/core-root-browser-internal/src/core_system.ts b/packages/core/root/core-root-browser-internal/src/core_system.ts
-index f06f1becb..d3c86d3b7 100644
+index 44e25b257..d83c3db45 100644
 --- a/packages/core/root/core-root-browser-internal/src/core_system.ts
 +++ b/packages/core/root/core-root-browser-internal/src/core_system.ts
-@@ -342,6 +342,7 @@ export class CoreSystem {
+@@ -348,6 +348,7 @@ export class CoreSystem {
          injectedMetadata,
          notifications,
          customBranding,
@@ -2672,22 +2669,19 @@ index f06f1becb..d3c86d3b7 100644
        });
        const deprecations = this.deprecations.start({ http });
  
-diff --git a/plugins/.empty b/plugins/.empty
-deleted file mode 100644
-index e69de29bb..000000000
 diff --git a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
-index 726c41f39..67ad475fc 100644
+index efc564089..4ad382cbf 100644
 --- a/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
 +++ b/x-pack/plugins/global_search_bar/public/components/search_bar.tsx
-@@ -18,6 +18,7 @@ import {
+@@ -19,6 +19,7 @@ import {
    euiSelectableTemplateSitewideRenderOptions,
    useEuiTheme,
  } from '@elastic/eui';
 +import { i18n } from '@kbn/i18n';
  import { EuiSelectableOnChangeEvent } from '@elastic/eui/src/components/selectable/selectable';
  import { css } from '@emotion/react';
- import type { GlobalSearchFindParams, GlobalSearchResult } from '@kbn/global-search-plugin/public';
-@@ -50,7 +51,15 @@ const EmptyMessage = () => (
+ import { FormattedMessage } from '@kbn/i18n-react';
+@@ -77,7 +78,15 @@ const EmptyMessage = () => (
  );
  
  export const SearchBar: FC<SearchBarProps> = (opts) => {
@@ -2704,15 +2698,15 @@ index 726c41f39..67ad475fc 100644
  
    const isMounted = useMountedState();
    const { euiTheme } = useEuiTheme();
-@@ -72,6 +81,7 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
-   const [showAppend, setShowAppend] = useState<boolean>(true);
+@@ -100,6 +109,7 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
    const UNKNOWN_TAG_ID = '__unknown__';
    const [isLoading, setIsLoading] = useState<boolean>(false);
+   const [searchCharLimitExceeded, setSearchCharLimitExceeded] = useState(false);
 +  const isEnterprise = licenseEdition === 'enterpriseEdition';
  
    useEffect(() => {
      if (initialLoad) {
-@@ -347,8 +357,12 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
+@@ -384,8 +394,12 @@ export const SearchBar: FC<SearchBarProps> = (opts) => {
          'data-test-subj': 'nav-search-input',
          inputRef: setSearchRef,
          compressed: true,
@@ -2728,7 +2722,7 @@ index 726c41f39..67ad475fc 100644
            reportEvent.searchFocus();
            setInitialLoad(true);
 diff --git a/x-pack/plugins/global_search_bar/public/components/types.ts b/x-pack/plugins/global_search_bar/public/components/types.ts
-index de0af3662..281d42f36 100644
+index fbcf7c523..04ac334ea 100644
 --- a/x-pack/plugins/global_search_bar/public/components/types.ts
 +++ b/x-pack/plugins/global_search_bar/public/components/types.ts
 @@ -20,4 +20,5 @@ export interface SearchBarProps {
@@ -2738,10 +2732,10 @@ index de0af3662..281d42f36 100644
 +  licenseEdition: string;
  }
 diff --git a/x-pack/plugins/global_search_bar/public/plugin.tsx b/x-pack/plugins/global_search_bar/public/plugin.tsx
-index 00cddfb65..f7f8f1f3d 100644
+index e8fbe2f7e..f1661e422 100644
 --- a/x-pack/plugins/global_search_bar/public/plugin.tsx
 +++ b/x-pack/plugins/global_search_bar/public/plugin.tsx
-@@ -39,6 +39,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}, {}, GlobalSearchBar
+@@ -52,6 +52,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}, {}, GlobalSearchBar
      const { core, globalSearch, savedObjectsTagging, usageCollection } = deps;
      const { application, http, theme, i18n } = core;
      const reportEvent = new EventReporter({ analytics: core.analytics, usageCollection });
@@ -2749,7 +2743,7 @@ index 00cddfb65..f7f8f1f3d 100644
  
      const navControl: ChromeNavControl = {
        order: 1000,
-@@ -52,6 +53,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}, {}, GlobalSearchBar
+@@ -65,6 +66,7 @@ export class GlobalSearchBarPlugin implements Plugin<{}, {}, {}, GlobalSearchBar
                basePathUrl={http.basePath.prepend('/plugins/globalSearchBar/assets/')}
                chromeStyle$={core.chrome.getChromeStyle$()}
                reportEvent={reportEvent}
@@ -2896,7 +2890,7 @@ index 000000000..9e0f3cbae
 +<path fill-rule="evenodd" clip-rule="evenodd" d="M52.3805 61C51.7588 61.7962 51.175 62.6823 50.6346 63.6546C48.2865 68.0122 47.0388 72.877 47 77.8262C47 87.8061 52.9711 94.7921 61.5083 94.7921C70.0555 94.7921 76.0166 87.7962 76.0166 77.7863C75.97 72.852 74.7262 68.0027 72.392 63.6546C71.8496 62.6823 71.2642 61.7962 70.6413 61H68.529C72.3573 65.1436 74.399 72.2907 74.399 77.8062C74.399 88.4349 67.9187 93.1953 61.5083 93.1953C55.0979 93.1953 48.6176 88.4149 48.6176 77.7863C48.6176 72.2844 50.6636 65.1422 54.4914 61H52.3805Z" fill="#141414"/>
 +</svg>
 diff --git a/x-pack/plugins/security/tsconfig.json b/x-pack/plugins/security/tsconfig.json
-index 64d162839..f6c596f18 100644
+index 1005d225b..1c2af16f7 100644
 --- a/x-pack/plugins/security/tsconfig.json
 +++ b/x-pack/plugins/security/tsconfig.json
 @@ -8,6 +8,7 @@

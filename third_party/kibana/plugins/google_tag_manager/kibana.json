@@ -1,0 +1,14 @@
+{
+  "id": "googleTagManager",
+  "version": "1.0.0",
+  "kibanaVersion": "kibana",
+  "owner": {
+    "name": "google",
+    "githubTeam": ""
+  },
+  "description": "google tag manager",
+  "server": true,
+  "ui": true,
+  "requiredPlugins": [],
+  "optionalPlugins": []
+}

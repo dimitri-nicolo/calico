@@ -5,7 +5,7 @@ FROM ${QEMU_IMAGE} AS qemu
 
 ARG TARGETARCH
 
-FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.15.3 AS kibana
+FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.16.1 AS kibana
 
 COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 

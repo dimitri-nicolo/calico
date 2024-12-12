@@ -1,6 +1,6 @@
-From 09012097402bb2438c6866f188f91feb993c87d9 Mon Sep 17 00:00:00 2001
+From d023ff4b9a860aed5329462e72aaf887252cd4f1 Mon Sep 17 00:00:00 2001
 From: Vara <vara@tigera.io>
-Date: Wed, 6 Nov 2024 09:55:47 -0800
+Date: Wed, 11 Dec 2024 11:23:28 -0800
 Subject: [PATCH] update to offical node js version 20.15.1
 
 ---
@@ -11,14 +11,14 @@ Subject: [PATCH] update to offical node js version 20.15.1
  4 files changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/.buildkite/scripts/common/setup_node.sh b/.buildkite/scripts/common/setup_node.sh
-index 8675537b8..a487d7c7d 100755
+index aac3d2670..738a3718e 100755
 --- a/.buildkite/scripts/common/setup_node.sh
 +++ b/.buildkite/scripts/common/setup_node.sh
-@@ -32,7 +32,7 @@ elif [[ "$UNAME" == "Darwin" ]]; then
+@@ -40,7 +40,7 @@ if [[ "${CI_FORCE_NODE_POINTER_COMPRESSION:-}" = "true" ]]; then
+   sed -i 's#"node-v20.15.1-linux-x64", "a854c291c7b775bedab54251e1e273cfee1adf1dba25435bc52305ef41f143ab"#"node-v20.15.1-linux-x64", "d7990d99dcb165eca7305dd895ddd5b2a490b7c2b624136d2fc83004bc0f2d2d"#' WORKSPACE.bazel
+   echo ' -- Using Node.js variant with pointer compression enabled'
  fi
- echo " -- Running on OS: $OS"
- 
--nodeUrl="https://us-central1-elastic-kibana-184716.cloudfunctions.net/kibana-ci-proxy-cache/dist/v$NODE_VERSION/node-v$NODE_VERSION-${OS}-${classifier}"
+-nodeUrl="https://us-central1-elastic-kibana-184716.cloudfunctions.net/kibana-ci-proxy-cache/${NODE_VARIANT}dist/v$NODE_VERSION/node-v$NODE_VERSION-${OS}-${classifier}"
 +nodeUrl="https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-${OS}-${classifier}"
  
  echo " -- node: version=v${NODE_VERSION} dir=$NODE_DIR"
@@ -45,10 +45,10 @@ index c1bae6c54..775a3035b 100644
    yarn_repositories = {
      "1.22.21": ("yarn-v1.22.21.tar.gz", "yarn-v1.22.21", "a55bb4e85405f5dfd6e7154a444e7e33ad305d7ca858bad8546e932a6688df08"),
 diff --git a/src/dev/build/tasks/nodejs/node_download_info.ts b/src/dev/build/tasks/nodejs/node_download_info.ts
-index 489ff1fc0..f44b1cc7d 100644
+index c9bda93e2..256bf7b7b 100644
 --- a/src/dev/build/tasks/nodejs/node_download_info.ts
 +++ b/src/dev/build/tasks/nodejs/node_download_info.ts
-@@ -26,7 +26,7 @@ export function getNodeDownloadInfo(config: Config, platform: Platform) {
+@@ -32,7 +32,7 @@ export function getNodeDownloadInfo(config: Config, platform: Platform) {
  
      let variantPath = '';
      if (variant === 'pointer-compression') variantPath = 'node-pointer-compression/';
@@ -58,10 +58,10 @@ index 489ff1fc0..f44b1cc7d 100644
        '.node_binaries',
        version,
 diff --git a/src/dev/build/tasks/nodejs/node_shasums.ts b/src/dev/build/tasks/nodejs/node_shasums.ts
-index 7e2590818..b8bee8da0 100644
+index 81693fb49..efeac74eb 100644
 --- a/src/dev/build/tasks/nodejs/node_shasums.ts
 +++ b/src/dev/build/tasks/nodejs/node_shasums.ts
-@@ -14,7 +14,7 @@ const cache: Record<string, Record<string, string>> = {};
+@@ -15,7 +15,7 @@ const cache: Record<string, Record<string, string>> = {};
  export async function getNodeShasums(log: ToolingLog, nodeVersion: string, variant: string | null) {
    let variantPath = '';
    if (variant === 'pointer-compression') variantPath = 'node-pointer-compression/';
