@@ -449,29 +449,34 @@ func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kuber
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		// ip diagnostics
 		{
-			Info:     fmt.Sprintf("Collect iptables for node %s", nodeName),
+			Info:     fmt.Sprintf("Collect iptables (legacy) for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- iptables-legacy-save -c", namespace, podName),
-			FilePath: fmt.Sprintf("%s/iptables-save.txt", curNodeDir),
+			FilePath: fmt.Sprintf("%s/iptables-legacy-save.txt", curNodeDir),
+		},
+		{
+			Info:     fmt.Sprintf("Collect iptables (nft) for node %s", nodeName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- iptables-nft-save -c", namespace, podName),
+			FilePath: fmt.Sprintf("%s/iptables-nft-save.txt", curNodeDir),
+		},
+		{
+			Info:     fmt.Sprintf("Collect nftables for node %s", nodeName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- nft -n -a list ruleset", namespace, podName),
+			FilePath: fmt.Sprintf("%s/nft-ruleset.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip routes for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip route", namespace, podName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip route show table all", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iproute.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ipv6 routes for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip -6 route", namespace, podName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip -6 route show table all", namespace, podName),
 			FilePath: fmt.Sprintf("%s/ipv6route.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip rule for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip rule", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iprule.txt", curNodeDir),
-		},
-		{
-			Info:     fmt.Sprintf("Collect ip route show table all for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip route show table all", namespace, podName),
-			FilePath: fmt.Sprintf("%s/iproute-all-table.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip addr for node %s", nodeName),
