@@ -147,7 +147,7 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				cli := getClientFromOpener(cliTun)
-				response, err := cli.Get("http://test.com")
+				response, err := cli.Get("http://example.com")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(readResponseBody(response)).To(Equal("Response"))
@@ -227,10 +227,10 @@ var _ = Describe("Manager", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				cli := getClientFromOpener(cliTun)
 
-				response1, err := cli.Get("http://test.com")
+				response1, err := cli.Get("http://example.com")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				response2, err := cli.Get("http://test.com")
+				response2, err := cli.Get("http://example.com")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(len(filter([]string{"Response1", "Response2"}, readResponseBody(response1), readResponseBody(response2)))).To(Equal(0))

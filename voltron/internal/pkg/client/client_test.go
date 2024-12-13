@@ -107,7 +107,7 @@ var _ = Describe("Client", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			By("creating a http client with the client side of the pipe")
-			cli, err := client.New("http://test.com", "voltron",
+			cli, err := client.New("http://example.com", "voltron",
 				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				}, 1, 0, 5*time.Second)),
@@ -141,7 +141,7 @@ var _ = Describe("Client", func() {
 			cliConn, srvConn := net.Pipe()
 
 			By("creating a http client with the client side of the pipe")
-			cli, err := client.New("http://test.com", "voltron",
+			cli, err := client.New("http://example.com", "voltron",
 				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
 				}, 1, 0, 5*time.Second)),
