@@ -1,6 +1,6 @@
 module github.com/projectcalico/calico
 
-go 1.23.2
+go 1.23.4
 
 require (
 	github.com/BurntSushi/toml v1.4.0
@@ -135,8 +135,8 @@ require (
 	go.etcd.io/etcd/client/v2 v2.305.17
 	go.etcd.io/etcd/client/v3 v3.5.17
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.30.0
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
+	golang.org/x/crypto v0.31.0
+	golang.org/x/exp v0.0.0-20241210194714-1829a127f884
 	golang.org/x/net v0.32.0
 	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sync v0.10.0
