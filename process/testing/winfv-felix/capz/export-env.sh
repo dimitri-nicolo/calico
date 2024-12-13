@@ -11,10 +11,11 @@ export USER_IDENTITY="cloud-provider-user-identity"
 export CI_RG="${AZURE_RESOURCE_GROUP}-ci"
 export USER_IDENTITY="cloud-provider-user-identity"
 
-# Optional, can be windows-2019 or windows-2022 (default)
+# Optional, can be windows-2019 (default) or windows-2022
 # https://capz.sigs.k8s.io/developers/development.html
 # https://github.com/kubernetes-sigs/cluster-api-provider-azure/blob/main/templates/flavors/machinepool-windows/machine-pool-deployment-windows.yaml#L29
-export WINDOWS_SERVER_VERSION="${WINDOWS_SERVER_VERSION:="windows-2022"}"
+# Default changed to 2019 due to this 2022 issue: https://github.com/microsoft/Windows-Containers/issues/516
+export WINDOWS_SERVER_VERSION="${WINDOWS_SERVER_VERSION:="windows-2019"}"
 
 # Select VM types ("Standard_D2s_v3" is recommented for OSS Calico and "Standard_D4s_v3" is recommended for Calico Enterprise)
 export AZURE_CONTROL_PLANE_MACHINE_TYPE="${AZURE_CONTROL_PLANE_MACHINE_TYPE:="Standard_D4s_v3"}"
