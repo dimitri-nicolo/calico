@@ -1,0 +1,14 @@
+{
+  "id": "tigera",
+  "version": "1.0.0",
+  "kibanaVersion": "kibana",
+  "owner": {
+    "name": "Tigera",
+    "githubTeam": "tigera"
+  },
+  "description": "Tigera plugin",
+  "server": true,
+  "ui": true,
+  "requiredPlugins": ["navigation"],
+  "optionalPlugins": []
+}

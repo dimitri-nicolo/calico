@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/kibana
 KIBANA_IMAGE?=kibana-ubi
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-KIBANA_VERSION = 8.15.3
+KIBANA_VERSION = 8.16.1
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
@@ -37,11 +37,11 @@ init-source: $(KIBANA_DOWNLOADED)
 $(KIBANA_DOWNLOADED):
 	git clone --depth 1 --branch v$(KIBANA_VERSION) --single-branch https://github.com/elastic/kibana.git
 	patch -d kibana -p1 < patches/0001-apply-tigera-customization-to-kibana.patch
-	patch -d kibana -p1 < patches/0002-tigera-plugin-changes.patch
-	patch -d kibana -p1 < patches/0003-google-tag-manager-plugin-changes.patch
-	patch -d kibana -p1 < patches/0004-Reduce-all-platforms-to-only-linux-variant.patch
-	patch -d kibana -p1 < patches/0005-support-ubi-arm64-builds.patch
-	patch -d kibana -p1 < patches/0006-update-to-offical-node-js-version-20.15.1.patch
+	patch -d kibana -p1 < patches/0002-Reduce-all-platforms-to-only-linux-variant.patch
+	patch -d kibana -p1 < patches/0003-support-ubi-arm64-builds.patch
+	patch -d kibana -p1 < patches/0004-update-to-offical-node-js-version-20.15.1.patch
+	cp -r plugins/tigera kibana/plugins/
+	cp -r plugins/google_tag_manager kibana/plugins/
 	touch $@
 
 

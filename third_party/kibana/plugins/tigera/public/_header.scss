@@ -1,0 +1,37 @@
+$header-background-color: #000;
+$header-font-color: #fff;
+$header-second-font-color: lightgray;
+
+@mixin darkHeader {
+  .euiHeader {
+    &--dark {
+      background-color: $header-background-color;
+      color: $header-font-color;
+    }
+  }
+}
+
+@mixin defaultHeader {
+  .euiHeader {
+    &--default {
+      background-color: $header-background-color;
+      color: $header-font-color;
+
+      .euiBreadcrumb {
+        color: $header-font-color;
+
+        &:hover {
+          color: $header-font-color;
+        }
+
+        &--last {
+          color: $header-second-font-color;
+
+          &:hover {
+            color: $header-second-font-color;
+          }
+        }
+      }
+    }
+  }
+}
