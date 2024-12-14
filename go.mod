@@ -56,6 +56,7 @@ require (
 	github.com/go-kit/log v0.2.1
 	github.com/go-openapi/runtime v0.28.0
 	github.com/go-sql-driver/mysql v1.8.1
+	github.com/go-logr/logr v1.4.2
 	github.com/gofrs/flock v0.12.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gogo/googleapis v1.4.1
@@ -244,7 +245,6 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
