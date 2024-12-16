@@ -24,7 +24,6 @@ const (
 	ObjectDir    = "/usr/lib/calico/bpf"
 
 	DnsObjDir = DefaultBPFfsPath + "/dns/"
-
 )
 
 func GetCgroupV2Path() string {
