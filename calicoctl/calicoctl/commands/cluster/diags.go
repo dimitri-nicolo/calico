@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
@@ -20,11 +22,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-const (
-	archiveName   = "calico-diagnostics.tar.gz"
-	directoryName = "calico-diagnostics"
-)
-
 type diagOpts struct {
 	// Even though we already know, in this file, that we are doing the "calicoctl cluster
 	// diags" command, these two fields must be present or else Bind returns an error and fails
@@ -37,8 +34,10 @@ type diagOpts struct {
 	Config               string
 	Since                string
 	MaxLogs              int
+	MaxParallelism       int
 	FocusNodes           string
 	AllowVersionMismatch bool
+	SkipTempDirCleanup   bool
 }
 
 var usage = `Usage:
@@ -50,11 +49,15 @@ Options:
                                duration, in seconds (s), minutes (m) or hours (h).
      --max-logs=<MAXLOGS>      Only collect up to this number of logs, for each
                                kind of Calico component. [default: 5]
+     --max-parallelism=<MAXPARALLELISM> Maximum number of parallel threads to use for
+                               collecting logs. [default: 10]
      --focus-nodes=<NODES>     Comma-separated list of nodes from which we should
                                try first to collect logs.
   -c --config=<CONFIG>         Path to connection configuration file.
                                [default: ` + constants.DefaultConfigPath + `]
      --allow-version-mismatch  Allow client and cluster versions mismatch.
+     --skip-temp-dir-cleanup   Don't clean up the temporary directory (useful 
+                               for development).
 `
 
 var doc = constants.DatastoreIntro + usage + `
@@ -111,6 +114,8 @@ func diagsTestable(args []string, print func(a ...any) (int, error), continuatio
 }
 
 func collectDiags(opts *diagOpts) error {
+	common.MaxParallelism = opts.MaxParallelism
+
 	// Ensure since value is valid with proper time unit
 	argutils.ValidateSinceDuration(opts.Since)
 
@@ -130,19 +135,26 @@ func collectDiags(opts *diagOpts) error {
 
 	// Create a temp folder to house all diagnostic files. Use empty string for dir parameter.
 	// TempDir will use the default directory for temporary files (see os.TempDir).
-	rootDir, err := os.MkdirTemp("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return err
 	}
-	// Clean up everything that is temporary afterwards
-	defer os.RemoveAll(rootDir)
+	fmt.Println("Created temporary directory:", tempDir)
+	if !opts.SkipTempDirCleanup {
+		// Clean up the temporary directory.
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
+	}
 
 	// Within temp dir create a folder that will be used to zip everything up in the end
-	dir := fmt.Sprintf("%s/%s", rootDir, directoryName)
+	directoryName := "calico-diagnostics-" + time.Now().UTC().Format("20060102_150405")
+	archiveName := directoryName + ".tar.gz"
+	dir := fmt.Sprintf("%s/%s", tempDir, directoryName)
 
 	collectGlobalClusterInformation(dir + "/cluster")
 	collectSelectedNodeLogs(dir+"/nodes", dir+"/links", opts)
-	createArchive(rootDir)
+	createArchive(tempDir, directoryName, archiveName)
 
 	return nil
 }
@@ -253,6 +265,7 @@ func collectDiagsForSelectedPods(dir, linkDir string, opts *diagOpts, kubeClient
 	}
 
 	nextNodeIndex := 0
+	var cmds []common.Cmd
 	for logsWanted := opts.MaxLogs; logsWanted > 0; {
 		// Get the next node name to look at.
 		if nextNodeIndex >= len(nodeList) {
@@ -264,13 +277,18 @@ func collectDiagsForSelectedPods(dir, linkDir string, opts *diagOpts, kubeClient
 
 		for _, podName := range podNamesByNode[nodeName] {
 			fmt.Printf("Collecting detailed diags for pod %v in namespace %v on node %v...\n", podName, ns, nodeName)
-			collectDiagsForPod(dir, linkDir, opts, kubeClient, nodeName, ns, podName)
+			if strings.HasPrefix(podName, "calico-node-") {
+				nodeDir := dir + "/" + nodeName
+				collectCalicoNodeDiags(nodeDir, opts, kubeClient, nodeName, ns, podName)
+			}
+			cmds = append(cmds, diagsCmdsForPod(dir, linkDir, opts, kubeClient, nodeName, ns, podName)...)
 			logsWanted--
 			if logsWanted <= 0 {
 				break
 			}
 		}
 	}
+	common.ExecAllCmdsWriteToFile(cmds)
 }
 
 func collectCalicoResource(dir string) {
@@ -420,11 +438,11 @@ func collectGlobalClusterInformation(dir string) {
 	collectKubernetesResource(dir + "/kubernetes")
 }
 
-// func collectDiagsForPod(pod, namespace, dir /*node_name*/, sinceFlag string) {
-func collectDiagsForPod(dir, linkDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
+// func diagsCmdsForPod(pod, namespace, dir /*node_name*/, sinceFlag string) {
+func diagsCmdsForPod(dir, linkDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) []common.Cmd {
 	nodeDir := dir + "/" + nodeName
 	namespaceDir := nodeDir + "/" + namespace
-	common.ExecAllCmdsWriteToFile([]common.Cmd{
+	cmds := []common.Cmd{
 		{
 			Info:     fmt.Sprintf("Collect logs for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl logs --since=%s -n %s %s --all-containers", opts.Since, namespace, podName),
@@ -437,11 +455,8 @@ func collectDiagsForPod(dir, linkDir string, opts *diagOpts, kubeClient *kuberne
 			FilePath: fmt.Sprintf("%s/%s.txt", namespaceDir, podName),
 			SymLink:  fmt.Sprintf("%s/%s/%s.txt", linkDir, namespace, podName),
 		},
-	})
-
-	if strings.HasPrefix(podName, "calico-node-") {
-		collectCalicoNodeDiags(nodeDir, opts, kubeClient, nodeName, namespace, podName)
 	}
+	return cmds
 }
 
 func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
@@ -450,94 +465,94 @@ func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kuber
 		// ip diagnostics
 		{
 			Info:     fmt.Sprintf("Collect iptables (legacy) for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- iptables-legacy-save -c", namespace, podName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- iptables-legacy-save -c", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iptables-legacy-save.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect iptables (nft) for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- iptables-nft-save -c", namespace, podName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- iptables-nft-save -c", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iptables-nft-save.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect nftables for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- nft -n -a list ruleset", namespace, podName),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- nft -n -a list ruleset", namespace, podName),
 			FilePath: fmt.Sprintf("%s/nft-ruleset.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip routes for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip route show table all", namespace, podName),
-			FilePath: fmt.Sprintf("%s/iproute.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- ip route show table all", namespace, podName),
+			FilePath: fmt.Sprintf("%s/ip-route.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ipv6 routes for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip -6 route show table all", namespace, podName),
-			FilePath: fmt.Sprintf("%s/ipv6route.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- ip -6 route show table all", namespace, podName),
+			FilePath: fmt.Sprintf("%s/ip-route-v6.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip rule for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip rule", namespace, podName),
-			FilePath: fmt.Sprintf("%s/iprule.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- ip rule", namespace, podName),
+			FilePath: fmt.Sprintf("%s/ip-rule.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip addr for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip addr", namespace, podName),
-			FilePath: fmt.Sprintf("%s/ipaddr.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- ip addr", namespace, podName),
+			FilePath: fmt.Sprintf("%s/ip-addr.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip link for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip link", namespace, podName),
-			FilePath: fmt.Sprintf("%s/iplink.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- ip link", namespace, podName),
+			FilePath: fmt.Sprintf("%s/ip-link.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ip neigh for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip neigh", namespace, podName),
-			FilePath: fmt.Sprintf("%s/ipneigh.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- ip neigh", namespace, podName),
+			FilePath: fmt.Sprintf("%s/ip-neigh.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect ipset list for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ipset list", namespace, podName),
-			FilePath: fmt.Sprintf("%s/ipsetlist.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- ipset list", namespace, podName),
+			FilePath: fmt.Sprintf("%s/ipset-list.txt", curNodeDir),
 		},
 		// eBPF diagnostics
 		{
 			Info:     fmt.Sprintf("Collect eBPF conntrack for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf conntrack dump", namespace, podName),
-			FilePath: fmt.Sprintf("%s/eBPFconntrack.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- calico-node -bpf conntrack dump", namespace, podName),
+			FilePath: fmt.Sprintf("%s/bpf-conntrack.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect eBPF ipsets for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf ipsets dump", namespace, podName),
-			FilePath: fmt.Sprintf("%s/eBPFipsets.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- calico-node -bpf ipsets dump", namespace, podName),
+			FilePath: fmt.Sprintf("%s/bpf-ipsets.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect eBPF nat for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf nat dump", namespace, podName),
-			FilePath: fmt.Sprintf("%s/eBPFnat.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- calico-node -bpf nat dump", namespace, podName),
+			FilePath: fmt.Sprintf("%s/bpf-nat.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect eBPF routes for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf routes dump", namespace, podName),
-			FilePath: fmt.Sprintf("%s/eBPFroutes.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- calico-node -bpf routes dump", namespace, podName),
+			FilePath: fmt.Sprintf("%s/bpf-routes.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect eBPF prog for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- bpftool prog list", namespace, podName),
-			FilePath: fmt.Sprintf("%s/eBPFprog.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- bpftool prog list", namespace, podName),
+			FilePath: fmt.Sprintf("%s/bpf-prog.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect eBPF map for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- bpftool map list", namespace, podName),
-			FilePath: fmt.Sprintf("%s/eBPFmap.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- bpftool map list", namespace, podName),
+			FilePath: fmt.Sprintf("%s/bpf-maps.txt", curNodeDir),
 		},
 		{
 			Info:     fmt.Sprintf("Collect tc qdisc for node %s", nodeName),
-			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- tc qdisc show", namespace, podName),
-			FilePath: fmt.Sprintf("%s/tcqdisc.txt", curNodeDir),
+			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- tc qdisc show", namespace, podName),
+			FilePath: fmt.Sprintf("%s/tc-qdisc.txt", curNodeDir),
 		},
 	})
 
 	output, err := common.ExecCmd(fmt.Sprintf(
-		"kubectl exec -n %s -t %s -- bpftool map list",
+		"kubectl exec -n %s -t %s -c calico-node -- bpftool map list",
 		namespace,
 		podName,
 	))
@@ -547,23 +562,31 @@ func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kuber
 		bpfMaps := strings.Split(strings.TrimSpace(output.String()), "\n")
 		log.Debugf("eBPF maps: %s\n", bpfMaps)
 
-		for _, bpfMap := range bpfMaps {
-			if strings.Contains(bpfMap, "cali") {
-				id := strings.Split(bpfMap, ":")
-				common.ExecAllCmdsWriteToFile([]common.Cmd{
-					{
-						Info:     fmt.Sprintf("Collect eBPF map id %s dumps for node %s", id[0], nodeName),
-						CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- bpftool map dump id %s", namespace, podName, id[0]),
-						FilePath: fmt.Sprintf("%s/eBPFmap-%s.txt", curNodeDir, id[0]),
-					},
+		// Output looks like this:
+		//
+		// 35: lru_hash  name cali_v4_srmsg  flags 0x0
+		//	key 16B  value 8B  max_entries 510000  memlock 12242944B
+		//	pids calico-node(28576)
+
+		bpfInfoLineRe := regexp.MustCompile(`^(\d+):.*name (cali\w+)`)
+		var bpfDumpCmds []common.Cmd
+		for _, line := range bpfMaps {
+			if m := bpfInfoLineRe.FindStringSubmatch(line); m != nil {
+				id := m[1]
+				name := m[2]
+				bpfDumpCmds = append(bpfDumpCmds, common.Cmd{
+					Info:     fmt.Sprintf("Collect eBPF map %s:%s for node %s", id, name, nodeName),
+					CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- bpftool map dump id %s", namespace, podName, id),
+					FilePath: fmt.Sprintf("%s/bpf-maps/%s-id_%s.txt", curNodeDir, name, id),
 				})
 			}
 		}
+		common.ExecAllCmdsWriteToFile(bpfDumpCmds)
 	}
 
 	// Collect all of the CNI logs
 	output, err = common.ExecCmd(fmt.Sprintf(
-		"kubectl exec -n %s -t %s -- ls /var/log/calico/cni",
+		"kubectl exec -n %s -t %s -c calico-node -- ls /var/log/calico/cni",
 		namespace,
 		podName,
 	))
@@ -571,18 +594,20 @@ func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kuber
 		fmt.Printf("Error listing the Calico CNI logs at /var/log/calico/cni/: %s\n", err)
 	} else {
 		cniLogFiles := strings.Split(strings.TrimSpace(output.String()), "\n")
+		var cmds []common.Cmd
 		for _, logFile := range cniLogFiles {
-			common.ExecCmdWriteToFile(common.Cmd{
+			cmds = append(cmds, common.Cmd{
 				Info:     fmt.Sprintf("Collect CNI log %s for the node %s", logFile, nodeName),
-				CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- cat /var/log/calico/cni/%s", namespace, podName, logFile),
+				CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -c calico-node -- cat /var/log/calico/cni/%s", namespace, podName, logFile),
 				FilePath: fmt.Sprintf("%s/%s.log", curNodeDir, logFile),
 			})
 		}
+		common.ExecAllCmdsWriteToFile(cmds)
 	}
 }
 
 // createArchive attempts to bundle all the diagnostics files into a single compressed archive.
-func createArchive(dir string) {
+func createArchive(tempDir string, directoryName string, archiveName string) {
 	fmt.Println("\n==== Producing a diagnostics bundle. ====")
 
 	// Attempt to remove archive file (if it previously existed)
@@ -593,12 +618,12 @@ func createArchive(dir string) {
 	}
 
 	// Attempt to create new archive
-	output, err := common.ExecCmd(fmt.Sprintf("tar cfz ./%s -C %s %s", archiveName, dir, directoryName))
+	output, err := common.ExecCmd(fmt.Sprintf("tar cfz ./%s -C %s %s", archiveName, tempDir, directoryName))
 	log.Debugf("creating archive %s: output %s", archiveName, output.String())
 	if err != nil {
 		fmt.Printf("Could not create new archive %s: %s\n", archiveName, err)
 		return
 	}
 
-	fmt.Printf("Diagnostic bundle available at ./%s\n", archiveName)
+	fmt.Printf("Diagnostic bundle created at ./%s\n", archiveName)
 }

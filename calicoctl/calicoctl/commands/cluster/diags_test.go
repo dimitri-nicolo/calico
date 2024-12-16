@@ -54,6 +54,7 @@ func TestDiags(t *testing.T) {
 			Config:               "/etc/calico/calicoctl.cfg",
 			Since:                "0s",
 			MaxLogs:              5,
+			MaxParallelism:       10,
 			FocusNodes:           "",
 			AllowVersionMismatch: false,
 		})
@@ -80,6 +81,7 @@ func TestDiags(t *testing.T) {
 			Config:               "/configfile",
 			Since:                "0s",
 			MaxLogs:              5,
+			MaxParallelism:       10,
 			FocusNodes:           "",
 			AllowVersionMismatch: false,
 		})
@@ -90,6 +92,7 @@ func TestDiags(t *testing.T) {
 			Config:               "/configfile",
 			Since:                "0s",
 			MaxLogs:              5,
+			MaxParallelism:       10,
 			FocusNodes:           "",
 			AllowVersionMismatch: false,
 		})
@@ -100,16 +103,18 @@ func TestDiags(t *testing.T) {
 			Config:               "/etc/calico/calicoctl.cfg",
 			Since:                "3h",
 			MaxLogs:              5,
+			MaxParallelism:       10,
 			FocusNodes:           "",
 			AllowVersionMismatch: false,
 		})
-	test("cluster diags --max-logs 1",
+	test("cluster diags --max-logs 1 --max-parallelism 2",
 		nil,
 		"",
 		&diagOpts{
 			Config:               "/etc/calico/calicoctl.cfg",
 			Since:                "0s",
 			MaxLogs:              1,
+			MaxParallelism:       2,
 			FocusNodes:           "",
 			AllowVersionMismatch: false,
 		})
@@ -120,6 +125,7 @@ func TestDiags(t *testing.T) {
 			Config:               "/etc/calico/calicoctl.cfg",
 			Since:                "0s",
 			MaxLogs:              1,
+			MaxParallelism:       10,
 			FocusNodes:           "",
 			AllowVersionMismatch: false,
 		})
@@ -130,6 +136,7 @@ func TestDiags(t *testing.T) {
 			Config:               "/etc/calico/calicoctl.cfg",
 			Since:                "0s",
 			MaxLogs:              5,
+			MaxParallelism:       10,
 			FocusNodes:           "infra1,control2",
 			AllowVersionMismatch: false,
 		})

@@ -8,8 +8,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 // CmdExecutor will execute a command and return its output and its error
@@ -77,64 +80,82 @@ type Cmd struct {
 
 // ExecCmdWriteToFile executes the provided command c and outputs the result to a
 // file with the given filepath.
-func ExecCmdWriteToFile(c Cmd) {
+func ExecCmdWriteToFile(logPrefix string, c Cmd) {
 
 	if c.Info != "" {
-		fmt.Println(c.Info)
+		fmt.Println(logPrefix, c.Info)
 	}
+	logCtx := log.WithField("cmdID", logPrefix)
 
 	// Create the containing directory, if needed.
 	dir := filepath.Dir(c.FilePath)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		fmt.Printf("Error creating directory for %v: %v\n", c.FilePath, err)
+		fmt.Printf("%s Error creating directory for %v: %v\n", logPrefix, c.FilePath, err)
 		return
 	}
 
 	parts := strings.Fields(c.CmdStr)
-	log.Debugf("cmd tokens: [%+v]", parts)
+	logCtx.Debugf("cmd tokens: [%+v]", parts)
 
-	log.Debugf("Executing command: %+v ... ", c.CmdStr)
+	logCtx.Debugf("Executing command: %+v ... ", c.CmdStr)
 	content, err := exec.Command(parts[0], parts[1:]...).CombinedOutput()
 	if err != nil {
-		fmt.Printf("Failed to run command: %s\nError: %s\n", c.CmdStr, string(content))
+		fmt.Printf("%s Failed to run command: %s\nError: %s\n", logPrefix, c.CmdStr, string(content))
 	}
 
 	// This is for the commands we want to run but don't want to save the output
 	// or for commands that don't produce any output to stdout
 	if c.FilePath == "" {
-		log.Debugln("Command executed successfully, skipping writing output (no filepath specified)")
+		logCtx.Debugln("Command executed successfully, skipping writing output (no filepath specified)")
 		return
 	}
 
 	if err := os.WriteFile(c.FilePath, content, 0644); err != nil {
-		log.Errorf("Error writing diags to file: %s\n", err)
+		logCtx.Errorf("Error writing diags to file: %s\n", err)
 	}
-	log.Debugf("Command executed successfully and outputted to %s", c.FilePath)
+	logCtx.Debugf("Command executed successfully and outputted to %s", c.FilePath)
 
 	if c.SymLink != "" {
 		dir = filepath.Dir(c.SymLink)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-			fmt.Printf("Error creating directory for %v: %v\n", c.SymLink, err)
+			fmt.Printf("%s Error creating directory for %v: %v\n", logPrefix, c.SymLink, err)
 			return
 		}
 		relativeTarget, err := filepath.Rel(dir, c.FilePath)
 		if err != nil {
-			fmt.Printf("Error computing relative path for %v: %v\n", c.SymLink, err)
+			fmt.Printf("%s Error computing relative path for %v: %v\n", logPrefix, c.SymLink, err)
 			return
 		}
 		err = os.Symlink(relativeTarget, c.SymLink)
 		if err != nil {
-			fmt.Printf("Error making symlink %v: %v\n", c.SymLink, err)
+			fmt.Printf("%s Error making symlink %v: %v\n", logPrefix, c.SymLink, err)
 			return
 		}
 	}
 }
 
+var MaxParallelism = 10
+var nextPrefix atomic.Int64
+
 // ExecAllCmdsWriteToFile iterates through the provided list of Cmd objects and attempts
 // to execute each one.
 func ExecAllCmdsWriteToFile(cmds []Cmd) {
+	var eg errgroup.Group
+	eg.SetLimit(MaxParallelism)
+
 	for _, c := range cmds {
-		ExecCmdWriteToFile(c)
+		id := nextPrefix.Add(1)
+		prefix := fmt.Sprintf("[%d]", id)
+		eg.Go(func() error {
+			ExecCmdWriteToFile(prefix, c)
+			return nil // For diags collection, we want to continue even if one command fails
+		})
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	err := eg.Wait()
+	if err != nil {
+		log.Errorf("Unexpected error from background commands: %v", err)
 	}
 }
