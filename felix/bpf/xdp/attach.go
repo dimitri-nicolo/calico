@@ -174,7 +174,7 @@ func (ap *AttachPoint) AttachProgram() (bpf.AttachResult, error) {
 			}
 		}
 
-		pinDir := bpf.MapPinDir(m.Type(), mapName, ap.Iface, hook.XDP)
+		pinDir := bpf.MapPinDir()
 		if err := m.SetPinPath(path.Join(pinDir, mapName)); err != nil {
 			return nil, fmt.Errorf("error pinning map %s: %w", mapName, err)
 		}

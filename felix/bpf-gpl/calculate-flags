@@ -52,11 +52,11 @@ flags=0
 ((CALI_XDP_PROG = 1 << 6))
 ((CALI_TC_NAT_IF = 1 << 7))
 ((CALI_TC_LO = 1 << 8))
-((CALI_CT_CLEANUP = 1 << 9))
 
 #EE only
 ((CALI_KPROBE = 1 << 24))
 ((CALI_STATS = 1 << 25))
+((CALI_IPT_BPF = 1 << 26))
 
 if [[ "${filename}" =~ .*hep.* ]]; then
   # Host endpoint.
@@ -70,11 +70,12 @@ elif [[ "${filename}" =~ .*l3.* ]]; then
   # Any l3 device.
   ((flags |= CALI_TC_L3_DEV | CALI_TC_HOST_EP))
   ep_type="l3dev"
+elif [[ "${filename}" =~ ipt.* ]]; then
+  # All iptables bpf programs are L3
+  ((flags |= CALI_IPT_BPF))
 elif [[ "${filename}" =~ .*connect.* ]]; then
   # Connect-time load balancer (CGROUP attached).
   ((flags |= CALI_CGROUP))
-elif [[ "${filename}" =~ .*conntrack_cleanup.* ]]; then
-  ((flags |= CALI_CT_CLEANUP))
 elif [[ "${filename}" =~ .*kprobe.* ]]; then
   ((flags |= CALI_KPROBE))
 elif [[ "${filename}" =~ .*stats.* ]]; then
@@ -96,9 +97,6 @@ elif [[ "${filename}" =~ .*lo.* ]]; then
   ((flags |= CALI_TC_HOST_EP))
   ((flags |= CALI_TC_LO))
   ep_type="lo"
-else
-  echo "Can't recognise endpoint type"
-  exit 2
 fi
 
 if [[ "${filename}" =~ to.* ]]; then

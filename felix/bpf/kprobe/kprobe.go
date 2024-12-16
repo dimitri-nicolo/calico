@@ -74,7 +74,7 @@ func progFileName(typ, logLevel string) string {
 	if logLevel == "off" {
 		logLevel = "no_log"
 	}
-	return fmt.Sprintf("%s_%s_kprobe.o", typ, logLevel)
+	return fmt.Sprintf("%s_kprobe_%s.o", typ, logLevel)
 }
 
 func (k *bpfKprobe) AttachTCPv4() error {

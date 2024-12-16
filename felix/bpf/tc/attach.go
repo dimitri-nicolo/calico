@@ -123,7 +123,7 @@ func (ap *AttachPoint) loadObject(file string) (*libbpf.Obj, error) {
 		}
 
 		log.Debugf("Pinning map %s k %d v %d", mapName, m.KeySize(), m.ValueSize())
-		pinDir := bpf.MapPinDir(m.Type(), mapName, ap.Iface, ap.Hook)
+		pinDir := bpf.MapPinDir()
 		if err := m.SetPinPath(path.Join(pinDir, mapName)); err != nil {
 			return nil, fmt.Errorf("error pinning map %s k %d v %d: %w", mapName, m.KeySize(), m.ValueSize(), err)
 		}

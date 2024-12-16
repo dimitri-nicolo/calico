@@ -40,7 +40,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
-	"github.com/projectcalico/calico/felix/bpf/hook"
+	//"github.com/projectcalico/calico/felix/bpf/hook"
 	"github.com/projectcalico/calico/felix/bpf/utils"
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -2249,7 +2249,7 @@ func PolicyDebugJSONFileName(iface, polDir string, ipFamily proto.IPVersion) str
 	return path.Join(RuntimePolDir, fmt.Sprintf("%s_%s_v%d.json", iface, polDir, ipFamily))
 }
 
-func MapPinDir(typ int, name, iface string, h hook.Hook) string {
+func MapPinDir() string {
 	PinBaseDir := path.Join(bpfdefs.DefaultBPFfsPath, "tc")
 	subDir := "globals"
 	return path.Join(PinBaseDir, subDir)
