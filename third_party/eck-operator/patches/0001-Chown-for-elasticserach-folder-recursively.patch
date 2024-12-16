@@ -1,0 +1,33 @@
+From 31836ad0de6557f148f220a14ea93451a63d43e4 Mon Sep 17 00:00:00 2001
+From: Vara <vara@tigera.io>
+Date: Wed, 18 Dec 2024 14:12:22 -0800
+Subject: [PATCH] Chown for elasticserach folder recursively
+
+We are switching the Elasticsearch UID/GID from 1000 to 10001
+to ensure consistency across Tigera components. This patch
+is necessary to support upgrades on RHEL OS. When changing
+the ownership ID for Elasticsearch (from 1000 to 10001) via ECK,
+only the parent folder's owner is updated, not the subfolders recursively.
+RHEL OS does not allow access to these subfolders/files,
+resulting in an AccessDeniedException for the data/logs folder
+(e.g., AccessDeniedException: /usr/share/elasticsearch/data/node.lock).
+---
+ pkg/controller/elasticsearch/initcontainer/prepare_fs_script.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pkg/controller/elasticsearch/initcontainer/prepare_fs_script.go b/pkg/controller/elasticsearch/initcontainer/prepare_fs_script.go
+index 182fa0414..c0e14fbc9 100644
+--- a/pkg/controller/elasticsearch/initcontainer/prepare_fs_script.go
++++ b/pkg/controller/elasticsearch/initcontainer/prepare_fs_script.go
+@@ -138,7 +138,7 @@ var scriptTemplate = template.Must(template.New("").Parse(
+ 	if [[ $EUID -eq 0 ]]; then
+ 		{{range .ChownToElasticsearch}}
+ 			echo "chowning {{.}} to elasticsearch:elasticsearch"
+-			chown -v elasticsearch:elasticsearch {{.}}
++			chown -vR elasticsearch:elasticsearch {{.}}
+ 		{{end}}
+ 	fi
+ 	echo "chown duration: $(duration $chown_start) sec."
+-- 
+2.25.1
+
