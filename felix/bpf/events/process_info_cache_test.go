@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"sync"
+	"syscall"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -216,6 +217,52 @@ var _ = Describe("ProcessPathCache tests", func() {
 		Expect(ok).To(BeTrue())
 		Expect(result.Path).To(Equal("wget"))
 		Expect(result.Args).To(Equal("blibble.com"))
+	})
+
+	Describe("with an ESRCH error", func() {
+		BeforeEach(func() {
+			// ESRCH happens when the process exits after we open the file
+			// but before we read.
+			procfs.NextReadFileErr = fmt.Errorf("a wrapper around %w", syscall.ESRCH)
+		})
+
+		It("Should cache tombstones for missing PIDs", func() {
+			_, ok := ppc.Lookup(100)
+			Expect(ok).To(BeFalse())
+
+			// Update to /proc will be ignored due to cache.
+			procfs.set("100/cmdline", &fstest.MapFile{
+				Data: []byte("curl\x00example.com"),
+				Mode: 0444,
+			})
+			_, ok = ppc.Lookup(100)
+			Expect(ok).To(BeFalse(), "Cache should not have re-queried procfs")
+
+			Expect(ppc.UnexpectedErrorCount.Load()).To(Equal(int64(0)),
+				"ESRCH errors are expected and should not go through the warning path")
+		})
+	})
+
+	Describe("with an unexpected error", func() {
+		BeforeEach(func() {
+			procfs.NextReadFileErr = fmt.Errorf("an err-or")
+		})
+
+		It("Should cache tombstones for missing PIDs", func() {
+			_, ok := ppc.Lookup(100)
+			Expect(ok).To(BeFalse())
+
+			// Update to /proc will be ignored due to cache.
+			procfs.set("100/cmdline", &fstest.MapFile{
+				Data: []byte("curl\x00example.com"),
+				Mode: 0444,
+			})
+			_, ok = ppc.Lookup(100)
+			Expect(ok).To(BeFalse(), "Cache should not have re-queried procfs")
+
+			Expect(ppc.UnexpectedErrorCount.Load()).To(Equal(int64(1)),
+				"Unexpected errors should be counted/warning logged")
+		})
 	})
 
 	Describe("with extra short TTL", func() {
@@ -442,6 +489,8 @@ func setUpBench(b *testing.B) *events.BPFProcessPathCache {
 type syncMapFS struct {
 	mu sync.Mutex
 	fs fstest.MapFS
+
+	NextReadFileErr error
 }
 
 func (s *syncMapFS) Open(name string) (fs.File, error) {
@@ -451,6 +500,11 @@ func (s *syncMapFS) Open(name string) (fs.File, error) {
 func (s *syncMapFS) ReadFile(name string) ([]byte, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.NextReadFileErr != nil {
+		err := s.NextReadFileErr
+		s.NextReadFileErr = nil
+		return nil, err
+	}
 	return s.fs.ReadFile(name)
 }
 

@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -68,6 +70,8 @@ type BPFProcessPathCache struct {
 	eventProcessPath <-chan ProcessPath
 	rll              *logutils.RateLimitedLogger
 	procfs           readDirReadFileFS
+
+	UnexpectedErrorCount atomic.Int64
 }
 
 type readDirReadFileFS interface {
@@ -206,8 +210,11 @@ func (r *BPFProcessPathCache) updateSinglePIDFromProcfs(pid int) processPathCach
 	pathInfo := ProcessPathInfo{}
 	content, err := r.procfs.ReadFile(cmdlinePath)
 	if errors.Is(err, fs.ErrNotExist) {
-		log.Debugf("PID not found in /proc: %d", pid)
+		log.Debugf("PID not found in /proc: %d.", pid)
+	} else if errors.Is(err, syscall.ESRCH) {
+		log.Debugf("Read of /proc/%d/cmdline failed because process exited.", pid)
 	} else if err != nil {
+		r.UnexpectedErrorCount.Add(1) // Counter for the UTs to check.
 		r.rll.WithError(err).Warnf("Unexpected error when trying to read /proc/%d/cmdline, ignoring.", pid)
 	} else {
 		path, args, _ := strings.Cut(string(content), "\x00")
