@@ -24,7 +24,7 @@ blocks:
   - name: "Build/Push helm charts"
     skip:
       # Only run on master or release branches, not PRs.
-      when: "(branch =~ 'master|release-.*') and (branch !~ '.+')" 
+      when: "(branch =~ 'master|release-.*') and (branch !~ '.+')"
     dependencies: []
     task:
       jobs:
