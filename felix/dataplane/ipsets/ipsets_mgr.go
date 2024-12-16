@@ -26,13 +26,17 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-type IPSetsDataplane interface {
+type BaseIPSetsDataplane interface {
 	AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string)
 	AddMembers(setID string, newMembers []string)
 	RemoveMembers(setID string, removedMembers []string)
 	RemoveIPSet(setID string)
 	GetIPFamily() ipsets.IPFamily
 	GetTypeOf(setID string) (ipsets.IPSetType, error)
+}
+
+type IPSetsDataplane interface {
+	BaseIPSetsDataplane
 	GetDesiredMembers(setID string) (set.Set[string], error)
 	QueueResync()
 	ApplyUpdates(ipsetFilter func(ipSetName string) bool) set.Set[string]
@@ -44,7 +48,7 @@ type IPSetsDataplane interface {
 // to the ipsets.IPSets dataplane layer.  For domain IP sets - which hereafter we'll just call
 // "domain sets" - IPSetsManager handles the resolution from domain names to expiring IPs.
 type IPSetsManager struct {
-	dataplanes []IPSetsDataplane
+	dataplanes []BaseIPSetsDataplane
 	maxSize    int
 	lg         *log.Entry
 
@@ -52,7 +56,7 @@ type IPSetsManager struct {
 	domainInfoStore IPSetsDomainStore
 
 	// Map from each active domain set ID to the IPs that are currently programmed for it and
-	// why.  The interior map is from each IP to the set of lower case domain names that have resolved to
+	// why. The interior map is from each IP to the set of lower case domain names that have resolved to
 	// that IP.
 	domainSetProgramming map[string]map[string]set.Set[string]
 
@@ -101,7 +105,7 @@ func NewIPSetsManager(name string, ipsets_ IPSetsDataplane, maxIPSetSize int,
 	return m
 }
 
-func (m *IPSetsManager) AddDataplane(dp IPSetsDataplane) {
+func (m *IPSetsManager) AddDataplane(dp BaseIPSetsDataplane) {
 	m.dataplanes = append(m.dataplanes, dp)
 }
 
@@ -121,9 +125,10 @@ func (m *IPSetsManager) GetIPSetType(setID string) (typ ipsets.IPSetType, err er
 
 func (m *IPSetsManager) GetIPSetMembers(setID string) (members set.Set[string], err error) {
 	for _, dp := range m.dataplanes {
-		members, err = dp.GetDesiredMembers(setID)
-		if err == nil {
-			break
+		if dpWithMembers, ok := dp.(IPSetsDataplane); ok {
+			if members, err = dpWithMembers.GetDesiredMembers(setID); err == nil {
+				break
+			}
 		}
 	}
 	return
@@ -170,9 +175,10 @@ func (m *IPSetsManager) OnUpdate(msg interface{}) {
 		}
 
 		metadata := ipsets.IPSetMetadata{
-			Type:    setType,
-			SetID:   msg.Id,
-			MaxSize: m.maxSize,
+			Type:       setType,
+			UpdateType: msg.Type,
+			SetID:      msg.Id,
+			MaxSize:    m.maxSize,
 		}
 		if setType == ipsets.IPSetTypeBitmapPort {
 			metadata.MaxSize = 0

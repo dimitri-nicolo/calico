@@ -16,11 +16,13 @@ package ipsets
 
 import (
 	"strings"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
@@ -223,3 +225,56 @@ var _ = Describe("IP Sets manager", func() {
 		IPsetsMgrTest1(testCase.ipsetID, testCase.ipsetType, testCase.ipsetMembers, testCase.dnsRecs)
 	}
 })
+
+func TestIPSetsManager_GetIPSetMembers(t *testing.T) {
+	RegisterTestingT(t)
+
+	domainStore := &mockDomainStore{mappings: make(map[string][]string)}
+	ipsetsMgr := NewIPSetsManager("ipv4", nil, 1024, domainStore)
+
+	t.Run("should not panic for BaseIPSetDataplane", func(t *testing.T) {
+		baseIPSetsDataplane := &MockBaseIPSets{}
+		ipsetsMgr.AddDataplane(baseIPSetsDataplane)
+
+		defer func() {
+			Expect(recover()).To(BeNil())
+		}()
+		_, err := ipsetsMgr.GetIPSetMembers("test-ipset")
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	t.Run("should return members for IPSetDataplane", func(t *testing.T) {
+		ipsetDataplane := &MockIPSets{
+			Members: map[string]set.Set[string]{
+				"test-ipset": set.From("192.168.1.1"),
+			},
+		}
+
+		ipsetsMgr.AddDataplane(ipsetDataplane)
+		members, err := ipsetsMgr.GetIPSetMembers("test-ipset")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(members.ContainsAll(set.FromArray([]string{"192.168.1.1"}))).To(BeTrue())
+
+		// Test case where the IPSet is found but has multiple members.
+		ipsetDataplane.Members["test-ipset"] = set.From("192.168.1.1", "192.168.1.2")
+		members, err = ipsetsMgr.GetIPSetMembers("test-ipset")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(members.ContainsAll(set.FromArray([]string{"192.168.1.1", "192.168.1.2"}))).To(BeTrue())
+	})
+}
+
+type MockBaseIPSets struct{}
+
+func (m *MockBaseIPSets) AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string) {}
+func (m *MockBaseIPSets) AddMembers(setID string, newMembers []string)                         {}
+func (m *MockBaseIPSets) RemoveMembers(setID string, removedMembers []string)                  {}
+func (m *MockBaseIPSets) RemoveIPSet(setID string)                                             {}
+func (m *MockBaseIPSets) GetIPFamily() ipsets.IPFamily {
+	return ipsets.IPFamilyV4
+}
+func (m *MockBaseIPSets) GetTypeOf(setID string) (ipsets.IPSetType, error) {
+	return ipsets.IPSetTypeHashIP, nil
+}
+func (m *MockBaseIPSets) GetMembers(setID string) ([]string, error) {
+	return nil, nil
+}

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/config"
+	dpipsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	intdataplane "github.com/projectcalico/calico/felix/dataplane/linux"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
@@ -66,6 +67,9 @@ func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}
 func (_ *mockCollector) SetProcessInfoCache(collector.ProcessInfoCache) {}
 
 func (_ *mockCollector) SetDomainLookup(collector.EgressDomainCache) {}
+
+func (_ *mockCollector) AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpipsets.IPSetsManager) {
+}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

@@ -28,6 +28,8 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
+	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/proto"
@@ -259,6 +261,12 @@ func (c *collector) SetProcessInfoCache(pic ProcessInfoCache) {
 
 func (c *collector) SetDomainLookup(dlu EgressDomainCache) {
 	c.domainLookup = dlu
+}
+
+func (c *collector) AddNewDomainDataplaneToIpSetsManager(ipFamily ipsets.IPFamily, ipm *dpsets.IPSetsManager) {
+	log.Info("Adding domain dataplane to ipsets manager")
+	domainDataplane := policystore.NewDomainIPSetsDataplane(ipFamily, c.policyStoreManager)
+	ipm.AddDataplane(domainDataplane)
 }
 
 func (c *collector) startStatsCollectionAndReporting() {

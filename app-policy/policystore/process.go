@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
 package policystore
 
 import (
@@ -133,6 +133,7 @@ func (store *PolicyStore) processIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate
 		log.Errorf("Unknown IPSet id: %v, skipping update", update.Id)
 		return // we shouldn't be getting a delta update before we've seen the IPSet
 	}
+
 	for _, addr := range update.AddedMembers {
 		s.AddString(addr)
 	}

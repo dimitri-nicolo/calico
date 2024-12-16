@@ -1734,6 +1734,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("ConntrackInfoReader added to collector")
 		config.Collector.SetProcessInfoCache(processInfoCache)
 		log.Info("ProcessInfoCache added to collector")
+		config.Collector.AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamilyV4, ipsetsManager)
+		log.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv4")
+		config.Collector.AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamilyV6, ipsetsManagerV6)
+		log.Info("Adding Collector's IPSet dataplane callbacks to ipsetsManager for IPv6")
 	}
 
 	if bpfEventPoller != nil {

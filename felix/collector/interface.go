@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -10,6 +10,8 @@ import (
 
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
+	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
+	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
 )
 
@@ -26,4 +28,5 @@ type Collector interface {
 	SetConntrackInfoReader(ConntrackInfoReader)
 	SetProcessInfoCache(ProcessInfoCache)
 	SetDomainLookup(EgressDomainCache)
+	AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpsets.IPSetsManager)
 }

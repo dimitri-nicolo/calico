@@ -235,7 +235,12 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 		})
 	dp.RegisterManager(dp.domainInfoStore)
 
-	dp.RegisterManager(dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
+	ipsetsManager := dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
+	if config.Collector != nil {
+		// Add the domain dataplane callbacks to the ipsets manager
+		config.Collector.AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamilyV4, ipsetsManager)
+	}
+	dp.RegisterManager(ipsetsManager)
 	dp.RegisterManager(newPolicyManager(dp.policySets))
 	dp.endpointMgr = newEndpointManager(hns, dp.policySets, epEventListeners)
 	dp.RegisterManager(dp.endpointMgr)

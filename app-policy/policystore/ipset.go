@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,21 +25,23 @@ import (
 	syncapi "github.com/projectcalico/calico/felix/proto"
 )
 
-// IPSet is a data structure that contains IP addresses, or IP address/port pairs. It allows fast membership tests
-// of Address objects from the authorization API.
+// IPSet is a data structure that contains IP addresses, or IP address/port pairs. It allows fast
+// membership tests of Address objects from the authorization API.
 type IPSet interface {
 	// Idempotent add IP address to set.
 	// ip depends on the IPSet type:
-	// IP          - Each member is an IP address in dotted-decimal or IPv6 format.
-	// IP_AND_PORT - Each member is "<IP>,(tcp|udp):<port-number>"
-	// NET         - Each member is a CIDR (note individual IPs can be full-length prefixes)
+	// IP          		- Each member is an IP address in dotted-decimal or IPv6 format.
+	// IP_AND_PORT 		- Each member is "<IP>,(tcp|udp):<port-number>"
+	// NET         		- Each member is a CIDR (note individual IPs can be full-length prefixes)
+	// IP_OF_DOMAIN		- Each member is an IP address in dotted-decimal or IPv6 format.
 	AddString(ip string)
 
 	// Idempotent remove IP address from set.
 	// ip depends on the IPSet type:
-	// IP          - Each member is an IP address in dotted-decimal or IPv6 format.
-	// IP_AND_PORT - Each member is "<IP>,(tcp|udp):<port-number>"
-	// NET         - Each member is a CIDR. Only removes exact matches.
+	// IP          		- Each member is an IP address in dotted-decimal or IPv6 format.
+	// IP_AND_PORT 		- Each member is "<IP>,(tcp|udp):<port-number>"
+	// NET         		- Each member is a CIDR. Only removes exact matches.
+	// IP_OF_DOMAIN 	- Each member is an IP address in dotted-decimal or IPv6 format.
 	RemoveString(ip string)
 
 	// Test if the key is contained in the set.
@@ -53,6 +55,7 @@ type IPSet interface {
 type ipMapSet map[string]bool
 type ipPortMapSet map[string]bool
 type portMapSet map[string]struct{}
+type ipOfDomainMapSet map[string]bool
 
 // NewIPSet creates an IPSet of the appropriate type given by t.
 func NewIPSet(t syncapi.IPSetUpdate_IPSetType) IPSet {
@@ -65,6 +68,8 @@ func NewIPSet(t syncapi.IPSetUpdate_IPSetType) IPSet {
 		return ipNetSet{v4: &trieNode{}, v6: &trieNode{}}
 	case syncapi.IPSetUpdate_PORTS:
 		return portMapSet{}
+	case syncapi.IPSetUpdate_DOMAIN:
+		return ipOfDomainMapSet{}
 	}
 	log.Warn(fmt.Sprintf("Unrecognized IPSet type %T", t))
 	return nil
@@ -330,4 +335,25 @@ func parseCIDR(network string) (net.IP, uint64) {
 
 func (m ipNetSet) Members() []string {
 	return []string{"ipNetSet{}"}
+}
+
+func (m ipOfDomainMapSet) AddString(ip string) {
+	m[ip] = true
+}
+
+func (m ipOfDomainMapSet) RemoveString(ip string) {
+	delete(m, ip)
+}
+
+func (m ipOfDomainMapSet) Contains(ip string) bool {
+	log.Debugf("Finding ip: \"%s\" in ipOfDomainMapSet", ip)
+	return m[ip]
+}
+
+func (m ipOfDomainMapSet) Members() []string {
+	members := make([]string, 0, len(m))
+	for k := range m {
+		members = append(members, k)
+	}
+	return members
 }
