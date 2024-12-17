@@ -43648,6 +43648,7 @@ rules:
       - egressgateways
       - egressgateways/finalizers
       - egressgateways/status
+      - gatewayapis
       - imagesets
       - installations
       - installations/finalizers
@@ -44014,6 +44015,38 @@ rules:
       - get
       - create
       - delete
+  # Additions for Gateway API support.  The operator needs to install and manage CRDs, GatewayClasses and EnvoyProxy configurations.
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - create
+      - delete
+      - list
+      - update
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - gatewayclasses
+    verbs:
+      - create
+      - update
+      - delete
+      - list
+      - get
+      - watch
+  - apiGroups:
+      - gateway.envoyproxy.io
+    resources:
+      - envoyproxies
+    verbs:
+      - create
+      - update
+      - delete
+      - list
+      - get
+      - watch
 ---
 # Source: tigera-operator/templates/tigera-operator/02-rolebinding-tigera-operator.yaml
 kind: ClusterRoleBinding
