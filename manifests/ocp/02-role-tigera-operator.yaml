@@ -16,7 +16,6 @@ rules:
       - endpoints
       - events
       - configmaps
-      - secrets
       - serviceaccounts
       - resourcequotas
       - persistentvolumeclaims
@@ -31,6 +30,7 @@ rules:
       - ""
     resources:
       - resourcequotas
+      - secrets
     verbs:
       - list
       - get

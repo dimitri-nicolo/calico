@@ -43502,6 +43502,24 @@ metadata:
 imagePullSecrets:
   - name: tigera-pull-secret
 ---
+# Source: tigera-operator/templates/tigera-operator/02-role-tigera-operator-secrets.yaml
+# Permissions required to manipulate operator secrets for a Calico cluster.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-operator-secrets
+  labels:
+    k8s-app: tigera-operator
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - update
+      - delete
+---
 # Source: tigera-operator/templates/tigera-operator/02-role-tigera-operator.yaml
 # Permissions required when running the operator for a Calico cluster.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -43521,7 +43539,6 @@ rules:
       - endpoints
       - events
       - configmaps
-      - secrets
       - serviceaccounts
       - resourcequotas
       - persistentvolumeclaims
@@ -43536,6 +43553,7 @@ rules:
       - ""
     resources:
       - resourcequotas
+      - secrets
     verbs:
       - list
       - get
@@ -44004,6 +44022,23 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: tigera-operator-enterprise
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: tigera-operator/templates/tigera-operator/02-rolebinding-tigera-operator-secrets.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tigera-operator-secrets
+  namespace: tigera-operator-enterprise
+  labels:
+    k8s-app: tigera-operator
+subjects:
+  - kind: ServiceAccount
+    name: tigera-operator-enterprise
+    namespace: tigera-operator-enterprise
+roleRef:
+  kind: ClusterRole
+  name: tigera-operator-secrets
   apiGroup: rbac.authorization.k8s.io
 ---
 # Source: tigera-operator/templates/tigera-operator/02-tigera-operator.yaml
