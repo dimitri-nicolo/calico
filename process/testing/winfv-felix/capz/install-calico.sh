@@ -76,12 +76,15 @@ fi
 # Install Calico on Linux nodes
 if [[ ${RELEASE_STREAM} == 'local' ]]; then
     # Use local manifests
+    ${KCAPZ} create -f ${LOCAL_MANIFESTS_DIR}/operator-crds.yaml
     ${KCAPZ} create -f ${LOCAL_MANIFESTS_DIR}/tigera-operator.yaml
 else
     # Use release url
     echo "Set release base url ${RELEASE_BASE_URL}"
     sed -i "s,export RELEASE_BASE_URL.*,export RELEASE_BASE_URL=\"${RELEASE_BASE_URL}\"," ./export-env.sh
+    curl -sSf -L --retry 5 ${RELEASE_BASE_URL}/manifests/operator-crds.yaml -o operator-crds.yaml
     curl -sSf -L --retry 5 ${RELEASE_BASE_URL}/manifests/tigera-operator.yaml -o tigera-operator.yaml
+    ${KCAPZ} create -f ./operator-crds.yaml
     ${KCAPZ} create -f ./tigera-operator.yaml
 fi
 
