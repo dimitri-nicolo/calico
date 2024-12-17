@@ -4,6 +4,7 @@ package helpers_test
 
 import (
 	"encoding/json"
+	"html/template"
 	"testing"
 	"time"
 
@@ -14,45 +15,6 @@ import (
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/generic"
 )
-
-func TestParseTemplate(t *testing.T) {
-	// empty corner case:
-	templateData := ""
-	_, err := helpers.ParseTemplate(templateData)
-	assert.NoError(t, err)
-
-	// valid arbitrary data:
-	templateData = `{
-	"name": "{{.name}}",
-	"event": {{.}}
-}`
-	_, err = helpers.ParseTemplate(templateData)
-	assert.NoError(t, err)
-
-	// invalid template (no data)
-	templateData = `{
-	"name": "{{.name}}",
-	"event": {{}}
-}`
-	_, err = helpers.ParseTemplate(templateData)
-	assert.Error(t, err)
-
-	// invalid template (missing })
-	templateData = `{
-		"name": "{{.name}}",
-		"event": {{}
-	}`
-	_, err = helpers.ParseTemplate(templateData)
-	assert.Error(t, err)
-
-	// invalid template (extra {)
-	templateData = `{
-		"name": "{{.name}}",
-		"event": {{{}}
-	}`
-	_, err = helpers.ParseTemplate(templateData)
-	assert.Error(t, err)
-}
 
 func TestProcessTemplate(t *testing.T) {
 	event := lsApi.Event{
@@ -77,7 +39,7 @@ func TestProcessTemplate(t *testing.T) {
 	"nested_missing_data": "{{.this_field_does_not_exists.nested}}",
 	"don't_do_this": "{{.}}"
 }`
-	tmpl, err := helpers.ParseTemplate(templateData)
+	tmpl, err := template.New("template").Parse(templateData)
 	assert.NoError(t, err)
 	assert.NotNil(t, tmpl)
 

@@ -9,10 +9,6 @@ import (
 	"io"
 )
 
-func ParseTemplate(templateData string) (*template.Template, error) {
-	return template.New("template").Parse(string(templateData))
-}
-
 func ProcessTemplate(tmpl *template.Template, payload []byte) ([]byte, error) {
 	if tmpl == nil {
 		return payload, nil
