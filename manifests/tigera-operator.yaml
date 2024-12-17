@@ -6,7 +6,7 @@ metadata:
     name: tigera-operator
     pod-security.kubernetes.io/enforce: privileged
 ---
-# Source: crds/calico/crd.projectcalico.org_alertexceptions.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_alertexceptions.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -83,7 +83,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_bfdconfigurations.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_bfdconfigurations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -172,7 +172,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_bgpconfigurations.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_bgpconfigurations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -372,7 +372,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_bgpfilters.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_bgpfilters.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -557,7 +557,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_bgppeers.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_bgppeers.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -730,7 +730,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_blockaffinities.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_blockaffinities.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -795,7 +795,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_caliconodestatuses.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_caliconodestatuses.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1060,7 +1060,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_clusterinformations.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_clusterinformations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1130,7 +1130,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_deeppacketinspections.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_deeppacketinspections.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1242,7 +1242,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_egressgatewaypolicies.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_egressgatewaypolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1343,7 +1343,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_externalnetworks.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_externalnetworks.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1403,7 +1403,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_felixconfigurations.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_felixconfigurations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -3154,7 +3154,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_globalalerts.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_globalalerts.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -3320,7 +3320,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_globalalerttemplates.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_globalalerttemplates.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -3455,7 +3455,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_globalnetworkpolicies.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_globalnetworkpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -4369,7 +4369,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_globalnetworksets.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_globalnetworksets.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -4434,7 +4434,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_globalreports.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_globalreports.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -4851,7 +4851,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_globalreporttypes.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_globalreporttypes.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -4991,7 +4991,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_globalthreatfeeds.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_globalthreatfeeds.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5205,7 +5205,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_hostendpoints.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_hostendpoints.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5315,7 +5315,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_ipamblocks.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_ipamblocks.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5436,7 +5436,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_ipamconfigs.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_ipamconfigs.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5496,7 +5496,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_ipamhandles.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_ipamhandles.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5554,7 +5554,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_ippools.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_ippools.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5683,7 +5683,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_ipreservations.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_ipreservations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -5739,7 +5739,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_kubecontrollersconfigurations.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_kubecontrollersconfigurations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -6026,7 +6026,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_licensekeys.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_licensekeys.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -6109,7 +6109,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_managedclusters.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_managedclusters.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -6193,7 +6193,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_networkpolicies.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_networkpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -7088,7 +7088,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_networksets.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_networksets.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -7151,7 +7151,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_packetcaptures.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_packetcaptures.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -7307,7 +7307,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_policyrecommendationscopes.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_policyrecommendationscopes.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -7425,7 +7425,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_remoteclusterconfigurations.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_remoteclusterconfigurations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -7599,7 +7599,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_securityeventwebhooks.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_securityeventwebhooks.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -7795,7 +7795,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_stagedglobalnetworkpolicies.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_stagedglobalnetworkpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -8716,7 +8716,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_stagedkubernetesnetworkpolicies.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_stagedkubernetesnetworkpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -9233,7 +9233,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_stagednetworkpolicies.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_stagednetworkpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -10135,7 +10135,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_tiers.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_tiers.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -10201,7 +10201,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_uisettings.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_uisettings.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -10515,7 +10515,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/crd.projectcalico.org_uisettingsgroups.yaml
+# Source: tigera-operator/crds/calico/crd.projectcalico.org_uisettingsgroups.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -10598,7 +10598,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/calico/policy.networking.k8s.io_adminnetworkpolicies.yaml
+# Source: tigera-operator/crds/calico/policy.networking.k8s.io_adminnetworkpolicies.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -11683,7 +11683,7 @@ status:
   storedVersions: null
 
 ---
-# Source: crds/calico/usage.tigera.io_licenseusagereports.yaml
+# Source: tigera-operator/crds/calico/usage.tigera.io_licenseusagereports.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -11741,7 +11741,7 @@ status:
   storedVersions: []
 
 ---
-# Source: crds/eck/01-crd-eck-agent.yaml
+# Source: tigera-operator/crds/eck/01-crd-eck-agent.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -12200,8 +12200,7 @@ spec:
         status: {}
 
 ---
-# Source: crds/eck/01-crd-eck-apmserver.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-apmserver.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -12868,8 +12867,7 @@ spec:
       storage: false
 
 ---
-# Source: crds/eck/01-crd-eck-autoscaling.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-autoscaling.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -13169,8 +13167,7 @@ spec:
         status: {}
 
 ---
-# Source: crds/eck/01-crd-eck-beat.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-beat.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -13479,8 +13476,7 @@ spec:
         status: {}
 
 ---
-# Source: crds/eck/01-crd-eck-elasticmapsserver.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-elasticmapsserver.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -13804,8 +13800,7 @@ spec:
         status: {}
 
 ---
-# Source: crds/eck/01-crd-eck-elasticsearch.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-elasticsearch.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -15412,8 +15407,7 @@ spec:
       storage: false
 
 ---
-# Source: crds/eck/01-crd-eck-enterprisesearch.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-enterprisesearch.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -16024,8 +16018,7 @@ spec:
         status: {}
 
 ---
-# Source: crds/eck/01-crd-eck-kibana.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-kibana.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -16739,8 +16732,7 @@ spec:
       storage: false
 
 ---
-# Source: crds/eck/01-crd-eck-stackconfigpolicy.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-stackconfigpolicy.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -16943,7 +16935,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_amazoncloudintegrations.yaml
+# Source: tigera-operator/crds/operator.tigera.io_amazoncloudintegrations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -17137,7 +17129,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_apiservers.yaml
+# Source: tigera-operator/crds/operator.tigera.io_apiservers.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -18662,7 +18654,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_applicationlayers.yaml
+# Source: tigera-operator/crds/operator.tigera.io_applicationlayers.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -19026,7 +19018,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_authentications.yaml
+# Source: tigera-operator/crds/operator.tigera.io_authentications.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -19486,7 +19478,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_compliances.yaml
+# Source: tigera-operator/crds/operator.tigera.io_compliances.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -20449,7 +20441,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_egressgateways.yaml
+# Source: tigera-operator/crds/operator.tigera.io_egressgateways.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -22069,7 +22061,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_imagesets.yaml
+# Source: tigera-operator/crds/operator.tigera.io_imagesets.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -22150,7 +22142,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_installations.yaml
+# Source: tigera-operator/crds/operator.tigera.io_installations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -39082,7 +39074,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_intrusiondetections.yaml
+# Source: tigera-operator/crds/operator.tigera.io_intrusiondetections.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -39541,7 +39533,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_logcollectors.yaml
+# Source: tigera-operator/crds/operator.tigera.io_logcollectors.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -40121,7 +40113,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_logstorages.yaml
+# Source: tigera-operator/crds/operator.tigera.io_logstorages.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -41333,7 +41325,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_managementclusterconnections.yaml
+# Source: tigera-operator/crds/operator.tigera.io_managementclusterconnections.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -41635,7 +41627,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_managementclusters.yaml
+# Source: tigera-operator/crds/operator.tigera.io_managementclusters.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -41713,7 +41705,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_managers.yaml
+# Source: tigera-operator/crds/operator.tigera.io_managers.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -42004,7 +41996,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_monitors.yaml
+# Source: tigera-operator/crds/operator.tigera.io_monitors.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -42583,7 +42575,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_nonclusterhosts.yaml
+# Source: tigera-operator/crds/operator.tigera.io_nonclusterhosts.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -42640,7 +42632,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/operator.tigera.io_packetcaptureapis.yaml
+# Source: tigera-operator/crds/operator.tigera.io_packetcaptureapis.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -42926,7 +42918,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_policyrecommendations.yaml
+# Source: tigera-operator/crds/operator.tigera.io_policyrecommendations.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -43157,7 +43149,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_tigerastatuses.yaml
+# Source: tigera-operator/crds/operator.tigera.io_tigerastatuses.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -43270,7 +43262,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/operator.tigera.io_tlspassthroughroutes.yaml
+# Source: tigera-operator/crds/operator.tigera.io_tlspassthroughroutes.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -43342,7 +43334,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/operator.tigera.io_tlsterminatedroutes.yaml
+# Source: tigera-operator/crds/operator.tigera.io_tlsterminatedroutes.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
