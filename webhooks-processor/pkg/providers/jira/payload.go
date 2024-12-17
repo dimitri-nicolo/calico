@@ -89,7 +89,7 @@ var descriptionTemplate = template.Must(template.New("description").Funcs(templa
 {code:json|title=Detailed record information}{{record .Event}}{code}
 `))
 
-func buildSummary(event *lsApi.Event) (string, error) {
+func buildSummary(_ *lsApi.Event) (string, error) {
 	return "Calico Security Alert", nil
 }
 

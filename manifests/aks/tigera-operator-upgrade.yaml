@@ -7692,7 +7692,7 @@ spec:
                 type: array
               consumer:
                 description: 'indicates the SecurityEventWebhook intended consumer,
-                  one of: Slack, Jira'
+                  one of: Slack, Jira, Generic, AlertManager'
                 type: string
               query:
                 description: defines the SecurityEventWebhook query to be executed
@@ -7700,7 +7700,7 @@ spec:
                 type: string
               state:
                 description: 'defines the webhook desired state, one of: Enabled,
-                  Disabled or Debug'
+                  Disabled, Test or Debug'
                 type: string
             required:
             - config

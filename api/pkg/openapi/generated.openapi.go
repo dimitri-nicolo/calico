@@ -12144,7 +12144,7 @@ func schema_pkg_apis_projectcalico_v3_SecurityEventWebhookSpec(ref common.Refere
 				Properties: map[string]spec.Schema{
 					"consumer": {
 						SchemaProps: spec.SchemaProps{
-							Description: "indicates the SecurityEventWebhook intended consumer, one of: Slack, Jira",
+							Description: "indicates the SecurityEventWebhook intended consumer, one of: Slack, Jira, Generic, AlertManager",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -12152,7 +12152,7 @@ func schema_pkg_apis_projectcalico_v3_SecurityEventWebhookSpec(ref common.Refere
 					},
 					"state": {
 						SchemaProps: spec.SchemaProps{
-							Description: "defines the webhook desired state, one of: Enabled, Disabled or Debug",
+							Description: "defines the webhook desired state, one of: Enabled, Disabled, Test or Debug",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
