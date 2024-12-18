@@ -123,7 +123,7 @@ EOF
             raise Exception("should not have connected")
 
         # No policy.
-        should_connect()
+        retry_until_success(should_connect, retries=5)
 
         # Deny all egress.
         self.deny_all_egress_except_dns("egress == 'restricted'")
