@@ -28,6 +28,8 @@ set -o pipefail
 : ${RELEASE_STREAM:="master"} # Default to master
 : ${HASH_RELEASE:="false"} # Set to true to use hash release
 
+: "${AZ_KUBE_VERSION:?Environment variable empty or not defined.}"
+
 echo Settings:
 echo '  PRODUCT='${PRODUCT}
 echo '  RELEASE_STREAM='${RELEASE_STREAM}
@@ -154,7 +156,7 @@ echo "Calico is ready on Windows nodes"
 
 # Create the kube-proxy-windows daemonset
 for iter in {1..5};do
-    curl -sSf -L  https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml | sed "s/KUBE_PROXY_VERSION/${KUBE_VERSION}/g" | ${KCAPZ} apply -f - && break || echo "download error: retry $iter in 5s" && sleep 5;
+    curl -sSf -L  https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml | sed "s/KUBE_PROXY_VERSION/${AZ_KUBE_VERSION}/g" | ${KCAPZ} apply -f - && break || echo "download error: retry $iter in 5s" && sleep 5;
 done;
 
 echo "Wait for kube-proxy to be ready on Windows nodes..."
