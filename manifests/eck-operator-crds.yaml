@@ -1,6 +1,6 @@
 # ECK operator CRDs.
 ---
-# Source: crds/eck/01-crd-eck-agent.yaml
+# Source: tigera-operator/crds/eck/01-crd-eck-agent.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -458,8 +458,7 @@ spec:
       subresources:
         status: {}
 ---
-# Source: crds/eck/01-crd-eck-apmserver.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-apmserver.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1125,8 +1124,7 @@ spec:
       served: false
       storage: false
 ---
-# Source: crds/eck/01-crd-eck-autoscaling.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-autoscaling.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1425,8 +1423,7 @@ spec:
       subresources:
         status: {}
 ---
-# Source: crds/eck/01-crd-eck-beat.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-beat.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1734,8 +1731,7 @@ spec:
       subresources:
         status: {}
 ---
-# Source: crds/eck/01-crd-eck-elasticmapsserver.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-elasticmapsserver.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -2058,8 +2054,7 @@ spec:
           statusReplicasPath: .status.count
         status: {}
 ---
-# Source: crds/eck/01-crd-eck-elasticsearch.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-elasticsearch.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -3665,8 +3660,7 @@ spec:
       served: false
       storage: false
 ---
-# Source: crds/eck/01-crd-eck-enterprisesearch.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-enterprisesearch.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -4276,8 +4270,7 @@ spec:
       subresources:
         status: {}
 ---
-# Source: crds/eck/01-crd-eck-kibana.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-kibana.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -4990,8 +4983,7 @@ spec:
       served: false
       storage: false
 ---
-# Source: crds/eck/01-crd-eck-stackconfigpolicy.yaml
-# Elasticsearch operator CRDs
+# Source: tigera-operator/crds/eck/01-crd-eck-stackconfigpolicy.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:

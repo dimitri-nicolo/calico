@@ -1,5 +1,5 @@
 ---
-# Source: crds/01-crd-alertmanagerconfigs.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-alertmanagerconfigs.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -9978,7 +9978,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/01-crd-alertmanagers.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-alertmanagers.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -18585,7 +18585,7 @@ spec:
         status: {}
 
 ---
-# Source: crds/01-crd-podmonitors.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-podmonitors.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -19832,7 +19832,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/01-crd-probes.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-probes.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -21047,7 +21047,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/01-crd-prometheusagents.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-prometheusagents.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -31763,7 +31763,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/01-crd-prometheuses.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-prometheuses.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -44828,7 +44828,7 @@ spec:
       status: {}
 
 ---
-# Source: crds/01-crd-prometheusrules.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-prometheusrules.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -44972,7 +44972,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/01-crd-scrapeconfigs.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-scrapeconfigs.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -56381,7 +56381,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/01-crd-servicemonitors.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-servicemonitors.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -57656,7 +57656,7 @@ spec:
     storage: true
 
 ---
-# Source: crds/01-crd-thanosrulers.yaml
+# Source: tigera-prometheus-operator/crds/01-crd-thanosrulers.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:

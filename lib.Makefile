@@ -471,11 +471,6 @@ git-commit:
 # different implementation.
 ###############################################################################
 
-define yq_cmd
-	$(shell yq --version | grep v$1.* >/dev/null && which yq || echo docker run --rm --user="root" -i -v "$(shell pwd)":/workdir mikefarah/yq:$1 $(if $(shell [ $1 -lt 4 ] && echo "true"), yq,))
-endef
-YQ_V4 = $(call yq_cmd,4)
-
 ifdef LOCAL_CRANE
 CRANE_CMD         = bash -c $(double_quote)crane
 else
@@ -1333,10 +1328,8 @@ $(KUBECTL): $(KIND_DIR)/.kubectl-updated-$(K8S_VERSION)
 
 bin/helm-$(HELM_VERSION):
 	mkdir -p bin
-	$(eval TMP := $(shell mktemp -d))
-	curl -sSf -L --retry 5 -o $(TMP)/helm3.tar.gz https://get.helm.sh/helm-$(HELM_VERSION)-linux-$(ARCH).tar.gz
-	tar -zxvf $(TMP)/helm3.tar.gz -C $(TMP)
-	mv $(TMP)/linux-$(ARCH)/helm bin/helm-$(HELM_VERSION)
+	curl -sSfL --retry 5 https://get.helm.sh/helm-$(HELM_VERSION)-linux-$(ARCH).tar.gz | tar xz --strip-components 1 -C bin linux-$(ARCH)/helm && \
+	mv bin/helm bin/helm-$(HELM_VERSION)
 
 bin/.helm-updated-$(HELM_VERSION): bin/helm-$(HELM_VERSION)
 	# Remove old marker files so that bin/helm will be stale if we switch
@@ -1369,10 +1362,8 @@ publish-charts-oci:
 
 bin/yq:
 	mkdir -p bin
-	$(eval TMP := $(shell mktemp -d))
-	curl -sSf -L --retry 5 -o $(TMP)/yq4.tar.gz https://github.com/mikefarah/yq/releases/download/v4.44.5/yq_linux_$(BUILDARCH).tar.gz
-	tar -zxvf $(TMP)/yq4.tar.gz -C $(TMP)
-	mv $(TMP)/yq_linux_$(BUILDARCH) bin/yq
+	curl -sSfL --retry 5 https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_$(BUILDARCH).tar.gz | tar xz -C bin ./yq_linux_$(BUILDARCH) && \
+	mv bin/yq_linux_$(BUILDARCH) bin/yq
 
 ###############################################################################
 # Common functions for launching a local etcd instance.
