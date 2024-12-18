@@ -184,7 +184,7 @@ function start_test_infra(){
   $CALICO_HOME/process/testing/winfv-felix/infra/setup.sh $KUBECONFIG
 
   #Wait for porter pod to be running on windows node
-  for i in $(seq 1 30); do
+  for i in $(seq 1 60); do
     if [[ $(${KCAPZ} -n demo get pods porter --no-headers -o custom-columns=NAMESPACE:metadata.namespace,POD:metadata.name,PodIP:status.podIP,READY-true:status.containerStatuses[*].ready | awk -v OFS='\t\t' '{print $4}') = "true" ]] ; then
       echo "Porter is ready"
       return
