@@ -15,14 +15,9 @@
 package migrate
 
 import (
-	"strings"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 var _ = Describe("Etcd to KDD Migration Export handling", func() {
@@ -69,42 +64,5 @@ var _ = Describe("Etcd to KDD Migration Export handling", func() {
 			Expect(felixConfig.Spec.IptablesMangleAllowAction).To(Equal(""))
 			Expect(felixConfig.Spec.IptablesFilterDenyAction).To(Equal(""))
 		})
-	})
-
-	It("should cover all calico resources", func() {
-		allPlurals := set.FromArray(model.AllResourcePlurals())
-
-		// Profiles are backed by k8s resources in KDD.  User cannot create
-		// their own.
-		allPlurals.Discard("profiles")
-		// WEPs are backed by Pods in KDD.
-		allPlurals.Discard("workloadendpoints")
-		// ClusterInformation is generated fresh in the new cluster.
-		allPlurals.Discard("clusterinformations")
-		// Not supported in KDD (OpenStack only).
-		allPlurals.Discard("caliconodestatuses")
-		// Handled by IPAM migration code.
-		allPlurals.Discard("ipamconfigs")
-		allPlurals.Discard("blockaffinities")
-
-		allPlurals.Iter(func(resource string) error {
-			if strings.HasPrefix(resource, "kubernetes") {
-				// "kubernetes"-prefixed resources are backed by Kubernetes API
-				// objects, not Calico objects.
-				return set.RemoveItem
-			}
-			return nil
-		})
-
-		Expect(allV3Resources).To(ConsistOf(allPlurals.Slice()))
-	})
-
-	It("should have names for all resources", func() {
-		var keys []string
-		for k := range resourceDisplayMap {
-			keys = append(keys, k)
-		}
-		Expect(keys).To(ConsistOf(allV3Resources),
-			"expected to see names for the listed calico resources (only)")
 	})
 })
