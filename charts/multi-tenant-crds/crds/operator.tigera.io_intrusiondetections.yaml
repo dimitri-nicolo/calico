@@ -11,7 +11,7 @@ spec:
     listKind: IntrusionDetectionList
     plural: intrusiondetections
     singular: intrusiondetection
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:
