@@ -69,6 +69,7 @@ func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct
 		server.WithWAFConfig(
 			config.PerHostWAFEnabled,
 			config.WAFLogFile,
+			config.WAFRulesetRootDir,
 			config.WAFRulesetFiles.Value(),
 			config.WAFDirectives.Value(),
 		),

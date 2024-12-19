@@ -2,10 +2,13 @@ package waf_test
 
 import (
 	_ "embed"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 
+	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/code"
@@ -21,15 +24,8 @@ var tigeraConfContents string
 
 func TestCorazaWAFAuthzScenarios(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
-	for _, scenario := range corazaWAFScenarios {
-		t.Run(scenario.name, func(t *testing.T) {
-			runCorazaWAFAuthzScenario(t, &scenario)
-		})
-	}
-}
 
-var (
-	corazaWAFScenarios = []corazaWAFScenario{
+	corazaWAFScenarios := []corazaWAFScenario{
 		{
 			name:  "allow",
 			store: nil,
@@ -83,8 +79,56 @@ var (
 				{},
 			},
 		},
+		{
+			name:  "deny - SQL injection 2, detection only with rootFS",
+			store: nil,
+			// In this test case, we setup a sample ruleset that only detects SQL injection.
+			// It's based on coraza-coreruleset, but only contains the 3 fiels we need.
+			rootFS: func(t *testing.T) fs.FS {
+				corazaConf, err := fs.ReadFile(coreruleset.FS, "@coraza.conf-recommended")
+				if err != nil {
+					t.Error(err)
+				}
+				crsSetup, err := fs.ReadFile(coreruleset.FS, "@crs-setup.conf.example")
+				if err != nil {
+					t.Error(err)
+				}
+				sqliConf, err := fs.ReadFile(coreruleset.FS, "@owasp_crs/REQUEST-942-APPLICATION-ATTACK-SQLI.conf")
+				if err != nil {
+					t.Error(err)
+				}
+				return fstest.MapFS{
+					"coraza.conf":    {Data: corazaConf},
+					"crs-setup.conf": {Data: crsSetup},
+					"crs/REQUEST-942-APPLICATION-ATTACK-SQLI.conf": {Data: sqliConf},
+				}
+			}(t),
+			directives: []string{
+				"Include coraza.conf",
+				"Include crs-setup.conf",
+				"Include crs/*.conf",
+				"SecRuleEngine DetectionOnly",
+			},
+			checkReq: testutils.NewCheckRequestBuilder(
+				testutils.WithMethod("POST"),
+				testutils.WithHost("www.example.com"),
+				testutils.WithPath("/vulnerable.php?id=1' waitfor delay '00:00:10'--"),
+				testutils.WithScheme("https"),
+			),
+			expectedResponse: waf.OK,
+			expectedErr:      nil,
+			expectedLogs: []*v1.WAFLog{
+				{},
+			},
+		},
 	}
-)
+
+	for _, scenario := range corazaWAFScenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			runCorazaWAFAuthzScenario(t, &scenario)
+		})
+	}
+}
 
 func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 	psm := policystore.NewPolicyStoreManager()
@@ -108,6 +152,7 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 	}
 	evp := waf.NewEventsPipeline(cb)
 	waf, err := waf.New(
+		scenario.rootFS,
 		files,
 		scenario.directives,
 		true,
@@ -138,6 +183,7 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 
 type corazaWAFScenario struct {
 	name                  string
+	rootFS                fs.FS
 	directives            []string
 	additionalConfigFiles map[string]string
 	store                 *policystore.PolicyStore

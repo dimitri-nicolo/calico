@@ -65,7 +65,7 @@ func (s *dikastesSrcDstInfoTestSuite) setupPolicySyncAndDikastes(policySyncName,
 		server.WithDialAddress("unix", policySync.Addr()),
 		server.WithListenArguments(listenNetwork, dikastesListenPath),
 		server.WithSubscriptionType(subscriptionType),
-		server.WithWAFConfig(true, dikastesLogfile, []string{}, []string{
+		server.WithWAFConfig(true, dikastesLogfile, "", []string{}, []string{
 			"Include @coraza.conf-recommended",
 			"Include @crs-setup.conf.example",
 			"Include @owasp_crs/*.conf",
