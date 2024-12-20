@@ -152,6 +152,10 @@ bin/test%.o: test%.ll | bin
 	$(LINK)
 bin/xdp%.o: xdp%.ll | bin
 	$(LINK)
+bin/conntrack_cleanup_%v4.o: conntrack_cleanup_%v4.ll | bin
+	$(LINK)
+bin/conntrack_cleanup_%v6.o: conntrack_cleanup_%v6.ll | bin
+	$(LINK)
 bin/tcp_%kprobe.o: tcp_%kprobe.ll | bin
 	$(LINK)
 bin/udp_%kprobe.o: udp_%kprobe.ll | bin

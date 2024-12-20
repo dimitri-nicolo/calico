@@ -73,7 +73,6 @@ static CALI_BPF_INLINE long skb_iphdr_offset(struct cali_tc_ctx *ctx)
 		// XXX no support for ip options in ipip header
 		return sizeof(struct ethhdr) + IP_SIZE;
 	} else if (CALI_F_L3 || CALI_F_IPT_BPF) {
-		CALI_DEBUG("IP hdr offset is 0");
 		// Egress on an IPIP tunnel, or any other l3 devices (wireguard) both directions:
 		// skb is [inner IP|payload]
 		return 0;

@@ -61,6 +61,7 @@ bpf/report/
 .semaphore-cache/
 /fv/cwlogs
 /fv/win-fv.exe
+/fv/extra-env.sh
 /rpm/felix.spec
 /debian/changelog
 /docs/*.pdf
