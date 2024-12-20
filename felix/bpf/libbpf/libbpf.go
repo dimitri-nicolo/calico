@@ -479,6 +479,11 @@ func TcSetGlobals(
 	return err
 }
 
+func IPTSetGlobals(m * Map, ipSetID uint64) error {
+	_, err := C.bpf_ipt_set_globals(m.bpfMap, C.uint64_t(ipSetID))
+	return err
+}
+
 func CTLBSetGlobals(m *Map, udpNotSeen time.Duration, excludeUDP bool) error {
 	udpNotSeen /= time.Second // Convert to seconds
 	_, err := C.bpf_ctlb_set_globals(m.bpfMap, C.uint(udpNotSeen), C.bool(excludeUDP))

@@ -303,6 +303,8 @@ extern const volatile struct cali_stats_globals __globals;
 
 #if CALI_F_CT_CLEANUP
 extern const volatile struct cali_ct_cleanup_globals __globals;
+#elif CALI_F_IPT_BPF
+extern const volatile struct cali_ipt_dns_globals __globals;
 #else
 extern const volatile struct cali_tc_preamble_globals __globals;
 #endif
