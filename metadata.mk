@@ -99,3 +99,5 @@ LIBBPF_VERSION=v1.4.6
 
 # The operator branch corresponding to this branch.
 OPERATOR_BRANCH=master
+
+DEFAULT_BRANCH_OVERRIDE=sridhar-dns-inline-iptables
