@@ -14,10 +14,10 @@ import (
 )
 
 func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipFamily int) error {
-        logLevel := strings.ToLower(bpfLogLevel)
-        if logLevel == "off" {
-                logLevel = "no_log"
-        }
+	logLevel := strings.ToLower(bpfLogLevel)
+	if logLevel == "off" {
+		logLevel = "no_log"
+	}
 
 	suffix := "_v4.o"
 	if ipFamily == 6 {
@@ -54,7 +54,7 @@ func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipFamily int) e
 		return fmt.Errorf("error loading program %v", err)
 	}
 
-	pinPath := path.Join(bpfdefs.DnsObjDir, fmt.Sprintf("%d_v%d",ipSetID, ipFamily))
+	pinPath := path.Join(bpfdefs.DnsObjDir, fmt.Sprintf("%d_v%d", ipSetID, ipFamily))
 	err = obj.PinPrograms(pinPath)
 	if err != nil {
 		return fmt.Errorf("error pinning program %v", err)

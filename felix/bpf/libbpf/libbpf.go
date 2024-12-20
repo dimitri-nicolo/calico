@@ -479,7 +479,7 @@ func TcSetGlobals(
 	return err
 }
 
-func IPTSetGlobals(m * Map, ipSetID uint64) error {
+func IPTSetGlobals(m *Map, ipSetID uint64) error {
 	_, err := C.bpf_ipt_set_globals(m.bpfMap, C.uint64_t(ipSetID))
 	return err
 }
