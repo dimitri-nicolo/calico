@@ -93,7 +93,7 @@ check-language:
 	./hack/check-language.sh
 
 generate:
-	$(MAKE) gen-semaphore-yaml
+	$(MAKE) DEFAULT_BRANCH_OVERRIDE=master gen-semaphore-yaml
 	$(MAKE) get-operator-crds
 	$(MAKE) -C api gen-files
 	$(MAKE) -C libcalico-go gen-files
