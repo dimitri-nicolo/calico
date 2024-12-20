@@ -8,6 +8,7 @@ package waf
 
 import (
 	"fmt"
+	"io/fs"
 	"net/http"
 	"strings"
 
@@ -29,10 +30,36 @@ import (
 )
 
 var (
-	OK       = newResponseWithCode(code.Code_OK, "OK")
-	DENY     = newResponseWithCode(code.Code_PERMISSION_DENIED, "Forbidden")
-	INTERNAL = newResponseWithCode(code.Code_INTERNAL, "Internal Server Error")
+	OK            = newResponseWithCode(code.Code_OK, "OK")
+	DENY          = newResponseWithCode(code.Code_PERMISSION_DENIED, "Forbidden")
+	INTERNAL      = newResponseWithCode(code.Code_INTERNAL, "Internal Server Error")
+	defaultRootFS fs.FS
 )
+
+func init() {
+	// Default convenient option that uses the coraza-ruleset (with relative paths)
+	// and anything from the file system (with absolute paths).
+	defaultRootFS = mergefs.Merge(
+		// Add mergefs OSFS first to avoid "invalid argument" error from golang 1.23+.
+		//
+		// Since golang 1.23 io/fs.SubFS, the error returned from Sub() call is changed
+		// to ErrInvalid [1] (from "invalid name"). This change escapes mergefs ReadFile
+		// error suppression in [2] so that it causes Coraza WAF initialization [3] to fail.
+		// Reordering mergefsio.OSFS to the first will use os.ReadFile [4] for on-disk
+		// configurations. Once the on-disk config is read successfully, mergefs ReaFile
+		// won't retry Coraza ReadFile [5] so that ErrInvalid is avoided. io/fs ValidPath
+		// check won't allow leading slash [6] and this is where the error is from.
+		//
+		// [1] https://github.com/golang/go/commit/bf821f65cfd61dcc431922eea2cb97ce0825d60c
+		// [2] https://github.com/jcchavezs/mergefs/blob/07f27d25676181074133e7573825402b88bf2f99/readfile.go#L23
+		// [3] https://github.com/corazawaf/coraza/blob/34cdde87ae4d3754e8da080387e0511b779fc228/waf.go#L64
+		// [4] https://github.com/jcchavezs/mergefs/blob/07f27d25676181074133e7573825402b88bf2f99/io/os.go#L20
+		// [5] https://github.com/corazawaf/coraza-coreruleset/blob/b20e2628b747fb7368178092fa472f3a9dc76f43/coreruleset.go#L62
+		// [6] https://github.com/golang/go/blob/2f507985dc24d198b763e5568ebe5c04d788894f/src/io/fs/fs.go#L47
+		mergefsio.OSFS,
+		coreruleset.FS,
+	)
+}
 
 func newResponseWithCode(code code.Code, message string) *envoyauthz.CheckResponse {
 	return &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code), Message: message}}
@@ -50,32 +77,17 @@ type Server struct {
 	currPolicyStore *policystore.PolicyStore
 }
 
-func New(files, directives []string, tproxyEnabled bool, evp *wafEventsPipeline) (*Server, error) {
+func New(rootFS fs.FS, files, directives []string, tproxyEnabled bool, evp *wafEventsPipeline) (*Server, error) {
 	srv := &Server{
 		evp:            evp,
 		perHostEnabled: tproxyEnabled,
 	}
+
+	if rootFS == nil {
+		rootFS = defaultRootFS
+	}
 	cfg := coraza.NewWAFConfig().
-		WithRootFS(mergefs.Merge(
-			// Add mergefs OSFS first to avoid "invalid argument" error from golang 1.23+.
-			//
-			// Since golang 1.23 io/fs.SubFS, the error returned from Sub() call is changed
-			// to ErrInvalid [1] (from "invalid name"). This change escapes mergefs ReadFile
-			// error suppression in [2] so that it causes Coraza WAF initialization [3] to fail.
-			// Reordering mergefsio.OSFS to the first will use os.ReadFile [4] for on-disk
-			// configurations. Once the on-disk config is read successfully, mergefs ReaFile
-			// won't retry Coraza ReadFile [5] so that ErrInvalid is avoided. io/fs ValidPath
-			// check won't allow leading slash [6] and this is where the error is from.
-			//
-			// [1] https://github.com/golang/go/commit/bf821f65cfd61dcc431922eea2cb97ce0825d60c
-			// [2] https://github.com/jcchavezs/mergefs/blob/07f27d25676181074133e7573825402b88bf2f99/readfile.go#L23
-			// [3] https://github.com/corazawaf/coraza/blob/34cdde87ae4d3754e8da080387e0511b779fc228/waf.go#L64
-			// [4] https://github.com/jcchavezs/mergefs/blob/07f27d25676181074133e7573825402b88bf2f99/io/os.go#L20
-			// [5] https://github.com/corazawaf/coraza-coreruleset/blob/b20e2628b747fb7368178092fa472f3a9dc76f43/coreruleset.go#L62
-			// [6] https://github.com/golang/go/blob/2f507985dc24d198b763e5568ebe5c04d788894f/src/io/fs/fs.go#L47
-			mergefsio.OSFS,
-			coreruleset.FS,
-		)).
+		WithRootFS(rootFS).
 		WithRequestBodyAccess().
 		WithErrorCallback(func(rule corazatypes.MatchedRule) {
 			evp.Process(srv.currPolicyStore, rule)

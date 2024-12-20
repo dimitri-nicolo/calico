@@ -9,21 +9,24 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/alertmanager"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/generic"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/jira"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers/slack"
 )
 
 type ProvidersConfig struct {
-	RequestTimeout                     time.Duration `default:"5s"`
-	RetryDuration                      time.Duration `default:"2s"`
-	RetryTimes                         uint          `default:"5"`
-	GenericProviderRateLimiterDuration time.Duration `default:"1s"`
-	GenericProviderRateLimiterCount    uint          `default:"1000"`
-	JiraProviderRateLimiterDuration    time.Duration `default:"1m"`
-	JiraProviderRateLimiterCount       uint          `default:"10"`
-	SlackProviderRateLimiterDuration   time.Duration `default:"1m"`
-	SlackProviderRateLimiterCount      uint          `default:"10"`
+	RequestTimeout                          time.Duration `default:"5s"`
+	RetryDuration                           time.Duration `default:"2s"`
+	RetryTimes                              uint          `default:"5"`
+	GenericProviderRateLimiterDuration      time.Duration `default:"1s"`
+	GenericProviderRateLimiterCount         uint          `default:"1000"`
+	JiraProviderRateLimiterDuration         time.Duration `default:"1m"`
+	JiraProviderRateLimiterCount            uint          `default:"10"`
+	SlackProviderRateLimiterDuration        time.Duration `default:"1m"`
+	SlackProviderRateLimiterCount           uint          `default:"10"`
+	AlertManagerProviderRateLimiterDuration time.Duration `default:"1s"`
+	AlertManagerProviderRateLimiterCount    uint          `default:"1000"`
 }
 
 func DefaultProviders() map[api.SecurityEventWebhookConsumer]providers.Provider {
@@ -51,6 +54,13 @@ func DefaultProviders() map[api.SecurityEventWebhookConsumer]providers.Provider 
 		RetryTimes:          c.RetryTimes,
 		RateLimiterDuration: c.GenericProviderRateLimiterDuration,
 		RateLimiterCount:    c.GenericProviderRateLimiterCount,
+	})
+	RegisteredProviders[api.SecurityEventWebhookConsumerAlertManager] = alertmanager.NewProvider(providers.Config{
+		RequestTimeout:      c.RequestTimeout,
+		RetryDuration:       c.RetryDuration,
+		RetryTimes:          c.RetryTimes,
+		RateLimiterDuration: c.AlertManagerProviderRateLimiterDuration,
+		RateLimiterCount:    c.AlertManagerProviderRateLimiterCount,
 	})
 
 	return RegisteredProviders

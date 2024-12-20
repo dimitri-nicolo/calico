@@ -48,7 +48,8 @@ init-source: $(ECK_OPERATOR_DOWNLOADED)
 $(ECK_OPERATOR_DOWNLOADED):
 	mkdir -p cloud-on-k8s
 	curl -sfL https://github.com/elastic/cloud-on-k8s/archive/refs/tags/$(ECK_OPERATOR_VERSION).tar.gz | tar xz --strip-components 1 -C cloud-on-k8s
-	patch -d cloud-on-k8s -p1 < patches/0001-Update-golang-x.patch
+	patch -d cloud-on-k8s -p1 < patches/0001-Chown-for-elasticserach-folder-recursively.patch
+	patch -d cloud-on-k8s -p1 < patches/0002-Update-golang-x.patch
 	touch $@
 
 .PHONY: build

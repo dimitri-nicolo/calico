@@ -300,14 +300,14 @@ release-notes:
 	@$(MAKE) -C release release-notes
 
 # Create updates for pre-release
-release-prep: var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-CALICO_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
+release-prep: bin/yq var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-CALICO_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
 	@cd calico && \
-		$(YQ_V4) ".[0].title = \"$(RELEASE_VERSION)\" | .[0].helmRelease = $(HELM_RELEASE)" -i _data/versions.yml && \
-		$(YQ_V4) ".[0].tigera-operator.version = \"$(OPERATOR_VERSION)\" | .[0].calico.minor_version = \"$(shell echo "$(CALICO_VERSION)" | awk -F  "." '{print $$1"."$$2}')\"" -i _data/versions.yml && \
-		$(YQ_V4) ".[0].components |= with_entries(select(.key | test(\"^(eck-|coreos-).*\") | not)) |= with(.[]; .version = \"$(RELEASE_VERSION)\")" -i _data/versions.yml
+		../bin/yq ".[0].title = \"$(RELEASE_VERSION)\" | .[0].helmRelease = $(HELM_RELEASE)" -i _data/versions.yml && \
+		../bin/yq ".[0].tigera-operator.version = \"$(OPERATOR_VERSION)\" | .[0].calico.minor_version = \"$(shell echo "$(CALICO_VERSION)" | awk -F  "." '{print $$1"."$$2}')\"" -i _data/versions.yml && \
+		../bin/yq ".[0].components |= with_entries(select(.key | test(\"^(eck-|coreos-).*\") | not)) |= with(.[]; .version = \"$(RELEASE_VERSION)\")" -i _data/versions.yml
 	@cd charts && \
-		$(YQ_V4) ".tigeraOperator.version = \"$(OPERATOR_VERSION)\" | .calicoctl.tag = \"$(RELEASE_VERSION)\"" -i tigera-operator/values.yaml && \
-		$(YQ_V4) ". |= with_entries(select(.key | test(\"^prometheus.*\"))) |= with(.[]; .tag = \"$(RELEASE_VERSION)\")" -i tigera-prometheus-operator/values.yaml && \
+		../bin/yq ".tigeraOperator.version = \"$(OPERATOR_VERSION)\" | .calicoctl.tag = \"$(RELEASE_VERSION)\"" -i tigera-operator/values.yaml && \
+		../bin/yq ". |= with_entries(select(.key | test(\"^prometheus.*\"))) |= with(.[]; .tag = \"$(RELEASE_VERSION)\")" -i tigera-prometheus-operator/values.yaml && \
 		sed -i "s/gcr.io.*\/tigera/quay.io\/tigera/g" tigera*-operator/values.yaml
 	$(MAKE) generate CALICO_VERSION=$(RELEASE_VERSION)
 	$(eval RELEASE_UPDATE_BRANCH = $(if $(SEMAPHORE),semaphore-,)auto-build-updates-$(RELEASE_VERSION))

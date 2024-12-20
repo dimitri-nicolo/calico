@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"time"
@@ -17,6 +18,10 @@ import (
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
+)
+
+const (
+	GenericProviderTemplateName = "genericProviderTemplate"
 )
 
 type GenericProvider struct {
@@ -43,8 +48,8 @@ func (p *GenericProvider) Validate(config map[string]string) error {
 			return err
 		}
 	}
-	if template, hasTemplate := config["template"]; hasTemplate {
-		if _, err := helpers.ParseTemplate(template); err != nil {
+	if templateData, hasTemplate := config["template"]; hasTemplate {
+		if _, err := template.New(GenericProviderTemplateName).Parse(templateData); err != nil {
 			return err
 		}
 	}
@@ -64,7 +69,7 @@ func (p *GenericProvider) Process(ctx context.Context, config map[string]string,
 		// If template config is set, we will interpret its content as a go-template and use it
 		// to transform the event to match whatever format is defined in the template.
 		if templateData, ok := config["template"]; ok {
-			tmpl, err := helpers.ParseTemplate(templateData)
+			tmpl, err := template.New(GenericProviderTemplateName).Parse(templateData)
 			if err != nil {
 				// this is just defensive coding, we should never get here because the validation happens first:
 				return helpers.NewNoRetryError(err)

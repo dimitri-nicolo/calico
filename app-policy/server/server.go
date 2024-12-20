@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/url"
 	"os"
@@ -32,6 +33,7 @@ type Dikastes struct {
 	perHostAlpEnabled            bool
 	perHostWafEnabled            bool
 	wafLogFile                   string
+	wafRulesetRootFS             fs.FS
 	wafRulesetFiles              []string
 	wafDirectives                []string
 	wafEventsFlushDuration       time.Duration
@@ -75,10 +77,17 @@ func WithALPConfig(enabled bool) DikastesServerOptions {
 	}
 }
 
-func WithWAFConfig(enabled bool, logfile string, files, directives []string) DikastesServerOptions {
+func WithWAFConfig(enabled bool, logfile, rulesetRootDir string, files, directives []string) DikastesServerOptions {
 	return func(ds *Dikastes) {
 		ds.perHostWafEnabled = enabled
 		ds.wafLogFile = logfile
+		if rulesetRootDir != "" {
+			// When a ruleset root path is provided, we use it as a root
+			// the fs used to configure WAF rules.
+			// All path will be relative to rulesetRootDir.
+			// This is the recommended option when specifying some ruleset(s).
+			ds.wafRulesetRootFS = os.DirFS(rulesetRootDir)
+		}
 		ds.wafDirectives = directives
 		ds.wafRulesetFiles = files
 	}
@@ -184,7 +193,8 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 	wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
 	events := waf.NewEventsPipeline(wafLogHandler.Process)
 	go events.Start(ctx, s.wafEventsFlushDuration)
-	wafServer, err := waf.New(s.wafRulesetFiles, s.wafDirectives, s.perHostWafEnabled, events)
+
+	wafServer, err := waf.New(s.wafRulesetRootFS, s.wafRulesetFiles, s.wafDirectives, s.perHostWafEnabled, events)
 	if err != nil {
 		log.Fatalf("cannot initialize WAF: %v", err)
 	}

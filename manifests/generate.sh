@@ -11,12 +11,12 @@ HELM=${HELM:-../bin/helm}
 YQ=${YQ:-../bin/yq}
 
 if [[ ! -f $HELM ]]; then
-    echo "[ERROR] Helm binary ${HELM} not found."
-    exit 1
+	echo "[ERROR] Helm binary ${HELM} not found."
+	exit 1
 fi
 if [[ ! -f $YQ ]]; then
-    echo "[ERROR] yq binary ${YQ} not found."
-    exit 1
+	echo "[ERROR] yq binary ${YQ} not found."
+	exit 1
 fi
 
 # Get versions to install.
@@ -27,10 +27,10 @@ defaultRegistry=gcr.io/unique-caldron-775/cnx
 REGISTRY=${REGISTRY:-$defaultRegistry}
 
 # Versions retrieved from charts.
-defaultOperatorVersion=$($YQ .tigeraOperator.version < ../charts/tigera-operator/values.yaml)
+defaultOperatorVersion=$($YQ .tigeraOperator.version <../charts/tigera-operator/values.yaml)
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
 
-defaultOperatorRegistry=$($YQ .tigeraOperator.registry < ../charts/tigera-operator/values.yaml)
+defaultOperatorRegistry=$($YQ .tigeraOperator.registry <../charts/tigera-operator/values.yaml)
 OPERATOR_REGISTRY=${OPERATOR_REGISTRY:-$defaultOperatorRegistry}
 
 # Images used in manifests that are not rendered by Helm.
@@ -39,7 +39,6 @@ NON_HELM_MANIFEST_IMAGES_ENT="tigera/compliance-reporter tigera/firewall-integra
 tigera/license-agent tigera/prometheus-operator tigera/prometheus-config-reloader tigera/anomaly_detection_jobs \
 tigera/calico-windows tigera/calicoctl"
 NON_HELM_MANIFEST_IMAGES+=" $NON_HELM_MANIFEST_IMAGES_ENT"
-
 
 # Version file used when components in non-helm manifests have unique image versions. Should only be set for hashreleases.
 # Defaults to nil, which results in CALICO_VERSION being set as the version for all non-helm manifest images.
@@ -50,7 +49,7 @@ echo "Generating manifests for Calico=$CALICO_VERSION and tigera-operator=$OPERA
 ##########################################################################
 # Build the operator manifest.
 ##########################################################################
-cat <<EOF > tigera-operator.yaml
+cat <<EOF >tigera-operator.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -80,29 +79,10 @@ ${HELM} -n tigera-operator template \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set calicoctl.tag=$CALICO_VERSION \
-	../charts/tigera-operator >> tigera-operator.yaml
+	../charts/tigera-operator >>tigera-operator.yaml
 
 ##########################################################################
-# Build manifest which includes both Calico and Operator CRDs.
-##########################################################################
-echo "# CustomResourceDefinitions for Calico and Tigera operator" > operator-crds.yaml
-for FILE in $(ls ../charts/tigera-operator/crds/*.yaml | xargs -n1 basename); do
-	${HELM} -n tigera-operator template \
-		--include-crds \
-		--show-only $FILE \
-	        --set version=$CALICO_VERSION \
-	       ../charts/tigera-operator >> operator-crds.yaml
-done
-for FILE in $(ls ../charts/calico/crds); do
-	${HELM} template ../charts/calico \
-		--include-crds \
-		--show-only $FILE \
-	        --set version=$CALICO_VERSION \
-		-f ../charts/values/calico.yaml >> operator-crds.yaml
-done
 
-
-##########################################################################
 # Build other Tigera operator manifests.
 #
 # To add a new manifest to this directory, define
@@ -118,58 +98,60 @@ for FILE in $VALUES_FILES; do
 	ns=$(cat ../charts/values/$FILE | grep -Po '# NS: \K(.*)')
 	${HELM} -n ${ns:-"tigera-operator"} template \
 		../charts/tigera-operator \
-	        --set policyRecommendation.enabled=false \
-	        --set tigeraOperator.version=$OPERATOR_VERSION \
-	        --set tigeraOperator.registry=$OPERATOR_REGISTRY \
-	        --set calicoctl.tag=$CALICO_VERSION \
-	        --include-crds \
-	        --no-hooks \
-		-f ../charts/values/$FILE > $FILE
+		--set policyRecommendation.enabled=false \
+		--set tigeraOperator.version=$OPERATOR_VERSION \
+		--set tigeraOperator.registry=$OPERATOR_REGISTRY \
+		--set calicoctl.tag=$CALICO_VERSION \
+		--include-crds \
+		--no-hooks \
+		-f ../charts/values/$FILE >$FILE
 done
+
+##########################################################################
+# Build manifest which includes both Calico and Operator CRDs.
+##########################################################################
+echo "# Tigera Operator and Calico Enterprise CRDs" >operator-crds.yaml
+(for file in ../charts/tigera-operator/crds/*.yaml; do
+	echo "---"
+	echo "# Source: tigera-operator/crds/$(basename $file)"
+	cat $file
+done) >>operator-crds.yaml
+(for file in ../charts/tigera-operator/crds/calico/*.yaml; do
+	echo "---"
+	echo "# Source: tigera-operator/crds/calico/$(basename $file)"
+	cat $file
+done) >>operator-crds.yaml
 
 ##########################################################################
 # Build CRDs files used in docs.
 ##########################################################################
-echo "# Tigera Operator and Calico Enterprise CRDs" > operator-crds.yaml
-for FILE in $(ls ../charts/tigera-operator/crds); do
-        ${HELM} template ../charts/tigera-operator \
-                --include-crds \
-                --show-only $FILE >> operator-crds.yaml
-done
-for FILE in $(ls ../charts/tigera-operator/crds/calico); do
-        ${HELM} template ../charts/tigera-operator \
-                --include-crds \
-                --show-only calico/$FILE >> operator-crds.yaml
-done
+echo "# ECK operator CRDs." >eck-operator-crds.yaml
+(for file in ../charts/tigera-operator/crds/eck/*.yaml; do
+	echo "---"
+	echo "# Source: tigera-operator/crds/eck/$(basename $file)"
+	cat $file
+done) >>eck-operator-crds.yaml
 
-echo "# ECK operator CRDs." > eck-operator-crds.yaml
-for FILE in $(ls ../charts/tigera-operator/crds/eck); do
-	${HELM} template ../charts/tigera-operator \
-                --include-crds \
-                --show-only eck/$FILE >> eck-operator-crds.yaml
-done
-
-echo "# Prometheus operator CRDs." > prometheus-operator-crds.yaml
-for FILE in $(ls ../charts/tigera-prometheus-operator/crds); do
-	${HELM} template ../charts/tigera-prometheus-operator \
-                --include-crds \
-                --show-only $FILE \
-		-f ../charts/tigera-operator/values.yaml >> prometheus-operator-crds.yaml
-done
+echo "# Prometheus operator CRDs." >prometheus-operator-crds.yaml
+(for file in ../charts/tigera-prometheus-operator/crds/*.yaml; do
+	echo "---"
+	echo "# Source: tigera-prometheus-operator/crds/$(basename $file)"
+	cat $file
+done) >>prometheus-operator-crds.yaml
 
 ##########################################################################
 # Build tigera-prometheus-operator manifests.
 ##########################################################################
-: > tigera-prometheus-operator.yaml
+: >tigera-prometheus-operator.yaml
 ${HELM} -n tigera-operator template \
-	      --set policyRecommendation.enabled=false \
-	      --set imagePullSecrets.tigera-pull-secret="\{}" \
-	      --set tigeraOperator.version=$OPERATOR_VERSION \
-	      --set tigeraOperator.registry=$OPERATOR_REGISTRY \
-	      --set calicoctl.tag=$CALICO_VERSION \
-	      --include-crds \
-	      --no-hooks \
-	      ../charts/tigera-prometheus-operator >> tigera-prometheus-operator.yaml
+	--set policyRecommendation.enabled=false \
+	--set imagePullSecrets.tigera-pull-secret="\{}" \
+	--set tigeraOperator.version=$OPERATOR_VERSION \
+	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
+	--set calicoctl.tag=$CALICO_VERSION \
+	--include-crds \
+	--no-hooks \
+	../charts/tigera-prometheus-operator >>tigera-prometheus-operator.yaml
 
 ##########################################################################
 # Build tigera-operator manifests for OCP.
@@ -196,7 +178,7 @@ ${HELM} template --include-crds \
 	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set imagePullSecrets.tigera-pull-secret=SECRET \
 	--set calicoctl.image=$REGISTRY/tigera/calicoctl \
-	--set calicoctl.tag=$CALICO_VERSION \
+	--set calicoctl.tag=$CALICO_VERSION
 # The first two lines are a newline and a yaml separator - remove them.
 find ocp/tigera-operator -name "*.yaml" | xargs sed -i -e 1,2d
 mv $(find ocp/tigera-operator -name "*.yaml") ocp/ && rm -r ocp/tigera-operator
@@ -207,16 +189,16 @@ sed -i "s/U0VDUkVU/SECRET/g" ocp/02-pull-secret.yaml
 # Replace versions for "static" Calico Enterprise manifests.
 ##########################################################################
 if [[ $CALICO_VERSION != master ]]; then
-  echo "Replacing image tags for static enterprise manifests"
-  for img in $NON_HELM_MANIFEST_IMAGES; do
-    echo $img
-    if [[ $VERSIONS_FILE ]]; then
-      ver=$(cat $VERSIONS_FILE | $YQ '.[0].components.* | select(.image == "'$img'").version')
-    else
-      ver=$CALICO_VERSION
-    fi
-    find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/$img:[A-Za-z0-9_.-]*;$REGISTRY/$img:$ver;g" {} \;
-  done
+	echo "Replacing image tags for static enterprise manifests"
+	for img in $NON_HELM_MANIFEST_IMAGES; do
+		echo $img
+		if [[ $VERSIONS_FILE ]]; then
+			ver=$(cat $VERSIONS_FILE | $YQ '.[0].components.* | select(.image == "'$img'").version')
+		else
+			ver=$CALICO_VERSION
+		fi
+		find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/$img:[A-Za-z0-9_.-]*;$REGISTRY/$img:$ver;g" {} \;
+	done
 fi
 
 # Remove the dummy sub chart again.

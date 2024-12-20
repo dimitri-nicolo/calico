@@ -3,9 +3,6 @@ export AZURE_LOCATION="${AZURE_LOCATION:="westus2"}"
 
 # [Optional] Select resource group. The default value is ${CLUSTER_NAME_CAPZ}-rg.
 export AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:=${CLUSTER_NAME_CAPZ}-rg}"
-# These are required by the machinepool-windows template
-export CI_RG="${AZURE_RESOURCE_GROUP}-ci"
-export USER_IDENTITY="cloud-provider-user-identity"
 
 # These are required by the machinepool-windows template
 export CI_RG="${AZURE_RESOURCE_GROUP}-ci"
