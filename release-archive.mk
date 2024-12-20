@@ -59,8 +59,7 @@ $(RELEASE_DIR)/private-registry.md:
 		private-registry.md.tpl > $(RELEASE_DIR)/private-registry.md
 
 bin/ocp.tgz:
-	@$(MAKE) -f Makefile manifests/ocp.tgz
-	@cp manifests/ocp.tgz bin/ocp.tgz
+	@$(MAKE) -f Makefile $@
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/private-registry.md $(RELEASE_DIR)/README.md bin/ocp.tgz
 	$(info *** Building release archive for Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), Key Cert Provisioner $(KSP_VER), chart release $(CHART_RELEASE))

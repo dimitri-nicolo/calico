@@ -92,10 +92,7 @@ endif
 # Default branch prefix for release branches
 RELEASE_BRANCH_PREFIX ?= release-calient
 # The operator branch corresponding to this branch.
-OPERATOR_BRANCH_NAME=master
+OPERATOR_BRANCH=master
 
 # The libbpf version to use
 LIBBPF_VERSION=v1.4.6
-
-# The operator branch corresponding to this branch.
-OPERATOR_BRANCH=master

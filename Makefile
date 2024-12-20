@@ -113,15 +113,13 @@ MULTI_TENANCY_CRDS_FILE_CHANGES = "operator.tigera.io_managers.yaml" \
 																	"operator.tigera.io_compliances.yaml" \
 																	"operator.tigera.io_intrusiondetections.yaml" \
 																	"calico/crd.projectcalico.org_managedclusters.yaml"
-# Get operator CRDs from the operator repo, OPERATOR_BRANCH_NAME must be set
-get-operator-crds: var-require-all-OPERATOR_BRANCH_NAME
+# Get operator CRDs from the operator repo, OPERATOR_BRANCH must be set
+get-operator-crds: var-require-all-OPERATOR_BRANCH
 	cd ./charts/tigera-operator/crds/ && \
-	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
-	cd ./manifests/ocp/ && \
-	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo for ocp" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/$${file} -o $${file}; done
+	for file in operator.tigera.io_*.yaml; do echo "downloading $$file from operator repo" && curl -fsSL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH)/pkg/crds/operator/$${file} -o $${file}; done
 	cp -vLR ./charts/tigera-operator/crds/ ./charts/multi-tenant-crds/. && \
 	cd ./charts/multi-tenant-crds/crds && \
-	curl -fsSOL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH_NAME)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
+	curl -fsSOL https://raw.githubusercontent.com/tigera/operator/$(OPERATOR_BRANCH)/pkg/crds/operator/operator.tigera.io_tenants.yaml && \
 	for file in $(MULTI_TENANCY_CRDS_FILE_CHANGES); do \
 		echo "Update CRD $$file to be Namespaced"; \
 		sed -i 's/scope: Cluster/scope: Namespaced/g' $$file; \
@@ -279,19 +277,11 @@ helm-index:
 
 # Creates the tar file used for installing Calico on OpenShift.
 # Excludes manifests that should be applied after cluster creation.
-manifests/ocp.tgz: bin/yq
-	rm -f $@
-	mkdir -p ocp-tmp
-	cp -r manifests/ocp ocp-tmp/
-	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c " \
-		for file in ocp-tmp/ocp/* ; \
-        	do bin/yq -i 'del(.. | select(select(has(\"description\")).description|type == \"!!str\").description)' \$$file ; \
-        done"
-	tar czvf $@ -C ocp-tmp \
+bin/ocp.tgz: manifests/ocp/
+	tar czvf $@ -C manifests/ \
 		--exclude=tigera-enterprise-resources.yaml \
 		--exclude=tigera-prometheus-operator.yaml \
 		ocp
-	rm -rf ocp-tmp
 
 ## Generates release notes for the given version.
 .PHONY: release-notes
