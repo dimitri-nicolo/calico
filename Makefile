@@ -229,6 +229,33 @@ e2e-test:
 	# Disable AdminNetworkPolicy Conformance tests since it's flaky. The issue is being tracked at https://tigera.atlassian.net/browse/CORE-10742
 	# KUBECONFIG=$(KIND_KUBECONFIG) ./e2e/bin/adminpolicy/e2e.test -exempt-features=$(ADMINPOLICY_UNSUPPORTED_FEATURES) -supported-features=$(ADMINPOLICY_SUPPORTED_FEATURES)
 
+###############################################################################
+# Release logic below
+###############################################################################
+# Build the release tool.
+release/bin/release: $(shell find ./release -type f -name '*.go')
+	$(call build_binary, ./release/build, $@)
+
+# Install ghr for publishing to github.
+bin/ghr:
+	$(DOCKER_RUN) -e GOBIN=/go/src/$(PACKAGE_NAME)/bin/ $(CALICO_BUILD) go install github.com/tcnksm/ghr@$(GHR_VERSION)
+
+# Build a release.
+release: release/bin/release
+	@release/bin/release release build
+
+# Publish an already built release.
+release-publish: release/bin/release bin/ghr
+	@release/bin/release release publish
+
+# Create a release branch.
+create-release-branch: release/bin/release
+	@release/bin/release branch cut -git-publish
+
+# Test the release code
+release-test:
+	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -cover -r release/pkg
+
 # Merge OSS branch.
 # Expects the following arguments:
 # - OSS_REMOTE: Git remote to use for OSS.

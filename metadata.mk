@@ -21,6 +21,7 @@ KIND_VERSION=v0.24.0
 PROTOC_VER=v0.1
 UBI8_VERSION=8.10
 UBI9_VERSION=9.4
+GHR_VERSION=v0.17.0
 
 # Configuration for Semaphore integration.
 ORGANIZATION=tigera
