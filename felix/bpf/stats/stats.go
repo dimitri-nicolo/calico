@@ -31,6 +31,6 @@ func AttachTcpStatsBpfProgram(ifaceName, logLevel string, nsID uint16) error {
 		logLevel = "no_log"
 	}
 
-	fileName := fmt.Sprintf("tcp_%s_stats.o", logLevel)
+	fileName := fmt.Sprintf("tcp_stats_%s.o", logLevel)
 	return tc.AttachTcpStatsProgram(ifaceName, fileName, nsID)
 }
