@@ -102,6 +102,6 @@ fv: bin/l7-collector-$(ARCH)
 ###############################################################################
 .PHONY: ci cd
 
-ci: clean static-checks image ut
+ci: clean image ut static-checks
 
 cd: image-all cd-common

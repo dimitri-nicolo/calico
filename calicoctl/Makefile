@@ -234,7 +234,7 @@ stop-kubernetes-master:
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean static-checks image test
+ci: clean image test static-checks
 
 ###############################################################################
 # CD

@@ -238,7 +238,7 @@ test-install-cni: run-k8s-apiserver image pkg/install/install.test
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean static-checks image test-cni-versions test-install-cni
+ci: clean image test-cni-versions test-install-cni static-checks
 
 ## Deploys images to registry
 cd: image-all cd-common

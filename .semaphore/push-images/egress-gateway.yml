@@ -40,7 +40,7 @@ blocks:
       jobs:
         - name: Linux amd64
           commands:
-            - make -C egress-gateway cd ARCHES=amd64 CONFIRM=true
+            - make -C egress-gateway cd ARCHES=amd64 CONFIRM=true SKIP_PROTOBUF=true
   - name: Publish egress-gateway images - native arm64 runner
     dependencies: []
     skip:

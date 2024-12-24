@@ -624,7 +624,7 @@ st: st-checks $(REMOTE_DEPS) image dist/calicoctl busybox.tar cnx-node.tar workl
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean static-checks image ut st
+ci: clean image ut st static-checks
 
 ## Deploys images to registry
 cd: image-all cd-common

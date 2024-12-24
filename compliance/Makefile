@@ -268,7 +268,7 @@ run-linseed:
 .PHONY: cd ci
 
 ## Builds the code and runs all tests.
-ci: clean static-checks image ut
+ci: clean image ut static-checks
 
 ## Deploys images to registry
 cd: image-all cd-common
