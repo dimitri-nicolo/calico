@@ -226,7 +226,7 @@ func HashreleaseCleanRemote(cfg *config.Config) {
 // the "legacy" format our CI tooling expects. This should be temporary until
 // we can update the tooling to expect the new format.
 // Specifically, we need to do two things:
-// - Copy the windows zip file to files/windows/calico-windows-<ver>.zip
+// - Copy the windows zip file to files/windows/tigera-calico-windows-<ver>.zip
 // - Copy tigera-operator-<ver>.tgz to tigera-operator.tgz
 // - Copy ocp.tgz to manifests/ocp.tgz
 func ReformatHashrelease(cfg *config.Config, dir string) error {
@@ -237,12 +237,12 @@ func ReformatHashrelease(cfg *config.Config, dir string) error {
 	}
 	ver := pinned.Components["calico"].Version
 
-	// Copy the windows zip file to files/windows/calico-windows-<ver>.zip
+	// Copy the windows zip file to files/windows/tigera-calico-windows-<ver>.zip
 	if err := os.MkdirAll(filepath.Join(dir, "files", "windows"), 0o755); err != nil {
 		return err
 	}
-	windowsZip := filepath.Join(dir, fmt.Sprintf("calico-windows-%s.zip", ver))
-	windowsZipDst := filepath.Join(dir, "files", "windows", fmt.Sprintf("calico-windows-%s.zip", ver))
+	windowsZip := filepath.Join(dir, fmt.Sprintf("tigera-calico-windows-%s.zip", ver))
+	windowsZipDst := filepath.Join(dir, "files", "windows", fmt.Sprintf("tigera-calico-windows-%s.zip", ver))
 	if err := utils.CopyFile(windowsZip, windowsZipDst); err != nil {
 		return err
 	}
