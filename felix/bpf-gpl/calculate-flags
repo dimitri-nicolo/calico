@@ -96,9 +96,6 @@ elif [[ "${filename}" =~ .*lo.* ]]; then
   ((flags |= CALI_TC_HOST_EP))
   ((flags |= CALI_TC_LO))
   ep_type="lo"
-else
-  echo "Can't recognise endpoint type"
-  exit 2
 fi
 
 if [[ "${filename}" =~ to.* ]]; then
