@@ -24,8 +24,7 @@ func TestMatchBPFIpsetsProgramForIPTablesV6(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 
 	defer iptables.CleanupObjPinDir()
-	var setID uint64
-	setID = 1234
+	setID := uint64(1234)
 
 	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 6)
 	Expect(err).NotTo(HaveOccurred())
@@ -43,18 +42,21 @@ func TestMatchBPFIpsetsProgramForIPTablesV6(t *testing.T) {
 	ipHdr := *ipv6Default
 	ipHdr.DstIP = net.IP([]byte{0x91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 81})
 	_, _, _, _, pktBytes, err := testPacketV6(ethDefault, &ipHdr, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
 	res, err := bpftoolProgRun(pinPath, pktBytes, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.Retval).To(Equal(1))
 
 	ipHdr.DstIP = net.IP([]byte{0x91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82})
 	_, _, _, _, pktBytes, err = testPacketV6(ethDefault, &ipHdr, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
 	res, err = bpftoolProgRun(pinPath, pktBytes, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.Retval).To(Equal(1))
 
 	ipHdr.DstIP = net.IP([]byte{0x91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83})
 	_, _, _, _, pktBytes, err = testPacketV6(ethDefault, &ipHdr, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
 	res, err = bpftoolProgRun(pinPath, pktBytes, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.Retval).To(Equal(0))
@@ -66,10 +68,9 @@ func TestMatchBPFIpsetsProgramForIPTables(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 
 	defer iptables.CleanupObjPinDir()
-	var setID uint64
-	setID = 1234
+	setID := uint64(1234)
 
-	err = iptables.LoadIPSetsPolicyProgram(setID, "off", 4)
+	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 4)
 	Expect(err).NotTo(HaveOccurred())
 
 	pinPath := path.Join(bpfdefs.DnsObjDir+fmt.Sprintf("%d_v4", setID)) + "/cali_ipt_match_ipset"
@@ -85,18 +86,21 @@ func TestMatchBPFIpsetsProgramForIPTables(t *testing.T) {
 	ipHdr := *ipv4Default
 	ipHdr.DstIP = net.IPv4(91, 189, 91, 81)
 	_, _, _, _, pktBytes, err := testPacketV4(ethDefault, &ipHdr, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
 	res, err := bpftoolProgRun(pinPath, pktBytes, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.Retval).To(Equal(1))
 
 	ipHdr.DstIP = net.IPv4(91, 189, 91, 82)
 	_, _, _, _, pktBytes, err = testPacketV4(ethDefault, &ipHdr, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
 	res, err = bpftoolProgRun(pinPath, pktBytes, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.Retval).To(Equal(1))
 
 	ipHdr.DstIP = net.IPv4(91, 189, 91, 83)
 	_, _, _, _, pktBytes, err = testPacketV4(ethDefault, &ipHdr, nil, nil)
+	Expect(err).NotTo(HaveOccurred())
 	res, err = bpftoolProgRun(pinPath, pktBytes, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(res.Retval).To(Equal(0))

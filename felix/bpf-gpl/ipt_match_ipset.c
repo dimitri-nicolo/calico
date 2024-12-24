@@ -41,8 +41,10 @@ int cali_ipt_match_ipset(struct __sk_buff *skb)
 #endif
 	__u32 *ret = cali_ip_sets_lookup_elem(&key);
 	if (ret) {
+		CALI_DEBUG("Dst IP " IP_FMT " matches ip set 0x%x", debug_ip(key.addr), ipset_id);
 		return 1;
 	}
+	CALI_DEBUG("Dst IP " IP_FMT " does not match ip set 0x%x", debug_ip(key.addr), ipset_id);
 	return 0;
 }
 

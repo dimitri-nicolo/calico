@@ -10,20 +10,26 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
+	"github.com/projectcalico/calico/felix/bpf/bpfutils"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 )
 
-func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipFamily int) error {
-	logLevel := strings.ToLower(bpfLogLevel)
+func progFileName(logLevel string, ipver int) string {
+	logLevel = strings.ToLower(logLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"
 	}
 
-	suffix := "_v4.o"
-	if ipFamily == 6 {
-		suffix = "_v6.o"
+	btf := ""
+	if bpfutils.BTFEnabled {
+		btf = "_co-re"
 	}
-	fileToLoad := "ipt_match_ipset_" + logLevel + suffix
+
+	return fmt.Sprintf("ipt_match_ipset_%s%s_v%d.o", logLevel, btf, ipver)
+}
+
+func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver int) error {
+	fileToLoad := progFileName(bpfLogLevel, ipver)
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileToLoad)
 	obj, err := libbpf.OpenObject(preCompiledBinary)
 	if err != nil {
@@ -54,7 +60,7 @@ func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipFamily int) e
 		return fmt.Errorf("error loading program %v", err)
 	}
 
-	pinPath := path.Join(bpfdefs.DnsObjDir, fmt.Sprintf("%d_v%d", ipSetID, ipFamily))
+	pinPath := path.Join(bpfdefs.DnsObjDir, fmt.Sprintf("%d_v%d", ipSetID, ipver))
 	err = obj.PinPrograms(pinPath)
 	if err != nil {
 		return fmt.Errorf("error pinning program %v", err)
