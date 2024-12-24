@@ -26,6 +26,7 @@ export KUBECONFIG=~/.kube/kind-config-kind
 # URL for an operator install. We will build the local code and load the images so
 # that the operator will use thoso images with local changes instead of pulling
 # images.
+: ${OPERATOR_CRDS_URL:=../manifests/operator-crds.yaml}
 : ${OPERATOR_URL:=../manifests/tigera-operator.yaml}
 
 tmpd=$(mktemp -d -t calico.XXXXXX)
@@ -166,6 +167,7 @@ function install_tsee() {
     . ${TEST_DIR}/load_images_on_kind_cluster.sh
 
     # Prepare for an operator install.
+    ${kubectl} create -f ${OPERATOR_CRDS_URL}
     ${kubectl} create -f ${OPERATOR_URL}
 
     # Install pull secret.

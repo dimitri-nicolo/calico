@@ -19,7 +19,7 @@ helm install calico-enterprise tigera-operator-{CALIENT_RELEASE_VERSION}.tgz --n
 In order to update multi-tenancy CRDs to the latest version, run the makefile target below:
 
 ```
-OPERATOR_BRANCH_NAME=master make get-operator-crds
+OPERATOR_BRANCH=master make get-operator-crds
 ```
 
 ## Release a new chart

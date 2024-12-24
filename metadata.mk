@@ -21,6 +21,7 @@ KIND_VERSION=v0.24.0
 PROTOC_VER=v0.1
 UBI8_VERSION=8.10
 UBI9_VERSION=9.4
+GHR_VERSION=v0.17.0
 
 # Configuration for Semaphore integration.
 ORGANIZATION=tigera
@@ -92,12 +93,7 @@ endif
 # Default branch prefix for release branches
 RELEASE_BRANCH_PREFIX ?= release-calient
 # The operator branch corresponding to this branch.
-OPERATOR_BRANCH_NAME=master
+OPERATOR_BRANCH=master
 
 # The libbpf version to use
 LIBBPF_VERSION=v1.4.6
-
-# The operator branch corresponding to this branch.
-OPERATOR_BRANCH=master
-
-DEFAULT_BRANCH_OVERRIDE=sridhar-dns-inline-iptables
