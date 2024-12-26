@@ -86,7 +86,7 @@ else
     sed -i "s,export RELEASE_BASE_URL.*,export RELEASE_BASE_URL=\"${RELEASE_BASE_URL}\"," ./export-env.sh
     curl -sSf -L --retry 5 ${RELEASE_BASE_URL}/manifests/operator-crds.yaml -o operator-crds.yaml
     curl -sSf -L --retry 5 ${RELEASE_BASE_URL}/manifests/tigera-operator.yaml -o tigera-operator.yaml
-    #${KCAPZ} create -f ./operator-crds.yaml #TODO: uncomment this when https://github.com/tigera/calico-private/pull/8346 is merged
+    ${KCAPZ} create -f ./operator-crds.yaml
     ${KCAPZ} create -f ./tigera-operator.yaml
 fi
 
