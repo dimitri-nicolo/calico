@@ -89,6 +89,7 @@ func NewManager(opts ...Option) *CalicoManager {
 	// Configure defaults here.
 	b := &CalicoManager{
 		runner:          &command.RealCommandRunner{},
+		productCode:     utils.CalicoProductCode,
 		validate:        true,
 		buildImages:     true,
 		publishImages:   true,
@@ -137,6 +138,9 @@ func NewManager(opts ...Option) *CalicoManager {
 type CalicoManager struct {
 	// Allow specification of command runner so it can be overridden in tests.
 	runner command.CommandRunner
+
+	// The product code for the release.
+	productCode string
 
 	// The abs path of the root of the repository.
 	repoRoot string
@@ -349,7 +353,7 @@ func (r *CalicoManager) Build() error {
 		env := append(os.Environ(), fmt.Sprintf("VERSION=%s", ver))
 		targets := []string{"release-windows-archive", "dist/install-calico-windows.ps1"}
 		for _, target := range targets {
-			if _, err = r.runner.RunInDir(r.repoRoot, "make", []string{"-C", "node", target}, env); err != nil {
+			if err = r.makeInDirectoryIgnoreOutput(filepath.Join(r.repoRoot, "node"), target, env...); err != nil {
 				return fmt.Errorf("error building target %s: %s", target, err)
 			}
 		}
@@ -466,6 +470,11 @@ func (r *CalicoManager) PreReleaseValidate(ver string) error {
 		return fmt.Errorf("Attempt to release from a shallow clone is not possible")
 	}
 
+	// Check that code generation is up-to-date.
+	if err := r.makeInDirectoryIgnoreOutput(r.repoRoot, "generate get-operator-crds check-dirty"); err != nil {
+		return fmt.Errorf("code generation error (try 'make generate' and/or 'make get-operator-crds' ?): %s", err)
+	}
+
 	// Assert that manifests are using the correct version.
 	err = r.assertManifestVersions(ver)
 	if err != nil {
@@ -502,23 +511,31 @@ func (r *CalicoManager) TagRelease(ver string) error {
 	return nil
 }
 
+// modifyHelmChartsValues modifies values in helm charts to use the correct version.
+// This is only necessary for hashreleases.
+func (r *CalicoManager) modifyHelmChartsValues() error {
+	valuesYAML := filepath.Join(r.repoRoot, "charts", "tigera-operator", "values.yaml")
+	if _, err := r.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/version: .*/version: %s/g`, r.operatorVersion), valuesYAML}, nil); err != nil {
+		logrus.WithError(err).Error("Failed to update operator version in values.yaml")
+		return err
+	}
+	if _, err := r.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/tag: .*/tag: %s/g`, r.calicoVersion), valuesYAML}, nil); err != nil {
+		logrus.WithError(err).Error("Failed to update calicoctl version in values.yaml")
+		return err
+	}
+	return nil
+}
+
 func (r *CalicoManager) BuildHelm() error {
 	if r.isHashRelease {
-		// We need to modify values.yaml to use the correct version.
-		valuesYAML := filepath.Join(r.repoRoot, "charts", "tigera-operator", "values.yaml")
-		if _, err := r.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/version: .*/version: %s/g`, r.operatorVersion), valuesYAML}, nil); err != nil {
-			logrus.WithError(err).Error("Failed to update operator version in values.yaml")
-			return err
-		}
-		if _, err := r.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/tag: .*/tag: %s/g`, r.calicoVersion), valuesYAML}, nil); err != nil {
-			logrus.WithError(err).Error("Failed to update calicoctl version in values.yaml")
-			return err
+		if err := r.modifyHelmChartsValues(); err != nil {
+			return fmt.Errorf("failed to modify helm chart values: %s", err)
 		}
 	}
 
 	// Build the helm chart, passing the version to use.
 	env := append(os.Environ(), fmt.Sprintf("GIT_VERSION=%s", r.calicoVersion))
-	if _, err := r.runner.RunInDir(r.repoRoot, "make", []string{"chart"}, env); err != nil {
+	if err := r.makeInDirectoryIgnoreOutput(r.repoRoot, "chart", env...); err != nil {
 		return err
 	}
 
@@ -534,7 +551,7 @@ func (r *CalicoManager) BuildHelm() error {
 
 func (r *CalicoManager) buildOCPBundle() error {
 	// Build OpenShift bundle.
-	if _, err := r.runner.RunInDir(r.repoRoot, "make", []string{"bin/ocp.tgz"}, []string{}); err != nil {
+	if err := r.makeInDirectoryIgnoreOutput(r.repoRoot, "bin/ocp.tgz"); err != nil {
 		return err
 	}
 	return nil
@@ -670,7 +687,7 @@ func (r *CalicoManager) hashreleasePrereqs() error {
 			imageList = append(imageList, component.String())
 		}
 		imageScanner := imagescanner.New(r.imageScanningConfig)
-		err := imageScanner.Scan(imageList, r.hashrelease.Stream, false, r.tmpDir)
+		err := imageScanner.Scan(r.productCode, imageList, r.hashrelease.Stream, false, r.tmpDir)
 		if err != nil {
 			// Error is logged and ignored as this is not considered a fatal error
 			logrus.WithError(err).Error("Failed to scan images")
@@ -896,7 +913,7 @@ func (r *CalicoManager) generateManifests() error {
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("CALICO_VERSION=%s", r.calicoVersion))
 	env = append(env, fmt.Sprintf("OPERATOR_VERSION=%s", r.operatorVersion))
-	if _, err := r.runner.RunInDir(r.repoRoot, "make", []string{"gen-manifests"}, env); err != nil {
+	if err := r.makeInDirectoryIgnoreOutput(r.repoRoot, "gen-manifests", env...); err != nil {
 		logrus.WithError(err).Error("Failed to make manifests")
 		return err
 	}
@@ -1230,4 +1247,9 @@ func (r *CalicoManager) git(args ...string) (string, error) {
 
 func (r *CalicoManager) makeInDirectoryWithOutput(dir, target string, env ...string) (string, error) {
 	return r.runner.Run("make", []string{"-C", dir, target}, env)
+}
+
+func (r *CalicoManager) makeInDirectoryIgnoreOutput(dir, target string, env ...string) error {
+	_, err := r.runner.Run("make", []string{"-C", dir, target}, env)
+	return err
 }
