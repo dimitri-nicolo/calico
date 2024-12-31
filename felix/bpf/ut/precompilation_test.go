@@ -102,11 +102,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 				objects[filename] = struct{}{}
 			}
 			for _, ipv := range []string{"v4", "v6"} {
-				core := ""
-				if btf {
-					core = "_co-re"
-				}
-				filename := "ipt_match_ipset_" + logLevel + core + fmt.Sprintf("_%s.o", ipv)
+				filename := "ipt_match_ipset_" + logLevel + "_co-re" + fmt.Sprintf("_%s.o", ipv)
 				objects[filename] = struct{}{}
 			}
 		}
