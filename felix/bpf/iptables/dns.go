@@ -10,7 +10,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
-	"github.com/projectcalico/calico/felix/bpf/bpfutils"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 )
 
@@ -20,12 +19,7 @@ func progFileName(logLevel string, ipver int) string {
 		logLevel = "no_log"
 	}
 
-	btf := ""
-	if bpfutils.BTFEnabled {
-		btf = "_co-re"
-	}
-
-	return fmt.Sprintf("ipt_match_ipset_%s%s_v%d.o", logLevel, btf, ipver)
+	return fmt.Sprintf("ipt_match_ipset_%s_co-re_v%d.o", logLevel, ipver)
 }
 
 func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver int) error {
@@ -33,7 +27,7 @@ func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver int) erro
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileToLoad)
 	obj, err := libbpf.OpenObject(preCompiledBinary)
 	if err != nil {
-		return fmt.Errorf("error opening BPF object %v", err)
+		return fmt.Errorf("error opening BPF object %w", err)
 	}
 	defer obj.Close()
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
@@ -108,7 +102,7 @@ func LoadDNSParserBPFProgram(bpfLogLevel string) error {
 
 }
 
-func CreateObjPinDir() error {
+func CreateDNSObjPinDir() error {
 	_, err := os.Stat(bpfdefs.DnsObjDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -121,6 +115,6 @@ func CreateObjPinDir() error {
 	return nil
 }
 
-func CleanupObjPinDir() {
+func CleanupDNSObjPinDir() {
 	os.RemoveAll(bpfdefs.DnsObjDir)
 }
