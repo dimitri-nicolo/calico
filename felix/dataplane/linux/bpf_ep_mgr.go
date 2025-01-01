@@ -1,6 +1,6 @@
 //go:build !windows
 
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -546,15 +546,15 @@ func newBPFEndpointManager(
 		// Note: the allocators only allocate a fraction of the map, the
 		// rest is reserved for sub-programs generated if a single program
 		// would be too large.
-		jumpMapAlloc:            newJumpMapAlloc(jump.TCMaxEntryPoints),
-		xdpJumpMapAlloc:         newJumpMapAlloc(jump.XDPMaxEntryPoints),
-		ruleRenderer:            iptablesRuleRenderer,
-		onStillAlive:            livenessCallback,
-		lookupsCache:            lookupsCache,
-		hostIfaceToEpMap:        map[string]proto.HostEndpoint{},
-		opReporter:              opReporter,
-		actionOnDrop:            actionOnDrop,
-		enableTcpStats:          enableTcpStats,
+		jumpMapAlloc:     newJumpMapAlloc(jump.TCMaxEntryPoints),
+		xdpJumpMapAlloc:  newJumpMapAlloc(jump.XDPMaxEntryPoints),
+		ruleRenderer:     iptablesRuleRenderer,
+		onStillAlive:     livenessCallback,
+		lookupsCache:     lookupsCache,
+		hostIfaceToEpMap: map[string]proto.HostEndpoint{},
+		opReporter:       opReporter,
+		actionOnDrop:     actionOnDrop,
+		enableTcpStats:   enableTcpStats,
 		// ipv6Enabled Should be set to config.Ipv6Enabled, but for now it is better
 		// to set it to BPFIpv6Enabled which is a dedicated flag for development of IPv6.
 		// TODO: set ipv6Enabled to config.Ipv6Enabled when IPv6 support is complete
