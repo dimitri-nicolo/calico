@@ -14,9 +14,10 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/authorization/v1"
+
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 	"github.com/projectcalico/calico/linseed/pkg/server"
-	v1 "k8s.io/api/authorization/v1"
 )
 
 type myHandler struct {
