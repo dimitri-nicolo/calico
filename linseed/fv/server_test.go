@@ -41,7 +41,7 @@ func (h *myHandler) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 }
 
 // Prior to increasing the Linseed server's WriteTimeout to 60s, this test got a "tls: bad record
-// MAC" error like this:
+// MAC" error like this at line 103:
 //
 //	Unexpected error:
 //	    <*url.Error | 0xc00042a660>:
@@ -100,7 +100,7 @@ func TestServerSlowRequest(t *testing.T) {
 		},
 	}}
 	_, err = client.Get("https://localhost:9999/sleep")
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred()) // "tls: bad record MAC" error used to be seen here
 
 	// Shut down the server.
 	err = server.Shutdown(context.TODO())
