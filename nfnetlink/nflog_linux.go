@@ -92,7 +92,7 @@ func SubscribeDNS(groupNum int, bufSize int, callback func(data []byte, timestam
 	return nil
 }
 
-func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}, includeConnTrack bool) error {
+func NflogSubscribe(groupNum int, bufSize int, ch chan<- map[NflogPacketTuple]*NflogPacketAggregate, done <-chan struct{}, includeConnTrack bool) error {
 	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), false, includeConnTrack)
 	if err != nil {
 		return err
@@ -269,7 +269,7 @@ func openAndReadNFNLSocket(
 	return resChan, nil
 }
 
-func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- *NflogPacketAggregate) {
+func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- map[NflogPacketTuple]*NflogPacketAggregate) {
 	// Start another goroutine for parsing netlink messages into nflog objects
 	go func() {
 		defer close(ch)
@@ -334,16 +334,18 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 					}
 				}
 			case <-sendTicker.C:
-				for t, pktAddr := range aggregate {
-					// Don't block when trying to send to slow receivers.
-					// In case of slow receivers, simply continue aggregating and
-					// retry sending next time around.
-					select {
-					case ch <- pktAddr:
-						numAggregatesFlushed.Inc()
-						delete(aggregate, t)
-					default:
-					}
+				if len(aggregate) == 0 {
+					continue
+				}
+
+				// Don't block when trying to send to slow receivers.
+				// In case of slow receivers, simply continue aggregating and
+				// retry sending next time around.
+				select {
+				case ch <- aggregate:
+					numAggregatesFlushed.Add(float64(len(aggregate)))
+					aggregate = make(map[NflogPacketTuple]*NflogPacketAggregate)
+				default:
 				}
 			}
 		}
