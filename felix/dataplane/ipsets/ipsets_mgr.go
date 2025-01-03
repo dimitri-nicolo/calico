@@ -350,7 +350,7 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 	for ip, domains := range ipToDomains {
 		// Remove the removed domains.
 		for _, domain := range domainsRemoved {
-			domains.Discard(domain)
+			domains.Discard(strings.ToLower(domain))
 		}
 		if domains.Len() == 0 {
 			// We should remove this IP now.

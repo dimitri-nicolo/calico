@@ -346,174 +346,203 @@ var (
 	}
 )
 
-var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierAllowIngressNFLOGPrefix,
-			Len:     20,
-			Bytes:   100,
-			Packets: 1,
+var ingressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   remoteIp1,
+	Dst:   localIp1,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var ingressPktAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	ingressPktAllowNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierAllowIngressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
-	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   remoteIp1,
-		Dst:   localIp1,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+		Tuple: ingressPktAllowNflogTuple,
 	},
 }
 
 var ingressPktAllowTuple = tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
-var egressPktAllow = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierAllowEgressNFLOGPrefix,
-			Len:     20,
-			Bytes:   100,
-			Packets: 1,
+var egressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   remoteIp1,
+	Proto: proto_udp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+var egressPktAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	egressPktAllowNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierAllowEgressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
-	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   remoteIp1,
-		Proto: proto_udp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+		Tuple: egressPktAllowNflogTuple,
 	},
 }
 var egressPktAllowTuple = tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
-var ingressPktDeny = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierDenyIngressNFLOGPrefix,
-			Len:     20,
-			Bytes:   100,
-			Packets: 1,
+var ingressPktDenyNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   remoteIp1,
+	Dst:   localIp1,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var ingressPktDeny = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	ingressPktDenyNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierDenyIngressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
-	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   remoteIp1,
-		Dst:   localIp1,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+		Tuple: ingressPktDenyNflogTuple,
 	},
 }
 var ingressPktDenyTuple = tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
-var localPktIngress = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierDenyIngressNFLOGPrefix,
-			Len:     22,
-			Bytes:   100,
-			Packets: 1,
-		},
-	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   localIp2,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
-	},
+var localPktIngressNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   localIp2,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 }
-var localPktIngressWithDNAT = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierDenyIngressNFLOGPrefix,
-			Len:     22,
-			Bytes:   100,
-			Packets: 1,
+var localPktIngress = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktIngressNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierDenyIngressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
+		Tuple: localPktIngressNflogTuple,
 	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   localIp2,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
-	},
-	OriginalTuple: nfnetlink.CtTuple{
-		Src:        localIp1,
-		Dst:        localIp2DNAT,
-		L3ProtoNum: ipv4,
-		ProtoNum:   proto_tcp,
-		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
-		L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
-	},
-	IsDNAT: true,
 }
 
-var localPktEgress = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierAllowEgressNFLOGPrefix,
-			Len:     20,
-			Bytes:   100,
-			Packets: 1,
+var localPktIngressWithDNATNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   localIp2,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var localPktIngressWithDNAT = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktIngressWithDNATNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierDenyIngressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
+		Tuple: localPktIngressWithDNATNflogTuple,
+		OriginalTuple: nfnetlink.CtTuple{
+			Src:        localIp1,
+			Dst:        localIp2DNAT,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
+		},
+		IsDNAT: true,
 	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   localIp2,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+
+var localPktEgressNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   localIp2,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+var localPktEgress = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktEgressNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+
+			{
+				Prefix:  defTierAllowEgressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
+		},
+		Tuple: localPktEgressNflogTuple,
 	},
 }
 
 var localPktEgressDenyTuplePreDNAT = tuple.New(localIp1, localIp1DNAT, proto_tcp, srcPort, dstPortDNAT)
 
-var localPktEgressDeniedPreDNAT = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierDenyEgressNFLOGPrefix,
-			Len:     22,
-			Bytes:   100,
-			Packets: 1,
+var localPktEgressDeniedPreDNATNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   localIp1DNAT,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPortDNAT},
+}
+var localPktEgressDeniedPreDNAT = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktEgressDeniedPreDNATNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierDenyEgressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
+		Tuple:  localPktEgressDeniedPreDNATNflogTuple,
+		IsDNAT: false,
 	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   localIp1DNAT,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPortDNAT},
-	},
-	IsDNAT: false,
 }
 
 var localPktEgressAllowTuple = tuple.New(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 
-var localPktEgressAllowedPreDNAT = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierAllowEgressNFLOGPrefix,
-			Len:     22,
-			Bytes:   100,
-			Packets: 1,
+var localPktEgressAllowedPreDNATNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   remoteIp1,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+var localPktEgressAllowedPreDNAT = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	localPktEgressAllowedPreDNATNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierAllowEgressNFLOGPrefix,
+				Len:     22,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
+		Tuple: localPktEgressAllowedPreDNATNflogTuple,
+		OriginalTuple: nfnetlink.CtTuple{
+			Src:        localIp1,
+			Dst:        localIp1DNAT,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
+		},
+		IsDNAT: true,
 	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   remoteIp1,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
-	},
-	OriginalTuple: nfnetlink.CtTuple{
-		Src:        localIp1,
-		Dst:        localIp1DNAT,
-		L3ProtoNum: ipv4,
-		ProtoNum:   proto_tcp,
-		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
-		L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
-	},
-	IsDNAT: true,
 }
 
 var _ = Describe("NFLOG Datasource", func() {
@@ -643,39 +672,45 @@ var proxyBackEndCTEntry = nfnetlink.CtEntry{
 	ProtoInfo:        nfnetlink.CtProtoInfo{State: nfnl.TCP_CONNTRACK_TIME_WAIT},
 }
 
-var podProxyEgressPktAllow = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierAllowEgressNFLOGPrefix,
-			Len:     20,
-			Bytes:   100,
-			Packets: 1,
+var podProxyEgressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   localIp2,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+var podProxyEgressPktAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	podProxyEgressPktAllowNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierAllowEgressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
-	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   localIp2,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+		Tuple: podProxyEgressPktAllowNflogTuple,
 	},
 }
 
-var proxyBackendIngressPktAllow = &nfnetlink.NflogPacketAggregate{
-	Prefixes: []nfnetlink.NflogPrefix{
-		{
-			Prefix:  defTierAllowIngressNFLOGPrefix,
-			Len:     20,
-			Bytes:   100,
-			Packets: 1,
+var proxyBackendIngressPktAllowNflogTuple = nfnetlink.NflogPacketTuple{
+	Src:   localIp1,
+	Dst:   localIp2,
+	Proto: proto_tcp,
+	L4Src: nfnetlink.NflogL4Info{Port: proxyPort},
+	L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+}
+var proxyBackendIngressPktAllow = map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate{
+	proxyBackendIngressPktAllowNflogTuple: {
+		Prefixes: []nfnetlink.NflogPrefix{
+			{
+				Prefix:  defTierAllowIngressNFLOGPrefix,
+				Len:     20,
+				Bytes:   100,
+				Packets: 1,
+			},
 		},
-	},
-	Tuple: nfnetlink.NflogPacketTuple{
-		Src:   localIp1,
-		Dst:   localIp2,
-		Proto: proto_tcp,
-		L4Src: nfnetlink.NflogL4Info{Port: proxyPort},
-		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+		Tuple: proxyBackendIngressPktAllowNflogTuple,
 	},
 }
 
@@ -1043,7 +1078,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.DstEp).NotTo(Equal(oldDest))
 		})
 		It("should handle destination becoming non-local by removing entry on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow[ingressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
@@ -1061,7 +1096,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.Reported).To(BeFalse())
 		})
 		It("should handle destination becoming non-local by removing entry on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow[ingressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
@@ -1082,7 +1117,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle destination changing on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow[ingressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
@@ -1105,7 +1140,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.DstEp).NotTo(Equal(oldDest))
 		})
 		It("should handle destination changing on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow[ingressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
@@ -1241,7 +1276,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle source becoming non-local by removing entry on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow[egressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
@@ -1259,7 +1294,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.Reported).To(BeFalse())
 		})
 		It("should handle source becoming non-local by removing entry on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow[egressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
@@ -1280,7 +1315,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle source changing on next packetinfo update for reported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow[egressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
@@ -1303,7 +1338,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.DstEp).To(Equal(oldDest))
 		})
 		It("should handle source changing on next packetinfo update for unreported flow", func() {
-			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirEgress, egressPktAllow[egressPktAllowNflogTuple])
 			c.applyPacketInfo(pktinfo)
 			t := tuple.New(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
 
@@ -1417,7 +1452,7 @@ var _ = Describe("Conntrack Datasource", func() {
 
 			By("handling an nflog update for destination matching on policy - all policy info is now gathered",
 				func() {
-					pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+					pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow[ingressPktAllowNflogTuple])
 					c.applyPacketInfo(pktinfo)
 				},
 			)
@@ -1488,7 +1523,7 @@ var _ = Describe("Conntrack Datasource", func() {
 
 			By("handling an nflog update for destination matching on policy - all policy info is now gathered",
 				func() {
-					pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+					pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow[ingressPktAllowNflogTuple])
 					c.applyPacketInfo(pktinfo)
 				},
 			)
@@ -1537,8 +1572,8 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.IsDNAT).Should(BeTrue())
 
 			By("handling nflog updates for destination matching on policy - all policy info is now gathered, but no service")
-			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress))
-			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirEgress, localPktEgress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress[localPktIngressNflogTuple]))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirEgress, localPktEgress[localPktEgressNflogTuple]))
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
@@ -1558,13 +1593,13 @@ var _ = Describe("Conntrack Datasource", func() {
 			})
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
-			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress[localPktIngressNflogTuple]))
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 		It("handle pre-DNAT info on nflog update", func() {
 			By("handling egress nflog updates for destination matching on policy - this contains pre-DNAT info")
 			t := tuple.New(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngressWithDNAT))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngressWithDNAT[localPktIngressWithDNATNflogTuple]))
 
 			// Flagging as expired will attempt to expire the data when NFLOGs and service info are gathered.
 			By("flagging the data as expired")
@@ -1573,7 +1608,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.IsDNAT).Should(BeTrue())
 
 			By("handling ingree nflog updates for destination matching on policy - all policy info is now gathered, but no service")
-			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirEgress, localPktEgress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirEgress, localPktEgress[localPktEgressNflogTuple]))
 			Expect(c.epStats).Should(HaveKey(*t))
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
@@ -1593,7 +1628,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			})
 
 			By("handling another nflog update for destination matching on policy - should rematch and expire the entry")
-			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress))
+			c.applyPacketInfo(nflogReader.ConvertNflogPkt(rules.RuleDirIngress, localPktIngress[localPktIngressNflogTuple]))
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 	})
@@ -2596,7 +2631,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+		pktinfo := nflogReader.ConvertNflogPkt(rules.RuleDirIngress, ingressPktAllow[ingressPktAllowNflogTuple])
 		c.applyPacketInfo(pktinfo)
 	}
 }
