@@ -56,7 +56,7 @@ Options:
   -c --config=<CONFIG>         Path to connection configuration file.
                                [default: ` + constants.DefaultConfigPath + `]
      --allow-version-mismatch  Allow client and cluster versions mismatch.
-     --skip-temp-dir-cleanup   Don't clean up the temporary directory (useful 
+     --skip-temp-dir-cleanup   Don't clean up the temporary directory (useful
                                for development).
 `
 
@@ -395,6 +395,17 @@ func collectKubernetesResource(dir string) {
 		// The following resources are used only in older versions of EE, but could still be good to include.
 		"jobs",
 		"cronjobs",
+		// Gateway API resources.
+		"backendlbpolicies",
+		"backendtlspolicies",
+		"gatewayclasses",
+		"gateways",
+		"grpcroutes",
+		"httproutes",
+		"referencegrants",
+		"tcproutes",
+		"tlsroutes",
+		"udproutes",
 	} {
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
