@@ -24,20 +24,20 @@ type Server struct {
 // NewServer creates a new Server that binds on addr and applies different customizations
 func NewServer(addr string, opts ...Option) *Server {
 	const (
-		defaultIdleTimeout  = 120 * time.Second
-		defaultReadTimeout  = 5 * time.Second
-		defaultWriteTimeout = 60 * time.Second
+		defaultIdleTimeout = 120 * time.Second
+		defaultReadTimeout = 5 * time.Second
 	)
 
 	mux := chi.NewRouter()
 
 	srv := &http.Server{
-		Addr:         addr,
-		TLSConfig:    tls.NewTLSConfig(),
-		Handler:      mux,
-		IdleTimeout:  defaultIdleTimeout,
-		ReadTimeout:  defaultReadTimeout,
-		WriteTimeout: defaultWriteTimeout,
+		Addr:        addr,
+		TLSConfig:   tls.NewTLSConfig(),
+		Handler:     mux,
+		IdleTimeout: defaultIdleTimeout,
+		ReadTimeout: defaultReadTimeout,
+		// Don't impose a WriteTimeout on Linseed's server side.  Instead we have a timeout
+		// (defaulting to 60s) in the Elastic backend.
 	}
 
 	server := &Server{
