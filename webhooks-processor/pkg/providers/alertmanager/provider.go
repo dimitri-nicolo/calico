@@ -29,6 +29,7 @@ var (
 	ErrNoUrlField  = errors.New("url field is not present in webhook configuration")
 	ErrWrongPrefix = errors.New("url field does not start with 'http://' nor 'https://'")
 	ErrWrongSuffix = errors.New("url field does not end with '/api/v2/alerts'")
+	ErrAuthCorrupt = errors.New("basicAuth field value is incorrect")
 )
 
 type AlertManagerProvider struct {
@@ -54,6 +55,11 @@ func (p *AlertManagerProvider) Validate(config map[string]string) error {
 		return ErrWrongPrefix
 	} else if !strings.HasSuffix(url, "/api/v2/alerts") {
 		return ErrWrongSuffix
+	}
+	if basicAuth, ok := config["basicAuth"]; ok {
+		if parts := strings.SplitN(basicAuth, ":", 2); len(parts) != 2 {
+			return ErrAuthCorrupt
+		}
 	}
 	return nil
 }
@@ -100,6 +106,13 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 			return // retry if failed
 		}
 		request.Header.Set("Content-Type", "application/json")
+
+		// configure basic authentication when enabled:
+		if basicAuth, ok := config["basicAuth"]; ok {
+			if parts := strings.SplitN(basicAuth, ":", 2); len(parts) == 2 {
+				request.SetBasicAuth(parts[0], parts[1])
+			}
+		}
 
 		// execute the request:
 		response, err := new(http.Client).Do(request)
