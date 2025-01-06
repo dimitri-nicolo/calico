@@ -70,6 +70,7 @@ $(VALIDARCHES):
 build-all: $(VALIDARCHES)
 
 .PHONY: build
+## Build the binary for the current architecture and platform
 build:
 	$(MAKE) $(BINDIR)/dikastes-$(ARCH) ARCH=$(ARCH)
 
@@ -84,7 +85,7 @@ endif
 
 
 ###############################################################################
-# Protobufs, 
+# Protobufs,
 #
 # defer to felix's makefile for felixbackend stuff
 ###############################################################################
