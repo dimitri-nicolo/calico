@@ -154,4 +154,4 @@ check-generated-files: .generate_files
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean check-generated-files static-checks build ut
+ci: clean check-generated-files build ut static-checks

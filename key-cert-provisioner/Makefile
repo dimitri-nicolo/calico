@@ -81,7 +81,7 @@ ut: build
 		sh -c '$(GIT_CONFIG_SSH) \
 			go test ./...'
 
-ci: clean static-checks image ut
+ci: clean image ut static-checks
 
 cd: image-all cd-common
 
@@ -91,3 +91,20 @@ clean:
 	-docker image rm -f $$(docker images $(KEY_CERT_PROVISIONER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(TEST_SIGNER_IMAGE) -a -q)
 
+###############################################################################
+# Release
+###############################################################################
+## Produces a clean build of release artifacts at the specified version.
+release-build: .release-$(VERSION).created
+.release-$(VERSION).created:
+	$(MAKE) clean image-all RELEASE=true
+	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
+	# Generate the `latest` images.
+	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
+	touch $@
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs .release-$(VERSION).published
+.release-$(VERSION).published:
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=$(RELEASE) CONFIRM=$(CONFIRM)
+	touch $@

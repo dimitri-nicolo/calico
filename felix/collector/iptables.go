@@ -27,8 +27,8 @@ type NFLogReader struct {
 	stopC    chan struct{}
 
 	luc            *calc.LookupsCache
-	IngressC       chan *nfnetlink.NflogPacketAggregate
-	EgressC        chan *nfnetlink.NflogPacketAggregate
+	IngressC       chan map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate
+	EgressC        chan map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate
 	nfIngressDoneC chan struct{}
 	nfEgressDoneC  chan struct{}
 
@@ -44,8 +44,8 @@ func NewNFLogReader(lookupsCache *calc.LookupsCache, inGrp, eGrp, bufSize int, s
 	return &NFLogReader{
 		stopC:          make(chan struct{}),
 		luc:            lookupsCache,
-		IngressC:       make(chan *nfnetlink.NflogPacketAggregate, 1000),
-		EgressC:        make(chan *nfnetlink.NflogPacketAggregate, 1000),
+		IngressC:       make(chan map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate, 1000),
+		EgressC:        make(chan map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate, 1000),
 		nfIngressDoneC: make(chan struct{}),
 		nfEgressDoneC:  make(chan struct{}),
 
@@ -83,7 +83,7 @@ func (r *NFLogReader) PacketInfoChan() <-chan PacketInfo {
 	return r.packetInfoC
 }
 
-func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}, enableServices bool) error {
+func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan map[nfnetlink.NflogPacketTuple]*nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}, enableServices bool) error {
 	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan, enableServices)
 }
 
@@ -106,12 +106,16 @@ func (r *NFLogReader) run() {
 		select {
 		case <-r.stopC:
 			return
-		case nflogPacketAggr := <-r.IngressC:
-			info := r.ConvertNflogPkt(rules.RuleDirIngress, nflogPacketAggr)
-			r.packetInfoC <- info
-		case nflogPacketAggr := <-r.EgressC:
-			info := r.ConvertNflogPkt(rules.RuleDirEgress, nflogPacketAggr)
-			r.packetInfoC <- info
+		case nflogPacketAggrMap := <-r.IngressC:
+			for _, nflogPacketAggr := range nflogPacketAggrMap {
+				info := r.ConvertNflogPkt(rules.RuleDirIngress, nflogPacketAggr)
+				r.packetInfoC <- info
+			}
+		case nflogPacketAggrMap := <-r.EgressC:
+			for _, nflogPacketAggr := range nflogPacketAggrMap {
+				info := r.ConvertNflogPkt(rules.RuleDirEgress, nflogPacketAggr)
+				r.packetInfoC <- info
+			}
 		}
 	}
 }

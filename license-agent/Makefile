@@ -83,7 +83,7 @@ clean:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks image ut
+ci: clean image ut static-checks
 
 ## Deploys images to registry
 cd: image-all cd-common

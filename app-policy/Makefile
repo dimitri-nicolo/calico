@@ -129,7 +129,7 @@ ut-exec:
 ###############################################################################
 
 .PHONY: ci
-ci: check-generated-files static-checks image ut
+ci: check-generated-files image ut static-checks
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files

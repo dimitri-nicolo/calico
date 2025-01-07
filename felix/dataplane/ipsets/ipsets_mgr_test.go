@@ -147,7 +147,7 @@ var _ = Describe("IP Sets manager", func() {
 					ipsetsMgr.OnUpdate(&proto.IPSetDeltaUpdate{
 						Id:             ipsetID,
 						AddedMembers:   []string{members[2], members[3]},
-						RemovedMembers: []string{members[0]},
+						RemovedMembers: []string{members[1]},
 					})
 					err := ipsetsMgr.CompleteDeferredWork()
 					Expect(err).ToNot(HaveOccurred())
@@ -156,9 +156,9 @@ var _ = Describe("IP Sets manager", func() {
 				AssertIPSetNotModified()
 
 				if ipsetType == proto.IPSetUpdate_DOMAIN {
-					AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[1], members[2], members[3]))
+					AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[0], members[2], members[3]))
 				} else {
-					AssertIPSetMembers(ipsetID, []string{members[1], members[2], members[3]})
+					AssertIPSetMembers(ipsetID, []string{members[0], members[2], members[3]})
 				}
 
 				Describe("after sending a delete", func() {

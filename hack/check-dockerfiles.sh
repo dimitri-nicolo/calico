@@ -17,7 +17,9 @@
 problems="$(find -name '*Dockerfile*' | \
             grep -v -e containernetworking-plugins \
                     -e flannel-cni-plugin \
-                    -e envoybinary | \
+                    -e envoybinary \
+                    -e build/elasticsearch \
+                    -e cloud-on-k8s | \
             xargs grep --with-filename '^ADD ')"
 
 if [ "$problems" ]; then

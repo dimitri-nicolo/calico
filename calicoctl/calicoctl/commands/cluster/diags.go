@@ -56,7 +56,7 @@ Options:
   -c --config=<CONFIG>         Path to connection configuration file.
                                [default: ` + constants.DefaultConfigPath + `]
      --allow-version-mismatch  Allow client and cluster versions mismatch.
-     --skip-temp-dir-cleanup   Don't clean up the temporary directory (useful 
+     --skip-temp-dir-cleanup   Don't clean up the temporary directory (useful
                                for development).
 `
 
@@ -342,6 +342,7 @@ func collectTigeraOperator(dir string) {
 		"authentications.operator.tigera.io",
 		"compliances",
 		"egressgateways",
+		"gatewayapis",
 		"installations",
 		"intrusiondetections",
 		"logcollectors",
@@ -391,6 +392,20 @@ func collectKubernetesResource(dir string) {
 		"sc",
 		"services",
 		"statefulsets",
+		// The following resources are used only in older versions of EE, but could still be good to include.
+		"jobs",
+		"cronjobs",
+		// Gateway API resources.
+		"backendlbpolicies",
+		"backendtlspolicies",
+		"gatewayclasses",
+		"gateways",
+		"grpcroutes",
+		"httproutes",
+		"referencegrants",
+		"tcproutes",
+		"tlsroutes",
+		"udproutes",
 	} {
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
@@ -422,6 +437,28 @@ func collectKubernetesResource(dir string) {
 	common.ExecAllCmdsWriteToFile(commands)
 }
 
+func collectThirdPartyResource(dir string) {
+	fmt.Println("Collecting third party resources...")
+	commands := []common.Cmd{}
+	for _, resource := range []string{
+		"elasticsearches",
+		"kibanas",
+		"prometheuses",
+		"alertmanagers",
+	} {
+		commands = append(commands, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o yaml", resource),
+			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
+		}, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (wide text)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o wide", resource),
+			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
+		})
+	}
+	common.ExecAllCmdsWriteToFile(commands)
+}
+
 // collectGlobalClusterInformation collects the Kubernetes resource, Calico Resource and Tigera operator details
 func collectGlobalClusterInformation(dir string) {
 	fmt.Println("Collecting kubernetes version...")
@@ -436,6 +473,7 @@ func collectGlobalClusterInformation(dir string) {
 	collectCalicoResource(dir + "/calico")
 	collectTigeraOperator(dir + "/tigera")
 	collectKubernetesResource(dir + "/kubernetes")
+	collectThirdPartyResource(dir + "/third-party")
 }
 
 // func diagsCmdsForPod(pod, namespace, dir /*node_name*/, sinceFlag string) {

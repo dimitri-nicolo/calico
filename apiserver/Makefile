@@ -202,7 +202,7 @@ clean-hack-lib:
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks image ut fv
+ci: clean image ut fv static-checks
 
 ## Deploys images to registry
 cd: image-all cd-common

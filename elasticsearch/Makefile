@@ -53,7 +53,7 @@ $(ELASTICSEARCH_IMAGE_MARKER): Dockerfile bin/readiness-probe-$(ARCH)
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean static-checks image
+ci: clean image static-checks
 
 .PHONY: cd
 cd: image-all cd-common

@@ -91,4 +91,4 @@ fv: package
 LINT_ARGS += --exclude-dirs="(^|/)package($$|/)"
 
 .PHONY: ci
-ci: clean static-checks ut fv
+ci: clean ut fv static-checks

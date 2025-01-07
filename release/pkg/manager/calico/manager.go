@@ -355,7 +355,7 @@ func (r *CalicoManager) BuildMetadata(dir string, overrides ...string) error {
 // of OSS Calico that we are most recently based off of.
 func (r *CalicoManager) determineCalicoVersion() string {
 	args := []string{"-Po", `CALICO_VERSION=\K(.*)`, "Makefile"}
-	out, err := r.runner.RunInDir("node", "grep", args, nil)
+	out, err := r.runner.RunInDir(filepath.Join(r.repoRoot, "node"), "grep", args, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -560,7 +560,7 @@ func (r *CalicoManager) publishPrereqs() error {
 //
 // - release-vX.Y.Z.tgz: contains images, manifests, and binaries.
 // - tigera-operator-vX.Y.Z.tgz: contains the helm v3 chart.
-// - calico-windows-vX.Y.Z.zip: Calico for Windows zip archive for non-HPC installation.
+// - tigera-calico-windows-vX.Y.Z.zip: Calico for Windows zip archive for non-HPC installation.
 // - calicoctl/bin: All calicoctl binaries.
 //
 // For hashreleases, we don't build the release tarball, but we do include the manifests directly.
@@ -603,7 +603,7 @@ func (r *CalicoManager) collectGithubArtifacts() error {
 	}
 
 	// Add in the already-built windows zip archive, the Windows install script, ocp bundle, and the helm chart.
-	if _, err := r.runner.RunInDir(r.repoRoot, "cp", []string{fmt.Sprintf("node/dist/calico-windows-%s.zip", r.calicoVersion), uploadDir}, nil); err != nil {
+	if _, err := r.runner.RunInDir(r.repoRoot, "cp", []string{fmt.Sprintf("node/dist/tigera-calico-windows-%s.zip", r.calicoVersion), uploadDir}, nil); err != nil {
 		return err
 	}
 	if _, err := r.runner.RunInDir(r.repoRoot, "cp", []string{"node/dist/install-calico-windows.ps1", uploadDir}, nil); err != nil {
@@ -816,7 +816,7 @@ Additional links:
 		"{branch}", fmt.Sprintf("release-v%d.%d", sv.Major, sv.Minor),
 		"{release_stream}", fmt.Sprintf("v%d.%d", sv.Major, sv.Minor),
 		"{release_tar}", fmt.Sprintf("`release-%s.tgz`", ver),
-		"{calico_windows_zip}", fmt.Sprintf("`calico-windows-%s.zip`", ver),
+		"{calico_windows_zip}", fmt.Sprintf("`tigera-calico-windows-%s.zip`", ver),
 		"{helm_chart}", fmt.Sprintf("`tigera-operator-%s.tgz`", ver),
 	}
 	replacer := strings.NewReplacer(formatters...)
@@ -958,7 +958,7 @@ func (r *CalicoManager) assertManifestVersions(ver string) error {
 
 func (r *CalicoManager) getRegistryFromManifests() string {
 	args := []string{"-Po", `image:\K(.*)`, "calicoctl.yaml"}
-	out, err := r.runner.RunInDir("manifests", "grep", args, nil)
+	out, err := r.runner.RunInDir(filepath.Join(r.repoRoot, "manifests"), "grep", args, nil)
 	if err != nil {
 		panic(err)
 	}

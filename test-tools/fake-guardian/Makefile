@@ -85,6 +85,6 @@ st:
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean static-checks image test
+ci: clean image test static-checks
 ## Deploys images to registry
 cd: image-all cd-common

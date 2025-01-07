@@ -18,12 +18,6 @@ global_job_config:
   prologue:
     commands:
       - checkout
-      # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
-      # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given
-      # how much we churn docker containers during the build.  Disable it.
-      - sudo systemctl stop docker
-      - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
-      - sudo systemctl start docker
       # Semaphore is doing shallow clone on a commit without tags.
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
       - retry git fetch --unshallow
@@ -51,10 +45,10 @@ blocks:
       jobs:
         - name: Linux amd64
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node cd ARCHES=amd64 CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node cd ARCHES=amd64 CONFIRM=true SKIP_PROTOBUF=true; fi
         - name: Windows amd64
           commands:
-            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node release-windows CONFIRM=true; fi
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C node release-windows CONFIRM=true SKIP_PROTOBUF=true; fi
   - name: Publish node images - native arm64 runner
     dependencies: []
     skip:

@@ -586,7 +586,7 @@ gen-files: $(GENERATED_FILES)
 ###############################################################################
 .PHONY: ci cd
 
-ci: clean static-checks image ut
+ci: clean image ut static-checks
 ifeq (,$(filter fv, $(EXCEPT)))
 	@$(MAKE) fv
 endif
