@@ -173,6 +173,7 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 	if err != nil {
 		return fmt.Errorf("error loading tcp stats program %w", err)
 	}
+	defer obj.Close()
 	_, _, _, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0)
 	return err
 }
