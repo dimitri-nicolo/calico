@@ -84,10 +84,6 @@ var (
 		"calico/test-signer",
 		"calico/typha",
 	}
-	windowsImages = []string{
-		"calico/cni-windows",
-		"calico/node-windows",
-	}
 )
 
 func NewManager(opts ...Option) *CalicoManager {
