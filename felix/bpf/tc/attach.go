@@ -170,6 +170,9 @@ func (ap *AttachPoint) AttachProgram() (bpf.AttachResult, error) {
 func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileName)
 	obj, err := bpf.LoadObject(preCompiledBinary, &libbpf.TcStatsGlobalData{VethNS: nsId})
+	if err != nil {
+		return fmt.Errorf("error loading tcp stats program %w", err)
+	}
 	_, _, _, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, true, 0)
 	return err
 }
