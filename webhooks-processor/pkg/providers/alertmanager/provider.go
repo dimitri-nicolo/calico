@@ -26,10 +26,10 @@ const (
 )
 
 var (
-	ErrNoUrlField  = errors.New("url field is not present in webhook configuration")
-	ErrWrongPrefix = errors.New("url field does not start with 'http://' nor 'https://'")
-	ErrWrongSuffix = errors.New("url field does not end with '/api/v2/alerts'")
-	ErrAuthCorrupt = errors.New("basicAuth field value is incorrect")
+	ErrNoUrlField               = errors.New("url field is not present in webhook configuration")
+	ErrWrongPrefix              = errors.New("url field does not start with 'http://' nor 'https://'")
+	ErrWrongSuffix              = errors.New("url field does not end with '/api/v2/alerts'")
+	ErrBasicAuthFieldValueError = errors.New("basicAuth field value is incorrect")
 )
 
 type AlertManagerProvider struct {
@@ -58,7 +58,7 @@ func (p *AlertManagerProvider) Validate(config map[string]string) error {
 	}
 	if basicAuth, ok := config["basicAuth"]; ok {
 		if parts := strings.SplitN(basicAuth, ":", 2); len(parts) != 2 {
-			return ErrAuthCorrupt
+			return ErrBasicAuthFieldValueError
 		}
 	}
 	return nil
