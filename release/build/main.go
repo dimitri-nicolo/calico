@@ -429,47 +429,6 @@ func hashreleaseSubCommands(cfg *config.Config) []*cli.Command {
 				return r.BuildMetadata(c.String("dir"), imgs...)
 			},
 		},
-
-		// Build metadata for a release.
-		{
-			Name:  "metadata",
-			Usage: "Generate metadata for a hashrelease",
-			Flags: []cli.Flag{
-				&cli.StringFlag{Name: orgFlag, Usage: "Git organization", EnvVars: []string{"ORGANIZATION"}, Value: config.DefaultOrg},
-				&cli.StringFlag{Name: repoFlag, Usage: "Git repository", EnvVars: []string{"GIT_REPO"}, Value: config.DefaultRepo},
-				&cli.StringFlag{Name: "dir", Usage: "Directory to write metadata to", EnvVars: []string{"METADATA_DIR"}, Value: "", Required: true},
-				&cli.StringFlag{Name: "versions-file", Usage: "Path to the versions file", EnvVars: []string{"VERSIONS_FILE"}, Value: "", Required: true},
-			},
-			Action: func(c *cli.Context) error {
-				configureLogging("hashrelease-metadata.log")
-				versions, err := pinnedversion.LoadPinnedVersionFile(c.String("versions-file"))
-				if err != nil {
-					return err
-				}
-				logrus.WithField("version", versions).Info("versions file")
-				imgs := []string{}
-				for _, c := range versions.Components {
-					image := c.Image
-					version := c.Version
-					if image != "" && version != "" {
-						image := strings.TrimPrefix(image, "tigera/")
-						imgs = append(imgs, fmt.Sprintf("%s:%s", image, version))
-					}
-				}
-				opts := []calico.Option{
-					calico.WithRepoRoot(cfg.RepoRootDir),
-					calico.WithVersions(&version.Data{
-						ProductVersion:  version.New(versions.Title),
-						OperatorVersion: version.New(versions.TigeraOperator.Version),
-					}),
-					calico.WithGithubOrg(c.String(orgFlag)),
-					calico.WithRepoName(c.String(repoFlag)),
-					calico.WithRepoRemote(cfg.GitRemote),
-				}
-				r := calico.NewManager(opts...)
-				return r.BuildMetadata(c.String("dir"), imgs...)
-			},
-		},
 	}
 }
 
