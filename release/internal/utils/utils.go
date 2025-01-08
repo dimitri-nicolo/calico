@@ -37,6 +37,9 @@ const (
 
 	// TigeraOrg is the name of the Tigera organization.
 	TigeraOrg = "tigera"
+
+	// CalicoPrivateRepo is the name of the private repo in Tigera.
+	CalicoPrivateRepo = "calico-private"
 )
 
 // DisplayProductName returns the product name in title case.

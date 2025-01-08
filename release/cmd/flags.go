@@ -52,13 +52,13 @@ var (
 		Name:    "org",
 		Usage:   "The GitHub organization to use for the release",
 		EnvVars: []string{"ORGANIZATION"},
-		Value:   utils.ProjectCalicoOrg,
+		Value:   utils.TigeraOrg,
 	}
 	repoFlag = &cli.StringFlag{
 		Name:    "repo",
 		Usage:   "The GitHub repository to use for the release",
 		EnvVars: []string{"GIT_REPO"},
-		Value:   utils.Calico,
+		Value:   utils.CalicoPrivateRepo,
 	}
 	repoRemoteFlag = &cli.StringFlag{
 		Name:    "remote",
@@ -77,13 +77,13 @@ var (
 		Name:    "release-branch-prefix",
 		Usage:   "The stardard prefix used to denote release branches",
 		EnvVars: []string{"RELEASE_BRANCH_PREFIX"},
-		Value:   "release",
+		Value:   "release-calient",
 	}
 	devTagSuffixFlag = &cli.StringFlag{
 		Name:    "dev-tag-suffix",
 		Usage:   "The suffix used to denote development tags",
 		EnvVars: []string{"DEV_TAG_SUFFIX"},
-		Value:   "0.dev",
+		Value:   "calient-0.dev",
 	}
 	publishBranchFlag = &cli.BoolFlag{
 		Name:  "publish-branch",
@@ -120,7 +120,7 @@ var (
 		Value:   cli.NewStringSlice(),
 	}
 
-	archOptions = []string{"amd64", "arm64", "ppc64le", "s390x"}
+	archOptions = []string{"amd64", "arm64"}
 	archFlag    = &cli.StringSliceFlag{
 		Name:    "architecture",
 		Aliases: []string{"arch"},
