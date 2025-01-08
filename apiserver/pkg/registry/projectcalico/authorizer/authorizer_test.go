@@ -14,7 +14,7 @@ import (
 )
 
 func getAttributesMapkey(a k8sauth.Attributes) string {
-	return fmt.Sprintf("%s/%s", a.GetPath(), a.GetVerb())
+	return fmt.Sprintf("%s/%s/%s", a.GetPath(), a.GetSubresource(), a.GetVerb())
 }
 
 type testAuth struct {
