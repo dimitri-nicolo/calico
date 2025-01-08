@@ -10,3 +10,5 @@ Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
     Profile "k8s-ns.advanced-policy-demo"
   Rule matches:
     Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && (projectcalico.org/namespace == 'advanced-policy-demo')"
+
+Plus 2 lines on stderr
