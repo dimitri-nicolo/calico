@@ -206,3 +206,12 @@ ci: clean image ut fv static-checks
 
 ## Deploys images to registry
 cd: image-all cd-common
+
+###############################################################################
+# Utils
+###############################################################################
+# this is not a linked target, available for convenience.
+.PHONY: tidy
+## 'tidy' mods.
+tidy:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'

@@ -478,6 +478,15 @@ rules:
       - create
       - update
       - delete
+  - apiGroups:
+      - projectcalico.org
+    resources:
+      - tier.networkpolicies
+      - tier.globalnetworkpolicies
+    verbs:
+      - list
+      - watch
+      - get
   # For tiered network policy actions, tigera-apiserver requires get authorization on the associated tier.
   - apiGroups:
       - projectcalico.org
@@ -495,6 +504,7 @@ rules:
     resources:
       - tiers
     verbs:
+      - get
       - create
       - list
       - watch

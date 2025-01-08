@@ -23,37 +23,12 @@ func progFileName(logLevel string, ipver int) string {
 }
 
 func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver int) error {
-	fileToLoad := progFileName(bpfLogLevel, ipver)
-	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileToLoad)
-	obj, err := libbpf.OpenObject(preCompiledBinary)
+	preCompiledBinary := path.Join(bpfdefs.ObjectDir, progFileName(bpfLogLevel, ipver))
+	obj, err := bpf.LoadObject(preCompiledBinary, &libbpf.IPTDnsGlobalData{IPSetID: ipSetID})
 	if err != nil {
-		return fmt.Errorf("error opening BPF object %w", err)
+		return fmt.Errorf("error loading ipsets policy program for dns %w", err)
 	}
 	defer obj.Close()
-	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
-		mapName := m.Name()
-		if m.IsMapInternal() {
-			if strings.HasPrefix(mapName, ".rodata") {
-				continue
-			}
-			if err := libbpf.IPTSetGlobals(m, ipSetID); err != nil {
-				return fmt.Errorf("error setting globals: %w", err)
-			}
-			continue
-		}
-		log.Debugf("Pinning map %s k %d v %d", mapName, m.KeySize(), m.ValueSize())
-		pinDir := bpf.MapPinDir()
-		if err := m.SetPinPath(path.Join(pinDir, mapName)); err != nil {
-			return fmt.Errorf("error pinning map %s k %d v %d: %w", mapName, m.KeySize(), m.ValueSize(), err)
-		}
-		log.Infof("Pin path %s", path.Join(pinDir, mapName))
-	}
-
-	err = obj.Load()
-	if err != nil {
-		return fmt.Errorf("error loading program %v", err)
-	}
-
 	pinPath := path.Join(bpfdefs.DnsObjDir, fmt.Sprintf("%d_v%d", ipSetID, ipver))
 	err = obj.PinPrograms(pinPath)
 	if err != nil {
@@ -108,9 +83,9 @@ func CreateDNSObjPinDir() error {
 		if !os.IsNotExist(err) {
 			return err
 		}
-	}
-	if err := os.MkdirAll(bpfdefs.DnsObjDir, 0700); err != nil {
-		return err
+		if err := os.MkdirAll(bpfdefs.DnsObjDir, 0700); err != nil {
+			return err
+		}
 	}
 	return nil
 }
