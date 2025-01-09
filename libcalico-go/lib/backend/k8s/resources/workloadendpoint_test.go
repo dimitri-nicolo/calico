@@ -2032,7 +2032,7 @@ func mustMarshal(v interface{}) string {
 }
 
 func testListWorkloadEndpoints(pods []runtime.Object, listOptions model.ResourceListOptions, expectedWEPs []*libapiv3.WorkloadEndpoint) {
-	k8sClient := fake.NewSimpleClientset(pods...)
+	k8sClient := resources.NewFakeClientSetWithListRevAndFiltering(pods...)
 	wepClient := resources.NewWorkloadEndpointClient(k8sClient).(*resources.WorkloadEndpointClient)
 
 	kvps, err := wepClient.List(context.Background(), listOptions, "")

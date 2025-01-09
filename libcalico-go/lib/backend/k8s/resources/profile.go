@@ -164,12 +164,24 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 	logContext.Debug("Received List request")
 	nl := list.(model.ResourceListOptions)
 
+	// Somehow we have ended up with two default-allow profiles in
+	// Enterprise.  They both serve the same function, but they have
+	// different names so it'd be a breaking change to remove either.
 	if nl.Name == resources.DefaultAllowProfileName {
 		// Special case, we synthesize the default allow profile.  Revision
 		// is always 1, and it cannot change (a watch on that profile returns
 		// no events).
 		return &model.KVPairList{
 			KVPairs:  []*model.KVPair{resources.DefaultAllowProfile()},
+			Revision: "1",
+		}, nil
+	}
+	if nl.Name == "default" {
+		// Special case, we synthesize the default allow profile.  Revision
+		// is always 1, and it cannot change (a watch on that profile returns
+		// no events).
+		return &model.KVPairList{
+			KVPairs:  []*model.KVPair{DefaultProfile()},
 			Revision: "1",
 		}, nil
 	}
@@ -242,8 +254,11 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 
 	// Return a merged KVPairList including both results as well as the default-allow profile.
 	var kvps []*model.KVPair
-	kvps = append(kvps, DefaultProfile())
 	if nsName == "" {
+		// Somehow we have ended up with two default-allow profiles in
+		// Enterprise.  They both serve the same function, but they have
+		// different names so it'd be a breaking change to remove either.
+		kvps = append(kvps, DefaultProfile())
 		kvps = append(kvps, resources.DefaultAllowProfile())
 	}
 	kvps = append(kvps, nsKVPs.KVPairs...)
@@ -449,7 +464,7 @@ func (pw *profileWatcher) processProfileEvents() {
 			log.Debug("Processing ServiceAccount event")
 			isNsEvent = false
 
-		case <-pw.context.Done(): //user cancel
+		case <-pw.context.Done(): // user cancel
 			log.Debug("Process watcher done event in kdd client")
 			return
 		}

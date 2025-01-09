@@ -35,9 +35,9 @@ type FakeClientSetWithListRevAndFiltering struct {
 	CurrentListRevisionByType  map[string]string
 }
 
-func NewFakeClientSetWithListRevAndFiltering() *FakeClientSetWithListRevAndFiltering {
+func NewFakeClientSetWithListRevAndFiltering(objects ...runtime.Object) *FakeClientSetWithListRevAndFiltering {
 	clientset := &FakeClientSetWithListRevAndFiltering{
-		Clientset:                  fake.NewSimpleClientset(),
+		Clientset:                  fake.NewSimpleClientset(objects...),
 		DefaultCurrentListRevision: "123",
 		CurrentListRevisionByType:  map[string]string{},
 	}

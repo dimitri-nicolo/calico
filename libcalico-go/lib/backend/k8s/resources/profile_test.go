@@ -65,9 +65,19 @@ var _ = Describe("Profile tests with fake clientSet", func() {
 	It("should list all and return the collection revision", func() {
 		list, err := client.List(context.TODO(), model.ResourceListOptions{}, "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(list.KVPairs).To(HaveLen(3))
+		Expect(list.KVPairs).To(HaveLen(4))
 		Expect(list.Revision).To(Equal("100/200"),
 			"revision should match the combined collection versions")
+	})
+
+	It("should only return the default allow profile by name", func() {
+		list, err := client.List(context.TODO(), model.ResourceListOptions{
+			Name: "default",
+		}, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list.KVPairs).To(HaveLen(1))
+		Expect(list.Revision).To(Equal("1"),
+			"revision should only relate to the namespace collection")
 	})
 
 	It("should only return the default allow profile by name", func() {

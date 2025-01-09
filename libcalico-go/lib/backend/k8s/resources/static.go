@@ -32,6 +32,6 @@ func DefaultProfile() *model.KVPair {
 			Kind: v3.KindProfile,
 		},
 		Value:    profile,
-		Revision: "",
+		Revision: "1",
 	}
 }
