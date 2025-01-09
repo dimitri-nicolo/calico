@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -42,6 +41,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+	calischeme "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/scheme"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -744,8 +744,6 @@ func (c *KubeClient) Close() error {
 	return nil
 }
 
-var addToSchemeOnce sync.Once
-
 // BuildK8SAdminPolicyClient builds a RESTClient configured to interact (Baseline) Admin Network Policy.
 func BuildK8SAdminPolicyClient(cfg *rest.Config) (*adminpolicyclient.PolicyV1alpha1Client, error) {
 	return adminpolicyclient.NewForConfig(cfg)
@@ -767,106 +765,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 		return nil, err
 	}
 
-	// We're operating on the pkg level scheme.Scheme, so make sure that multiple
-	// calls to this function don't do this simultaneously, which can cause crashes
-	// due to concurrent access to underlying maps.  For good measure, use a once
-	// since this really only needs to happen one time.
-	addToSchemeOnce.Do(func() {
-		// We also need to register resources.
-		schemeBuilder := runtime.NewSchemeBuilder(
-			func(scheme *runtime.Scheme) error {
-				scheme.AddKnownTypes(
-					*cfg.GroupVersion,
-					&apiv3.FelixConfiguration{},
-					&apiv3.FelixConfigurationList{},
-					&apiv3.IPPool{},
-					&apiv3.IPPoolList{},
-					&apiv3.IPReservation{},
-					&apiv3.IPReservationList{},
-					&apiv3.BGPPeer{},
-					&apiv3.BGPPeerList{},
-					&apiv3.BGPConfiguration{},
-					&apiv3.BGPConfigurationList{},
-					&apiv3.ClusterInformation{},
-					&apiv3.ClusterInformationList{},
-					&apiv3.LicenseKey{},
-					&apiv3.LicenseKeyList{},
-					&apiv3.GlobalNetworkSet{},
-					&apiv3.GlobalNetworkSetList{},
-					&apiv3.NetworkSet{},
-					&apiv3.NetworkSetList{},
-					&apiv3.GlobalNetworkPolicy{},
-					&apiv3.GlobalNetworkPolicyList{},
-					&apiv3.StagedGlobalNetworkPolicy{},
-					&apiv3.StagedGlobalNetworkPolicyList{},
-					&apiv3.NetworkPolicy{},
-					&apiv3.NetworkPolicyList{},
-					&apiv3.StagedNetworkPolicy{},
-					&apiv3.StagedNetworkPolicyList{},
-					&apiv3.StagedKubernetesNetworkPolicy{},
-					&apiv3.StagedKubernetesNetworkPolicyList{},
-					&apiv3.PolicyRecommendationScope{},
-					&apiv3.PolicyRecommendationScopeList{},
-					&apiv3.Tier{},
-					&apiv3.TierList{},
-					&apiv3.HostEndpoint{},
-					&apiv3.HostEndpointList{},
-					&apiv3.RemoteClusterConfiguration{},
-					&apiv3.RemoteClusterConfigurationList{},
-					&libapiv3.BlockAffinity{},
-					&libapiv3.BlockAffinityList{},
-					&libapiv3.IPAMBlock{},
-					&libapiv3.IPAMBlockList{},
-					&libapiv3.IPAMHandle{},
-					&libapiv3.IPAMHandleList{},
-					&libapiv3.IPAMConfig{},
-					&libapiv3.IPAMConfigList{},
-					&apiv3.KubeControllersConfiguration{},
-					&apiv3.KubeControllersConfigurationList{},
-					&apiv3.AlertException{},
-					&apiv3.AlertExceptionList{},
-					&apiv3.GlobalAlert{},
-					&apiv3.GlobalAlertList{},
-					&apiv3.GlobalAlertTemplate{},
-					&apiv3.GlobalAlertTemplateList{},
-					&apiv3.GlobalThreatFeed{},
-					&apiv3.GlobalThreatFeedList{},
-					&apiv3.GlobalReport{},
-					&apiv3.GlobalReportList{},
-					&apiv3.GlobalReportType{},
-					&apiv3.GlobalReportTypeList{},
-					&apiv3.ManagedCluster{},
-					&apiv3.ManagedClusterList{},
-					&apiv3.PacketCapture{},
-					&apiv3.PacketCaptureList{},
-					&apiv3.DeepPacketInspection{},
-					&apiv3.DeepPacketInspectionList{},
-					&apiv3.UISettingsGroup{},
-					&apiv3.UISettingsGroupList{},
-					&apiv3.UISettings{},
-					&apiv3.UISettingsList{},
-					&apiv3.CalicoNodeStatus{},
-					&apiv3.CalicoNodeStatusList{},
-					&apiv3.BGPFilter{},
-					&apiv3.BGPFilterList{},
-					&apiv3.ExternalNetwork{},
-					&apiv3.ExternalNetworkList{},
-					&apiv3.EgressGatewayPolicy{},
-					&apiv3.EgressGatewayPolicyList{},
-					&apiv3.SecurityEventWebhook{},
-					&apiv3.SecurityEventWebhookList{},
-					&apiv3.BFDConfiguration{},
-					&apiv3.BFDConfigurationList{},
-				)
-				return nil
-			})
+	calischeme.AddCalicoResourcesToScheme()
 
-		err := schemeBuilder.AddToScheme(scheme.Scheme)
-		if err != nil {
-			log.WithError(err).Fatal("failed to add calico resources to scheme")
-		}
-		metav1.AddToGroupVersion(scheme.Scheme, schema.GroupVersion{Group: "crd.projectcalico.org", Version: "v1"})
-	})
 	return cli, nil
 }
 
