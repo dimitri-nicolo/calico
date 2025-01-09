@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	cli "github.com/urfave/cli/v2"
@@ -270,30 +269,16 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 			},
 			Action: func(c *cli.Context) error {
 				configureLogging("hashrelease-metadata.log")
-				versions, err := pinnedversion.LoadPinnedVersionFile(c.String("versions-file"))
+				managerOpts, imgs, err := pinnedversion.ParseVersionsFile(c.String("versions-file"))
 				if err != nil {
-					return err
+					return fmt.Errorf(("failed to retrieve pinned version options for manager: %v"), err)
 				}
-				logrus.WithField("version", versions).Info("versions file")
-				imgs := []string{}
-				for _, c := range versions.Components {
-					image := c.Image
-					version := c.Version
-					if image != "" && version != "" {
-						image := strings.TrimPrefix(image, "tigera/")
-						imgs = append(imgs, fmt.Sprintf("%s:%s", image, version))
-					}
-				}
-				opts := []calico.Option{
+				opts := append(managerOpts,
 					calico.WithRepoRoot(cfg.RepoRootDir),
-					calico.WithVersions(&version.Data{
-						ProductVersion:  version.New(versions.Title),
-						OperatorVersion: version.New(versions.TigeraOperator.Version),
-					}),
 					calico.WithGithubOrg(c.String(orgFlag.Name)),
 					calico.WithRepoName(c.String(repoFlag.Name)),
 					calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
-				}
+				)
 				r := calico.NewManager(opts...)
 				return r.BuildMetadata(c.String("dir"), imgs...)
 			},
