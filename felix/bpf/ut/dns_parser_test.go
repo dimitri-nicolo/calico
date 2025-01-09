@@ -16,9 +16,7 @@ import (
 	"github.com/projectcalico/calico/felix/ip"
 )
 
-func TestDNSParser(t *testing.T) {
-	RegisterTestingT(t)
-
+func testDNSParser(t *testing.T, pinPath string, iptables bool) {
 	// DNS response to archive.ubuntu.com with multiple A answers. The packet
 	// was obtained using tcpdump.
 	pktBytes := []byte{
@@ -60,15 +58,22 @@ func TestDNSParser(t *testing.T) {
 	err = tracker.ApplyAllChanges()
 	Expect(err).NotTo(HaveOccurred())
 
-	runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
-		res, err := bpfrun(pktBytes)
+	if !iptables {
+		runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
+			res, err := bpfrun(pktBytes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
+
+			pktR := gopacket.NewPacket(res.dataOut, layers.LayerTypeEthernet, gopacket.Default)
+			fmt.Printf("pktR = %+v\n", pktR)
+
+		})
+	} else {
+		res, err := bpftoolProgRun(pinPath, pktBytes, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
+		Expect(res.Retval).To(Equal(1))
 
-		pktR := gopacket.NewPacket(res.dataOut, layers.LayerTypeEthernet, gopacket.Default)
-		fmt.Printf("pktR = %+v\n", pktR)
-
-	})
+	}
 
 	for _, setID := range []uint64{1, 2, 3, 1234} {
 		_, err := ipsMap.Get(
@@ -104,15 +109,21 @@ func TestDNSParser(t *testing.T) {
 	tracker.Add("*.idnes.cz", "666", "3")
 	_ = tracker.ApplyAllChanges()
 
-	runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
-		res, err := bpfrun(pktBytes)
+	if !iptables {
+		runBpfUnitTest(t, "dns_parser_test.c", func(bpfrun bpfProgRunFn) {
+			res, err := bpfrun(pktBytes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
+
+			pktR := gopacket.NewPacket(res.dataOut, layers.LayerTypeEthernet, gopacket.Default)
+			fmt.Printf("pktR = %+v\n", pktR)
+
+		})
+	} else {
+		res, err := bpftoolProgRun(pinPath, pktBytes, nil)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(res.Retval).To(Equal(resTC_ACT_UNSPEC))
-
-		pktR := gopacket.NewPacket(res.dataOut, layers.LayerTypeEthernet, gopacket.Default)
-		fmt.Printf("pktR = %+v\n", pktR)
-
-	})
+		Expect(res.Retval).To(Equal(1))
+	}
 
 	err = ipsMap.Iter(func(k, v []byte) maps.IteratorAction {
 		fmt.Println(ipsets.IPSetEntryFromBytes(k))
@@ -126,6 +137,11 @@ func TestDNSParser(t *testing.T) {
 	_, err = ipsMap.Get(
 		ipsets.MakeBPFIPSetEntry(666, ip.CIDRFromStringNoErr("185.17.117.45/32").(ip.V4CIDR), 0, 0).AsBytes())
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func TestDNSParser(t *testing.T) {
+	RegisterTestingT(t)
+	testDNSParser(t, "", false)
 }
 
 func TestDNSParserMicrosoftFV(t *testing.T) {
