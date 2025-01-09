@@ -28,7 +28,7 @@ func TestMatchBPFIpsetsProgramForIPTablesV6(t *testing.T) {
 	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 6)
 	Expect(err).NotTo(HaveOccurred())
 
-	pinPath := path.Join(bpfdefs.DnsObjDir+fmt.Sprintf("%d_v6", setID)) + "/cali_ipt_match_ipset"
+	pinPath := path.Join(bpfdefs.DnsObjDir+fmt.Sprintf("%d_v6", setID)) + "/" + bpfdefs.IPTMatchIPSetProgram
 	_, err = os.Stat(pinPath)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -72,7 +72,7 @@ func TestMatchBPFIpsetsProgramForIPTables(t *testing.T) {
 	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 4)
 	Expect(err).NotTo(HaveOccurred())
 
-	pinPath := path.Join(bpfdefs.DnsObjDir+fmt.Sprintf("%d_v4", setID)) + "/cali_ipt_match_ipset"
+	pinPath := path.Join(bpfdefs.DnsObjDir+fmt.Sprintf("%d_v4", setID)) + "/" + bpfdefs.IPTMatchIPSetProgram
 	_, err = os.Stat(pinPath)
 	Expect(err).NotTo(HaveOccurred())
 

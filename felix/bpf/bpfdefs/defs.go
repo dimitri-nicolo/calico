@@ -24,6 +24,8 @@ const (
 	ObjectDir    = "/usr/lib/calico/bpf"
 
 	DnsObjDir = DefaultBPFfsPath + "/dns/"
+
+	IPTMatchIPSetProgram = "cali_ipt_match_ipset"
 )
 
 func GetCgroupV2Path() string {
