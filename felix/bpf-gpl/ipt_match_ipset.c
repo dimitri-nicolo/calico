@@ -18,33 +18,26 @@ SEC("socket")
 int cali_ipt_match_ipset(struct __sk_buff *skb)
 {
 #ifdef IPVER6
-	struct ipv6hdr iph;
 	int mask = 192;
-	int bytes_to_load = sizeof(struct ipv6hdr);
+	int offset = offsetof(struct ipv6hdr, daddr);
 #else
-	struct iphdr iph;
 	int mask = 96;
-	int bytes_to_load = sizeof(struct iphdr);
+	int offset = offsetof(struct iphdr, daddr);
 #endif
-	if (bpf_skb_load_bytes(skb, 0, &iph, bytes_to_load)) {
-		return 1;
-	}
-	__be64 ipset_id = __globals.ip_set_id;
 	struct ip_set_key key = {
 		.mask = mask,
-		.set_id = ((__be64)bpf_ntohl(ipset_id & 0xFFFFFFFF) << 32) | bpf_ntohl(ipset_id >> 32),
+		.set_id = bpf_be64_to_cpu(__globals.ip_set_id),
 	};
-#ifdef IPVER6
-	ipv6hdr_ip_to_ipv6_addr_t(&key.addr, &iph.daddr);
-#else
-	key.addr = iph.daddr;
-#endif
-	__u32 *ret = cali_ip_sets_lookup_elem(&key);
-	if (ret) {
-		CALI_DEBUG("Dst IP " IP_FMT " matches ip set 0x%x", debug_ip(key.addr), ipset_id);
+
+	if (bpf_skb_load_bytes(skb, offset, &key.addr, sizeof(ipv46_addr_t))) {
 		return 1;
 	}
-	CALI_DEBUG("Dst IP " IP_FMT " does not match ip set 0x%x", debug_ip(key.addr), ipset_id);
+	__u32 *ret = cali_ip_sets_lookup_elem(&key);
+	if (ret) {
+		CALI_DEBUG("Dst IP " IP_FMT " matches ip set 0x%x", debug_ip(key.addr), __globals.ip_set_id);
+		return 1;
+	}
+	CALI_DEBUG("Dst IP " IP_FMT " does not match ip set 0x%x", debug_ip(key.addr), __globals.ip_set_id);
 	return 0;
 }
 
