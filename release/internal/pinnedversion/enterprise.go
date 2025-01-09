@@ -5,8 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"gopkg.in/yaml.v2"
+
+	"github.com/projectcalico/calico/release/pkg/manager/calico"
 )
 
 func ParseVersionsFile(pinnedVersionPath string) ([]calico.Option, []string, error) {
