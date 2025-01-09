@@ -6,10 +6,10 @@ import (
 	"path"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
+	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
+	"github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 )
 
@@ -38,6 +38,12 @@ func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver int) erro
 }
 
 func LoadDNSParserBPFProgram(bpfLogLevel string) error {
+	mapsToPin := []string{ipsets.MapParameters.VersionedName(),
+		dnsresolver.DNSPfxMapParams.VersionedName(),
+		dnsresolver.DNSSetMapParams.VersionedName(),
+		ipsets.MapV6Parameters.VersionedName(),
+		dnsresolver.DNSPfxMapParamsV6.VersionedName(),
+		dnsresolver.DNSSetMapParamsV6.VersionedName()}
 	logLevel := strings.ToLower(bpfLogLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"
@@ -45,30 +51,11 @@ func LoadDNSParserBPFProgram(bpfLogLevel string) error {
 
 	fileToLoad := "ipt_parse_dns_" + logLevel + "_co-re.o"
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileToLoad)
-	obj, err := libbpf.OpenObject(preCompiledBinary)
+	obj, err := bpf.LoadObject(preCompiledBinary, nil, mapsToPin...)
 	if err != nil {
-		return fmt.Errorf("error opening BPF object %v", err)
+		return fmt.Errorf("error loading bpf dns parser program for iptables %w", err)
 	}
 	defer obj.Close()
-	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
-		mapName := m.Name()
-		if m.IsMapInternal() {
-			if strings.HasPrefix(mapName, ".rodata") {
-				continue
-			}
-		}
-
-		log.Debugf("Pinning map %s k %d v %d", mapName, m.KeySize(), m.ValueSize())
-		pinDir := bpf.MapPinDir()
-		if err := m.SetPinPath(path.Join(pinDir, mapName)); err != nil {
-			return fmt.Errorf("error pinning map %s k %d v %d: %w", mapName, m.KeySize(), m.ValueSize(), err)
-		}
-	}
-
-	err = obj.Load()
-	if err != nil {
-		return fmt.Errorf("error loading program %v", err)
-	}
 	err = obj.PinPrograms(bpfdefs.DnsObjDir)
 	if err != nil {
 		return fmt.Errorf("error pinning program %v", err)
