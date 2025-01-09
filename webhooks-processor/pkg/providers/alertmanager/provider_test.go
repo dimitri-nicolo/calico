@@ -46,7 +46,9 @@ func TestValidate(t *testing.T) {
 
 func TestProcess(t *testing.T) {
 	// placeholders for tracking server side data:
-	requestsCount, serverSideData := 0, []alertmanager.AlertManagerProviderPayload{}
+	serverSideData := []alertmanager.AlertManagerProviderPayload{}
+	headers := map[string][]string{}
+	requestsCount := 0
 
 	// start test HTTP server
 	testServer := httptest.NewServer(
@@ -60,6 +62,7 @@ func TestProcess(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
+				headers = r.Header
 				bytes, _ := io.ReadAll(r.Body)
 				if err := json.Unmarshal(bytes, &serverSideData); err != nil {
 					t.Errorf("got payload unmarshalling error: %s", err)
@@ -85,6 +88,7 @@ func TestProcess(t *testing.T) {
 		map[string]string{
 			"url":          testUrl,
 			"generatorURL": "just-a-test",
+			"basicAuth":    "johnybravo:password",
 		},
 		map[string]string{
 			"label": "unit-test",
@@ -115,6 +119,22 @@ func TestProcess(t *testing.T) {
 	// make sure there was only 2 HTTP requests received
 	if requestsCount != 2 {
 		t.Errorf("got unexpected number of HTTP requests: %d", requestsCount)
+	}
+
+	// verify if the HTTP headers are as expected
+	if value, present := headers["Authorization"]; present {
+		if !reflect.DeepEqual(value, []string{"Basic am9obnlicmF2bzpwYXNzd29yZA=="}) {
+			t.Errorf("Authorization HTTP header is not as expected: %+v", value)
+		}
+	} else {
+		t.Error("Authorization HTTP header is missing")
+	}
+	if value, present := headers["Content-Type"]; present {
+		if !reflect.DeepEqual(value, []string{"application/json"}) {
+			t.Errorf("Content-Type HTTP header is not as expected: %+v", value)
+		}
+	} else {
+		t.Error("Content-Type HTTP header is missing")
 	}
 
 	// make sure there was only 1 security event issued
