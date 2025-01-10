@@ -44,13 +44,12 @@ sub-image-%:
 .PHONY: image
 image: $(ENVOY_GATEWAY_IMAGE)
 
-ENVOY_ARCH=$(ARCH)
-ifeq ($(ARCH),amd64)
-ENVOY_ARCH=x64
-endif
+.PHONY: register
+register:
+	docker run --rm --privileged multiarch/qemu-user-static:register || true
 
 $(ENVOY_GATEWAY_IMAGE): $(ENVOY_GATEWAY_IMAGE_CREATED)
-$(ENVOY_GATEWAY_IMAGE_CREATED): init-source
+$(ENVOY_GATEWAY_IMAGE_CREATED): init-source register
 	make -C envoy-gateway build image PLATFORMS="linux_$(ARCH)" BINS="envoy-gateway" REGISTRY=tigera IMAGE_NAME=envoy-gateway TAG=$(LATEST_IMAGE_TAG)-$(ARCH) GOARCH=$(ARCH)
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
