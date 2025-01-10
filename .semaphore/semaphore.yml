@@ -1182,7 +1182,7 @@ blocks:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd third_party/envoy-gateway
     jobs:
-      - name: Linux amd64
+      - name: Linux amd64 and arm64
         commands:
           - ../../.semaphore/run-and-monitor build.log make cd ARCHES="amd64 arm64" CONFIRM=true
 - name: Publish tigera/envoy-gateway multi-arch manifests
