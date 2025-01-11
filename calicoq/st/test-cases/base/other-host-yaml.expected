@@ -2,5 +2,3 @@ host somewhere_else -o yaml
 
 - description: Policies and profiles for each endpoint on host "somewhere_else"
 
-
-Plus 2 lines on stderr
