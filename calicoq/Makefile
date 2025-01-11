@@ -73,7 +73,7 @@ ci: clean image test static-checks
 cd: image-all cd-common
 
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv
-	$(DOCKER_BUILD) --cpuset-cpus 0 -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv .
+	$(DOCKER_BUILD) -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv .
 	touch $@
 
 .PHONY: ut 

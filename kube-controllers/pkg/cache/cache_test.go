@@ -252,7 +252,7 @@ var _ = Describe("Cache", func() {
 	Context("Stop operation", func() {
 		var (
 			c           *calicoCache
-			mockQueue   workqueue.RateLimitingInterface
+			mockQueue   workqueue.TypedRateLimitingInterface[any]
 			mockCache   *gocache.Cache
 			stopChannel chan struct{}
 		)
@@ -262,7 +262,7 @@ var _ = Describe("Cache", func() {
 			defaultExpiration = 5 * time.Minute
 		)
 		BeforeEach(func() {
-			mockQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+			mockQueue = workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]())
 			mockCache = gocache.New(noExpiration, defaultExpiration)
 			mockCache.Set("namespace1", resource{name: "namespace1"}, gocache.NoExpiration)
 			mockCache.Set("namespace2", resource{name: "namespace2"}, gocache.NoExpiration)

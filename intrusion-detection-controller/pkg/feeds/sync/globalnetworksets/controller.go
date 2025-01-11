@@ -51,9 +51,9 @@ type controller struct {
 	once     sync.Once
 	client   v3client.GlobalNetworkSetInterface
 	local    cache.Store
-	remote   cache.Indexer
+	remote   cache.Store
 	informer cache.Controller
-	queue    workqueue.RateLimitingInterface
+	queue    workqueue.TypedRateLimitingInterface[any]
 
 	noGC    map[string]struct{}
 	gcMutex sync.RWMutex
@@ -89,30 +89,36 @@ func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 			return client.Watch(context.Background(), options)
 		},
 	}
-	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+	queue := workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]())
 
-	remote, informer := cache.NewIndexerInformer(lw, &v3.GlobalNetworkSet{}, DefaultResyncPeriod, cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(obj)
-			if err == nil {
-				queue.Add(key)
-			}
+	remote, informer := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: lw,
+		ObjectType:    &v3.GlobalNetworkSet{},
+		ResyncPeriod:  DefaultResyncPeriod,
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				key, err := cache.MetaNamespaceKeyFunc(obj)
+				if err == nil {
+					queue.Add(key)
+				}
+			},
+			UpdateFunc: func(old interface{}, new interface{}) {
+				key, err := cache.MetaNamespaceKeyFunc(new)
+				if err == nil {
+					queue.Add(key)
+				}
+			},
+			DeleteFunc: func(obj interface{}) {
+				// IndexerInformer uses a delta queue, therefore for deletes we have to use this
+				// key function.
+				key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+				if err == nil {
+					queue.Add(key)
+				}
+			},
 		},
-		UpdateFunc: func(old interface{}, new interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(new)
-			if err == nil {
-				queue.Add(key)
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			// IndexerInformer uses a delta queue, therefore for deletes we have to use this
-			// key function.
-			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-			if err == nil {
-				queue.Add(key)
-			}
-		},
-	}, cache.Indexers{})
+		Indexers: cache.Indexers{},
+	})
 
 	local := cache.NewStore(cache.MetaNamespaceKeyFunc)
 	return &controller{

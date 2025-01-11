@@ -57,7 +57,7 @@ type ResourceCache interface {
 
 	// GetQueue returns the cache's output queue, which emits a stream
 	// of any keys which have been created, modified, or deleted.
-	GetQueue() workqueue.RateLimitingInterface
+	GetQueue() workqueue.TypedRateLimitingInterface[any]
 
 	// Stop stops the cache from generating events on the output queue and stops the
 	// reconciliation loop.
@@ -98,7 +98,7 @@ type ReconcilerConfig struct {
 // calicoCache implements the ResourceCache interface
 type calicoCache struct {
 	threadSafeCache  *cache.Cache
-	workqueue        workqueue.RateLimitingInterface
+	workqueue        workqueue.TypedRateLimitingInterface[any]
 	ListFunc         func() (map[string]interface{}, error)
 	ObjectType       reflect.Type
 	log              *log.Entry
@@ -113,7 +113,7 @@ func NewResourceCache(args ResourceCacheArgs) ResourceCache {
 	// Make sure logging is context aware.
 	return &calicoCache{
 		threadSafeCache: cache.New(cache.NoExpiration, cache.DefaultExpiration),
-		workqueue:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		workqueue:       workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]()),
 		ListFunc:        args.ListFunc,
 		ObjectType:      args.ObjectType,
 		log: func() *log.Entry {
@@ -192,7 +192,7 @@ func (c *calicoCache) ListKeys() []string {
 
 // GetQueue returns the output queue from the cache.  Whenever a key/value pair
 // is modified, an event will appear on this queue.
-func (c *calicoCache) GetQueue() workqueue.RateLimitingInterface {
+func (c *calicoCache) GetQueue() workqueue.TypedRateLimitingInterface[any] {
 	return c.workqueue
 }
 

@@ -5,3 +5,5 @@ eval app=="rubbish" -o json
     "description": "Endpoints matching selector app==\"rubbish\""
   }
 ]
+
+Plus 2 lines on stderr
