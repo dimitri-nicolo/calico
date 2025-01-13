@@ -36,4 +36,4 @@ ENTRYPOINT ["/usr/local/bin/envoy-gateway"]
 
 which matches https://github.com/envoyproxy/gateway/blob/v1.1.2/tools/docker/envoy-gateway/Dockerfile
 
-So we just need to copy and build that Dockerfile.
+So we just need to use and build that Dockerfile.
