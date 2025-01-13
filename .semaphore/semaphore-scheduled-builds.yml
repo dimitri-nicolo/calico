@@ -1165,7 +1165,7 @@ blocks:
               - arm64
         commands:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
-- name: Publish tigera/envoy-gateway images
+- name: Publish tigera/envoy-gateway amd64 image
   run:
     when: "false or change_in(['/third_party/envoy-gateway'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
@@ -1182,14 +1182,34 @@ blocks:
         - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - cd third_party/envoy-gateway
     jobs:
-      - name: Linux amd64 and arm64
+      - name: Linux amd64
         commands:
-          - ../../.semaphore/run-and-monitor build.log make cd ARCHES="amd64 arm64" CONFIRM=true
+          - ../../.semaphore/run-and-monitor build.log make cd ARCHES=amd64 CONFIRM=true
+- name: Publish tigera/envoy-gateway arm64 image
+  run:
+    when: "false or change_in(['/third_party/envoy-gateway'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+  dependencies:
+    - Prerequisites
+  task:
+    agent:
+      machine:
+        type: s1-aws-arm64-2
+    secrets:
+      - name: google-service-account-for-gcr
+    prologue:
+      commands:
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
+        - cd third_party/envoy-gateway
+    jobs:
+      - name: Linux arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build.log make cd ARCHES=arm64 CONFIRM=true
 - name: Publish tigera/envoy-gateway multi-arch manifests
   run:
     when: "false or change_in(['/third_party/envoy-gateway'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
   dependencies:
-    - Publish tigera/envoy-gateway images
+    - Publish tigera/envoy-gateway amd64 image
+    - Publish tigera/envoy-gateway arm64 image
   task:
     secrets:
       - name: google-service-account-for-gcr
