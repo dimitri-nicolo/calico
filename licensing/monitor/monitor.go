@@ -35,7 +35,7 @@ type LicenseMonitor interface {
 
 type bapiClient interface {
 	Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error)
-	Watch(ctx context.Context, list model.ListInterface, revision string) (lapi.WatchInterface, error)
+	Watch(ctx context.Context, list model.ListInterface, options lapi.WatchOptions) (lapi.WatchInterface, error)
 }
 
 // licenseMonitor uses a libcalico-go (backend) client to monitor the status of the active license.
@@ -197,7 +197,7 @@ func (l *licenseMonitor) createLicenseWatcher(ctx context.Context) lapi.WatchInt
 	licenseWatcher, err := l.datastoreClient.Watch(ctx, model.ResourceListOptions{
 		Kind:      api.KindLicenseKey,
 		Name:      "default",
-		Namespace: ""}, "")
+		Namespace: ""}, lapi.WatchOptions{})
 	if err != nil {
 		log.Errorf("An error occurred while creating a license watcher: %v", err)
 		return nil

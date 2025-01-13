@@ -112,7 +112,7 @@ type Client interface {
 
 	// Watch returns a WatchInterface used for watching a resources matching the
 	// input list options.
-	Watch(ctx context.Context, list model.ListInterface, revision string) (WatchInterface, error)
+	Watch(ctx context.Context, list model.ListInterface, options WatchOptions) (WatchInterface, error)
 
 	// EnsureInitialized ensures that the backend is initialized
 	// any ready to be used.
@@ -133,6 +133,10 @@ type StatusClient interface {
 	// On success, returns a KVPair for the object with revision information filled-in.
 	// If the input KVPair has revision information then the update only succeeds if the revision is still current.
 	UpdateStatus(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
+}
+
+type WatchOptions struct {
+	Revision string
 }
 
 type Syncer interface {
