@@ -18,3 +18,5 @@ endpoint default.frontend-5gs43 -o json
     ]
   }
 ]
+
+Plus 2 lines on stderr

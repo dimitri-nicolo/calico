@@ -13,3 +13,5 @@ eval app=="frontend" -o json
     ]
   }
 ]
+
+Plus 2 lines on stderr

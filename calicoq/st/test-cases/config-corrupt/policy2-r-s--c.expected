@@ -1,4 +1,4 @@
 policy -rs abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ --config=calicoq.cfg
 
 
-Plus 1 lines on stderr
+Plus 3 lines on stderr

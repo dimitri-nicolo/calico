@@ -18,3 +18,5 @@ host rack1-host1 -o json
     ]
   }
 ]
+
+Plus 2 lines on stderr

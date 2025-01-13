@@ -6,3 +6,5 @@ Workload endpoint k8s/default.frontend-5gs43/eth0
   Policies:
   Profiles:
     Profile "profile1"
+
+Plus 2 lines on stderr
