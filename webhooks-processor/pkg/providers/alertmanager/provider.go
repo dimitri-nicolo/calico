@@ -5,6 +5,8 @@ package alertmanager
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,10 +28,12 @@ const (
 )
 
 var (
-	ErrNoUrlField               = errors.New("url field is not present in webhook configuration")
-	ErrWrongPrefix              = errors.New("url field does not start with 'http://' nor 'https://'")
-	ErrWrongSuffix              = errors.New("url field does not end with '/api/v2/alerts'")
-	ErrBasicAuthFieldValueError = errors.New("basicAuth field value is incorrect")
+	ErrNoUrlField                   = errors.New("url field is not present in webhook configuration")
+	ErrWrongPrefix                  = errors.New("url field does not start with 'http://' nor 'https://'")
+	ErrWrongSuffix                  = errors.New("url field does not end with '/api/v2/alerts'")
+	ErrBasicAuthFieldValueError     = errors.New("basicAuth field value is incorrect")
+	ErrTLSConfigurationErrorCA      = errors.New("unable to add Certificate Authority to certificate pool")
+	ErrTLSConfigurationErrorKeyPair = errors.New("unable to configure TLS client cert/key pair")
 )
 
 type AlertManagerProvider struct {
@@ -59,6 +63,11 @@ func (p *AlertManagerProvider) Validate(config map[string]string) error {
 	if basicAuth, ok := config["basicAuth"]; ok {
 		if parts := strings.SplitN(basicAuth, ":", 2); len(parts) != 2 {
 			return ErrBasicAuthFieldValueError
+		}
+	}
+	if tlsEnabled(config) {
+		if _, _, err := tlsConfig(config); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -114,8 +123,22 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 			}
 		}
 
+		client := new(http.Client)
+		if tlsEnabled(config) {
+			if caPool, cert, err := tlsConfig(config); err == nil {
+				client = &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{
+							RootCAs:      caPool,
+							Certificates: []tls.Certificate{*cert},
+						},
+					},
+				}
+			}
+		}
+
 		// execute the request:
-		response, err := new(http.Client).Do(request)
+		response, err := client.Do(request)
 		if err != nil {
 			return // retry if failed
 		}
@@ -154,4 +177,23 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 
 func (p *AlertManagerProvider) Config() providers.Config {
 	return p.config
+}
+
+func tlsEnabled(config map[string]string) bool {
+	_, caPresent := config["tlsCA"]
+	_, keyPresent := config["tlsKey"]
+	_, certPresent := config["tlsCert"]
+	return caPresent && keyPresent && certPresent
+}
+
+func tlsConfig(config map[string]string) (*x509.CertPool, *tls.Certificate, error) {
+	caCertPool := x509.NewCertPool()
+	if ok := caCertPool.AppendCertsFromPEM([]byte(config["tlsCA"])); !ok {
+		return nil, nil, ErrTLSConfigurationErrorCA
+	}
+	cert, err := tls.X509KeyPair([]byte(config["tlsCert"]), []byte(config["tlsKey"]))
+	if err != nil {
+		return nil, nil, ErrTLSConfigurationErrorKeyPair
+	}
+	return caCertPool, &cert, nil
 }
