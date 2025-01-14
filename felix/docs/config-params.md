@@ -3158,17 +3158,19 @@ The size of the NFQUEUE for captured DNS packets. This is the maximum number of 
 
 Specifies how DNS policy programming will be handled. DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches, but did not match. The packet is released after a fixed time, or after the destination IP address was programmed. DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit statistics. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 
-This setting is ignored on Windows and "NoDelay" is always used.
+Inline - Parses DNS response inline with DNS response packet processing within IPTables. This guarantees the DNS rules reflect any change immediately. This mode works for iptables only and matches the same mode for BPFDNSPolicyMode. This setting is ignored on Windows and "NoDelay" is always used.
 
 This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
+
+Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
 
 | Detail |   |
 | --- | --- |
 | Environment variable | `FELIX_DNSPolicyMode` |
-| Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>NoDelay</code> (case insensitive) |
+| Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>Inline</code>, <code>NoDelay</code> (case insensitive) |
 | Default value (above encoding) | `DelayDeniedPacket` |
 | `FelixConfiguration` field | `dnsPolicyMode` (YAML) `DNSPolicyMode` (Go API) |
-| `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"NoDelay"</code>. |
+| `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"Inline"</code>, <code>"NoDelay"</code>. |
 | Default value (YAML) | `DelayDeniedPacket` |
 | Notes | Required. | 
 

@@ -78,13 +78,14 @@ const (
 	AWSSecondaryIPEnabledENIPerWorkload = "EnabledENIPerWorkload"
 )
 
-// +kubebuilder:validation:Enum=NoDelay;DelayDeniedPacket;DelayDNSResponse
+// +kubebuilder:validation:Enum=NoDelay;DelayDeniedPacket;DelayDNSResponse;Inline
 type DNSPolicyMode string
 
 const (
 	DNSPolicyModeNoDelay           DNSPolicyMode = "NoDelay"
 	DNSPolicyModeDelayDeniedPacket DNSPolicyMode = "DelayDeniedPacket"
 	DNSPolicyModeDelayDNSResponse  DNSPolicyMode = "DelayDNSResponse"
+	DNSPolicyModeInline            DNSPolicyMode = "Inline"
 )
 
 type BPFDNSPolicyMode string
@@ -1043,12 +1044,16 @@ type FelixConfigurationSpec struct {
 	// the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
 	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 	//
+	// Inline - Parses DNS response inline with DNS response packet processing within IPTables.
+	// This guarantees the DNS rules reflect any change immediately.
+	// This mode works for iptables only and matches the same mode for BPFDNSPolicyMode.
 	// This setting is ignored on Windows and "NoDelay" is always used.
 	//
 	// This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 	//
+	// Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
 	// [Default: DelayDeniedPacket]
-	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse"`
+	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse Inline"`
 	// BPFDNSPolicyMode specifies how DNS policy programming will be handled.
 	// Inline - BPF parses DNS response inline with DNS response packet
 	// processing. This guarantees the DNS rules reflect any change immediately.

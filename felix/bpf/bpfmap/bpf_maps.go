@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	"github.com/projectcalico/calico/felix/bpf/routes"
 	"github.com/projectcalico/calico/felix/bpf/state"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type IPMaps struct {
@@ -119,6 +120,20 @@ func getIPMaps(ipFamily int) *IPMaps {
 	}
 }
 
+func CreateBPFIPSetsMap(ipFamily proto.IPVersion) (maps.Map, error) {
+	var ipsetsMap maps.Map
+	if ipFamily == proto.IPVersion_IPV6 {
+		ipsetsMap = ipsets.MapV6()
+	} else {
+		ipsetsMap = ipsets.Map()
+	}
+	err := ipsetsMap.EnsureExists()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create %s map, err=%w", ipsetsMap.GetName(), err)
+	}
+	return ipsetsMap, nil
+}
+
 func CreateBPFMaps(ipV6Enabled bool) (*Maps, error) {
 	ret := new(Maps)
 
@@ -132,7 +147,6 @@ func CreateBPFMaps(ipV6Enabled bool) (*Maps, error) {
 	for i, bpfMap := range mps {
 		err := bpfMap.EnsureExists()
 		if err != nil {
-
 			for j := 0; j < i; j++ {
 				m := mps[j]
 				os.Remove(m.(pinnedMap).Path())

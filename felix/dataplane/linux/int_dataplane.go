@@ -536,6 +536,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 		}
+		if config.RulesConfig.NFTables && config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+			log.Warning("NFTables does not support Inline policy mode. Change DNSPolicyMode to DelayDeniedPacket")
+			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+		}
 	}
 
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
@@ -1332,6 +1336,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		log.Info("conntrackScanner started")
+	} else if config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+		log.Info("DNSPolicy Inline enabled, setting up BPF IPSets and domain tracker.")
+		setupIPSetsAndDomainTracker(proto.IPVersion_IPV4, config, ipsetsManager, dp)
+		if config.IPv6Enabled {
+			setupIPSetsAndDomainTracker(proto.IPVersion_IPV6, config, ipsetsManagerV6, dp)
+		}
 	}
 
 	if config.EgressIPEnabled {
@@ -3475,4 +3485,40 @@ func createBPFConntrackLivenessScanner(ipFamily proto.IPVersion, config Config) 
 	}
 
 	return nil, err
+}
+
+func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
+	config Config,
+	ipSetsMgr *dpsets.IPSetsManager,
+	dp *InternalDataplane) {
+	ipsetsMap, err := bpfmap.CreateBPFIPSetsMap(ipFamily)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create BPF IPSets map.")
+	}
+	ipSetIDAllocator := idalloc.New()
+	ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
+
+	ipSetConfig := config.RulesConfig.IPSetConfigV4
+	ipSetEntry := bpfipsets.IPSetEntryFromBytes
+	ipSetProtoEntry := bpfipsets.ProtoIPSetMemberToBPFEntry
+
+	if ipFamily == proto.IPVersion_IPV6 {
+		ipSetConfig = config.RulesConfig.IPSetConfigV6
+		ipSetEntry = bpfipsets.IPSetEntryV6FromBytes
+		ipSetProtoEntry = bpfipsets.ProtoIPSetMemberToBPFEntryV6
+	}
+
+	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, ipsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer)
+	ipSets.SetIPSetNameFilter(func(ipSetName string) bool {
+		return strings.HasPrefix(ipSetName, "d:")
+	})
+	dp.ipSets = append(dp.ipSets, ipSets)
+	ipSetsMgr.AddDataplane(ipSets)
+	tracker, err := dnsresolver.NewDomainTracker(int(ipFamily), func(id string) uint64 {
+		return ipSets.IDStringToUint64(id)
+	})
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create BPF domain tracker.")
+	}
+	ipSetsMgr.AddDomainTracker(tracker)
 }
