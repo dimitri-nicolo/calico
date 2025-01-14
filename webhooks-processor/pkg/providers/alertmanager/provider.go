@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -180,18 +180,18 @@ func (p *AlertManagerProvider) Config() providers.Config {
 }
 
 func tlsEnabled(config map[string]string) bool {
-	_, caPresent := config["tlsCA"]
-	_, keyPresent := config["tlsKey"]
-	_, certPresent := config["tlsCert"]
+	_, caPresent := config[corev1.ServiceAccountRootCAKey]
+	_, keyPresent := config[corev1.TLSPrivateKeyKey]
+	_, certPresent := config[corev1.TLSCertKey]
 	return caPresent && keyPresent && certPresent
 }
 
 func tlsConfig(config map[string]string) (*x509.CertPool, *tls.Certificate, error) {
 	caCertPool := x509.NewCertPool()
-	if ok := caCertPool.AppendCertsFromPEM([]byte(config["tlsCA"])); !ok {
+	if ok := caCertPool.AppendCertsFromPEM([]byte(config[corev1.ServiceAccountRootCAKey])); !ok {
 		return nil, nil, ErrTLSConfigurationErrorCA
 	}
-	cert, err := tls.X509KeyPair([]byte(config["tlsCert"]), []byte(config["tlsKey"]))
+	cert, err := tls.X509KeyPair([]byte(config[corev1.TLSCertKey]), []byte(config[corev1.TLSPrivateKeyKey]))
 	if err != nil {
 		return nil, nil, ErrTLSConfigurationErrorKeyPair
 	}
