@@ -66,7 +66,7 @@ func (p *AlertManagerProvider) Validate(config map[string]string) error {
 		}
 	}
 	if mTLSEnabled(config) {
-		if _, _, err := tlsConfig(config); err != nil {
+		if _, _, err := mTLSConfig(config); err != nil {
 			return err
 		}
 	}
@@ -125,7 +125,7 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 
 		client := new(http.Client)
 		if mTLSEnabled(config) {
-			if caPool, cert, err := tlsConfig(config); err == nil {
+			if caPool, cert, err := mTLSConfig(config); err == nil {
 				client = &http.Client{
 					Transport: &http.Transport{
 						TLSClientConfig: &tls.Config{
@@ -186,7 +186,7 @@ func mTLSEnabled(config map[string]string) bool {
 	return caPresent && keyPresent && certPresent
 }
 
-func tlsConfig(config map[string]string) (*x509.CertPool, *tls.Certificate, error) {
+func mTLSConfig(config map[string]string) (*x509.CertPool, *tls.Certificate, error) {
 	caCertPool := x509.NewCertPool()
 	if ok := caCertPool.AppendCertsFromPEM([]byte(config[corev1.ServiceAccountRootCAKey])); !ok {
 		return nil, nil, ErrTLSConfigurationErrorCA
