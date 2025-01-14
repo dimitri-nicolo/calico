@@ -65,7 +65,7 @@ func (p *AlertManagerProvider) Validate(config map[string]string) error {
 			return ErrBasicAuthFieldValueError
 		}
 	}
-	if tlsEnabled(config) {
+	if mTLSEnabled(config) {
 		if _, _, err := tlsConfig(config); err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 		}
 
 		client := new(http.Client)
-		if tlsEnabled(config) {
+		if mTLSEnabled(config) {
 			if caPool, cert, err := tlsConfig(config); err == nil {
 				client = &http.Client{
 					Transport: &http.Transport{
@@ -179,7 +179,7 @@ func (p *AlertManagerProvider) Config() providers.Config {
 	return p.config
 }
 
-func tlsEnabled(config map[string]string) bool {
+func mTLSEnabled(config map[string]string) bool {
 	_, caPresent := config[corev1.ServiceAccountRootCAKey]
 	_, keyPresent := config[corev1.TLSPrivateKeyKey]
 	_, certPresent := config[corev1.TLSCertKey]
