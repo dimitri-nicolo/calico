@@ -22,7 +22,6 @@ type Rule struct {
 	Raw            string       `json:"raw"`
 	Message        string       `json:"msg"`
 	Actions        []RuleAction `json:"actions"`
-	Lines          []int        `json:"lines"`
 }
 
 type RuleAction struct {
@@ -39,23 +38,19 @@ func Parse(f string) ([]Rule, error) {
 	var linebuffer strings.Builder
 	rules := []Rule{}
 	currentRule := Rule{}
-	lineNumber := 0
-	lastLine := lineNumber
 	rawLine := ""
 
 	for scanner.Scan() {
-		lineNumber++
 		line := scanner.Text()
 		lineLen := len(line)
 		if lineLen == 0 {
 			if currentRule.SecRule != "" || currentRule.Operator != "" {
-				currentRule.Raw += rawLine
+				currentRule.Raw = rawLine
 				rules = append(rules, currentRule)
 				rawLine = ""
 			}
 
 			currentRule = Rule{}
-			lastLine = lineNumber + 1
 			continue
 		}
 		rawLine = rawLine + line + "\n"
@@ -99,9 +94,7 @@ func Parse(f string) ([]Rule, error) {
 			if err != nil {
 				return []Rule{}, err
 			}
-			currentRule.Lines = []int{lastLine, lineNumber}
-			lastLine = lineNumber + 1
-			currentRule.Raw += rawLine
+			currentRule.Raw = rawLine
 
 			linebuffer.Reset()
 		}
@@ -161,7 +154,7 @@ func EvalLine(l string, rule *Rule) error {
 			rule.Id = act.Value
 		}
 		if act.Key == "msg" {
-			rule.Message = act.Value
+			rule.Message = strings.Trim(act.Value, "'")
 		}
 	}
 
@@ -181,7 +174,6 @@ func parseTransformers(actions string) ([]RuleAction, error) {
 	afterKey := -1  // index after last char of key and before first char of value
 
 	inQuotes := false
-
 	for i := 1; i < len(actions); i++ {
 		c := actions[i]
 		if actions[i-1] == '\\' {
@@ -238,6 +230,7 @@ func appendRuleAction(res []RuleAction, key string, val string) ([]RuleAction, e
 	key = strings.Trim(key, "\"")
 	val = strings.TrimSpace(val)
 	val = strings.Trim(val, "\"")
+	val = strings.Trim(val, "'")
 
 	res = append(res, RuleAction{
 		Key:   key,
