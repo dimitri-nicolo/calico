@@ -1,6 +1,8 @@
 package client_test
 
 import (
+	"context"
+	_ "embed"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +13,10 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/gomega"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/licensekey"
 	"github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 )
@@ -267,6 +272,60 @@ func TestDecodeAndVerify(t *testing.T) {
 			}
 		})
 	}
+}
+
+//go:embed testutils/test-data/test-customer-license.pem
+var testCert string
+
+//go:embed testutils/test-data/test-customer-token.txt
+var testToken string
+
+//go:embed testutils/test-data/test-customer-signed-by-intermediate-license.pem
+var testIntermediateCert string
+
+//go:embed testutils/test-data/test-customer-signed-by-intermediate-token.txt
+var testIntermediateToken string
+
+func TestDecodeNewRoot(t *testing.T) {
+	RegisterTestingT(t)
+	licenseKey := api.LicenseKey{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+		Spec: api.LicenseKeySpec{
+			Token:       testToken,
+			Certificate: testCert,
+		},
+	}
+	claims, err := client.Decode(licenseKey)
+	Expect(err).To(BeNil())
+	Expect(claims.Customer).To(Equal("test-customer"))
+	Expect(claims.Expiry.Time().Compare(time.Date(2125, 1, 2, 7, 59, 59, 0, time.UTC))).To(Equal(0))
+
+	// Tests that api-server wouldn't panic when handling this license. (This can happen when the license has nil nodes.)
+	strategy := licensekey.NewStrategy(runtime.NewScheme())
+	strategy.PrepareForCreate(context.TODO(), &licenseKey)
+}
+
+func TestDecodeNewIntermediate(t *testing.T) {
+	RegisterTestingT(t)
+	licenseKey := api.LicenseKey{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+		Spec: api.LicenseKeySpec{
+			Token:       testIntermediateToken,
+			Certificate: testIntermediateCert,
+		},
+	}
+	claims, err := client.Decode(licenseKey)
+	Expect(err).To(BeNil())
+	Expect(claims.Customer).To(Equal("test-customer-signed-by-intermediate"))
+	Expect(claims.Expiry.Time().Compare(time.Date(2125, 1, 2, 7, 59, 59, 0, time.UTC))).To(Equal(0))
+
+	// Tests that api-server wouldn't panic when handling this license. (This can happen when the license has nil nodes.)
+	strategy := licensekey.NewStrategy(runtime.NewScheme())
+	strategy.PrepareForCreate(context.TODO(), &licenseKey)
 }
 
 func keys(set map[string]bool) []string {
