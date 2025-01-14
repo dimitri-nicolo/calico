@@ -15,11 +15,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/providers"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (
