@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -682,13 +683,27 @@ func (c *cachedQuery) runQueryLabels(cxt context.Context, req QueryLabelsReq) (*
 	}
 
 	if allLabels != nil {
-		for k, v := range allLabels.GetLabels() {
-			response.ResourceTypeLabelMap[req.ResourceType] = append(response.ResourceTypeLabelMap[req.ResourceType],
-				LabelKeyValuePair{
-					LabelKey:    k,
-					LabelValues: v.Slice(),
-				})
+		labels := allLabels.GetLabels()
+
+		// sort keys
+		keys := make([]string, 0, len(labels))
+		for k := range labels {
+			keys = append(keys, k)
 		}
+		sort.Strings(keys)
+
+		// sort values per key
+		items := make([]LabelKeyValuePair, 0, len(keys))
+		for _, k := range keys {
+			values := labels[k].Slice()
+			sort.Strings(values)
+
+			items = append(items, LabelKeyValuePair{
+				LabelKey:    k,
+				LabelValues: values,
+			})
+		}
+		response.ResourceTypeLabelMap[req.ResourceType] = items
 	}
 
 	if warning != nil {
