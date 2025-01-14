@@ -46,6 +46,8 @@ func init() {
 	var V254 = 254
 	var V255 = 255
 	var V256 = 256
+	var Vxffff = 0xffff
+	var Vx10000 = 0x10000
 	var Vxffffffff = 0xffffffff
 	var Vx100000000 = 0x100000000
 	var tierOrder = float64(100.0)
