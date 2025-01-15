@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"reflect"
 
+	"context"
+
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"

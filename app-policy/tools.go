@@ -5,5 +5,5 @@
 package tools
 
 import (
-	_ "golang.org/x/net/context"
+	_ "context"
 )

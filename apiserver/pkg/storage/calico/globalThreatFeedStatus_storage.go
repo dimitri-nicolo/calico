@@ -5,8 +5,9 @@ package calico
 import (
 	"reflect"
 
+	"context"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"golang.org/x/net/context"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 

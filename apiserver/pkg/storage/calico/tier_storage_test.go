@@ -12,9 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"context"
+
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/api/apitesting"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"

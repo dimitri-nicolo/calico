@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"context"
+
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 
 	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	linseed "github.com/projectcalico/calico/linseed/pkg/client"

@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"time"
 
+	"context"
+
 	"github.com/olivere/elastic/v7"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"golang.org/x/net/context"
 
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client"

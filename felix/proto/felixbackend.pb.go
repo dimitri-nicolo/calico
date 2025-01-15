@@ -116,7 +116,7 @@ import (
 
 	proto1 "github.com/gogo/protobuf/proto"
 	google_protobuf "github.com/gogo/protobuf/types"
-	context "golang.org/x/net/context"
+	context "context"
 	grpc "google.golang.org/grpc"
 )
 
