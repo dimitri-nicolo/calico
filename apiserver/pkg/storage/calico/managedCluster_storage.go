@@ -3,13 +3,12 @@
 package calico
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
 	"reflect"
-
-	"context"
 
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"

@@ -3,9 +3,8 @@
 package calico
 
 import (
-	"reflect"
-
 	"context"
+	"reflect"
 
 	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"

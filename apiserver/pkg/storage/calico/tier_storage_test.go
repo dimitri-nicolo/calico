@@ -3,6 +3,7 @@
 package calico
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"reflect"
@@ -11,8 +12,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"context"
 
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"

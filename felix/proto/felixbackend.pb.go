@@ -109,6 +109,7 @@ It has these top-level messages:
 package proto
 
 import (
+	context "context"
 	binary "encoding/binary"
 	fmt "fmt"
 	io "io"
@@ -116,7 +117,6 @@ import (
 
 	proto1 "github.com/gogo/protobuf/proto"
 	google_protobuf "github.com/gogo/protobuf/types"
-	context "context"
 	grpc "google.golang.org/grpc"
 )
 

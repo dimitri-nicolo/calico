@@ -4,11 +4,10 @@
 package query
 
 import (
+	"context"
 	gojson "encoding/json"
 	"fmt"
 	"time"
-
-	"context"
 
 	"github.com/olivere/elastic/v7"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
