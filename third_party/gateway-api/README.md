@@ -37,3 +37,22 @@ ENTRYPOINT ["/usr/local/bin/envoy-gateway"]
 which matches https://github.com/envoyproxy/gateway/blob/v1.1.2/tools/docker/envoy-gateway/Dockerfile
 
 So we just need to use and build that Dockerfile.
+
+# envoyproxy/ratelimit:26f28d78
+
+https://hub.docker.com/layers/envoyproxy/ratelimit/26f28d78/images/sha256-8dd407e534f3c89aeeaf68241a5a4ace7ac7ebbf1c5931ed9957315e37fe3389
+says that the layers are formed from the following commands:
+
+```
+ADD file ... in /
+CMD ["/bin/sh"]
+RUN /bin/sh -c apk --no-cache
+COPY /go/bin/ratelimit /bin/ratelimit # buildkit
+```
+
+`26f28d78` is a commit ID in https://github.com/envoyproxy/ratelimit, but that
+repo doesn't have a Dockerfile that obviously matches those commands.
+
+On second thoughts, actually it does plausibly match the end of the top-level
+Dockerfile in that repo, after the last FROM.  So perhaps we just need to use
+and build that Dockerfile.
