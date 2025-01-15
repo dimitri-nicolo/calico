@@ -86,7 +86,7 @@ func (c *baselineAdminNetworkPolicyClient) Get(ctx context.Context, key model.Ke
 	}
 }
 
-func (c *baselineAdminNetworkPolicyClient) List(ctx context.Context, list model.ListInterface, options api.WatchOptions) (*model.KVPairList, error) {
+func (c *baselineAdminNetworkPolicyClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {
 	logContext := log.WithField("Resource", "BaselineAdminNetworkPolicy")
 	logContext.Debug("Received List request")
 
@@ -105,19 +105,17 @@ func (c *baselineAdminNetworkPolicyClient) List(ctx context.Context, list model.
 		}
 		return []*model.KVPair{kvp}, nil
 	}
-	return pagedList(ctx, logContext, options.Revision, list, convertFunc, listFunc)
+	return pagedList(ctx, logContext, revision, list, convertFunc, listFunc)
 }
 
-func (c *baselineAdminNetworkPolicyClient) Watch(ctx context.Context, list model.ListInterface, revision string) (api.WatchInterface, error) {
+func (c *baselineAdminNetworkPolicyClient) Watch(ctx context.Context, list model.ListInterface, options api.WatchOptions) (api.WatchInterface, error) {
 	// Build watch options to pass to k8s.
 	opts := metav1.ListOptions{Watch: true, AllowWatchBookmarks: false}
 	_, ok := list.(model.ResourceListOptions)
 	if !ok {
 		return nil, fmt.Errorf("ListInterface is not a ResourceListOptions: %s", list)
 	}
-
-	opts.ResourceVersion = revision
-	log.Debugf("Watching Kubernetes BaselineAdminNetworkPolicy at revision %q", revision)
+	log.Debugf("Watching Kubernetes BaselineAdminNetworkPolicy at revision %q", options.Revision)
 	k8sRawWatch, err := c.adminPolicyClient.BaselineAdminNetworkPolicies().Watch(ctx, opts)
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)

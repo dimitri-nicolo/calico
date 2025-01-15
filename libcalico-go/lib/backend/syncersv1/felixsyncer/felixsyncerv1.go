@@ -173,12 +173,12 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesBaselineAdminNetworkPolicy},
 				UpdateProcessor: updateprocessors.NewGlobalNetworkPolicyUpdateProcessor(),
+				ClientID:        calicoClientID, // This is backed by the calico client
 			})
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesEndpointSlice},
 				ClientID:      calicoClientID, // This is backed by the calico client
 			})
-
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesService},
 				ClientID:      calicoClientID, // This is backed by the calico client
