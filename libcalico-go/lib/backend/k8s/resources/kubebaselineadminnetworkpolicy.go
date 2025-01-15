@@ -86,7 +86,7 @@ func (c *baselineAdminNetworkPolicyClient) Get(ctx context.Context, key model.Ke
 	}
 }
 
-func (c *baselineAdminNetworkPolicyClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {
+func (c *baselineAdminNetworkPolicyClient) List(ctx context.Context, list model.ListInterface, options api.WatchOptions) (*model.KVPairList, error) {
 	logContext := log.WithField("Resource", "BaselineAdminNetworkPolicy")
 	logContext.Debug("Received List request")
 
@@ -105,7 +105,7 @@ func (c *baselineAdminNetworkPolicyClient) List(ctx context.Context, list model.
 		}
 		return []*model.KVPair{kvp}, nil
 	}
-	return pagedList(ctx, logContext, revision, list, convertFunc, listFunc)
+	return pagedList(ctx, logContext, options.Revision, list, convertFunc, listFunc)
 }
 
 func (c *baselineAdminNetworkPolicyClient) Watch(ctx context.Context, list model.ListInterface, revision string) (api.WatchInterface, error) {
