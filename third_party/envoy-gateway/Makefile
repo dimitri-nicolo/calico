@@ -34,8 +34,8 @@ $(ENVOY_GATEWAY_DOWNLOADED):
 build: bin/envoy-gateway-$(ARCH)
 
 LD_FLAGS = \
-	-X github.com/envoyproxy/gateway/internal/cmd/version.envoyGatewayVersion=v1.1.2 \
-	-X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=18115ee4dc413445f35bd0c4a7fbb5eb51ee68e5 \
+	-X github.com/envoyproxy/gateway/internal/cmd/version.envoyGatewayVersion=$(ENVOY_GATEWAY_VERSION) \
+	-X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=$(GIT_COMMIT) \
         -s -w
 
 bin/envoy-gateway-$(ARCH): init-source
