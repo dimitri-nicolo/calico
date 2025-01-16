@@ -9,7 +9,7 @@ ENVOY_GATEWAY_VERSION=v1.1.2
 
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
 BRANCH_NAME = $(ENVOY_GATEWAY_VERSION)
-LATEST_IMAGE_TAG = $(BRANCH_NAME)
+LATEST_IMAGE_TAG = latest
 
 ##############################################################################
 # Include lib.Makefile before anything else
