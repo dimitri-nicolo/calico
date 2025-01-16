@@ -49,6 +49,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
 	bpfifstate "github.com/projectcalico/calico/felix/bpf/ifstate"
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
+	bpfiptables "github.com/projectcalico/calico/felix/bpf/iptables"
 	"github.com/projectcalico/calico/felix/bpf/kprobe"
 	bpfmaps "github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/nat"
@@ -1004,13 +1005,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			rules.IPSetIDAllTunnelNets))
 		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4))
 
-		// Clean up any leftover BPF state.
-		err := bpfnat.RemoveConnectTimeLoadBalancer("")
-		if err != nil {
-			log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
-		}
-		tc.CleanUpProgramsAndPins()
-		bpfutils.RemoveBPFSpecialDevices()
+		cleanupBPFState(config)
 	} else {
 		// In BPF mode we still use iptables for raw egress policy, but we
 		// filter the IP sets that we render to the dataplane.  Set an empty
@@ -1341,6 +1336,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		setupIPSetsAndDomainTracker(proto.IPVersion_IPV4, config, ipsetsManager, dp)
 		if config.IPv6Enabled {
 			setupIPSetsAndDomainTracker(proto.IPVersion_IPV6, config, ipsetsManagerV6, dp)
+		}
+		err = bpfiptables.LoadDNSParserBPFProgram(config.BPFLogLevel)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to load BPF DNS parser program.")
 		}
 	}
 
@@ -3521,4 +3520,17 @@ func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
 		log.WithError(err).Fatal("Failed to create BPF domain tracker.")
 	}
 	ipSetsMgr.AddDomainTracker(tracker)
+}
+
+func cleanupBPFState(config Config) {
+	// Clean up any leftover BPF state.
+	err := bpfnat.RemoveConnectTimeLoadBalancer("")
+	if err != nil {
+		log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
+	}
+	tc.CleanUpProgramsAndPins()
+	bpfutils.RemoveBPFSpecialDevices()
+	if config.DNSPolicyMode != apiv3.DNSPolicyModeInline {
+		bpfiptables.Cleanup()
+	}
 }

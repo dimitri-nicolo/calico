@@ -22,7 +22,7 @@ func TestMatchBPFIpsetsProgramForIPTablesV6(t *testing.T) {
 	err := iptables.CreateDNSObjPinDir()
 	Expect(err).NotTo(HaveOccurred())
 
-	defer iptables.CleanupDNSObjPinDir()
+	defer iptables.Cleanup()
 	setID := uint64(1234)
 
 	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 6)
@@ -66,7 +66,7 @@ func TestMatchBPFIpsetsProgramForIPTables(t *testing.T) {
 	err := iptables.CreateDNSObjPinDir()
 	Expect(err).NotTo(HaveOccurred())
 
-	defer iptables.CleanupDNSObjPinDir()
+	defer iptables.Cleanup()
 	setID := uint64(1234)
 
 	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 4)
@@ -109,7 +109,7 @@ func TestBPFDnsParserProgramForIPTables(t *testing.T) {
 	RegisterTestingT(t)
 	err := iptables.CreateDNSObjPinDir()
 	Expect(err).NotTo(HaveOccurred())
-	defer iptables.CleanupDNSObjPinDir()
+	defer iptables.Cleanup()
 
 	err = iptables.LoadDNSParserBPFProgram("debug")
 	Expect(err).NotTo(HaveOccurred())

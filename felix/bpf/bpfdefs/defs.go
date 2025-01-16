@@ -25,6 +25,8 @@ const (
 
 	DnsObjDir = DefaultBPFfsPath + "/dns/"
 
+	DnsParserPinPath = DnsObjDir + "cali_ipt_parse_dns"
+
 	IPTMatchIPSetProgram = "cali_ipt_match_ipset"
 )
 

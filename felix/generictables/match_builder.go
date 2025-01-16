@@ -25,6 +25,7 @@ type EnterpriseMatchCriteria interface {
 	NotOutInterface(ifaceMatch string) MatchCriteria
 	DestAddrTypeLimitIfaceIn(addrType AddrType) MatchCriteria
 	SourceDestSet(name string) MatchCriteria
+	BPFProgram(pinPath string) MatchCriteria
 }
 
 type MatchCriteria interface {

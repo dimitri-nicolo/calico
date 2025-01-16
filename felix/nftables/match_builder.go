@@ -572,3 +572,8 @@ func PortRangesToMultiport(ports []*proto.PortRange) string {
 	portsString := strings.Join(portFragments, ", ")
 	return fmt.Sprintf("{ %s }", portsString)
 }
+
+func (m nftMatch) BPFProgram(pinPath string) generictables.MatchCriteria {
+	log.Panic("Matching bpf programs not supported in nftables")
+	return m
+}

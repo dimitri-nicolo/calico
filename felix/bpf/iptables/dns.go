@@ -51,6 +51,12 @@ func LoadDNSParserBPFProgram(bpfLogLevel string) error {
 
 	fileToLoad := "ipt_parse_dns_" + logLevel + "_co-re.o"
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileToLoad)
+
+	err := CreateDNSObjPinDir()
+	if err != nil {
+		return fmt.Errorf("error creating dns obj directory %w", err)
+	}
+
 	obj, err := bpf.LoadObject(preCompiledBinary, nil, mapsToPin...)
 	if err != nil {
 		return fmt.Errorf("error loading bpf dns parser program for iptables %w", err)
@@ -70,13 +76,13 @@ func CreateDNSObjPinDir() error {
 		if !os.IsNotExist(err) {
 			return err
 		}
-		if err := os.MkdirAll(bpfdefs.DnsObjDir, 0700); err != nil {
+		if err = os.MkdirAll(bpfdefs.DnsObjDir, 0700); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func CleanupDNSObjPinDir() {
+func Cleanup() {
 	os.RemoveAll(bpfdefs.DnsObjDir)
 }
