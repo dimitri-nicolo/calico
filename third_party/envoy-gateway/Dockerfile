@@ -4,7 +4,7 @@
 # - using calico/base instead of distroless
 # - using ARCH instead of TARGETPLATFORM.
 
-FROM busybox as source
+FROM busybox AS source
 # Create the data directory for eg
 RUN mkdir -p /var/lib/eg
 
