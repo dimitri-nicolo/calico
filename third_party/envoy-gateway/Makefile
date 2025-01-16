@@ -30,6 +30,19 @@ $(ENVOY_GATEWAY_DOWNLOADED):
 	curl -sfL https://github.com/envoyproxy/gateway/archive/refs/tags/$(ENVOY_GATEWAY_VERSION).tar.gz | tar xz --strip-components 1 -C envoy-gateway
 	touch $@
 
+.PHONY: build
+build: bin/envoy-gateway-$(ARCH)
+
+LD_FLAGS = \
+	-X github.com/envoyproxy/gateway/internal/cmd/version.envoyGatewayVersion=v1.1.2 \
+	-X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=18115ee4dc413445f35bd0c4a7fbb5eb51ee68e5 \
+        -s -w
+
+bin/envoy-gateway-$(ARCH): init-source
+	$(DOCKER_GO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+			CGO_ENABLED=0 go build -C envoy-gateway -buildvcs=false -o ../bin/envoy-gateway-$(ARCH) -ldflags="$(LD_FLAGS)" github.com/envoyproxy/gateway/cmd/envoy-gateway'
+
 ##############################################################################
 # Image
 ##############################################################################
@@ -44,16 +57,8 @@ sub-image-%:
 .PHONY: image
 image: $(ENVOY_GATEWAY_IMAGE)
 
-LD_FLAGS = \
-	-X github.com/envoyproxy/gateway/internal/cmd/version.envoyGatewayVersion=v1.1.2 \
-	-X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=18115ee4dc413445f35bd0c4a7fbb5eb51ee68e5 \
-        -s -w
-
 $(ENVOY_GATEWAY_IMAGE): $(ENVOY_GATEWAY_IMAGE_CREATED)
-$(ENVOY_GATEWAY_IMAGE_CREATED): init-source
-	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			CGO_ENABLED=0 go build -C envoy-gateway -buildvcs=false -o ../bin/envoy-gateway-$(ARCH) -ldflags="$(LD_FLAGS)" github.com/envoyproxy/gateway/cmd/envoy-gateway'
+$(ENVOY_GATEWAY_IMAGE_CREATED): build
 	$(DOCKER_BUILD) --build-arg ARCH=$(ARCH) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
