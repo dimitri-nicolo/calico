@@ -5,6 +5,8 @@ package alertmanager
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 
 	lsApi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/webhooks-processor/pkg/helpers"
@@ -26,10 +29,12 @@ const (
 )
 
 var (
-	ErrNoUrlField               = errors.New("url field is not present in webhook configuration")
-	ErrWrongPrefix              = errors.New("url field does not start with 'http://' nor 'https://'")
-	ErrWrongSuffix              = errors.New("url field does not end with '/api/v2/alerts'")
-	ErrBasicAuthFieldValueError = errors.New("basicAuth field value is incorrect")
+	ErrNoUrlField                   = errors.New("url field is not present in webhook configuration")
+	ErrWrongPrefix                  = errors.New("url field does not start with 'http://' nor 'https://'")
+	ErrWrongSuffix                  = errors.New("url field does not end with '/api/v2/alerts'")
+	ErrBasicAuthFieldValueError     = errors.New("basicAuth field value is incorrect")
+	ErrTLSConfigurationErrorCA      = errors.New("unable to add Certificate Authority to certificate pool")
+	ErrTLSConfigurationErrorKeyPair = errors.New("unable to configure TLS client cert/key pair")
 )
 
 type AlertManagerProvider struct {
@@ -59,6 +64,11 @@ func (p *AlertManagerProvider) Validate(config map[string]string) error {
 	if basicAuth, ok := config["basicAuth"]; ok {
 		if parts := strings.SplitN(basicAuth, ":", 2); len(parts) != 2 {
 			return ErrBasicAuthFieldValueError
+		}
+	}
+	if mTLSEnabled(config) {
+		if _, _, err := mTLSConfig(config); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -114,8 +124,22 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 			}
 		}
 
+		client := new(http.Client)
+		if mTLSEnabled(config) {
+			if caPool, cert, err := mTLSConfig(config); err == nil {
+				client = &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{
+							RootCAs:      caPool,
+							Certificates: []tls.Certificate{*cert},
+						},
+					},
+				}
+			}
+		}
+
 		// execute the request:
-		response, err := new(http.Client).Do(request)
+		response, err := client.Do(request)
 		if err != nil {
 			return // retry if failed
 		}
@@ -154,4 +178,23 @@ func (p *AlertManagerProvider) Process(ctx context.Context, config map[string]st
 
 func (p *AlertManagerProvider) Config() providers.Config {
 	return p.config
+}
+
+func mTLSEnabled(config map[string]string) bool {
+	_, caPresent := config[corev1.ServiceAccountRootCAKey]
+	_, keyPresent := config[corev1.TLSPrivateKeyKey]
+	_, certPresent := config[corev1.TLSCertKey]
+	return caPresent && keyPresent && certPresent
+}
+
+func mTLSConfig(config map[string]string) (*x509.CertPool, *tls.Certificate, error) {
+	caCertPool := x509.NewCertPool()
+	if ok := caCertPool.AppendCertsFromPEM([]byte(config[corev1.ServiceAccountRootCAKey])); !ok {
+		return nil, nil, ErrTLSConfigurationErrorCA
+	}
+	cert, err := tls.X509KeyPair([]byte(config[corev1.TLSCertKey]), []byte(config[corev1.TLSPrivateKeyKey]))
+	if err != nil {
+		return nil, nil, ErrTLSConfigurationErrorKeyPair
+	}
+	return caCertPool, &cert, nil
 }

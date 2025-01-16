@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
@@ -69,7 +70,7 @@ var _ = Describe("RouteRules Construct", func() {
 			// Return true if the rule is created by this manager.
 			nlRule := r.NetLinkRule()
 			if (nlRule.Mark == 0x100) &&
-				(nlRule.Mask == 0x100) &&
+				(ptr.Deref(nlRule.Mask, uint32(0)) == 0x100) &&
 				(nlRule.Priority == 100) {
 				return true
 			}
@@ -184,12 +185,12 @@ var _ = Describe("RouteRules with RulesMatchPrioSrcTable match func", func() {
 		err := rrs.Apply()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(dataplane.ruleKeyToRule).To(Equal(map[string]netlink.Rule{
-			makeRuleKey("100.0.0.1/32", -1, 15): netlink.Rule{
+			makeRuleKey("100.0.0.1/32", 0, 15): netlink.Rule{
 				Priority:          100,
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("100.0.0.1/32"),
-				Mark:              -1,
-				Mask:              -1,
+				Mark:              0,
+				Mask:              nil,
 				Table:             15,
 				Goto:              -1,
 				Flow:              -1,
@@ -208,12 +209,12 @@ var _ = Describe("RouteRules with RulesMatchPrioSrcTable match func", func() {
 		err = rrs.Apply()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(dataplane.ruleKeyToRule).To(Equal(map[string]netlink.Rule{
-			makeRuleKey("100.0.0.1/32", -1, 16): netlink.Rule{
+			makeRuleKey("100.0.0.1/32", 0, 16): netlink.Rule{
 				Priority:          100,
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("100.0.0.1/32"),
-				Mark:              -1,
-				Mask:              -1,
+				Mark:              0,
+				Mask:              nil,
 				Table:             16,
 				Goto:              -1,
 				Flow:              -1,
@@ -261,7 +262,7 @@ var _ = Describe("RouteRules in exclusive mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.1/32"),
 				Mark:              0x100,
-				Mask:              0x100,
+				Mask:              ptr.To[uint32](0x100),
 				Table:             1,
 				Invert:            true,
 				Goto:              -1,
@@ -281,7 +282,7 @@ var _ = Describe("RouteRules in exclusive mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.2/32"),
 				Mark:              0x200,
-				Mask:              0x200,
+				Mask:              ptr.To[uint32](0x200),
 				Table:             10,
 				Invert:            false,
 				Goto:              -1,
@@ -297,7 +298,7 @@ var _ = Describe("RouteRules in exclusive mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.1/32"),
 				Mark:              0x800,
-				Mask:              0x800,
+				Mask:              ptr.To[uint32](0x800),
 				Table:             90,
 				Invert:            true,
 				Goto:              -1,
@@ -329,7 +330,7 @@ var _ = Describe("RouteRules in exclusive mode", func() {
 					Family:            unix.AF_INET,
 					Src:               mustParseCIDR("10.0.0.3/32"),
 					Mark:              0x400,
-					Mask:              0x400,
+					Mask:              ptr.To[uint32](0x400),
 					Table:             250,
 					Goto:              -1,
 					Flow:              -1,
@@ -374,7 +375,7 @@ var _ = Describe("RouteRules in exclusive mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.2/32"),
 				Mark:              0x200,
-				Mask:              0x200,
+				Mask:              ptr.To[uint32](0x200),
 				Table:             250,
 				Goto:              -1,
 				Flow:              -1,
@@ -461,7 +462,7 @@ var _ = Describe("RouteRules in exclusive mode", func() {
 						Family:            unix.AF_INET,
 						Src:               mustParseCIDR("10.0.0.3/32"),
 						Mark:              0x400,
-						Mask:              0x400,
+						Mask:              ptr.To[uint32](0x400),
 						Table:             250,
 						Goto:              -1,
 						Flow:              -1,
@@ -498,8 +499,8 @@ var _ = Describe("RouteRules in open mode", func() {
 	var rrs *RouteRules
 	ourPriority := 100
 	notOurPriority := 200
-	ourMark := 0x100
-	notOurMark := 0x200
+	ourMark := uint32(0x100)
+	notOurMark := uint32(0x200)
 
 	BeforeEach(func() {
 		dataplane = &mockDataplane{
@@ -516,7 +517,7 @@ var _ = Describe("RouteRules in open mode", func() {
 			// Return true if the rule is created by this manager.
 			nlRule := r.NetLinkRule()
 			if (nlRule.Mark == ourMark) &&
-				(nlRule.Mask == ourMark) &&
+				(ptr.Deref(nlRule.Mask, uint32(0)) == ourMark) &&
 				(nlRule.Priority == ourPriority) {
 				return true
 			}
@@ -545,7 +546,7 @@ var _ = Describe("RouteRules in open mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.1/32"),
 				Mark:              ourMark,
-				Mask:              ourMark,
+				Mask:              ptr.To(ourMark),
 				Table:             1,
 				Invert:            true,
 				Goto:              -1,
@@ -565,7 +566,7 @@ var _ = Describe("RouteRules in open mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.2/32"),
 				Mark:              ourMark,
-				Mask:              ourMark,
+				Mask:              ptr.To(ourMark),
 				Table:             2,
 				Invert:            false,
 				Goto:              -1,
@@ -581,7 +582,7 @@ var _ = Describe("RouteRules in open mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.3/32"),
 				Mark:              notOurMark,
-				Mask:              notOurMark,
+				Mask:              ptr.To(notOurMark),
 				Table:             3,
 				Invert:            true,
 				Goto:              -1,
@@ -597,7 +598,7 @@ var _ = Describe("RouteRules in open mode", func() {
 				Family:            unix.AF_INET,
 				Src:               mustParseCIDR("10.0.0.4/32"),
 				Mark:              ourMark,
-				Mask:              ourMark,
+				Mask:              ptr.To(ourMark),
 				Table:             4,
 				Invert:            true,
 				Goto:              -1,
@@ -790,7 +791,7 @@ func keyForRule(rule *netlink.Rule) string {
 	return key
 }
 
-func makeRuleKey(cidr string, mark int, table int) string {
-	key := fmt.Sprintf("%s-%#x-%v", cidr, uint32(mark), uint32(table))
+func makeRuleKey(cidr string, mark uint32, table int) string {
+	key := fmt.Sprintf("%s-%#x-%v", cidr, mark, table)
 	return key
 }

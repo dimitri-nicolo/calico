@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -24,7 +25,7 @@ import (
 var (
 	claims client.LicenseClaims
 
-	customerFlag, expFlag, nodeFlag, graceFlag, debugFlag, privKeyPathFlag, certPathFlag, packageFlags *pflag.FlagSet
+	customerFlag, expFlag, nodeFlag, graceFlag, debugFlag, useDBFlag, privKeyPathFlag, certPathFlag, packageFlags *pflag.FlagSet
 
 	// Tigera private key location.
 	// Defaults to "./tigera.io_private_key.pem"
@@ -41,6 +42,8 @@ var (
 	exp string
 
 	nodes int
+
+	useDB bool
 )
 
 func init() {
@@ -67,6 +70,9 @@ func init() {
 
 	packageFlags = GenerateLicenseCmd.PersistentFlags()
 	packageFlags.StringVarP(&licensePackage, "package", "p", features.Enterprise, "License Package and feature selection to be assigned to a license")
+
+	useDBFlag = GenerateLicenseCmd.PersistentFlags()
+	useDBFlag.BoolVarP(&useDB, "useDB", "u", true, "Connect with the password database while generating this license")
 
 	_ = GenerateLicenseCmd.MarkPersistentFlagRequired("customer")
 	_ = GenerateLicenseCmd.MarkPersistentFlagRequired("expiry")
@@ -175,42 +181,46 @@ var GenerateLicenseCmd = &cobra.Command{
 			log.Fatalf("error generating license from claims: %v", err)
 		}
 
-		if debug {
-			fmt.Printf("Connecting to: %q\n", datastore.DSN)
-		}
-
-		// Store the license in the license database.
-		db, err := datastore.NewDB(datastore.DSN)
-		if err != nil {
-			log.Fatalf("error connecting to license database: %v", err)
-		}
-
-		// Find or create the Company entry for the license.
-		companyID, err := db.GetCompanyIdByName(claims.Customer)
-		if err == sql.ErrNoRows {
-			// Confirm creation of company with the user in case they mistyped.
-			fmt.Printf("Customer '%s' not found in company database.  Create new company? [y/N]\n", claims.Customer)
-			var create string
-			if _, err := fmt.Scanf("%s", &create); err != nil {
-				log.Fatalf("error reading response %q : %v", create, err)
+		var licenseID int64
+		var db *datastore.DB
+		if useDB {
+			if debug {
+				fmt.Printf("Connecting to: %q\n", datastore.DSN)
 			}
 
-			if strings.ToLower(create) != "y" {
-				os.Exit(1)
-			}
-
-			companyID, err = db.CreateCompany(claims.Customer)
+			// Store the license in the license database.
+			db, err = datastore.NewDB(datastore.DSN)
 			if err != nil {
-				log.Fatalf("error creating company: %v", err)
+				log.Fatalf("error connecting to license database: %v", err)
 			}
-		} else if err != nil {
-			log.Fatalf("error looking up company: %v", err)
-		}
 
-		// Save the license in the DB.
-		licenseID, err := db.CreateLicense(lic, companyID, &claims)
-		if err != nil {
-			log.Fatalf("error saving license to database: %v", err)
+			// Find or create the Company entry for the license.
+			companyID, err := db.GetCompanyIdByName(claims.Customer)
+			if errors.Is(err, sql.ErrNoRows) {
+				// Confirm creation of company with the user in case they mistyped.
+				fmt.Printf("Customer '%s' not found in company database.  Create new company? [y/N]\n", claims.Customer)
+				var create string
+				if _, err := fmt.Scanf("%s", &create); err != nil {
+					log.Fatalf("error reading response %q : %v", create, err)
+				}
+
+				if strings.ToLower(create) != "y" {
+					os.Exit(1)
+				}
+
+				companyID, err = db.CreateCompany(claims.Customer)
+				if err != nil {
+					log.Fatalf("error creating company: %v", err)
+				}
+			} else if err != nil {
+				log.Fatalf("error looking up company: %v", err)
+			}
+
+			// Save the license in the DB.
+			licenseID, err = db.CreateLicense(lic, companyID, &claims)
+			if err != nil {
+				log.Fatalf("error saving license to database: %v", err)
+			}
 		}
 
 		// License successfully stored in database: emit yaml file.

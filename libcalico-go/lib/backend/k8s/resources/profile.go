@@ -37,7 +37,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
-func NewProfileClient(c *kubernetes.Clientset) K8sResourceClient {
+func NewProfileClient(c kubernetes.Interface) K8sResourceClient {
 	return &profileClient{
 		clientSet: c,
 		Converter: conversion.NewConverter(),
@@ -46,7 +46,7 @@ func NewProfileClient(c *kubernetes.Clientset) K8sResourceClient {
 
 // Implements the api.Client interface for Profiles.
 type profileClient struct {
-	clientSet *kubernetes.Clientset
+	clientSet kubernetes.Interface
 	conversion.Converter
 }
 
@@ -164,25 +164,37 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 	logContext.Debug("Received List request")
 	nl := list.(model.ResourceListOptions)
 
-	// If a name is specified, then do an exact lookup.
-	if nl.Name != "" {
-		kvps := []*model.KVPair{}
-		kvp, err := c.Get(ctx, model.ResourceKey{Name: nl.Name, Kind: nl.Kind}, revision)
-		if err != nil {
-			if _, ok := err.(cerrors.ErrorResourceDoesNotExist); !ok {
-				return nil, err
-			}
-			return &model.KVPairList{
-				KVPairs:  kvps,
-				Revision: revision,
-			}, nil
-		}
-
-		kvps = append(kvps, kvp)
+	// Somehow we have ended up with two default-allow profiles in
+	// Enterprise.  They both serve the same function, but they have
+	// different names so it'd be a breaking change to remove either.
+	if nl.Name == resources.DefaultAllowProfileName {
+		// Special case, we synthesize the default allow profile.  Revision
+		// is always 1, and it cannot change (a watch on that profile returns
+		// no events).
 		return &model.KVPairList{
-			KVPairs:  kvps,
-			Revision: revision,
+			KVPairs:  []*model.KVPair{resources.DefaultAllowProfile()},
+			Revision: "1",
 		}, nil
+	}
+	if nl.Name == "default" {
+		// Special case, we synthesize the default allow profile.  Revision
+		// is always 1, and it cannot change (a watch on that profile returns
+		// no events).
+		return &model.KVPairList{
+			KVPairs:  []*model.KVPair{DefaultProfile()},
+			Revision: "1",
+		}, nil
+	}
+
+	var nsName, saName string
+	if nl.Name != "" {
+		// If we're listing a specific profile, then we need to determine
+		// whether it's a namespace or service account.
+		var err error
+		nsName, saName, err = c.parseProfileName(nl.Name)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	nsRev, saRev, err := c.SplitProfileRevision(revision)
@@ -190,8 +202,16 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 		return nil, err
 	}
 
-	// Enumerate all namespaces, paginated.
+	// Enumerate matching namespaces, paginated.
 	listFunc := func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+		if saName != "" {
+			// We've been asked to list a particular service account, skip
+			// listing namespaces.
+			return &v1.NamespaceList{}, nil
+		}
+		if nsName != "" {
+			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", nsName).String()
+		}
 		return c.clientSet.CoreV1().Namespaces().List(ctx, opts)
 	}
 	convertFunc := func(r Resource) ([]*model.KVPair, error) {
@@ -207,9 +227,17 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 		return nil, err
 	}
 
-	// Enumerate all service accounts, paginated.
+	// Enumerate matching service accounts, paginated.
 	listFunc = func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
-		return c.clientSet.CoreV1().ServiceAccounts(v1.NamespaceAll).List(ctx, opts)
+		if nsName != "" && saName == "" {
+			// We've been asked to list a particular namespace, skip
+			// listing service accounts.
+			return &v1.ServiceAccountList{}, nil
+		}
+		if saName != "" {
+			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", saName).String()
+		}
+		return c.clientSet.CoreV1().ServiceAccounts(nsName).List(ctx, opts)
 	}
 	convertFunc = func(r Resource) ([]*model.KVPair, error) {
 		sa := r.(*v1.ServiceAccount)
@@ -225,8 +253,14 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 	}
 
 	// Return a merged KVPairList including both results as well as the default-allow profile.
-	kvps := []*model.KVPair{DefaultProfile()}
-	kvps = append(kvps, resources.DefaultAllowProfile())
+	var kvps []*model.KVPair
+	if nsName == "" {
+		// Somehow we have ended up with two default-allow profiles in
+		// Enterprise.  They both serve the same function, but they have
+		// different names so it'd be a breaking change to remove either.
+		kvps = append(kvps, DefaultProfile())
+		kvps = append(kvps, resources.DefaultAllowProfile())
+	}
 	kvps = append(kvps, nsKVPs.KVPairs...)
 	kvps = append(kvps, saKVPs.KVPairs...)
 	return &model.KVPairList{
@@ -235,13 +269,25 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 	}, nil
 }
 
+func (c *profileClient) parseProfileName(name string) (ns, sa string, err error) {
+	ns, err = c.ProfileNameToNamespace(name)
+	if err == nil {
+		return
+	}
+	ns, sa, err = c.ProfileNameToServiceAccount(name)
+	if err == nil {
+		return
+	}
+	err = fmt.Errorf("profile name neither namespace or service account %s", name)
+	return
+}
+
 func (c *profileClient) EnsureInitialized() error {
 	return nil
 }
 
-func (c *profileClient) Watch(ctx context.Context, list model.ListInterface, revision string) (api.WatchInterface, error) {
+func (c *profileClient) Watch(ctx context.Context, list model.ListInterface, options api.WatchOptions) (api.WatchInterface, error) {
 	// Build watch options to pass to k8s.
-	opts := metav1.ListOptions{Watch: true, AllowWatchBookmarks: false}
 	rlo, ok := list.(model.ResourceListOptions)
 	if !ok {
 		return nil, fmt.Errorf("ListInterface is not a ResourceListOptions: %s", list)
@@ -253,6 +299,7 @@ func (c *profileClient) Watch(ctx context.Context, list model.ListInterface, rev
 	sa := ""
 
 	// Watch a specific profile.
+	k8sOpts := watchOptionsToK8sListOptions(options)
 	if len(rlo.Name) != 0 {
 		log.WithField("name", rlo.Name).Debug("Watching a single profile")
 		var err error
@@ -262,7 +309,7 @@ func (c *profileClient) Watch(ctx context.Context, list model.ListInterface, rev
 		// of real ns and sa watchers. This profile watcher will never get any
 		// events because no events will occur for the static default-allow profile.
 		if rlo.Name == resources.DefaultAllowProfileName {
-			log.WithField("rv", revision).Debug("Creating a fake watch on default-allow profile")
+			log.WithField("rv", options.Revision).Debug("Creating a fake watch on default-allow profile")
 			return newProfileWatcher(ctx, api.NewFake(), api.NewFake()), nil
 		} else if strings.HasPrefix(rlo.Name, conversion.NamespaceProfileNamePrefix) {
 			watchSA = false
@@ -270,28 +317,28 @@ func (c *profileClient) Watch(ctx context.Context, list model.ListInterface, rev
 			if err != nil {
 				return nil, err
 			}
-			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", ns).String()
+			k8sOpts.FieldSelector = fields.OneTermEqualSelector("metadata.name", ns).String()
 		} else if strings.HasPrefix(rlo.Name, conversion.ServiceAccountProfileNamePrefix) {
 			watchNS = false
 			ns, sa, err = c.ProfileNameToServiceAccount(rlo.Name)
 			if err != nil {
 				return nil, err
 			}
-			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", sa).String()
+			k8sOpts.FieldSelector = fields.OneTermEqualSelector("metadata.name", sa).String()
 		} else {
 			return nil, fmt.Errorf("Unsupported prefix for resource name: %s", rlo.Name)
 		}
 	}
-	nsRev, saRev, err := c.SplitProfileRevision(revision)
+	nsRev, saRev, err := c.SplitProfileRevision(options.Revision)
 	if err != nil {
 		return nil, err
 	}
 
-	opts.ResourceVersion = nsRev
+	k8sOpts.ResourceVersion = nsRev
 	var nsWatch kwatch.Interface = kwatch.NewFake()
 	if watchNS {
 		log.Debugf("Watching namespace at revision %q", nsRev)
-		nsWatch, err = c.clientSet.CoreV1().Namespaces().Watch(ctx, opts)
+		nsWatch, err = c.clientSet.CoreV1().Namespaces().Watch(ctx, k8sOpts)
 		if err != nil {
 			return nil, K8sErrorToCalico(err, list)
 		}
@@ -306,11 +353,11 @@ func (c *profileClient) Watch(ctx context.Context, list model.ListInterface, rev
 	nsWatcher := newK8sWatcherConverter(ctx, "Profile-NS", converter, nsWatch)
 
 	// Watch all service accounts in relevant namespace(s)
-	opts.ResourceVersion = saRev
+	k8sOpts.ResourceVersion = saRev
 	var saWatch kwatch.Interface = kwatch.NewFake()
 	if watchSA {
 		log.Debugf("Watching serviceAccount at revision %q", saRev)
-		saWatch, err = c.clientSet.CoreV1().ServiceAccounts(ns).Watch(ctx, opts)
+		saWatch, err = c.clientSet.CoreV1().ServiceAccounts(ns).Watch(ctx, k8sOpts)
 		if err != nil {
 			nsWatch.Stop()
 			return nil, K8sErrorToCalico(err, list)
@@ -417,7 +464,7 @@ func (pw *profileWatcher) processProfileEvents() {
 			log.Debug("Processing ServiceAccount event")
 			isNsEvent = false
 
-		case <-pw.context.Done(): //user cancel
+		case <-pw.context.Done(): // user cancel
 			log.Debug("Process watcher done event in kdd client")
 			return
 		}

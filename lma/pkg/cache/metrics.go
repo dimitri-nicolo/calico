@@ -3,13 +3,13 @@
 package cache
 
 import (
+	"context"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/zap"
-	"golang.org/x/net/context"
 	"k8s.io/component-base/metrics"
 )
 

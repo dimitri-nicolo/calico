@@ -2,6 +2,7 @@ package client
 
 import (
 	"crypto/x509"
+	_ "embed"
 	"fmt"
 	"strings"
 	"time"
@@ -14,70 +15,39 @@ import (
 	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
 )
 
-// Tigera entitlements root CA cert.
-// All future licenseKeys' certificates will be signed by this
-// cert's private key and can be verified using this certificate.
-const rootPEM = `-----BEGIN CERTIFICATE-----
-MIIGVDCCBDygAwIBAgIRALEvIBUYzHtatmXRoFZFvSkwDQYJKoZIhvcNAQELBQAw
-gawxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1T
-YW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtUaWdlcmEsIEluYzEiMCAGA1UECwwZU2Vj
-dXJpdHkgPHNpcnRAdGlnZXJhLmlvPjE2MDQGA1UEAxMtVGlnZXJhIFNlbGYtU2ln
-bmVkIFJvb3QgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MB4XDTE4MDQwNTIxMjk0NVoX
-DTI4MDQxMjIxMjk0MlowgbUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9y
-bmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtUaWdlcmEsIElu
-YzEiMCAGA1UECwwZU2VjdXJpdHkgPHNpcnRAdGlnZXJhLmlvPjE/MD0GA1UEAxM2
-VGlnZXJhIEVudGl0bGVtZW50cyBJbnRlcm1lZGlhdGUgQ2VydGlmaWNhdGUgQXV0
-aG9yaXR5MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyxR6cSweVsw1
-TDPU2Oo7MQIIZczguKAdjW7dCx+AIX+08NzmPpsV9xqiGGGoKnNsxzCz1QHPV+h3
-AbWo7GlOrlGVITpad6igXJ5oE0sfZZprt1fvKY/ZE+1n31b6SV5FOYdn5prL5hUq
-/xI55jQrayXTVjRq8B8JfC2pLOs0dkxLC6+HoGkyWE+uvfS+svGdGjLVO4P+TqIA
-YNGPkSfn7fUI+ilbsS0F3YQ2prKcqvxkoMO6RlOJw4Zh8HXSJuq4sIqRY2KxWGLN
-QQX46NJTzFLylPz0h4Tud3P49eHcgr2WQpepgclTxFxtOi3TTSoMwfg+bAgHsoJm
-qDXiYgmq0D35gPAI4ElIBqCoGGaFhctwlpMpbuwYwmxSYE6xkVdQoxnueR4qgGCv
-31WpoaEqOTVtiZuLppnVxofP0IiKVoB8GuliWz5BkH/aWpXbnGf13WoVIAZSVyfu
-aE60/Jnm9AL5yEAJSErVrU82kHvaWwZ7vexRwj6PpRc/MT7zidUdfZqXijeUl+rx
-o02ToOzYYri5HU3kCG5B/Gut8FIVt3oiNhwEFq0lBX6s6YYLdWo32lMNM4t5yong
-j5O2qKGd4mZpuGQVjyvV210EvBGsRBgUy2tDcmCzvibZaQMclOayLbKmlogRp9B6
-da9NNOgTY83w8OtVnudwM97vtkZLLU0CAwEAAaNmMGQwDgYDVR0PAQH/BAQDAgGG
-MBIGA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFMWQOZIn86ODZ4kHxim/uMK7
-kyBaMB8GA1UdIwQYMBaAFLBHvSxhIUK0KGQcRVLYs9mEfB/nMA0GCSqGSIb3DQEB
-CwUAA4ICAQAXYQY3O2BtdHI50YGe7owxXTpYTg9tt6/2rAgdU9KpquyfLzH1qTO+
-ZafW6/lXZdrMXgI19Txl9RBPw2DwQJIFYRpFFuQfkHiJumNtDFKt+PH13ZiukZid
-+kei1ktoxxRzzpa8Rks2b70fruwfBmx7/KCKFEUcbdJGfpdy6yIgtVcPkBz/y6Qw
-66Wopw61fF9Kr8Ugat18V/OIlOR1ErsoKA2GHohkTDwIHLMEXRArR/st3FnTMpb5
-gIaNtObfh72ugVXhWslDC3CkIGtGLK/zak/LTqNwFeuYFTGE6op4jtocV7zQzJWx
-POSjWs8qhHjhRle3DWwwooz4CfCFSWHWiaa6G4MXyY3+VNoG+0Gse3709ut45zjm
-8cuyIHuPbbRO/Pr2Q1mplZdRqDxXIVAssiS/vwSieC+7jYeIDoXvFb6BRnSjdQuF
-b8wF262rMiZlYhWlrbTYMTlyymxLp4H3nZ/V2XjFFWtC4iI4ImvPCUJRFtPZvwIR
-r4MoQ19OK0Mqny70PbosS9FI3wIfkPm0Ih4VrecAlMnvpo6wuYV/kONx6DaUGr7s
-ZVOtL6cv8afMyoaAQ/+O4xCd6bkCUnZe9DRp7AFfns6tY64MMvft/34Z1q0OyE01
-6YA0CdAuqhS47spN26cyJUfj+JTO9rqnHvSy+h7QZgBQCu16a6ZEIA==
------END CERTIFICATE-----`
-
 var (
+	// root20180405 is the original root certificate (that has since expired).
+	//go:embed root-certificates/root20180405.pem
+	root20180405 []byte
+
+	// root20241231 is a new root certificate that is used to sign licenses.
+	//go:embed root-certificates/root20241231.pem
+	root20241231 []byte
+
+	// rootCerts is a list of trusted license signers.
+	rootCerts []*x509.Certificate
+
 	// Symmetric key to encrypt and decrypt the JWT.
 	// It has to be 32-byte long UTF-8 string.
 	symKey = []byte("i༒2ஹ阳0?!pᄚ3-)0$߷५ૠm")
-
-	// LicenseKey is a singleton resource, and has to have the name "default".
-	ResourceName = "default"
-
-	//opts x509.VerifyOptions
 )
 
+// ResourceName is the name of the LicenseKey, which is a singleton resource.
+const ResourceName = "default"
+
 func init() {
-	// First, create the set of root certificates. For this example we only
-	// have one. It's also possible to omit this in order to use the
-	// default root set of the current operating system.
-	roots := x509.NewCertPool()
-	ok := roots.AppendCertsFromPEM([]byte(rootPEM))
-	if !ok {
-		panic("failed to load root cert")
+
+	cert20180405, err := cryptolicensing.LoadCertFromPEM(root20180405)
+	if err != nil {
+		panic(err)
 	}
 
-	//opts = x509.VerifyOptions{
-	//	Roots: roots,
-	//}
+	cert20241231, err := cryptolicensing.LoadCertFromPEM(root20241231)
+	if err != nil {
+		panic(err)
+	}
+
+	rootCerts = append(rootCerts, cert20180405, cert20241231)
 }
 
 // LicenseClaims contains all the license control fields.
@@ -148,16 +118,17 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 		return LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
 	}
 
-	rootCert, err := cryptolicensing.LoadCertFromPEM([]byte(rootPEM))
-	if err != nil {
-		return LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
-	}
-
 	// We only check if the certificate was signed by Tigera root certificate.
 	// Verify() also checks if the certificate is expired before checking if it was signed by the root cert,
 	// which is not what we want to do for v2.1 behavior.
-	if err = cert.CheckSignatureFrom(rootCert); err != nil {
-		return LicenseClaims{}, fmt.Errorf("failed to verify the certificate: %s", err)
+	for _, root := range rootCerts {
+		err = cert.CheckSignatureFrom(root)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return LicenseClaims{}, fmt.Errorf("error checking license signature: %s", err)
 	}
 
 	// For v2.1 we are not checking certificate expiration, verifying the cert chain also checks if the leaf certificate

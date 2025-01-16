@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 )
 
 //go:embed testdata/simple_testdata.conf
@@ -26,6 +27,7 @@ var _ = Describe("Waf Ruleset Parser Test", func() {
 		jsonData, err := json.MarshalIndent(rules, "", "    ")
 		Expect(err).To(BeNil())
 
-		Expect(jsonData).To(Equal(simple_parsed))
+		format.TruncatedDiff = false
+		Expect(jsonData).To(MatchJSON(simple_parsed))
 	})
 })

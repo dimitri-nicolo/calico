@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/felix/ip"
 )
@@ -59,7 +60,7 @@ func (r *Rule) LogCxt() *log.Entry {
 		"priority": r.nlRule.Priority,
 		"invert":   r.nlRule.Invert,
 		"Mark":     r.nlRule.Mark,
-		"Mask":     r.nlRule.Mask,
+		"Mask":     ptr.Deref(r.nlRule.Mask, uint32(0)),
 		"src":      src,
 		"Table":    r.nlRule.Table,
 	})
@@ -76,8 +77,8 @@ func (r *Rule) markMatchesWithMask(mark, mask uint32) *Rule {
 	if mark&mask != mark {
 		logCxt.Panic("Bug: mark is not contained in mask")
 	}
-	r.nlRule.Mask = int(mask)
-	r.nlRule.Mark = int(mark)
+	r.nlRule.Mask = ptr.To(mask)
+	r.nlRule.Mark = mark
 
 	return r
 }
@@ -137,7 +138,7 @@ func RulesMatchSrcFWMark(r, p *Rule) bool {
 		(r.nlRule.Family == p.nlRule.Family) &&
 		(r.nlRule.Invert == p.nlRule.Invert) &&
 		(r.nlRule.Mark == p.nlRule.Mark) &&
-		(r.nlRule.Mask == p.nlRule.Mask) &&
+		ptr.Equal(r.nlRule.Mask, p.nlRule.Mask) &&
 		ip.IPNetsEqual(r.nlRule.Src, p.nlRule.Src)
 }
 

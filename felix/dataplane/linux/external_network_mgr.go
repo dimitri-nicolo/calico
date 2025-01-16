@@ -1,10 +1,11 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2025 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
 import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/utils/ptr"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
@@ -174,8 +175,8 @@ func (m *externalNetworkManager) CompleteDeferredWork() error {
 		var CreatedByExternalNetworkManager routerule.RuleFilterFunc = func(r *routerule.Rule) bool {
 			// Return true if the rule is created by this manager.
 			nlRule := r.NetLinkRule()
-			if (nlRule.Mark == int(m.dpConfig.RulesConfig.MarkEgress)) &&
-				(nlRule.Mask == int(m.dpConfig.RulesConfig.MarkEgress)) &&
+			if (nlRule.Mark == m.dpConfig.RulesConfig.MarkEgress) &&
+				(ptr.Deref(nlRule.Mask, uint32(0)) == m.dpConfig.RulesConfig.MarkEgress) &&
 				(nlRule.Priority == m.dpConfig.ExternalNetworkRoutingRulePriority) {
 				return true
 			}
