@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -189,7 +189,7 @@ type egressRule struct {
 	srcIP      ip.Addr
 	priority   int
 	family     int
-	mark       int
+	mark       uint32
 	tableIndex int
 }
 
@@ -1240,7 +1240,7 @@ func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID
 	for _, ipAddr := range workload.Ipv4Nets {
 		m.deleteRouteRule(&egressRule{
 			priority:   m.dpConfig.EgressIPRoutingRulePriority,
-			mark:       int(m.dpConfig.RulesConfig.MarkEgress),
+			mark:       m.dpConfig.RulesConfig.MarkEgress,
 			srcIP:      ip.FromIPOrCIDRString(ipAddr),
 			tableIndex: index,
 		})
@@ -1627,7 +1627,7 @@ func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoi
 
 	priority := m.dpConfig.EgressIPRoutingRulePriority
 	family := syscall.AF_INET
-	mark := int(m.dpConfig.RulesConfig.MarkEgress)
+	mark := m.dpConfig.RulesConfig.MarkEgress
 
 	log.WithFields(log.Fields{
 		"srcIPs":             workload.Ipv4Nets,
