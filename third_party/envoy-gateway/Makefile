@@ -50,7 +50,8 @@ register:
 
 $(ENVOY_GATEWAY_IMAGE): $(ENVOY_GATEWAY_IMAGE_CREATED)
 $(ENVOY_GATEWAY_IMAGE_CREATED): init-source register
-	make -C envoy-gateway build image PLATFORMS="linux_$(ARCH)" BINS="envoy-gateway" REGISTRY=tigera IMAGE_NAME=envoy-gateway TAG=$(LATEST_IMAGE_TAG)-$(ARCH) GOARCH=$(ARCH)
+	make -C envoy-gateway build PLATFORMS="linux_$(ARCH)" BINS="envoy-gateway" REGISTRY=tigera IMAGE_NAME=envoy-gateway TAG=$(LATEST_IMAGE_TAG)-$(ARCH) GOARCH=$(ARCH)
+	$(DOCKER_BUILD) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile envoy-gateway/bin
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
 
