@@ -23,6 +23,9 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"0|tier.policy|pass|0":                      emptyValue,
 			"1|default.knp.default.default-deny|deny|1": emptyValue,
 		}
+		pendingPolicies := FlowPolicySet{
+			"0|tier.policy|allow|0": emptyValue,
+		}
 		flowLog := FlowLog{
 			StartTime: time.Now(),
 			EndTime:   time.Now(),
@@ -65,7 +68,9 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				SrcLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 			},
-			FlowPolicySet: policies,
+			FlowAllPolicySet:      policies,
+			FlowEnforcedPolicySet: policies,
+			FlowPendingPolicySet:  pendingPolicies,
 			FlowExtras: FlowExtras{
 				OriginalSourceIPs:    []net.IP{net.ParseIP("10.0.1.1")},
 				NumOriginalSourceIPs: 1,

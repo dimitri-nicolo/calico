@@ -75,6 +75,7 @@ type FlowTesterOptions struct {
 type flowMeta struct {
 	flowlog.FlowMeta
 	policies string
+	enforced string
 	labels   string
 }
 
@@ -135,11 +136,11 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 			}
 		}
 		if t.options.ExpectPolicies {
-			if len(fl.FlowPolicySet) == 0 {
+			if len(fl.FlowAllPolicySet) == 0 {
 				return fmt.Errorf("missing Policies in %v", fl.FlowMeta)
 			}
-		} else if len(fl.FlowPolicySet) != 0 {
-			return fmt.Errorf("unexpected Policies %v in %v", fl.FlowPolicySet, fl.FlowMeta)
+		} else if len(fl.FlowAllPolicySet) != 0 {
+			return fmt.Errorf("unexpected Policies %v in %v", fl.FlowAllPolicySet, fl.FlowMeta)
 		}
 
 		// Never include source port as it is usually ephemeral and difficult to test for.  Instead if the source port
@@ -270,11 +271,18 @@ func (t *FlowTester) flowMetaFromFlowLog(fl flowlog.FlowLog) flowMeta {
 	}
 	if t.options.MatchPolicies {
 		var policies []string
-		for p := range fl.FlowPolicySet {
+		for p := range fl.FlowAllPolicySet {
 			policies = append(policies, p)
 		}
 		sort.Strings(policies)
 		fm.policies = strings.Join(policies, ";")
+
+		var enforced []string
+		for p := range fl.FlowEnforcedPolicySet {
+			enforced = append(enforced, p)
+		}
+		sort.Strings(enforced)
+		fm.enforced += strings.Join(enforced, ";")
 	}
 	return fm
 }

@@ -42,7 +42,11 @@ var (
 	INTERNAL          = int32(code.Code_INTERNAL)
 	UNKNOWN           = int32(code.Code_UNKNOWN)
 
-	rlog = logutils.NewRateLimitedLogger()
+	rlog1 = logutils.NewRateLimitedLogger()
+	rlog2 = logutils.NewRateLimitedLogger()
+	rlog3 = logutils.NewRateLimitedLogger()
+	rlog4 = logutils.NewRateLimitedLogger()
+	rlog5 = logutils.NewRateLimitedLogger()
 )
 
 // Action is an enumeration of actions a policy rule can take if it is matched.
@@ -78,14 +82,14 @@ func LookupEndpointKeysFromSrcDst(store *policystore.PolicyStore, src, dst strin
 
 	// Map the destination
 	if destinationIp, err := ip.ParseCIDROrIP(dst); err != nil {
-		rlog.WithError(err).Errorf("cannot process destination addr %s", dst)
+		rlog1.WithError(err).Errorf("cannot process destination addr %s", dst)
 	} else {
 		log.Debugf("lookup endpoint for destination %s", destinationIp.String())
 		destination = ipToEndpointKeys(store, destinationIp.Addr())
 	}
 	// Map the source
 	if sourceIp, err := ip.ParseCIDROrIP(src); err != nil {
-		rlog.WithError(err).Errorf("cannot process source addr %s", src)
+		rlog2.WithError(err).Errorf("cannot process source addr %s", src)
 	} else {
 		log.Debugf("lookup endpoint for source %s", sourceIp.String())
 		source = ipToEndpointKeys(store, sourceIp.Addr())
@@ -166,7 +170,7 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, flow Flow) (sour
 
 	// Map the destination
 	if destinationIp, err := ip.ParseCIDROrIP(flow.GetDestIP().String()); err != nil {
-		rlog.WithError(err).Errorf("cannot process destination addr %s:%d", flow.GetDestIP().String(), flow.GetDestPort())
+		rlog3.WithError(err).Errorf("cannot process destination addr %s:%d", flow.GetDestIP().String(), flow.GetDestPort())
 	} else {
 		log.Debugf("lookup endpoint for destination %v:%d", destinationIp, flow.GetDestPort())
 		destination = ipToEndpoints(store, destinationIp.Addr())
@@ -174,7 +178,7 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, flow Flow) (sour
 
 	// Map the source
 	if sourceIp, err := ip.ParseCIDROrIP(flow.GetSourceIP().String()); err != nil {
-		rlog.WithError(err).Warnf("cannot process source addr %s:%d", flow.GetSourceIP().String(), flow.GetSourcePort())
+		rlog4.WithError(err).Warnf("cannot process source addr %s:%d", flow.GetSourceIP().String(), flow.GetSourcePort())
 	} else {
 		log.Debugf("lookup endpoint for source %s:%d", sourceIp.String(), flow.GetSourcePort())
 		source = ipToEndpoints(store, sourceIp.Addr())
@@ -207,7 +211,7 @@ func checkStore(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir 
 			// Leave action unchanged, packet will be dropped.
 		case policystore.ACCEPT, policystore.LOG_AND_ACCEPT:
 			// Convert action that would result in a drop into an accept.
-			rlog.Info("Invoking DropActionOverride: Converting drop action to allow")
+			rlog5.Info("Invoking DropActionOverride: Converting drop action to allow")
 			s.Code = OK
 		}
 	}
