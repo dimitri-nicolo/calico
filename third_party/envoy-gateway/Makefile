@@ -1,6 +1,6 @@
 include ../../metadata.mk
 
-PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoybinary
+PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy-gateway
 
 ENVOY_GATEWAY_IMAGE ?= tigera/envoy-gateway
 BUILD_IMAGES ?= $(ENVOY_GATEWAY_IMAGE)
@@ -44,14 +44,17 @@ sub-image-%:
 .PHONY: image
 image: $(ENVOY_GATEWAY_IMAGE)
 
-.PHONY: register
-register:
-	docker run --rm --privileged multiarch/qemu-user-static:register || true
+LD_FLAGS = \
+	-X github.com/envoyproxy/gateway/internal/cmd/version.envoyGatewayVersion=v1.1.2 \
+	-X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=18115ee4dc413445f35bd0c4a7fbb5eb51ee68e5 \
+        -s -w
 
 $(ENVOY_GATEWAY_IMAGE): $(ENVOY_GATEWAY_IMAGE_CREATED)
-$(ENVOY_GATEWAY_IMAGE_CREATED): init-source register
-	make -C envoy-gateway build PLATFORMS="linux_$(ARCH)" BINS="envoy-gateway" REGISTRY=tigera IMAGE_NAME=envoy-gateway TAG=$(LATEST_IMAGE_TAG)-$(ARCH) GOARCH=$(ARCH)
-	$(DOCKER_BUILD) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile envoy-gateway/bin
+$(ENVOY_GATEWAY_IMAGE_CREATED): init-source
+	$(DOCKER_GO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+			CGO_ENABLED=0 go build -C envoy-gateway -buildvcs=false -o ../bin/envoy-gateway-$(ARCH) -ldflags="$(LD_FLAGS)" github.com/envoyproxy/gateway/cmd/envoy-gateway'
+	$(DOCKER_BUILD) --build-arg ARCH=$(ARCH) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
 
