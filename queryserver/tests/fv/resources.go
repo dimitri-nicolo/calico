@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/api"
 	"github.com/projectcalico/calico/queryserver/pkg/querycache/client"
 )
@@ -1819,11 +1820,14 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 		p.Selector = &er.Spec.Selector
+		p.ServiceAccountSelector = &er.Spec.ServiceAccountSelector
 	case *apiv3.GlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
 		p.Selector = &er.Spec.Selector
+		p.NamespaceSelector = &er.Spec.NamespaceSelector
+		p.ServiceAccountSelector = &er.Spec.ServiceAccountSelector
 	case *apiv3.StagedNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
@@ -1832,6 +1836,7 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 			p.StagedAction = &er.Spec.StagedAction
 		}
 		p.Selector = &er.Spec.Selector
+		p.ServiceAccountSelector = &er.Spec.ServiceAccountSelector
 	case *apiv3.StagedKubernetesNetworkPolicy:
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
 		p.EgressRules = createRulesFn(len(er.Spec.Egress))
@@ -1839,6 +1844,7 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 			p.StagedAction = &er.Spec.StagedAction
 		}
 		p.Selector = getStringPointer(conversion.K8sSelectorToCalico(&er.Spec.PodSelector, conversion.SelectorPod))
+		p.ServiceAccountSelector = testutils.StringPtr("")
 	case *apiv3.StagedGlobalNetworkPolicy:
 		p.Tier = er.Spec.Tier
 		p.IngressRules = createRulesFn(len(er.Spec.Ingress))
@@ -1847,6 +1853,8 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 			p.StagedAction = &er.Spec.StagedAction
 		}
 		p.Selector = &er.Spec.Selector
+		p.NamespaceSelector = &er.Spec.NamespaceSelector
+		p.ServiceAccountSelector = &er.Spec.ServiceAccountSelector
 	}
 
 	qcStagedAdnDefaultTierAdjustment(&p)

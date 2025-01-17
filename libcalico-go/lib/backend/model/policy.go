@@ -149,18 +149,20 @@ func (options PolicyListOptions) KeyFromDefaultPath(path string) Key {
 }
 
 type Policy struct {
-	Namespace        string                        `json:"namespace,omitempty" validate:"omitempty"`
-	Order            *float64                      `json:"order,omitempty" validate:"omitempty"`
-	InboundRules     []Rule                        `json:"inbound_rules,omitempty" validate:"omitempty,dive"`
-	OutboundRules    []Rule                        `json:"outbound_rules,omitempty" validate:"omitempty,dive"`
-	Selector         string                        `json:"selector" validate:"selector"`
-	DoNotTrack       bool                          `json:"untracked,omitempty"`
-	Annotations      map[string]string             `json:"annotations,omitempty"`
-	PreDNAT          bool                          `json:"pre_dnat,omitempty"`
-	ApplyOnForward   bool                          `json:"apply_on_forward,omitempty"`
-	Types            []string                      `json:"types,omitempty"`
-	PerformanceHints []apiv3.PolicyPerformanceHint `json:"performance_hints,omitempty" validate:"omitempty,unique,dive,oneof=AssumeNeededOnEveryNode"`
-	StagedAction     *apiv3.StagedAction           `json:"staged_action,omitempty"`
+	Namespace              string                        `json:"namespace,omitempty" validate:"omitempty"`
+	Order                  *float64                      `json:"order,omitempty" validate:"omitempty"`
+	InboundRules           []Rule                        `json:"inbound_rules,omitempty" validate:"omitempty,dive"`
+	OutboundRules          []Rule                        `json:"outbound_rules,omitempty" validate:"omitempty,dive"`
+	Selector               string                        `json:"selector" validate:"selector"`
+	NamespaceSelector      string                        `json:"namespace_selector" validate:"selector"`
+	ServiceAccountSelector string                        `json:"serviceaccount_selector" validate:"selector"`
+	DoNotTrack             bool                          `json:"untracked,omitempty"`
+	Annotations            map[string]string             `json:"annotations,omitempty"`
+	PreDNAT                bool                          `json:"pre_dnat,omitempty"`
+	ApplyOnForward         bool                          `json:"apply_on_forward,omitempty"`
+	Types                  []string                      `json:"types,omitempty"`
+	PerformanceHints       []apiv3.PolicyPerformanceHint `json:"performance_hints,omitempty" validate:"omitempty,unique,dive,oneof=AssumeNeededOnEveryNode"`
+	StagedAction           *apiv3.StagedAction           `json:"staged_action,omitempty"`
 }
 
 func (p Policy) String() string {
@@ -169,6 +171,8 @@ func (p Policy) String() string {
 		parts = append(parts, fmt.Sprintf("order:%v", *p.Order))
 	}
 	parts = append(parts, fmt.Sprintf("selector:%#v", p.Selector))
+	parts = append(parts, fmt.Sprintf("namespaceSelector:%#v", p.NamespaceSelector))
+	parts = append(parts, fmt.Sprintf("serviceaccountSelector:%#v", p.ServiceAccountSelector))
 	inRules := make([]string, len(p.InboundRules))
 	for ii, rule := range p.InboundRules {
 		inRules[ii] = rule.String()

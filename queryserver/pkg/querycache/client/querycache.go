@@ -539,21 +539,23 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 
 	creationTime := res.GetObjectMeta().GetCreationTimestamp()
 	policy := Policy{
-		UID:                  res.GetObjectMeta().GetUID(),
-		Index:                idx,
-		Name:                 res.GetObjectMeta().GetName(),
-		Namespace:            res.GetObjectMeta().GetNamespace(),
-		Kind:                 res.GetObjectKind().GroupVersionKind().Kind,
-		Tier:                 p.GetTier(),
-		Annotations:          p.GetAnnotations(),
-		NumHostEndpoints:     ep.NumHostEndpoints,
-		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
-		IngressRules:         c.convertRules(p.GetRuleEndpointCounts().Ingress),
-		EgressRules:          c.convertRules(p.GetRuleEndpointCounts().Egress),
-		Order:                p.GetOrder(),
-		CreationTime:         &creationTime,
-		StagedAction:         p.GetStagedAction(),
-		Selector:             p.GetSelector(),
+		UID:                    res.GetObjectMeta().GetUID(),
+		Index:                  idx,
+		Name:                   res.GetObjectMeta().GetName(),
+		Namespace:              res.GetObjectMeta().GetNamespace(),
+		Kind:                   res.GetObjectKind().GroupVersionKind().Kind,
+		Tier:                   p.GetTier(),
+		Annotations:            p.GetAnnotations(),
+		NumHostEndpoints:       ep.NumHostEndpoints,
+		NumWorkloadEndpoints:   ep.NumWorkloadEndpoints,
+		IngressRules:           c.convertRules(p.GetRuleEndpointCounts().Ingress),
+		EgressRules:            c.convertRules(p.GetRuleEndpointCounts().Egress),
+		Order:                  p.GetOrder(),
+		CreationTime:           &creationTime,
+		StagedAction:           p.GetStagedAction(),
+		Selector:               p.GetSelector(),
+		NamespaceSelector:      p.GetNamespaceSelector(),
+		ServiceAccountSelector: p.GetServiceAccountSelector(),
 	}
 
 	if fieldSelector != nil {
