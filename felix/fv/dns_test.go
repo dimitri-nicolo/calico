@@ -1016,7 +1016,9 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		policyChainName = rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
 			Tier: "default",
 			Name: fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
-		})
+		},
+			NFTMode(),
+		)
 
 		// Allow workloads to connect out to the Internet.
 		tc.Felixes[0].Exec(
