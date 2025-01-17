@@ -94,21 +94,21 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 
 type withExtras struct {
 	v1.Event `json:",inline"`
-	Cluster  string `json:"cluster"`
 	Tenant   string `json:"tenant,omitempty"`
 }
 
-// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
 func (b *eventsBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Event) interface{} {
+	l.Cluster = i.Cluster
+
 	// We don't want to include the ID in the document ever.
 	l.ID = ""
 
 	if b.singleIndex {
 		return &withExtras{
-			Event:   l,
-			Cluster: i.Cluster,
-			Tenant:  i.Tenant,
+			Event:  l,
+			Tenant: i.Tenant,
 		}
 	}
 	return l

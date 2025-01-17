@@ -75,6 +75,7 @@ func TestFV_AuditEE(t *testing.T) {
 
 		// Perform a query.
 		audits, err := cli.AuditLogs(cluster).List(ctx, &params)
+
 		require.NoError(t, err)
 		require.Equal(t, []v1.AuditLog{}, audits.Items)
 	})
@@ -111,6 +112,7 @@ func TestFV_AuditEE(t *testing.T) {
 		// Reset the time as it microseconds to not match perfectly
 		require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
 		resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
+		testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
 
 		require.Equal(t, audits, resp.Items)
 	})
@@ -164,6 +166,7 @@ func TestFV_AuditEE(t *testing.T) {
 		// Reset the time as it microseconds to not match perfectly
 		require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
 		resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
+		testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
 
 		require.Equal(t, audits, resp.Items)
 	})
@@ -311,6 +314,7 @@ func TestFV_AuditEE(t *testing.T) {
 						RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
 						AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
 					},
+					Cluster: cluster,
 				},
 			}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log EE #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
@@ -345,6 +349,7 @@ func TestFV_AuditEE(t *testing.T) {
 					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(lastItem) * time.Second)),
 					AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", lastItem)),
 				},
+				Cluster: cluster,
 			},
 		}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log EE #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))
@@ -400,6 +405,7 @@ func TestFV_AuditEE(t *testing.T) {
 						RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(i) * time.Second)),
 						AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", i)),
 					},
+					Cluster: cluster,
 				},
 			}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log Kube #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
@@ -434,6 +440,7 @@ func TestFV_AuditEE(t *testing.T) {
 					RequestReceivedTimestamp: metav1.NewMicroTime(logTime.UTC().Add(time.Duration(lastItem) * time.Second)),
 					AuditID:                  types.UID(fmt.Sprintf("some-uuid-%d", lastItem)),
 				},
+				Cluster: cluster,
 			},
 		}, auditLogsWithUTCTime(resp), fmt.Sprintf("Audit Log Kube #%d did not match", lastItem))
 

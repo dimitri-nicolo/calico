@@ -65,9 +65,11 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 	}
 }
 
-// prepareForWrite wraps a log in a document that includes other important metadata - like cluster and tenant - if
+// prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
 func (b *auditLogBackend) prepareForWrite(i bapi.ClusterInfo, k v1.AuditLogType, l v1.AuditLog) (interface{}, error) {
+	l.Cluster = i.Cluster
+
 	// Audit logs have a special MarshalJSON implementation that we need to respect.
 	bs, err := l.MarshalJSON()
 	if err != nil {
@@ -75,11 +77,11 @@ func (b *auditLogBackend) prepareForWrite(i bapi.ClusterInfo, k v1.AuditLogType,
 	}
 
 	if b.singleIndex {
-		// For single-index mode, we need to also include cluster and tenant in the document, as well
+		// For single-index mode, we need to also include tenant in the document, as well
 		// as the log type (EE or Kube)
 		// AuditLogs have a custom JSON marshaler so we need to add this to the JSON directly.
 		buf := bytes.NewBuffer(bytes.TrimSuffix(bs, []byte("}")))
-		buf.WriteString(fmt.Sprintf(`,"cluster":"%s","tenant":"%s","audit_type":"%s"}`, i.Cluster, i.Tenant, k))
+		buf.WriteString(fmt.Sprintf(`,"tenant":"%s","audit_type":"%s"}`, i.Tenant, k))
 		return buf.String(), nil
 	}
 

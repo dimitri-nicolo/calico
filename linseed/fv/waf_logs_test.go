@@ -89,6 +89,7 @@ func TestFV_WAF(t *testing.T) {
 		// Reset the time as it microseconds to not match perfectly
 		require.NotEqual(t, "", resp.Items[0].Timestamp)
 		resp.Items[0].Timestamp = reqTime
+		testutils.AssertWAFLogClusterAndReset(t, cluster, &resp.Items[0])
 
 		require.Equal(t, wafLogs, resp.Items)
 	})
@@ -133,6 +134,7 @@ func TestFV_WAF(t *testing.T) {
 				{
 					Timestamp: logTime.Add(time.Duration(i) * time.Second),
 					Host:      fmt.Sprintf("%d", i),
+					Cluster:   cluster,
 				},
 			}, resp.Items, fmt.Sprintf("WAF #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
@@ -164,6 +166,7 @@ func TestFV_WAF(t *testing.T) {
 			{
 				Timestamp: logTime.Add(time.Duration(lastItem) * time.Second),
 				Host:      fmt.Sprintf("%d", lastItem),
+				Cluster:   cluster,
 			},
 		}, resp.Items, fmt.Sprintf("WAF #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))
@@ -182,6 +185,7 @@ func TestFV_WAF(t *testing.T) {
 			logs = append(logs, v1.WAFLog{
 				Timestamp: logTime.Add(time.Duration(i) * time.Second), // Make sure logs are ordered.
 				Host:      fmt.Sprintf("%d", i),
+				Cluster:   cluster,
 			},
 			)
 		}

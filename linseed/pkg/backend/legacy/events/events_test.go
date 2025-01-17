@@ -146,7 +146,7 @@ func TestCreateEvent(t *testing.T) {
 
 			// We expect the ID to be present, but it's a random value so we
 			// can't assert on the exact value.
-			require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
+			require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
 		})
 	}
 
@@ -177,6 +177,7 @@ func TestCreateEvent(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, 1, results)
 		require.Equal(t, 1, len(results.Items))
+		backendutils.AssertEventClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
 
 		// We expect the ID to be same as the passed event id.
 		require.Equal(t, event, results.Items[0])
@@ -279,7 +280,7 @@ func TestEventSelector(t *testing.T) {
 			if numResults > 0 {
 				// We expect the ID to be present, but it's a random value so we
 				// can't assert on the exact value.
-				require.Equal(t, event, backendutils.AssertEventIDAndReset(t, r.Items[0]))
+				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, r.Items[0]))
 			}
 		} else {
 			require.Error(t, e)
@@ -411,8 +412,8 @@ func TestSecurityEvents(t *testing.T) {
 		require.Equal(t, len(expectedEvents), len(r.Items))
 		for i := range expectedEvents {
 			// We expect the ID to be present, but it's a random value so we
-			// can't assert on the exact value.
-			require.Equal(t, expectedEvents[i], backendutils.AssertEventIDAndReset(t, r.Items[i]))
+			// can't assert on the exact value, but we do know the value of cluster
+			require.Equal(t, expectedEvents[i], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, r.Items[i]))
 		}
 	}
 
@@ -987,7 +988,7 @@ func TestPagination(t *testing.T) {
 		events = append(events, event)
 	}
 
-	testSelector := func(maxPageSize int, numResults int, afterkey map[string]interface{}, shouldSucceed bool, errmsg string) {
+	testSelector := func(t *testing.T, maxPageSize int, numResults int, afterkey map[string]interface{}, shouldSucceed bool, errmsg string) {
 		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
 
 		// Create the events in ES.
@@ -1018,8 +1019,8 @@ func TestPagination(t *testing.T) {
 			require.Equal(t, numResults, len(r.Items))
 			if numResults > 0 {
 				// We expect the ID to be present, but it's a random value so we
-				// can't assert on the exact value.
-				require.Equal(t, event, backendutils.AssertEventIDAndReset(t, r.Items[0]))
+				// can't assert on the exact value, but we do know the value of cluster
+				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, r.Items[0]))
 			}
 		} else {
 			require.Error(t, e)
@@ -1028,19 +1029,19 @@ func TestPagination(t *testing.T) {
 	}
 
 	RunAllModes(t, "check results size is same as max page size", func(t *testing.T) {
-		testSelector(10, 10, nil, true, "")
+		testSelector(t, 10, 10, nil, true, "")
 	})
 
 	RunAllModes(t, "check afterkey is used to load the rest of the items", func(t *testing.T) {
-		testSelector(0, 11, map[string]interface{}{"startFrom": 10}, true, "")
+		testSelector(t, 0, 11, map[string]interface{}{"startFrom": 10}, true, "")
 	})
 
 	RunAllModes(t, "check negative max page size returns error", func(t *testing.T) {
-		testSelector(-10, 10, nil, false, "parameter cannot be negative")
+		testSelector(t, -10, 10, nil, false, "parameter cannot be negative")
 	})
 
 	RunAllModes(t, "check afterkey is used to load the rest of the items", func(t *testing.T) {
-		testSelector(3, 3, map[string]interface{}{"startFrom": 10}, true, "")
+		testSelector(t, 3, 3, map[string]interface{}{"startFrom": 10}, true, "")
 	})
 }
 
@@ -1051,7 +1052,7 @@ func TestSorting(t *testing.T) {
 	var clusterInfo bapi.ClusterInfo
 
 	// sortingSetup performs additional setup for sorting tests.
-	sortingSetup := func() {
+	sortingSetup := func(t *testing.T) {
 		clusterInfo = bapi.ClusterInfo{Cluster: cluster}
 		createTime := []time.Time{time.Unix(100, 0), time.Unix(500, 0)}
 
@@ -1108,12 +1109,12 @@ func TestSorting(t *testing.T) {
 		require.NotNil(t, 1, results)
 		require.Equal(t, 2, len(results.Items))
 
-		require.Equal(t, events[0], backendutils.AssertEventIDAndReset(t, results.Items[0]))
-		require.Equal(t, events[1], backendutils.AssertEventIDAndReset(t, results.Items[1]))
+		require.Equal(t, events[0], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
+		require.Equal(t, events[1], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[1]))
 	}
 
 	RunAllModes(t, "Sort using the time in descending order", func(t *testing.T) {
-		sortingSetup()
+		sortingSetup(t)
 
 		// Query again, this time sorting in order to get the logs in reverse order.
 		params.Sort = []v1.SearchRequestSortBy{
@@ -1129,12 +1130,12 @@ func TestSorting(t *testing.T) {
 		require.NotNil(t, 1, results)
 		require.Equal(t, 2, len(results.Items))
 
-		require.Equal(t, events[0], backendutils.AssertEventIDAndReset(t, results.Items[1]))
-		require.Equal(t, events[1], backendutils.AssertEventIDAndReset(t, results.Items[0]))
+		require.Equal(t, events[0], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[1]))
+		require.Equal(t, events[1], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
 	})
 
 	RunAllModes(t, "Sort using the host in descending order", func(t *testing.T) {
-		sortingSetup()
+		sortingSetup(t)
 
 		// Query again, this time sorting in order to get the logs in reverse order.
 		params.Sort = []v1.SearchRequestSortBy{
@@ -1208,8 +1209,8 @@ func TestDismissEvent(t *testing.T) {
 		require.Equal(t, 1, len(results.Items))
 
 		// We expect the ID to be present, but it's a random value so we
-		// can't assert on the exact value.
-		require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
+		// can't assert on the exact value, but we know the expected value of cluster
+		require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
 	}
 
 	RunAllModes(t, "Dismiss an Event", func(t *testing.T) {
@@ -1699,8 +1700,8 @@ func TestDeleteEvent(t *testing.T) {
 		eventID = results.Items[0].ID
 
 		// We expect the ID to be present, but it's a random value so we
-		// can't assert on the exact value.
-		require.Equal(t, event, backendutils.AssertEventIDAndReset(t, results.Items[0]))
+		// can't assert on the exact value, but we know the expected value of cluster
+		require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
 	}
 
 	RunAllModes(t, "Delete an Event", func(t *testing.T) {

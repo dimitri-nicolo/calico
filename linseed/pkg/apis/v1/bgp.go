@@ -17,6 +17,9 @@ type BGPLog struct {
 	Message   string          `json:"message"`
 	Host      string          `json:"host"`
 	IPVersion BGPLogIPVersion `json:"ip_version"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 // BGPLogParams define querying parameters to retrieve BGP logs

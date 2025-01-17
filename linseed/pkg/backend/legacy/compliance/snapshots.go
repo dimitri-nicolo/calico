@@ -56,9 +56,11 @@ type snapshotsBackend struct {
 	index                api.Index
 }
 
-// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
 func (b *snapshotsBackend) prepareForWrite(i bapi.ClusterInfo, l *list.TimestampedResourceList) (interface{}, error) {
+	l.Cluster = i.Cluster
+
 	if b.singleIndex {
 		// Insert cluster and tenant into the document. TimestampedResourceLists have a custom
 		// JSON marshaler so we need to add the cluster and tenant to the JSON directly.
@@ -67,7 +69,7 @@ func (b *snapshotsBackend) prepareForWrite(i bapi.ClusterInfo, l *list.Timestamp
 			return nil, err
 		}
 		buf := bytes.NewBuffer(bytes.TrimSuffix(b, []byte("}")))
-		buf.WriteString(fmt.Sprintf(`,"cluster":"%s","tenant":"%s"}`, i.Cluster, i.Tenant))
+		buf.WriteString(fmt.Sprintf(`,"tenant":"%s"}`, i.Tenant))
 		return buf.String(), nil
 	}
 	return l, nil

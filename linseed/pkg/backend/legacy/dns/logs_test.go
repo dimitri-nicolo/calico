@@ -94,7 +94,8 @@ func TestCreateDNSLog(t *testing.T) {
 		require.NotEqual(t, time.Time{}, actual.EndTime)
 		actual.StartTime = f.StartTime
 		actual.EndTime = f.EndTime
-		require.Equal(t, f, backendutils.AssertDNSLogIDAndReset(t, actual))
+		backendutils.AssertDNSLogIDAndClusterAndReset(t, clusterInfo.Cluster, &actual)
+		require.Equal(t, f, actual)
 
 		// If we update the query params to specify matching against the "generated_time"
 		// field, we should get no results, because the time right now (>=2023) is years

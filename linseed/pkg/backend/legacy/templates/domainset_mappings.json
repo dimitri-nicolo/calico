@@ -6,6 +6,9 @@
     },
     "domains": {
       "type": "keyword"
+    },
+    "cluster": {
+      "type": "keyword"
     }
   }
 }

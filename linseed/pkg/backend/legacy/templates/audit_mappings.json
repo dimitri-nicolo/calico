@@ -66,6 +66,7 @@
       }
     },
     "verb": { "type": "keyword" },
-    "annotations" :{"type": "flattened"}
+    "annotations" :{"type": "flattened"},
+    "cluster": { "type": "keyword" }
   }
 }

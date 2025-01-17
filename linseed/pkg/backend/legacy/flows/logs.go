@@ -56,17 +56,16 @@ func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializ
 
 type flowLogWithExtras struct {
 	v1.FlowLog `json:",inline"`
-	Cluster    string `json:"cluster"`
 	Tenant     string `json:"tenant,omitempty"`
 }
 
-// prepareForWrite wraps a flow log in a document that includes the cluster and tenant if
+// prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
 func (b *flowLogBackend) prepareForWrite(i bapi.ClusterInfo, f v1.FlowLog) interface{} {
+	f.Cluster = i.Cluster
 	if b.singleIndex {
 		return flowLogWithExtras{
 			FlowLog: f,
-			Cluster: i.Cluster,
 			Tenant:  i.Tenant,
 		}
 	}

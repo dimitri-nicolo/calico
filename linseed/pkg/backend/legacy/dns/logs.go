@@ -55,18 +55,18 @@ func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitialize
 
 type logWithExtras struct {
 	v1.DNSLog `json:",inline"`
-	Cluster   string `json:"cluster"`
 	Tenant    string `json:"tenant,omitempty"`
 }
 
-// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
 func (b *dnsLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.DNSLog) interface{} {
+	l.Cluster = i.Cluster
+
 	if b.singleIndex {
 		return &logWithExtras{
-			DNSLog:  l,
-			Cluster: i.Cluster,
-			Tenant:  i.Tenant,
+			DNSLog: l,
+			Tenant: i.Tenant,
 		}
 	}
 	return l

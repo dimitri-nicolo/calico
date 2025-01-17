@@ -124,6 +124,9 @@ type FlowLog struct {
 	Host      string `json:"host"`
 	Timestamp int64  `json:"@timestamp"`
 	ID        string `json:"id,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 type FlowLogPolicy struct {
