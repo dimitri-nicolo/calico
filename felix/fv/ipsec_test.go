@@ -32,6 +32,10 @@ import (
 const numPoliciesPerWep = 3
 
 var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+	if NFTMode() {
+		return
+	}
+
 	var (
 		infra    infrastructure.DatastoreInfra
 		tc       infrastructure.TopologyContainers

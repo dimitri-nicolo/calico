@@ -2,7 +2,6 @@
 package policystore
 
 import (
-	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -62,7 +61,7 @@ func (store *PolicyStore) ProcessUpdate(subscriptionType string, update *proto.T
 	case *proto.ToDataplane_ConfigUpdate:
 		store.processConfigUpdate(payload.ConfigUpdate)
 	default:
-		log.Warn(fmt.Sprintf("unknown payload %v", update.String()))
+		log.Debugf("unknown payload %v", update.String())
 	}
 }
 

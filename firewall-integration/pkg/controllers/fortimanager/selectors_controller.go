@@ -104,73 +104,79 @@ func NewSelectorsController(
 	podListWatcher := cache.NewListWatchFromClient(k8sClientset.CoreV1().RESTClient(), "pods", "", fields.Everything())
 
 	// Bind the Endpoint cache to Kubernetes cache.
-	_, podInformer := cache.NewIndexerInformer(podListWatcher, &v1.Pod{}, 0, cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			log.Debugf("Got ADD event for Pod: %#v", obj)
-			pod := obj.(*v1.Pod)
+	_, podInformer := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: podListWatcher,
+		ObjectType:    &v1.Pod{},
+		ResyncPeriod:  0,
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				log.Debugf("Got ADD event for Pod: %#v", obj)
+				pod := obj.(*v1.Pod)
 
-			if pod.Spec.NodeName == "" {
-				log.Infof("Filtering out pod that doesn't have a assigned node")
-				return
-			}
+				if pod.Spec.NodeName == "" {
+					log.Infof("Filtering out pod that doesn't have a assigned node")
+					return
+				}
 
-			pod.TypeMeta = resources.TypeK8sPods
-			updates := []syncer.Update{
-				{
-					Type:       syncer.UpdateTypeSet,
-					ResourceID: resources.GetResourceID(pod),
-					Resource:   pod,
-				},
-			}
+				pod.TypeMeta = resources.TypeK8sPods
+				updates := []syncer.Update{
+					{
+						Type:       syncer.UpdateTypeSet,
+						ResourceID: resources.GetResourceID(pod),
+						Resource:   pod,
+					},
+				}
 
-			log.Debugf("Dispatching pod updates : %+v", updates)
-			syncerUpdateChan <- updates
+				log.Debugf("Dispatching pod updates : %+v", updates)
+				syncerUpdateChan <- updates
+			},
+			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
+				log.Debugf("Got UPDATE event for Pod")
+				log.Debugf("Old Pod: %#v", oldObj)
+				log.Debugf("Updated Pod: %#v", newObj)
+				pod := newObj.(*v1.Pod)
+
+				if pod.Spec.NodeName == "" {
+					log.Infof("Filtering out pod that doesn't have a assigned node")
+					return
+				}
+				pod.TypeMeta = resources.TypeK8sPods
+
+				updates := []syncer.Update{
+					{
+						Type:       syncer.UpdateTypeSet,
+						ResourceID: resources.GetResourceID(pod),
+						Resource:   pod,
+					},
+				}
+
+				log.Debugf("Dispatching pod updates : %+v", updates)
+				syncerUpdateChan <- updates
+			},
+			DeleteFunc: func(obj interface{}) {
+				log.Debugf("Got DELETE event for Pod: %#v", obj)
+				pod := obj.(*v1.Pod)
+
+				if pod.Spec.NodeName == "" {
+					log.Infof("Filtering out pod that doesn't have a assigned node")
+					return
+				}
+
+				pod.TypeMeta = resources.TypeK8sPods
+
+				updates := []syncer.Update{
+					{
+						Type:       syncer.UpdateTypeDeleted,
+						ResourceID: resources.GetResourceID(pod),
+						Resource:   pod,
+					},
+				}
+				log.Debugf("Dispatching pod updates : %+v", updates)
+				syncerUpdateChan <- updates
+			},
 		},
-		UpdateFunc: func(oldObj interface{}, newObj interface{}) {
-			log.Debugf("Got UPDATE event for Pod")
-			log.Debugf("Old Pod: %#v", oldObj)
-			log.Debugf("Updated Pod: %#v", newObj)
-			pod := newObj.(*v1.Pod)
-
-			if pod.Spec.NodeName == "" {
-				log.Infof("Filtering out pod that doesn't have a assigned node")
-				return
-			}
-			pod.TypeMeta = resources.TypeK8sPods
-
-			updates := []syncer.Update{
-				{
-					Type:       syncer.UpdateTypeSet,
-					ResourceID: resources.GetResourceID(pod),
-					Resource:   pod,
-				},
-			}
-
-			log.Debugf("Dispatching pod updates : %+v", updates)
-			syncerUpdateChan <- updates
-		},
-		DeleteFunc: func(obj interface{}) {
-			log.Debugf("Got DELETE event for Pod: %#v", obj)
-			pod := obj.(*v1.Pod)
-
-			if pod.Spec.NodeName == "" {
-				log.Infof("Filtering out pod that doesn't have a assigned node")
-				return
-			}
-
-			pod.TypeMeta = resources.TypeK8sPods
-
-			updates := []syncer.Update{
-				{
-					Type:       syncer.UpdateTypeDeleted,
-					ResourceID: resources.GetResourceID(pod),
-					Resource:   pod,
-				},
-			}
-			log.Debugf("Dispatching pod updates : %+v", updates)
-			syncerUpdateChan <- updates
-		},
-	}, cache.Indexers{})
+		Indexers: cache.Indexers{},
+	})
 
 	gnpToNodes := make(map[string]set.Set[string])
 	gnpToPods := make(map[string]set.Set[v3.ResourceID])
@@ -252,113 +258,118 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[stri
 	}
 
 	// Informer for Gnp
-	_, gnpInformer := cache.NewIndexerInformer(lw, &v3.GlobalNetworkPolicy{}, 0, cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			// Handle GNP add events
-			log.Debugf("Got Add Event for GNP: %+v", obj)
-			gnp := obj.(*v3.GlobalNetworkPolicy)
+	_, gnpInformer := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: lw,
+		ObjectType:    &v3.GlobalNetworkPolicy{},
+		ResyncPeriod:  0,
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				// Handle GNP add events
+				log.Debugf("Got Add Event for GNP: %+v", obj)
+				gnp := obj.(*v3.GlobalNetworkPolicy)
 
-			// Create address Group
-			addrGroup := AddressGroup{
-				Name:    gnp.Name,
-				Members: set.New[string](),
-			}
+				// Create address Group
+				addrGroup := AddressGroup{
+					Name:    gnp.Name,
+					Members: set.New[string](),
+				}
 
-			// Insert Address Group in Cache
-			for _, cache := range devToRcacheAddrGrp {
-				cache.Set(gnp.Name, addrGroup)
-			}
+				// Insert Address Group in Cache
+				for _, cache := range devToRcacheAddrGrp {
+					cache.Set(gnp.Name, addrGroup)
+				}
 
-			gnpToNodes[gnp.Name] = set.New[string]()
-			gnpToPods[gnp.Name] = set.New[v3.ResourceID]()
+				gnpToNodes[gnp.Name] = set.New[string]()
+				gnpToPods[gnp.Name] = set.New[v3.ResourceID]()
 
-			gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
-			// Create an update
-			updates := []syncer.Update{
-				{
-					Type:       syncer.UpdateTypeSet,
-					ResourceID: resources.GetResourceID(gnp),
-					Resource:   gnp,
-				},
-			}
-			// Dispatch to syncer
-			log.Debugf("Dispatching GNP updates : %+v", updates)
-			syncerUpdateChan <- updates
+				gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
+				// Create an update
+				updates := []syncer.Update{
+					{
+						Type:       syncer.UpdateTypeSet,
+						ResourceID: resources.GetResourceID(gnp),
+						Resource:   gnp,
+					},
+				}
+				// Dispatch to syncer
+				log.Debugf("Dispatching GNP updates : %+v", updates)
+				syncerUpdateChan <- updates
 
+			},
+			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
+				// Handle GNP add events
+				log.Debugf("Got UPDATE event for new GNP: %+v", newObj)
+				log.Debugf("Got UPDATE event for old GNP: %+v", oldObj)
+
+				gnpNew := newObj.(*v3.GlobalNetworkPolicy)
+				gnpOld := oldObj.(*v3.GlobalNetworkPolicy)
+
+				// If there is no change in Tier, Selector and name just return
+				if gnpNew.Name == gnpOld.Name && gnpNew.Spec.Selector == gnpOld.Spec.Selector {
+					log.Debug("No change in UPDATE event for GNP's")
+					return
+				}
+
+				// Create address Group
+				addrGroup := AddressGroup{
+					Name:    gnpNew.Name,
+					Members: set.New[string](),
+				}
+
+				// Update Address Group in Cache
+				for _, cache := range devToRcacheAddrGrp {
+					cache.Set(gnpNew.Name, addrGroup)
+				}
+
+				gnpNew.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
+
+				gnpToNodes[gnpNew.Name] = set.New[string]()
+				gnpToPods[gnpNew.Name] = set.New[v3.ResourceID]()
+
+				// Create an update
+				updates := []syncer.Update{
+					{
+						Type:       syncer.UpdateTypeSet,
+						ResourceID: resources.GetResourceID(gnpNew),
+						Resource:   gnpNew,
+					},
+				}
+				// Dispatch to syncer
+				log.Debugf("Dispatching GNP updates : %+v", updates)
+				syncerUpdateChan <- updates
+
+			},
+			DeleteFunc: func(obj interface{}) {
+				log.Debugf("Got DELETE event for GNP: %#v", obj)
+
+				gnp := obj.(*v3.GlobalNetworkPolicy)
+
+				gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
+
+				// Delete GNP key in local Map
+				delete(gnpToNodes, gnp.Name)
+				delete(gnpToPods, gnp.Name)
+
+				// Delete Address Group in Cache
+				for _, cache := range devToRcacheAddrGrp {
+					cache.Delete(gnp.Name)
+				}
+
+				updates := []syncer.Update{
+					{
+						Type:       syncer.UpdateTypeDeleted,
+						ResourceID: resources.GetResourceID(gnp),
+						Resource:   gnp,
+					},
+				}
+
+				// Dispatch to syncer
+				log.Debugf("Dispatching GNP updates : %+v", updates)
+				syncerUpdateChan <- updates
+			},
 		},
-		UpdateFunc: func(oldObj interface{}, newObj interface{}) {
-			// Handle GNP add events
-			log.Debugf("Got UPDATE event for new GNP: %+v", newObj)
-			log.Debugf("Got UPDATE event for old GNP: %+v", oldObj)
-
-			gnpNew := newObj.(*v3.GlobalNetworkPolicy)
-			gnpOld := oldObj.(*v3.GlobalNetworkPolicy)
-
-			// If there is no change in Tier, Selector and name just return
-			if gnpNew.Name == gnpOld.Name && gnpNew.Spec.Selector == gnpOld.Spec.Selector {
-				log.Debug("No change in UPDATE event for GNP's")
-				return
-			}
-
-			// Create address Group
-			addrGroup := AddressGroup{
-				Name:    gnpNew.Name,
-				Members: set.New[string](),
-			}
-
-			// Update Address Group in Cache
-			for _, cache := range devToRcacheAddrGrp {
-				cache.Set(gnpNew.Name, addrGroup)
-			}
-
-			gnpNew.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
-
-			gnpToNodes[gnpNew.Name] = set.New[string]()
-			gnpToPods[gnpNew.Name] = set.New[v3.ResourceID]()
-
-			// Create an update
-			updates := []syncer.Update{
-				{
-					Type:       syncer.UpdateTypeSet,
-					ResourceID: resources.GetResourceID(gnpNew),
-					Resource:   gnpNew,
-				},
-			}
-			// Dispatch to syncer
-			log.Debugf("Dispatching GNP updates : %+v", updates)
-			syncerUpdateChan <- updates
-
-		},
-		DeleteFunc: func(obj interface{}) {
-			log.Debugf("Got DELETE event for GNP: %#v", obj)
-
-			gnp := obj.(*v3.GlobalNetworkPolicy)
-
-			gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
-
-			// Delete GNP key in local Map
-			delete(gnpToNodes, gnp.Name)
-			delete(gnpToPods, gnp.Name)
-
-			// Delete Address Group in Cache
-			for _, cache := range devToRcacheAddrGrp {
-				cache.Delete(gnp.Name)
-			}
-
-			updates := []syncer.Update{
-				{
-					Type:       syncer.UpdateTypeDeleted,
-					ResourceID: resources.GetResourceID(gnp),
-					Resource:   gnp,
-				},
-			}
-
-			// Dispatch to syncer
-			log.Debugf("Dispatching GNP updates : %+v", updates)
-			syncerUpdateChan <- updates
-
-		},
-	}, cache.Indexers{})
+		Indexers: cache.Indexers{},
+	})
 
 	return gnpInformer
 }
@@ -654,7 +665,7 @@ func (sc *SelectorsController) syncToFortiGateAddr(key, dev string) error {
 
 func (sc *SelectorsController) handleError(err error, key, dev string, addrGrp bool) {
 
-	var workqueue workqueue.RateLimitingInterface
+	var workqueue workqueue.TypedRateLimitingInterface[any]
 	if addrGrp {
 		workqueue = sc.devToRcacheAddrGrp[dev].GetQueue()
 	} else {

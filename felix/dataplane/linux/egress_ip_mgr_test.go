@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -1928,7 +1928,7 @@ func (r *mockRouteRules) Apply() error {
 	return nil
 }
 
-func (r *mockRouteRules) hasRule(priority int, src string, mark int, table int) bool {
+func (r *mockRouteRules) hasRule(priority int, src string, mark uint32, table int) bool {
 	result := false
 	r.activeRules.Iter(func(rule *routerule.Rule) error {
 		nlRule := rule.NetLinkRule()
@@ -1946,7 +1946,7 @@ func (r *mockRouteRules) hasRule(priority int, src string, mark int, table int) 
 	return result
 }
 
-func (r *mockRouteRules) hasRuleWithSrc(priority int, src string, mark int) bool {
+func (r *mockRouteRules) hasRuleWithSrc(priority int, src string, mark uint32) bool {
 	result := false
 	r.activeRules.Iter(func(rule *routerule.Rule) error {
 		nlRule := rule.NetLinkRule()

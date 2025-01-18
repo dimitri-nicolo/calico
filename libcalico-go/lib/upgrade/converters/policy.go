@@ -113,6 +113,8 @@ func (_ Policy) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) {
 	ap.Spec.Ingress = rulesV1BackendToV3API(bp.InboundRules)
 	ap.Spec.Egress = rulesV1BackendToV3API(bp.OutboundRules)
 	ap.Spec.Selector = convertSelector(bp.Selector)
+	ap.Spec.NamespaceSelector = convertSelector(bp.NamespaceSelector)
+	ap.Spec.ServiceAccountSelector = convertSelector(bp.ServiceAccountSelector)
 	ap.Spec.DoNotTrack = bp.DoNotTrack
 	ap.Spec.PreDNAT = bp.PreDNAT
 	ap.Spec.ApplyOnForward = bp.ApplyOnForward

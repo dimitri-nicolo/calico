@@ -376,7 +376,7 @@ func (m *mockBapiClient) SendError() {
 	}
 }
 
-func (m *mockBapiClient) Watch(ctx context.Context, list model.ListInterface, revision string) (lapi.WatchInterface, error) {
+func (m *mockBapiClient) Watch(ctx context.Context, list model.ListInterface, opts lapi.WatchOptions) (lapi.WatchInterface, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

@@ -15,3 +15,5 @@ Endpoints matching Policy "group2/abcdefghijklmnopqrstuvwxyz" rules:
   Workload endpoint host1/k8s/group2.g2w3/eth0
     inbound rule 1 source match; selector "(projectcalico.org/namespace == 'group2') && (projectcalico.org/namespace in {'group1','group2'})"
     outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'group2') && (projectcalico.org/namespace in {'group1','group2'})"
+
+Plus 2 lines on stderr

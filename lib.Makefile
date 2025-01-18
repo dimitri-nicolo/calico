@@ -786,7 +786,7 @@ semaphore-run-auto-pin-update-workflows:
 gen-mocks:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(MAKE) mockery-run'
 	# The generated files need import reordering to pass static-checks
-	$(MAKE) fix
+	$(MAKE) fix-changed
 
 # Run mockery for each path in MOCKERY_FILE_PATHS. The the generated mocks are
 # created in package and in test files. Look here for more information https://github.com/vektra/mockery

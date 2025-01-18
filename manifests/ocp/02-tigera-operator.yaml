@@ -39,6 +39,7 @@ spec:
           args:
             # Configure tigera-operator to manage installation of the necessary CRDs.
             - -manage-crds=true
+            - -variant=TigeraSecureEnterprise
           volumeMounts:
             - name: var-lib-calico
               readOnly: true
@@ -89,6 +90,11 @@ spec:
             - operator
           args:
             - -bootstrap-crds
+            - -variant=TigeraSecureEnterprise
+          envFrom:
+            - configMapRef:
+                name: kubernetes-services-endpoint
+                optional: true
         # Install any v3 API resources provided in the calico-resources ConfigMap.
         - name: create-initial-resources
           image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl:master

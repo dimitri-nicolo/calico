@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
 
 package flowlog
 
@@ -103,7 +103,9 @@ type labelsJSONOutput struct {
 }
 
 type policiesJSONOutput struct {
-	AllPolicies []string `json:"all_policies"`
+	AllPolicies      []string `json:"all_policies"`
+	EnforcedPolicies []string `json:"enforced_policies"`
+	PendingPolicies  []string `json:"pending_policies"`
 }
 
 func ToOutput(l *FlowLog) JSONOutput {
@@ -198,15 +200,25 @@ func (out *JSONOutput) FillFrom(l *FlowLog) {
 	out.Action = string(l.Action)
 	out.Reporter = string(l.Reporter)
 
-	if l.FlowPolicySet == nil {
+	if l.FlowAllPolicySet == nil {
 		out.Policies = nil
 	} else {
 		if out.Policies == nil {
 			out.Policies = &policiesJSONOutput{}
 		}
 		out.Policies.AllPolicies = out.Policies.AllPolicies[:0]
-		for pol := range l.FlowPolicySet {
+		for pol := range l.FlowAllPolicySet {
 			out.Policies.AllPolicies = append(out.Policies.AllPolicies, pol)
+		}
+
+		out.Policies.EnforcedPolicies = out.Policies.EnforcedPolicies[:0]
+		for pol := range l.FlowEnforcedPolicySet {
+			out.Policies.EnforcedPolicies = append(out.Policies.EnforcedPolicies, pol)
+		}
+
+		out.Policies.PendingPolicies = out.Policies.PendingPolicies[:0]
+		for pol := range l.FlowPendingPolicySet {
+			out.Policies.PendingPolicies = append(out.Policies.PendingPolicies, pol)
 		}
 	}
 
@@ -385,11 +397,21 @@ func (o *JSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.TotalRetrans = int(o.TotalRetrans)
 	fl.UnrecoveredRTO = int(o.UnrecoveredRTO)
 	if o.Policies == nil {
-		fl.FlowPolicySet = nil
+		fl.FlowAllPolicySet = nil
+		fl.FlowEnforcedPolicySet = nil
+		fl.FlowPendingPolicySet = nil
 	} else {
-		fl.FlowPolicySet = make(FlowPolicySet)
+		fl.FlowAllPolicySet = make(FlowPolicySet)
 		for _, pol := range o.Policies.AllPolicies {
-			fl.FlowPolicySet[pol] = emptyValue
+			fl.FlowAllPolicySet[pol] = emptyValue
+		}
+		fl.FlowEnforcedPolicySet = make(FlowPolicySet)
+		for _, pol := range o.Policies.EnforcedPolicies {
+			fl.FlowEnforcedPolicySet[pol] = emptyValue
+		}
+		fl.FlowPendingPolicySet = make(FlowPolicySet)
+		for _, pol := range o.Policies.PendingPolicies {
+			fl.FlowPendingPolicySet[pol] = emptyValue
 		}
 	}
 

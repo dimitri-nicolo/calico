@@ -16,7 +16,7 @@ function summarise_test {
     echo
 }
 
-CALICOCTL=`pwd`/fv/calicoctl
+CALICOCTL=$(pwd)/fv/calicoctl
 
 export ETCD_ENDPOINTS=http://127.0.0.1:2379
 export DATASTORE_TYPE=etcdv3
@@ -26,7 +26,7 @@ docker rm -f calicoq-etcd 2>/dev/null
 
 # Run each test case in turn (note that this script is actually run from the parent directory in the Makefile).
 cd st/test-cases
-for c in `ls`; do
+for c in $(ls); do
     cd ${c}
 
     echo ------------------------------------------------------
@@ -45,9 +45,9 @@ for c in `ls`; do
 
     # Run etcd.
     docker run --detach --name calicoq-etcd \
-       ${ETCD_IMAGE} etcd \
-       --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
-       --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
+        ${ETCD_IMAGE} etcd \
+        --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
+        --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
     etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
     export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
     export DATASTORE_TYPE=etcdv3
@@ -72,15 +72,15 @@ EOF
     fi
 
     # Check all the expected outputs.
-    for expected in `ls *.expected`; do
+    for expected in $(ls *.expected); do
         actual=$(basename ${expected} .expected).actual
         stderr=$(basename ${expected} .expected).stderr
-        head -2 ${expected} > ${actual}
-        eval '${CALICOQ} `head -1 ${expected}`' >> ${actual} 2> ${stderr}
-        stderr_lines=`wc -l ${stderr} | awk '{print $1;}'`
+        head -2 ${expected} >${actual}
+        eval '${CALICOQ} `head -1 ${expected}`' >>${actual} 2>${stderr}
+        stderr_lines=$(wc -l ${stderr} | awk '{print $1;}')
         if test "$stderr_lines" -ne 0; then
-            echo >> ${actual}
-            echo "Plus $stderr_lines lines on stderr" >> ${actual}
+            echo >>${actual}
+            echo "Plus $stderr_lines lines on stderr" >>${actual}
         fi
         if diff -u ${expected} ${actual}; then
             echo TEST: ${c}/${expected}: PASSED
@@ -113,9 +113,9 @@ ETCD_PORT=2379
 
 # Run etcd.
 docker run --detach --name calicoq-etcd \
-   ${ETCD_IMAGE} etcd \
-   --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
-   --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
+    ${ETCD_IMAGE} etcd \
+    --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
+    --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
 etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
 export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
 export DATASTORE_TYPE=etcdv3
@@ -128,18 +128,20 @@ ${CALICOCTL} apply -f apply.yaml
 
 # Check all the expected outputs. We expect each test to produce the same error message about RCC.
 # The common error message is in the expected.stderr.common file.
-for expected in `ls *.expected`; do
+for expected in $(ls *.expected); do
     actual=$(basename ${expected} .expected).actual
     stderr=$(basename ${expected} .expected).stderr
 
-    head -2 ${expected} > ${actual}
-    eval '${CALICOQ} `head -1 ${expected}`' >> ${actual} 2> ${stderr}
+    head -2 ${expected} >${actual}
+    eval '${CALICOQ} `head -1 ${expected}`' >>${actual} 2>${stderr}
 
     # Replace all IP/ports with x.x.x.x:y for easier comparison.
     sed -r 's/([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}/x.x.x.x:y/' <${stderr} >${stderr}.sub
     mv ${stderr}.sub ${stderr}
 
     if diff -u ${expected} ${actual}; then
+        # workaround kubernetes v1.31 regression https://github.com/kubernetes/kubernetes/issues/126951
+        sed -i '/failed to initialize nfacct client/d' ${stderr}
         if diff -u expected.stderr.common ${stderr}; then
             echo TEST: ${c}/${expected}: PASSED
             let 'passed++'

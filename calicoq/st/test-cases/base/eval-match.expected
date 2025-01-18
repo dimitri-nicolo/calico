@@ -2,3 +2,5 @@ eval app=="frontend"
 
 Endpoints matching selector app=="frontend":
   Workload endpoint rack1-host1/k8s/default.frontend-5gs43/eth0
+
+Plus 2 lines on stderr

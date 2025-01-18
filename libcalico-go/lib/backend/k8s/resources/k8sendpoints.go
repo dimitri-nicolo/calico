@@ -74,36 +74,17 @@ func (c *endpointsClient) Get(ctx context.Context, key model.Key, revision strin
 
 func (c *endpointsClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {
 	log.Debug("Received List request on Kubernetes Endpoints type")
+	k8sOpts := metav1.ListOptions{ResourceVersion: revision}
 	rl := list.(model.ResourceListOptions)
-	kvps := []*model.KVPair{}
-
 	if rl.Name != "" {
-		// The endpoints is already fully qualified, so perform a Get instead.
-		// If the entry does not exist then we just return an empty list.
-		kvp, err := c.Get(ctx, model.ResourceKey{Name: rl.Name, Namespace: rl.Namespace, Kind: apiv3.KindK8sEndpoints}, revision)
-		if err != nil {
-			if _, ok := err.(cerrors.ErrorResourceDoesNotExist); !ok {
-				return nil, err
-			}
-			return &model.KVPairList{
-				KVPairs:  kvps,
-				Revision: revision,
-			}, nil
-		}
-
-		kvps = append(kvps, kvp)
-		return &model.KVPairList{
-			KVPairs:  kvps,
-			Revision: revision,
-		}, nil
+		k8sOpts.FieldSelector = fields.OneTermEqualSelector("metadata.name", rl.Name).String()
 	}
-
-	// Listing all endpointss.
-	endpointsList, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: revision})
+	endpointsList, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).List(ctx, k8sOpts)
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}
 
+	kvps := make([]*model.KVPair, 0, len(endpointsList.Items))
 	for i := range endpointsList.Items {
 		kvps = append(kvps, c.convertToKVPair(&endpointsList.Items[i]))
 	}
@@ -118,9 +99,9 @@ func (c *endpointsClient) EnsureInitialized() error {
 	return nil
 }
 
-func (c *endpointsClient) Watch(ctx context.Context, list model.ListInterface, revision string) (api.WatchInterface, error) {
+func (c *endpointsClient) Watch(ctx context.Context, list model.ListInterface, opts api.WatchOptions) (api.WatchInterface, error) {
 	// Build watch options to pass to k8s.
-	opts := metav1.ListOptions{ResourceVersion: revision, Watch: true}
+	k8sOpts := metav1.ListOptions{ResourceVersion: opts.Revision, Watch: true}
 	rl, ok := list.(model.ResourceListOptions)
 	if !ok {
 		return nil, fmt.Errorf("ListInterface is not a ResourceListOptions: %s", list)
@@ -128,10 +109,10 @@ func (c *endpointsClient) Watch(ctx context.Context, list model.ListInterface, r
 	if len(rl.Name) != 0 {
 		// We've been asked to watch a specific endpoints resource.
 		log.WithField("name", rl.Name).Debug("Watching a single endpoints")
-		opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", rl.Name).String()
+		k8sOpts.FieldSelector = fields.OneTermEqualSelector("metadata.name", rl.Name).String()
 	}
 
-	k8sWatch, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).Watch(ctx, opts)
+	k8sWatch, err := c.clientSet.CoreV1().Endpoints(rl.Namespace).Watch(ctx, k8sOpts)
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}

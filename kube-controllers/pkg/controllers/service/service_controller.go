@@ -45,7 +45,7 @@ import (
 // and endpoints, syncing them to the Calico datastore as NetworkSet.
 type serviceController struct {
 	svcInformer, epInformer cache.Controller
-	svcIndexer, epIndexer   cache.Indexer
+	svcIndexer, epIndexer   cache.Store
 	calicoClient            client.Interface
 	ctx                     context.Context
 	serviceConverter        converter.Converter
@@ -66,12 +66,24 @@ func NewServiceController(ctx context.Context, clientset *kubernetes.Clientset, 
 	// set up service informer
 	svcWatcher := cache.NewListWatchFromClient(clientset.CoreV1().RESTClient(), "services", "", fields.Everything())
 	svcHandler := cache.ResourceEventHandlerFuncs{AddFunc: sc.onSvcAdd, UpdateFunc: sc.onSvcUpdate, DeleteFunc: sc.onSvcDelete}
-	sc.svcIndexer, sc.svcInformer = cache.NewIndexerInformer(svcWatcher, &v1.Service{}, 0, svcHandler, cache.Indexers{})
+	sc.svcIndexer, sc.svcInformer = cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: svcWatcher,
+		ObjectType:    &v1.Service{},
+		ResyncPeriod:  0,
+		Handler:       svcHandler,
+		Indexers:      cache.Indexers{},
+	})
 
 	// set up endpoints informer
 	epWatcher := cache.NewListWatchFromClient(clientset.CoreV1().RESTClient(), "endpoints", "", fields.Everything())
 	epHandler := cache.ResourceEventHandlerFuncs{AddFunc: sc.onEndpointsAdd, UpdateFunc: sc.onEndpointsUpdate, DeleteFunc: sc.onEPDelete}
-	sc.epIndexer, sc.epInformer = cache.NewIndexerInformer(epWatcher, &v1.Endpoints{}, 0, epHandler, cache.Indexers{})
+	sc.epIndexer, sc.epInformer = cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: epWatcher,
+		ObjectType:    &v1.Endpoints{},
+		ResyncPeriod:  0,
+		Handler:       epHandler,
+		Indexers:      cache.Indexers{},
+	})
 
 	sc.serviceConverter = converter.NewServiceConverter()
 	sc.endpointConverter = converter.NewEndpointConverter()

@@ -356,7 +356,9 @@ var testMainlineFunction = func(t *testing.T, tenantNamespace, tenantID, tenantM
 		}
 		for i := 0; i < 5; i++ {
 			require.False(t, secretCreated())
-			require.Nil(t, secret)
+			// Expect the secret to be empty.
+			require.NotNil(t, secret)
+			require.Equal(t, *secret, corev1.Secret{})
 			time.Sleep(1 * time.Second)
 		}
 

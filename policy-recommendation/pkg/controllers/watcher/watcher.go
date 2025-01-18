@@ -30,8 +30,8 @@ type Watcher interface {
 }
 
 type watcher struct {
-	// workqueue.RateLimitingInterface is an interface that defines a rate limited work queue.
-	workqueue.RateLimitingInterface
+	// workqueue.TypedRateLimitingInterface is an interface that defines a rate limited work queue.
+	workqueue.TypedRateLimitingInterface[any]
 
 	// reconciler is the interface that is used to react to changes to watched resources.
 	reconciler ctrl.Reconciler
@@ -54,8 +54,8 @@ type watchedObj struct {
 
 func NewWatcher(reconciler ctrl.Reconciler, listWatcher cache.ListerWatcher, obj runtime.Object) Watcher {
 	return &watcher{
-		RateLimitingInterface: workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		reconciler:            reconciler,
+		TypedRateLimitingInterface: workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[any]()),
+		reconciler:                 reconciler,
 		resource: watchedObj{
 			listWatcher: listWatcher,
 			obj:         obj,
@@ -68,13 +68,13 @@ func (w *watcher) Run(stopChan chan struct{}) {
 	defer uruntime.HandleCrash()
 	defer w.ShutDown()
 
-	_, informer := cache.NewIndexerInformer(
-		w.resource.listWatcher,
-		w.resource.obj,
-		resyncPeriod,
-		w.resourceEventHandlerFuncs(),
-		cache.Indexers{},
-	)
+	_, informer := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: w.resource.listWatcher,
+		ObjectType:    w.resource.obj,
+		ResyncPeriod:  resyncPeriod,
+		Handler:       w.resourceEventHandlerFuncs(),
+		Indexers:      cache.Indexers{},
+	})
 
 	go informer.Run(stopChan)
 

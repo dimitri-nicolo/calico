@@ -1003,7 +1003,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			ipSetsV4,
 			config.MaxIPSetSize,
 			rules.IPSetIDAllTunnelNets))
-		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4))
+		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4, config.RulesConfig.NFTables))
 
 		cleanupBPFState(config)
 	} else {
@@ -1011,7 +1011,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// filter the IP sets that we render to the dataplane.  Set an empty
 		// filter now so that the IP sets driver does a lot less logging.
 		ipSetsV4.SetFilter(set.New[string]())
-		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter))
+		dp.RegisterManager(newRawEgressPolicyManager(rawTableV4, ruleRenderer, 4, ipSetsV4.SetFilter, config.RulesConfig.NFTables))
 		// Cleanup any tcp stats program attached in IPTables mode. In eBPF mode, tcp stats program is part of
 		// the main Tc program.
 		tc.CleanUpTcpStatsPrograms()
@@ -1571,9 +1571,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				ipSetsV6,
 				config.MaxIPSetSize,
 				rules.IPSetIDAllTunnelNets))
-			dp.RegisterManager(newPolicyManager(rawTableV6, mangleTableV6, filterTableV6, ruleRenderer, 6))
+			dp.RegisterManager(newPolicyManager(rawTableV6, mangleTableV6, filterTableV6, ruleRenderer, 6, config.RulesConfig.NFTables))
 		} else {
-			dp.RegisterManager(newRawEgressPolicyManager(rawTableV6, ruleRenderer, 6, ipSetsV6.SetFilter))
+			dp.RegisterManager(newRawEgressPolicyManager(rawTableV6, ruleRenderer, 6, ipSetsV6.SetFilter, config.RulesConfig.NFTables))
 		}
 
 		dp.RegisterManager(newEndpointManager(

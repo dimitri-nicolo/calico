@@ -565,7 +565,7 @@ func matchL4Protocol(rule *proto.Rule, protocol int32) bool {
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{
 			"isProtocol":      rule.GetProtocol(),
-			"isNotProtocol":   rule.NotProtocol,
+			"isNotProtocol":   rule.GetNotProtocol(),
 			"requestProtocol": protocolStr,
 		}).Debug("Matching L4 protocol")
 	}

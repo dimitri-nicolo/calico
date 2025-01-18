@@ -94,7 +94,7 @@ var _ = Describe("Test Caching Authorizer Key", func() {
 
 		result := toAuthorizeCacheKey(u, attrs)
 
-		Expect(result).To(Equal("{userName:un userUID:ui userGroups:[ug1 ug2] userExtra:map[ue1:[a b]] attrs:{Namespace:ns Verb:vb Group:gr Version:ver Resource:res Subresource:sub Name:nam}}"))
+		Expect(result).To(Equal("{userName:un userUID:ui userGroups:[ug1 ug2] userExtra:map[ue1:[a b]] attrs:{Namespace:ns Verb:vb Group:gr Version:ver Resource:res Subresource:sub Name:nam FieldSelector:<nil> LabelSelector:<nil>}}"))
 	})
 })
 

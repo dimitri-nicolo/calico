@@ -4,3 +4,5 @@ Policy "group2/abcdefghijklmnopqrstuvwxyz" applies to these endpoints:
   Workload endpoint host1/k8s/group2.g2w1/eth0
   Workload endpoint host1/k8s/group2.g2w2/eth0
   Workload endpoint host1/k8s/group2.g2w3/eth0
+
+Plus 2 lines on stderr
