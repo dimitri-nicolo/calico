@@ -167,6 +167,7 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 		},
 	}
 	store.PolicyByID[proto.PolicyID{Name: "policy1", Tier: "tier1"}] = &proto.Policy{
+		Namespace: "ns1",
 		OutboundRules: []*proto.Rule{
 			{
 				Action: "allow",
@@ -204,7 +205,7 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 	Expect(trace[0].Index).To(Equal(-1))
 	Expect(trace[0].Tier).To(Equal("tier1"))
 	Expect(trace[0].Name).To(Equal("policy1"))
-	Expect(trace[0].Namespace).To(Equal(""))
+	Expect(trace[0].Namespace).To(Equal("ns1"))
 
 	// Test with a matching source IP and destination port 80
 	flow2 := &MockFlow{
@@ -221,7 +222,7 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 	Expect(trace[0].Index).To(Equal(0))
 	Expect(trace[0].Tier).To(Equal("tier1"))
 	Expect(trace[0].Name).To(Equal("policy1"))
-	Expect(trace[0].Namespace).To(Equal(""))
+	Expect(trace[0].Namespace).To(Equal("ns1"))
 
 	// Test with a matching source IP and destination port 443
 	flow3 := &MockFlow{
@@ -238,7 +239,7 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 	Expect(trace[0].Index).To(Equal(1))
 	Expect(trace[0].Tier).To(Equal("tier1"))
 	Expect(trace[0].Name).To(Equal("policy1"))
-	Expect(trace[0].Namespace).To(Equal(""))
+	Expect(trace[0].Namespace).To(Equal("ns1"))
 }
 
 // actionFromString should parse strings in case-insensitive mode.
@@ -967,6 +968,29 @@ func TestLookupEndpointKeysFromSrcDst(t *testing.T) {
 		Expect(err).To(BeNil(), fmt.Sprintf("Test case %d", i))
 		Expect(src).To(Equal(test.expectedSrc), fmt.Sprintf("Test case %d", i))
 		Expect(dst).To(Equal(test.expectedDst), fmt.Sprintf("Test case %d", i))
+	}
+}
+
+func TestGetPolicyName(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"default/tier1.policy1", "policy1"},
+		{"default/staged:tier1.policy1", "staged:policy1"},
+		{"default/policy1", "policy1"},
+		{"default/staged:policy1", "staged:policy1"},
+		{"policy1", "policy1"},
+		{"staged:policy1", "staged:policy1"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			result := getPolicyName(test.input)
+			if result != test.expected {
+				t.Errorf("expected %s, got %s", test.expected, result)
+			}
+		})
 	}
 }
 

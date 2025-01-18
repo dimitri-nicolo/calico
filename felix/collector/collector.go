@@ -498,9 +498,13 @@ func (c *collector) applyConntrackStatUpdate(
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
 func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) {
-	if ru := data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == RuleMatchIsDifferent {
+	var ru RuleMatch
+	if ru = data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == RuleMatchIsDifferent {
 		c.handleDataEndpointOrRulesChanged(data)
 		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes)
+	}
+	if ru == RuleMatchSet || ru == RuleMatchIsDifferent {
+		c.evaluatePendingRuleTraceForLocalEp(data)
 	}
 }
 
@@ -987,27 +991,31 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 func (c *collector) updatePendingRuleTraces() {
 	// The epStats map may be quite large, so we chose to lock each entry individually to avoid
 	// locking the entire map.
-	for t, data := range c.epStats {
+	for _, data := range c.epStats {
 		if data == nil {
 			continue
 		}
 
-		// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
-		flow := TupleAsFlow(t)
+		c.evaluatePendingRuleTraceForLocalEp(data)
+	}
+}
 
-		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal {
-			// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
-			c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-				c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
-			})
-		}
+func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
+	// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
+	flow := TupleAsFlow(data.Tuple)
 
-		if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal {
-			// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
-			c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-				c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
-			})
-		}
+	if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal {
+		// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
+		})
+	}
+
+	if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal {
+		// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+			c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
+		})
 	}
 }
 
