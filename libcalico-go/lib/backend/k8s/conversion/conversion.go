@@ -496,12 +496,12 @@ func (c converter) K8sBaselineAdminNetworkPolicyToCalico(anp *adminpolicy.Baseli
 	// Either Namespaces or Pods is set. Use one of them to populate the selectors.
 	var nsSelector, podSelector string
 	if anp.Spec.Subject.Namespaces != nil {
-		nsSelector = k8sSelectorToCalico(anp.Spec.Subject.Namespaces, SelectorNamespace)
+		nsSelector = K8sSelectorToCalico(anp.Spec.Subject.Namespaces, SelectorNamespace)
 		// Make sure projectcalico.org/orchestrator == 'k8s' label is added to exclude heps.
-		podSelector = k8sSelectorToCalico(nil, SelectorPod)
+		podSelector = K8sSelectorToCalico(nil, SelectorPod)
 	} else {
-		nsSelector = k8sSelectorToCalico(&anp.Spec.Subject.Pods.NamespaceSelector, SelectorNamespace)
-		podSelector = k8sSelectorToCalico(&anp.Spec.Subject.Pods.PodSelector, SelectorPod)
+		nsSelector = K8sSelectorToCalico(&anp.Spec.Subject.Pods.NamespaceSelector, SelectorNamespace)
+		podSelector = K8sSelectorToCalico(&anp.Spec.Subject.Pods.PodSelector, SelectorPod)
 	}
 
 	var uid types.UID
