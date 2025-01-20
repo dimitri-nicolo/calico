@@ -52,7 +52,7 @@ func init() {
 type PolicyResolver struct {
 	policyIDToEndpointIDs multidict.Multidict[model.PolicyKey, any]
 	endpointIDToPolicyIDs multidict.Multidict[any, model.PolicyKey]
-	allPolicies           map[model.PolicyKey]policyMetadata // Only storing metadata for lower occupancy.
+	allPolicies           map[model.PolicyKey]PolicyMetadata // Only storing metadata for lower occupancy.
 	sortedTierData        []*TierInfo
 	endpoints             map[model.Key]interface{} // Local WEPs/HEPs only.
 	dirtyEndpoints        set.Set[any]              /* FIXME model.WorkloadEndpointKey or model.HostEndpointKey */
@@ -71,7 +71,7 @@ func NewPolicyResolver() *PolicyResolver {
 	return &PolicyResolver{
 		policyIDToEndpointIDs: multidict.New[model.PolicyKey, any](),
 		endpointIDToPolicyIDs: multidict.New[any, model.PolicyKey](),
-		allPolicies:           map[model.PolicyKey]policyMetadata{},
+		allPolicies:           map[model.PolicyKey]PolicyMetadata{},
 		endpoints:             make(map[model.Key]interface{}),
 		endpointEgressData:    make(map[model.WorkloadEndpointKey][]EpEgressData),
 		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
@@ -112,7 +112,7 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 			delete(pr.allPolicies, key)
 		} else {
 			policy := update.Value.(*model.Policy)
-			pr.allPolicies[key] = extractPolicyMetadata(policy)
+			pr.allPolicies[key] = ExtractPolicyMetadata(policy)
 		}
 		if !pr.policyIDToEndpointIDs.ContainsKey(key) {
 			return

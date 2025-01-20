@@ -133,7 +133,7 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 		var newPolicy *model.Policy
 		if update.Value != nil {
 			newPolicy = update.Value.(*model.Policy)
-			metadata := extractPolicyMetadata(newPolicy)
+			metadata := ExtractPolicyMetadata(newPolicy)
 			dirty = poc.UpdatePolicy(key, &metadata)
 		} else {
 			dirty = poc.UpdatePolicy(key, nil)
@@ -170,8 +170,8 @@ func (poc *PolicySorter) HasPolicy(key model.PolicyKey) bool {
 
 var polMetaDefaultOrder = math.Inf(1)
 
-func extractPolicyMetadata(policy *model.Policy) policyMetadata {
-	m := policyMetadata{}
+func ExtractPolicyMetadata(policy *model.Policy) PolicyMetadata {
+	m := PolicyMetadata{}
 	if policy.Order == nil {
 		m.Order = polMetaDefaultOrder
 	} else {
@@ -200,7 +200,7 @@ func extractPolicyMetadata(policy *model.Policy) policyMetadata {
 	return m
 }
 
-type policyMetadata struct {
+type PolicyMetadata struct {
 	Order float64 // Set to +Inf for default order.
 	Flags policyMetadataFlags
 }
@@ -215,29 +215,29 @@ const (
 	policyMetaEgress
 )
 
-func (m *policyMetadata) Equals(other *policyMetadata) bool {
+func (m *PolicyMetadata) Equals(other *PolicyMetadata) bool {
 	if m != nil && other != nil {
 		return *m == *other
 	}
 	return m == other
 }
 
-func (m *policyMetadata) DoNotTrack() bool {
+func (m *PolicyMetadata) DoNotTrack() bool {
 	return m != nil && m.Flags&policyMetaDoNotTrack != 0
 }
 
-func (m *policyMetadata) PreDNAT() bool {
+func (m *PolicyMetadata) PreDNAT() bool {
 	return m != nil && m.Flags&policyMetaPreDNAT != 0
 }
 
-func (m *policyMetadata) ApplyOnForward() bool {
+func (m *PolicyMetadata) ApplyOnForward() bool {
 	return m != nil && m.Flags&policyMetaApplyOnForward != 0
 }
 
-func (poc *PolicySorter) UpdatePolicy(key model.PolicyKey, newPolicy *policyMetadata) (dirty bool) {
+func (poc *PolicySorter) UpdatePolicy(key model.PolicyKey, newPolicy *PolicyMetadata) (dirty bool) {
 	tierInfo := poc.tiers[key.Tier]
 	var tiKey tierInfoKey
-	var oldPolicy *policyMetadata
+	var oldPolicy *PolicyMetadata
 	if tierInfo != nil {
 		if op, ok := tierInfo.Policies[key]; ok {
 			oldPolicy = &op
@@ -285,7 +285,7 @@ func (poc *PolicySorter) UpdatePolicy(key model.PolicyKey, newPolicy *policyMeta
 // the test package calc_test can also use it.
 type PolKV struct {
 	Key   model.PolicyKey
-	Value *policyMetadata
+	Value *PolicyMetadata
 }
 
 func (p *PolKV) String() string {
@@ -329,7 +329,7 @@ type TierInfo struct {
 	Valid           bool
 	Order           *float64
 	DefaultAction   v3.Action
-	Policies        map[model.PolicyKey]policyMetadata
+	Policies        map[model.PolicyKey]PolicyMetadata
 	SortedPolicies  *btree.BTreeG[PolKV]
 	OrderedPolicies []PolKV
 }
@@ -343,7 +343,7 @@ type tierInfoKey struct {
 func NewTierInfo(name string) *TierInfo {
 	return &TierInfo{
 		Name:           name,
-		Policies:       make(map[model.PolicyKey]policyMetadata),
+		Policies:       make(map[model.PolicyKey]PolicyMetadata),
 		SortedPolicies: btree.NewG[PolKV](2, PolKVLess),
 	}
 }
@@ -359,7 +359,7 @@ func (t TierInfo) String() string {
 				polType = "p"
 			}
 
-			//Append ApplyOnForward flag.
+			// Append ApplyOnForward flag.
 			if pol.Value.ApplyOnForward() {
 				polType = polType + "f"
 			}

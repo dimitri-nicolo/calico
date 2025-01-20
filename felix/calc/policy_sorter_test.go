@@ -33,7 +33,7 @@ func TestPolKV_String(t *testing.T) {
 		expected string
 	}
 
-	nilOrder := extractPolicyMetadata(&model.Policy{})
+	nilOrder := ExtractPolicyMetadata(&model.Policy{})
 
 	tests := []kvTestType{
 		{
@@ -52,7 +52,7 @@ func TestPolKV_String(t *testing.T) {
 		},
 		{
 			name:     "order set",
-			kv:       PolKV{Key: model.PolicyKey{Name: "name"}, Value: &policyMetadata{Order: 10.5}},
+			kv:       PolKV{Key: model.PolicyKey{Name: "name"}, Value: &PolicyMetadata{Order: 10.5}},
 			expected: "name(10.5)",
 		},
 	}
@@ -76,7 +76,7 @@ func TestPolicySorter_HasPolicy(t *testing.T) {
 		t.Error("Unexpectedly found policy when it should not be present")
 	}
 
-	pol := policyMetadata{}
+	pol := PolicyMetadata{}
 	_ = poc.UpdatePolicy(polKey, &pol)
 
 	found = poc.HasPolicy(polKey)
@@ -93,7 +93,7 @@ func TestPolicySorter_UpdatePolicy(t *testing.T) {
 		Tier: "default",
 	}
 
-	pol := policyMetadata{}
+	pol := PolicyMetadata{}
 
 	dirty := poc.UpdatePolicy(polKey, &pol)
 	if tierInfo, found := poc.tiers[polKey.Tier]; !found {
@@ -107,7 +107,7 @@ func TestPolicySorter_UpdatePolicy(t *testing.T) {
 		}
 	}
 
-	newPol := policyMetadata{
+	newPol := PolicyMetadata{
 		Order: 7,
 	}
 
@@ -217,7 +217,7 @@ func TestPolicySorter_OnUpdate_RemoveFromNonExistent(t *testing.T) {
 		t.Error("Expected default tier not to be valid but it is")
 	}
 
-	expectedPolicies := map[model.PolicyKey]policyMetadata{
+	expectedPolicies := map[model.PolicyKey]PolicyMetadata{
 		key: {
 			Order: polMetaDefaultOrder,
 			Flags: policyMetaIngress | policyMetaEgress,

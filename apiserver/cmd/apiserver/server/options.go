@@ -61,9 +61,6 @@ type CalicoServerOptions struct {
 	ManagementClusterCAType        string
 	TunnelSecretName               string
 
-	// This Kubernetes feature was made default in k8s 1.30, but may not be enabled prior.
-	EnableValidatingAdmissionPolicy bool
-
 	StopCh <-chan struct{}
 }
 
