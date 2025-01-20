@@ -76,7 +76,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			resp, err := bb.List(ctx, clusterInfo, &p)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
-			require.NotEmpty(t, resp.Items[0].ID)
+			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 			require.Equal(t, f, resp.Items[0])
 		})
 
@@ -142,7 +142,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			resp, err := bb.List(ctx, clusterInfo, &p1)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
-			require.NotEmpty(t, resp.Items[0].ID)
+			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 			require.Equal(t, b1, resp.Items[0])
 
 			// Read back data a managed cluster and check it matches.
@@ -150,7 +150,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			resp, err = bb.List(ctx, anotherClusterInfo, &p2)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
-			require.NotEmpty(t, resp.Items[0].ID)
+			backendutils.AssertBenchmarkClusterAndReset(t, anotherClusterInfo.Cluster, &resp.Items[0])
 			require.Equal(t, b2, resp.Items[0])
 		})
 	}
@@ -295,6 +295,9 @@ func TestBenchmarksFiltering(t *testing.T) {
 
 				resp, err := bb.List(ctx, clusterInfo, tc.Params)
 				require.NoError(t, err)
+				for i := range resp.Items {
+					backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
+				}
 
 				if tc.Expect1 {
 					require.Contains(t, resp.Items, bm1)
@@ -314,6 +317,9 @@ func TestBenchmarksFiltering(t *testing.T) {
 				badClusterInfo := clusterInfo
 				badClusterInfo.Tenant = "bad-tenant"
 				resp, err = bb.List(ctx, badClusterInfo, tc.Params)
+				for i := range resp.Items {
+					backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
+				}
 				require.NoError(t, err)
 				require.Empty(t, resp.Items)
 			})
@@ -380,6 +386,9 @@ func TestBenchmarkSorting(t *testing.T) {
 		r, err := bb.List(ctx, clusterInfo, &params)
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
+		for i := range r.Items {
+			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 		require.Nil(t, r.AfterKey)
 
 		// Assert that the logs are returned in the correct order.
@@ -396,6 +405,9 @@ func TestBenchmarkSorting(t *testing.T) {
 		r, err = bb.List(ctx, clusterInfo, &params)
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
+		for i := range r.Items {
+			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 		require.Equal(t, bm2, r.Items[1])
 		require.Equal(t, bm1, r.Items[0])
 	})

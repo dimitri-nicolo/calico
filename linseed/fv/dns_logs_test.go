@@ -87,8 +87,10 @@ func TestDNS_DNSLogs(t *testing.T) {
 		}
 		resp, err := cli.DNSLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		actualLogs := testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp)
-		require.Equal(t, logs, actualLogs)
+		for i := range resp.Items {
+			testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &resp.Items[i])
+		}
+		require.Equal(t, logs, resp.Items)
 	})
 
 	RunDNSLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
@@ -128,6 +130,7 @@ func TestDNS_DNSLogs(t *testing.T) {
 			resp, err := cli.DNSLogs(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
+			testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &resp.Items[0])
 			require.Equal(t, []v1.DNSLog{
 				{
 					StartTime: logTime,
@@ -136,7 +139,7 @@ func TestDNS_DNSLogs(t *testing.T) {
 					RCode:     v1.DNSResponseCode(0),
 					RRSets:    v1.DNSRRSets{},
 				},
-			}, testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp), fmt.Sprintf("DNS #%d did not match", i))
+			}, resp.Items, fmt.Sprintf("DNS #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
 			require.Contains(t, resp.AfterKey, "startFrom")
 			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
@@ -162,6 +165,7 @@ func TestDNS_DNSLogs(t *testing.T) {
 		resp, err := cli.DNSLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
+		testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &resp.Items[0])
 		require.Equal(t, []v1.DNSLog{
 			{
 				StartTime: logTime,
@@ -170,7 +174,7 @@ func TestDNS_DNSLogs(t *testing.T) {
 				RCode:     v1.DNSResponseCode(0),
 				RRSets:    v1.DNSRRSets{},
 			},
-		}, testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp), fmt.Sprintf("DNS #%d did not match", lastItem))
+		}, resp.Items, fmt.Sprintf("DNS #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))
 
 		// Once we reach the end of the data, we should not receive

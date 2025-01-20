@@ -132,12 +132,9 @@ func TestFV_RuntimeReports(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, resp.Items, 1)
-		// Linseed overwrote the GeneratedTime field.  We can't predict it exactly, so copy
-		// it across from the actual to our expected value.
-		require.NotNil(t, resp.Items[0].Report.GeneratedTime)
+		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster, resp)
 		report.GeneratedTime = resp.Items[0].Report.GeneratedTime
-		require.Equal(t, []v1.RuntimeReport{{Tenant: "tenant-a", Cluster: cluster, Report: report}},
-			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp))
+		require.Equal(t, []v1.RuntimeReport{{Tenant: "tenant-a", Cluster: cluster, Report: report}}, resp.Items)
 	})
 
 	RunRuntimeReportTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
@@ -178,8 +175,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 			resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
-
-			require.NotNil(t, resp.Items[0].Report.GeneratedTime)
+			testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster, resp)
 			require.EqualValues(t, []v1.RuntimeReport{
 				{
 					Cluster: cluster,
@@ -189,8 +185,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 						Host:          fmt.Sprintf("%d", i),
 					},
 				},
-			}, testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp),
-				fmt.Sprintf("RuntimeReport #%d did not match", i))
+			}, resp.Items, fmt.Sprintf("RuntimeReport #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
 			require.Contains(t, resp.AfterKey, "startFrom")
 			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
@@ -215,19 +210,16 @@ func TestFV_RuntimeReports(t *testing.T) {
 		resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
-
-		require.NotNil(t, resp.Items[0].Report.GeneratedTime)
+		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster, resp)
 		require.EqualValues(t, []v1.RuntimeReport{
 			{
 				Cluster: cluster,
 				Tenant:  "tenant-a",
 				Report: v1.Report{
-					GeneratedTime: resp.Items[0].Report.GeneratedTime,
-					Host:          fmt.Sprintf("%d", lastItem),
+					Host: fmt.Sprintf("%d", lastItem),
 				},
 			},
-		}, testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, resp),
-			fmt.Sprintf("RuntimeReport #%d did not match", lastItem))
+		}, resp.Items, fmt.Sprintf("RuntimeReport #%d did not match", lastItem))
 
 		// Once we reach the end of the data, we should not receive
 		// an afterKey
@@ -345,11 +337,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 			// Validate that the source is populated
 			require.NotEmpty(t, item.Cluster)
 			require.Equal(t, item.Cluster, cluster)
-			// Validate that the id is populated
-			item = testutils.AssertRuntimeReportIDAndReset(t, item)
-			// Validate that the rest of the fields are populated
-			require.NotNil(t, item.Report.GeneratedTime)
-			runtimeReport.GeneratedTime = item.Report.GeneratedTime
+			testutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster, &item)
 			require.Equal(t, runtimeReport, item.Report)
 		}
 
@@ -362,11 +350,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 			// Validate that the source is populated
 			require.NotEmpty(t, item.Cluster)
 			require.Equal(t, item.Cluster, anotherCluster)
-			// Validate that the id is populated
-			item = testutils.AssertRuntimeReportIDAndReset(t, item)
-			// Validate that the rest of the fields are populated
-			require.NotNil(t, item.Report.GeneratedTime)
-			runtimeReport.GeneratedTime = item.Report.GeneratedTime
+			testutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, anotherCluster, &item)
 			require.Equal(t, runtimeReport, item.Report)
 		}
 	})
@@ -429,11 +413,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		// Validate that we got the first report
 		for _, item := range resp.Items {
-			// Validate that the id is populated
-			item = testutils.AssertRuntimeReportIDAndReset(t, item)
-			// Validate that the rest of the fields are populated
-			require.NotNil(t, item.Report.GeneratedTime)
-			runtimeReport1.GeneratedTime = item.Report.GeneratedTime
+			testutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster, &item)
 			require.Equal(t, runtimeReport1, item.Report)
 		}
 
@@ -445,11 +425,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 
 		// Validate that we got the second report
 		for _, item := range resp.Items {
-			// Validate that the id is populated
-			item = testutils.AssertRuntimeReportIDAndReset(t, item)
-			// Validate that the rest of the fields are populated
-			require.NotNil(t, item.Report.GeneratedTime)
-			runtimeReport2.GeneratedTime = item.Report.GeneratedTime
+			testutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster, &item)
 			require.Equal(t, runtimeReport2, item.Report)
 		}
 

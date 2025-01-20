@@ -81,6 +81,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		// The ID should be set.
 		require.Len(t, resp.Items, 1)
 		require.Equal(t, feed.ID, resp.Items[0].ID)
+		testutils.AssertDomainNameSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 		require.Equal(t, feed, resp.Items[0])
 
 		// Delete the feed
@@ -128,6 +129,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		// The ID should be set.
 		require.Len(t, resp.Items, 1)
 		require.Equal(t, feed.ID, resp.Items[0].ID)
+		testutils.AssertDomainNameSetThreatFeedClusterAndReset(t, clusterB, &resp.Items[0])
 		require.Equal(t, feed, resp.Items[0])
 
 		// Read back the other one, which was created first
@@ -137,6 +139,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		// The ID should be set.
 		require.Len(t, resp.Items, 1)
 		require.Equal(t, feed.ID, resp.Items[0].ID)
+		testutils.AssertDomainNameSetThreatFeedClusterAndReset(t, clusterA, &resp.Items[0])
 		require.Equal(t, feed, resp.Items[0])
 	})
 
@@ -183,6 +186,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 					ID: strconv.Itoa(i),
 					Data: &v1.DomainNameSetThreatFeedData{
 						CreatedAt: createdAtTime.Add(time.Duration(i) * time.Second),
+						Cluster:   cluster,
 					},
 				},
 			}, resp.Items, fmt.Sprintf("Threat Feed #%d did not match", i))
@@ -216,6 +220,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 				ID: strconv.Itoa(lastItem),
 				Data: &v1.DomainNameSetThreatFeedData{
 					CreatedAt: createdAtTime.Add(time.Duration(lastItem) * time.Second),
+					Cluster:   cluster,
 				},
 			},
 		}, resp.Items, fmt.Sprintf("Feeds #%d did not match", lastItem))

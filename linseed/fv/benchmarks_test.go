@@ -91,8 +91,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 
 		// The ID should be set.
 		require.Len(t, resp.Items, 1)
-		require.Equal(t, benchmarks.UID(), resp.Items[0].ID)
-		resp.Items[0].ID = ""
+		testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
 		require.Equal(t, benchmarks, resp.Items[0])
 
 		// Read it back, using a time range
@@ -109,8 +108,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 
 		// The ID should be set.
 		require.Len(t, resp.Items, 1)
-		require.Equal(t, benchmarks.UID(), resp.Items[0].ID)
-		resp.Items[0].ID = ""
+		testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
 		require.Equal(t, benchmarks, resp.Items[0])
 	})
 
@@ -159,6 +157,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 				{
 					Timestamp: metav1.Time{Time: logTime.Add(time.Duration(i) * time.Second)},
 					NodeName:  fmt.Sprintf("%d", i),
+					Cluster:   cluster,
 				},
 			}, benchmarksWithUTCTime(resp), fmt.Sprintf("Benchmark #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
@@ -195,6 +194,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 			{
 				Timestamp: metav1.Time{Time: logTime.Add(time.Duration(lastItem) * time.Second)},
 				NodeName:  fmt.Sprintf("%d", lastItem),
+				Cluster:   cluster,
 			},
 		}, benchmarksWithUTCTime(resp), fmt.Sprintf("Benchmark #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))

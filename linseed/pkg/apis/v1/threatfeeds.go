@@ -38,6 +38,9 @@ type IPSetThreatFeedData struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	IPs []string `json:"ips"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 // DomainNameSetThreatFeed defines a threat feed that
@@ -54,4 +57,7 @@ type DomainNameSetThreatFeedData struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	Domains []string `json:"domains"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }

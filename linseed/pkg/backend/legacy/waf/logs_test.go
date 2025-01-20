@@ -165,6 +165,7 @@ func TestWAFLogBasic(t *testing.T) {
 
 			// Timestamps don't equal on read.
 			results.Items[0].Timestamp = f.Timestamp
+			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
 			require.Equal(t, f, results.Items[0])
 
 			// Read again using a dummy tenant - we should get nothing.
@@ -450,6 +451,9 @@ func TestSorting(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
+		for i := range r.Items {
+			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 
 		// Assert that the logs are returned in the correct order.
 		require.Equal(t, log1, r.Items[0])
@@ -466,6 +470,9 @@ func TestSorting(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
+		for i := range r.Items {
+			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 		require.Equal(t, log2, r.Items[0])
 		require.Equal(t, log1, r.Items[1])
 	})
@@ -543,6 +550,7 @@ func TestWAFLogFiltering(t *testing.T) {
 				// Reset the time as it microseconds to not match perfectly
 				require.NotEqual(t, "", result.Items[0].Timestamp)
 				result.Items[0].Timestamp = reqTime
+				backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &result.Items[0])
 
 				require.Equal(t, wafLogs[testcase.ExpectLogIndex], result.Items[0])
 			})

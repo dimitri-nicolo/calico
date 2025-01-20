@@ -28,6 +28,9 @@ type Report struct {
 	ProcessStart  ProcessStart `json:"process_start"`
 	FileAccess    FileAccess   `json:"file_access"`
 	Host          string       `json:"host,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 // RuntimeReportParams define querying parameters to retrieve runtime reports

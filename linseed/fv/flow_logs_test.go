@@ -84,7 +84,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		}
 		resp, err := cli.FlowLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		require.Equal(t, logs, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp))
+		require.Equal(t, logs, testutils.AssertFlowLogsIDAndClusterAndReset(t, cluster, resp))
 	})
 
 	RunFlowLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
@@ -131,7 +131,7 @@ func TestFV_FlowLogs(t *testing.T) {
 					EndTime:   logTime + int64(i),
 					Host:      fmt.Sprintf("%d", i),
 				},
-			}, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp), fmt.Sprintf("Flow #%d did not match", i))
+			}, testutils.AssertFlowLogsIDAndClusterAndReset(t, cluster, resp), fmt.Sprintf("Flow #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
 			require.Contains(t, resp.AfterKey, "startFrom")
 			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
@@ -163,7 +163,7 @@ func TestFV_FlowLogs(t *testing.T) {
 				EndTime:   logTime + int64(lastItem),
 				Host:      fmt.Sprintf("%d", lastItem),
 			},
-		}, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp), fmt.Sprintf("Flow #%d did not match", lastItem))
+		}, testutils.AssertFlowLogsIDAndClusterAndReset(t, cluster, resp), fmt.Sprintf("Flow #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))
 
 		// Once we reach the end of the data, we should not receive
@@ -541,7 +541,7 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 			}
 
 			if testcase.expectMatch {
-				require.Equal(t, logs, testutils.AssertLogIDAndCopyFlowLogsWithoutID(t, resp))
+				require.Equal(t, logs, testutils.AssertFlowLogsIDAndClusterAndReset(t, cluster, resp))
 			}
 		})
 	}

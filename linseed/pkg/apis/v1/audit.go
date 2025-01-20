@@ -126,6 +126,9 @@ type AuditLog struct {
 	audit.Event
 	// Name field is populated by FluentD
 	Name *string `json:"name,omitempty"`
+
+	// Cluster is populated by Linseed from the request context
+	Cluster string `json:"cluster,omitempty"`
 }
 
 // internalEvent is a copy of the K8S Audit Event in order to perform JSON marshaling/unmarshalling
@@ -153,6 +156,9 @@ type internalEvent struct {
 
 	// Additional field added by FluentD
 	Name *string `json:"name,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 type internalObjectReference struct {
@@ -220,6 +226,8 @@ func (auditLog *AuditLog) MarshalJSON() ([]byte, error) {
 	if auditLog.Name != nil {
 		val.Name = auditLog.Name
 	}
+
+	val.Cluster = auditLog.Cluster
 
 	return json.Marshal(val)
 }
@@ -296,6 +304,8 @@ func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 
 	// Replace the K8S k8sEvent on the AuditLog
 	auditLog.Event = k8sEvent
+
+	auditLog.Cluster = internalEvent.Cluster
 
 	return nil
 }

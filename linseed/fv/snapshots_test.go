@@ -91,11 +91,8 @@ func TestFV_Snapshots(t *testing.T) {
 		params := v1.SnapshotParams{}
 		resp, err := cli.Compliance(cluster).Snapshots().List(ctx, &params)
 		require.NoError(t, err)
-
-		// The ID should be set.
 		require.Len(t, resp.Items, 1)
-		require.NotEqual(t, "", resp.Items[0].ID)
-		resp.Items[0].ID = ""
+		testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 		require.Equal(t, snapshots, resp.Items[0])
 
 		// Read it back, using a time range
@@ -112,8 +109,7 @@ func TestFV_Snapshots(t *testing.T) {
 
 		// The ID should be set.
 		require.Len(t, resp.Items, 1)
-		require.NotEqual(t, "", resp.Items[0].ID)
-		resp.Items[0].ID = ""
+		testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 		require.Equal(t, snapshots, resp.Items[0])
 	})
 
@@ -195,6 +191,9 @@ func TestFV_Snapshots(t *testing.T) {
 				},
 			}
 			actual := snapshotsWithUTCTime(resp)
+			for j := range actual {
+				testutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &actual[j])
+			}
 			require.Equal(t, expected, actual, fmt.Sprintf("Snapshot #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
 			require.Contains(t, resp.AfterKey, "startFrom")
@@ -248,6 +247,9 @@ func TestFV_Snapshots(t *testing.T) {
 			},
 		}
 		actual := snapshotsWithUTCTime(resp)
+		for j := range actual {
+			testutils.AssertSnapshotClusterAndReset(t, cluster, &actual[j])
+		}
 		require.Equal(t, expected, actual, fmt.Sprintf("Snapshot #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))
 

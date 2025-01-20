@@ -164,6 +164,7 @@ func TestReportDataBasic(t *testing.T) {
 			resp, err := rb.List(ctx, clusterInfo, &p)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
+			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 			require.NotEmpty(t, resp.Items[0].ID)
 			require.Equal(t, f, resp.Items[0])
 		})
@@ -212,7 +213,7 @@ func TestReportDataBasic(t *testing.T) {
 			resp, err := rb.List(ctx, clusterInfo, &p1)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
-			require.NotEmpty(t, resp.Items[0].ID)
+			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 			require.Equal(t, r1, resp.Items[0])
 
 			// Read back data a managed cluster and check it matches.
@@ -220,7 +221,7 @@ func TestReportDataBasic(t *testing.T) {
 			resp, err = rb.List(ctx, anotherClusterInfo, &p2)
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
-			require.NotEmpty(t, resp.Items[0].ID)
+			backendutils.AssertReportDataClusterAndReset(t, anotherClusterInfo.Cluster, &resp.Items[0])
 			require.Equal(t, r2, resp.Items[0])
 		})
 	}
@@ -371,6 +372,9 @@ func TestReportDataFiltering(t *testing.T) {
 
 				resp, err := rb.List(ctx, clusterInfo, tc.Params)
 				require.NoError(t, err)
+				for i := range resp.Items {
+					backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
+				}
 
 				if tc.Expect1 {
 					require.Contains(t, resp.Items, r1)
@@ -427,6 +431,9 @@ func TestReportDataSorting(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
+		for i := range r.Items {
+			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 
 		// Assert that the logs are returned in the correct order.
 		require.Equal(t, r1, r.Items[0])
@@ -442,6 +449,9 @@ func TestReportDataSorting(t *testing.T) {
 		r, err = rb.List(ctx, clusterInfo, &params)
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
+		for i := range r.Items {
+			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 		require.Equal(t, r2, r.Items[0])
 		require.Equal(t, r1, r.Items[1])
 	})

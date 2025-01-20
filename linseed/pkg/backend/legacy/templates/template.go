@@ -163,11 +163,9 @@ func (c *TemplateConfig) Template() (*Template, error) {
 		return nil, err
 	}
 
-	// For single-index templates, the mappings must include keywords for
-	// cluster and tenant.
+	// For single-index templates, the mappings must include keywords for tenant.
 	if c.Index.IsSingleIndex() {
 		properties := indexMappings["properties"].(map[string]interface{})
-		properties["cluster"] = map[string]string{"type": "keyword"}
 		properties["tenant"] = map[string]string{"type": "keyword"}
 	}
 

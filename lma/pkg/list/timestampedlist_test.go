@@ -37,6 +37,7 @@ var _ = Describe("types", func() {
    ],
   "requestStartedTimestamp": "2019-03-20T15:20:11Z",
   "requestCompletedTimestamp": "2019-04-20T15:20:12Z",
+  "cluster": "cluster1",		
   "metadata": {
     "resourceVersion": "abcdef"
   }
@@ -76,6 +77,7 @@ var _ = Describe("types", func() {
    ],
   "requestStartedTimestamp": "2019-03-20T15:20:11Z",
   "requestCompletedTimestamp": "2019-04-20T15:20:12Z",
+  "cluster": "cluster1",		
   "metadata": {
     "resourceVersion": "abcdef"
   }
