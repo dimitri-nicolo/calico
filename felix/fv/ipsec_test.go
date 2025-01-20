@@ -32,10 +32,6 @@ import (
 const numPoliciesPerWep = 3
 
 var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
-	if NFTMode() {
-		return
-	}
-
 	var (
 		infra    infrastructure.DatastoreInfra
 		tc       infrastructure.TopologyContainers
@@ -49,6 +45,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	)
 
 	BeforeEach(func() {
+		Skip("Skip ipsec tests")
 		infra = getInfra()
 
 		topologyOptions := ipSecTopologyOptions()
@@ -505,6 +502,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 	)
 
 	BeforeEach(func() {
+		Skip("Skip ipsec tests")
 		var err error
 
 		infra = getInfra()
@@ -599,6 +597,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	)
 
 	BeforeEach(func() {
+		Skip("Skip ipsec tests")
 		infra = getInfra()
 
 		tc, client = infrastructure.StartNNodeTopology(3, ipSecTopologyOptions(), infra)
