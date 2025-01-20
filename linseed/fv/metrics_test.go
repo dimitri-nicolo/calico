@@ -78,8 +78,11 @@ func TestMetrics(t *testing.T) {
 		}
 		resp, err := cli.DNSLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
-		actualLogs := testutils.AssertLogIDAndCopyDNSLogsWithoutID(t, resp)
-		require.Equal(t, logs, actualLogs)
+		require.NotNil(t, resp)
+		for i := range resp.Items {
+			testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &resp.Items[i])
+		}
+		require.Equal(t, logs, resp.Items)
 
 		client := mTLSClient(t)
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("https://%s/metrics", metricsAddr), "", "", token)

@@ -6,6 +6,9 @@
     },
     "ips": {
       "type": "ip_range"
+    },
+    "cluster": {
+      "type": "keyword"
     }
   }
 }

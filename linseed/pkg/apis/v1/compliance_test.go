@@ -20,7 +20,7 @@ func TestReportDataUID(t *testing.T) {
 		StartTime:      metav1.Time{Time: time.Unix(10, 0).UTC()},
 		EndTime:        metav1.Time{Time: time.Unix(20, 0).UTC()},
 	}
-	rdd := v1.ReportData{&rd, "summary", ""}
+	rdd := v1.ReportData{&rd, "summary", "", "cluster-one"}
 	uid := rdd.UID()
 	require.Equal(t, "name_type_4a4f4ca3-557c-5b88-b993-84c7fa0828d3", uid)
 }

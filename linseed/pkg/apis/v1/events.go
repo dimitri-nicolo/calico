@@ -168,6 +168,9 @@ type Event struct {
 	Mitigations     *[]string       `json:"mitigations,omitempty"`
 	Record          interface{}     `json:"record,omitempty"`
 	GeoInfo         IPGeoInfo       `json:"geo_info,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 // Events can take records of numerous forms. GetRecord extracts the record

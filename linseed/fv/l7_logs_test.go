@@ -86,6 +86,9 @@ func TestL7_L7Logs(t *testing.T) {
 		}
 		resp, err := cli.L7Logs(cluster).List(ctx, &params)
 		require.NoError(t, err)
+		for i := range resp.Items {
+			testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[i])
+		}
 		require.Equal(t, logs, resp.Items)
 	})
 
@@ -195,6 +198,7 @@ func TestL7_L7Logs(t *testing.T) {
 			resp, err := cli.L7Logs(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
+			testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[0])
 			require.Equal(t, []v1.L7Log{
 				{
 					StartTime: logTime,
@@ -232,6 +236,7 @@ func TestL7_L7Logs(t *testing.T) {
 				StartTime: logTime,
 				EndTime:   logTime + int64(lastItem),
 				Host:      fmt.Sprintf("%d", lastItem),
+				Cluster:   cluster,
 			},
 		}, resp.Items, fmt.Sprintf("L7 #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))

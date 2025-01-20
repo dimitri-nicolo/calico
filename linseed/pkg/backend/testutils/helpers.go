@@ -18,48 +18,47 @@ import (
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 )
 
-func AssertLogIDAndCopyFlowLogsWithoutID(t *testing.T, r *v1.List[v1.FlowLog]) []v1.FlowLog {
+func AssertFlowLogsIDAndClusterAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.FlowLog]) []v1.FlowLog {
 	require.NotNil(t, r)
 
 	// Asert that we have an ID assigned from Elastic
 	var copyOfLogs []v1.FlowLog
 	for _, item := range r.Items {
-		item = AssertFlowLogIDAndReset(t, item)
+		AssertFlowLogIDAndClusterAndReset(t, expectedCluster, &item)
 		copyOfLogs = append(copyOfLogs, item)
 	}
 	return copyOfLogs
 }
 
-func AssertFlowLogIDAndReset(t *testing.T, item v1.FlowLog) v1.FlowLog {
+func AssertFlowLogIDAndClusterAndReset(t *testing.T, expectedCluster string, item *v1.FlowLog) {
+	require.NotNil(t, item)
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
 
 	require.NotNil(t, item.GeneratedTime)
 	item.GeneratedTime = nil
 
-	return item
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
 }
 
-func AssertEventIDAndReset(t *testing.T, item v1.Event) v1.Event {
+func AssertEventIDAndClusterAndReset(t *testing.T, expectedCluster string, item v1.Event) v1.Event {
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
 
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+
 	return item
 }
 
-func AssertLogIDAndCopyDNSLogsWithoutID(t *testing.T, r *v1.List[v1.DNSLog]) []v1.DNSLog {
-	require.NotNil(t, r)
-
-	// Asert that we have an ID assigned from Elastic
-	var copyOfLogs []v1.DNSLog
-	for _, item := range r.Items {
-		item = AssertDNSLogIDAndReset(t, item)
-		copyOfLogs = append(copyOfLogs, item)
-	}
-	return copyOfLogs
+func AssertEventClusterAndReset(t *testing.T, expectedCluster string, item *v1.Event) {
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
 }
 
-func AssertDNSLogIDAndReset(t *testing.T, item v1.DNSLog) v1.DNSLog {
+func AssertDNSLogIDAndClusterAndReset(t *testing.T, expectedCluster string, item *v1.DNSLog) {
+	require.NotNil(t, item)
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
 
@@ -68,38 +67,117 @@ func AssertDNSLogIDAndReset(t *testing.T, item v1.DNSLog) v1.DNSLog {
 	require.NotNil(t, item.GeneratedTime)
 	item.GeneratedTime = nil
 
-	return item
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
 }
 
-func AssertLogIDAndCopyEventsWithoutID(t *testing.T, r *v1.List[v1.Event]) []v1.Event {
+func AssertAuditLogClusterAndReset(t *testing.T, expectedCluster string, item *v1.AuditLog) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertBenchmarkIDAndClusterAndReset(t *testing.T, expectedID string, expectedCluster string, item *v1.Benchmarks) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedID, item.ID)
+	item.ID = ""
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertBenchmarkClusterAndReset(t *testing.T, expectedCluster string, item *v1.Benchmarks) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertDomainNameSetThreatFeedClusterAndReset(t *testing.T, expectedCluster string, item *v1.DomainNameSetThreatFeed) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Data.Cluster)
+	item.Data.Cluster = ""
+}
+
+func AssertIPSetThreatFeedClusterAndReset(t *testing.T, expectedCluster string, item *v1.IPSetThreatFeed) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Data.Cluster)
+	item.Data.Cluster = ""
+}
+
+func AssertReportDataIDAndClusterAndReset(t *testing.T, expectedID string, expectedCluster string, item *v1.ReportData) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedID, item.ID)
+	item.ID = ""
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertReportDataClusterAndReset(t *testing.T, expectedCluster string, item *v1.ReportData) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertSnapshotIDAndClusterAndReset(t *testing.T, expectedCluster string, item *v1.Snapshot) {
+	require.NotNil(t, item)
+	require.NotEmpty(t, item.ID)
+	item.ID = ""
+	require.Equal(t, expectedCluster, item.ResourceList.Cluster)
+	item.ResourceList.Cluster = ""
+}
+
+func AssertSnapshotClusterAndReset(t *testing.T, expectedCluster string, item *v1.Snapshot) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.ResourceList.Cluster)
+	item.ResourceList.Cluster = ""
+}
+
+func AssertBGPLogClusterAndReset(t *testing.T, expectedCluster string, item *v1.BGPLog) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertWAFLogClusterAndReset(t *testing.T, expectedCluster string, item *v1.WAFLog) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertL7LogClusterAndReset(t *testing.T, expectedCluster string, item *v1.L7Log) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Cluster)
+	item.Cluster = ""
+}
+
+func AssertEventsIDAndClusterAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.Event]) []v1.Event {
 	require.NotNil(t, r)
 
 	// Asert that we have an ID assigned from Elastic
 	var copyOfEvents []v1.Event
 	for _, item := range r.Items {
-		item = AssertEventIDAndReset(t, item)
+		item = AssertEventIDAndClusterAndReset(t, expectedCluster, item)
 		copyOfEvents = append(copyOfEvents, item)
 	}
 	return copyOfEvents
 }
 
-func AssertRuntimeReportIDAndReset(t *testing.T, item v1.RuntimeReport) v1.RuntimeReport {
+func AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t *testing.T, expectedCluster string, item *v1.RuntimeReport) {
+	require.NotNil(t, item)
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
 
-	return item
+	require.NotNil(t, item.Report.GeneratedTime)
+	item.Report.GeneratedTime = nil
+
+	require.Equal(t, expectedCluster, item.Report.Cluster)
+	item.Report.Cluster = ""
 }
 
-func AssertLogIDAndCopyRuntimeReportsWithoutThem(t *testing.T, r *v1.List[v1.RuntimeReport]) []v1.RuntimeReport {
+func AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.RuntimeReport]) {
 	require.NotNil(t, r)
-
-	// Asert that we have an ID assigned from Elastic
-	var copyOfReports []v1.RuntimeReport
-	for _, item := range r.Items {
-		item = AssertRuntimeReportIDAndReset(t, item)
-		copyOfReports = append(copyOfReports, item)
+	for i := range r.Items {
+		AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, expectedCluster, &r.Items[i])
 	}
-	return copyOfReports
 }
 
 func CheckFieldsInJSON(t *testing.T, jsonMap map[string]interface{}, mappings map[string]interface{}, excludeFieldList map[string]bool) bool {

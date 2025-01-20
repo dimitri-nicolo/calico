@@ -55,18 +55,18 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 
 type logWithExtras struct {
 	v1.WAFLog `json:",inline"`
-	Cluster   string `json:"cluster"`
 	Tenant    string `json:"tenant,omitempty"`
 }
 
 // prepareForWrite wraps a log in a document that includes the cluster and tenant if
 // the backend is configured to write to a single index.
 func (b *wafLogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.WAFLog) interface{} {
+	l.Cluster = i.Cluster
+
 	if b.singleIndex {
 		return &logWithExtras{
-			WAFLog:  l,
-			Cluster: i.Cluster,
-			Tenant:  i.Tenant,
+			WAFLog: l,
+			Tenant: i.Tenant,
 		}
 	}
 	return l

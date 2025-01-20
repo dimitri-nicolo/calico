@@ -84,6 +84,7 @@ func TestFV_BGP(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, resp.Items, 1)
+		testutils.AssertBGPLogClusterAndReset(t, cluster, &resp.Items[0])
 		require.Equal(t, bgpLogs, resp.Items)
 	})
 
@@ -127,6 +128,7 @@ func TestFV_BGP(t *testing.T) {
 				{
 					LogTime: logTime.Add(time.Duration(i) * time.Second).Format(v1.BGPLogTimeFormat),
 					Host:    fmt.Sprintf("%d", i),
+					Cluster: cluster,
 				},
 			}, resp.Items, fmt.Sprintf("BGP #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
@@ -158,6 +160,7 @@ func TestFV_BGP(t *testing.T) {
 			{
 				LogTime: logTime.Add(time.Duration(lastItem) * time.Second).Format(v1.BGPLogTimeFormat),
 				Host:    fmt.Sprintf("%d", lastItem),
+				Cluster: cluster,
 			},
 		}, resp.Items, fmt.Sprintf("BGP #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))
