@@ -1225,10 +1225,6 @@ spec:
                                   If omitted, the API server Deployment will use its default value for nodeSelector.
                                   WARNING: Please note that this field will modify the default API server Deployment nodeSelector.
                                 type: object
-                              priorityClassName:
-                                description: PriorityClassName allows to specify a
-                                  PriorityClass resource to be used.
-                                type: string
                               tolerations:
                                 description: |-
                                   Tolerations is the API server pod's tolerations.
@@ -1450,38 +1446,6 @@ spec:
                                 type: array
                             type: object
                         type: object
-                    type: object
-                type: object
-              logging:
-                properties:
-                  apiServer:
-                    properties:
-                      logSeverity:
-                        default: Info
-                        description: LogSeverity defines log level for APIServer container.
-                        enum:
-                        - Fatal
-                        - Error
-                        - Warn
-                        - Info
-                        - Debug
-                        - Trace
-                        type: string
-                    type: object
-                  queryServer:
-                    properties:
-                      logSeverity:
-                        default: Info
-                        description: LogSeverity defines log level for QueryServer
-                          container.
-                        enum:
-                        - Fatal
-                        - Error
-                        - Warn
-                        - Info
-                        - Debug
-                        - Trace
-                        type: string
                     type: object
                 type: object
             type: object

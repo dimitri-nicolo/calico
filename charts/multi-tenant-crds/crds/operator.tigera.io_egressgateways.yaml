@@ -173,14 +173,16 @@ spec:
                 type: array
               logSeverity:
                 default: Info
-                description: LogSeverity defines the logging level of the Egress Gateway.
+                description: |-
+                  LogSeverity defines the logging level of the Egress Gateway.
+                  Default: Info
                 enum:
-                - Fatal
-                - Error
-                - Warn
-                - Info
-                - Debug
                 - Trace
+                - Debug
+                - Info
+                - Warn
+                - Error
+                - Fatal
                 type: string
               replicas:
                 default: 1

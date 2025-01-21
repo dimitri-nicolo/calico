@@ -6559,8 +6559,8 @@ spec:
                         enum:
                         - Error
                         - Warning
-                        - Info
                         - Debug
+                        - Info
                         type: string
                     type: object
                 type: object
@@ -15000,8 +15000,8 @@ spec:
                             enum:
                             - Error
                             - Warning
-                            - Info
                             - Debug
+                            - Info
                             type: string
                         type: object
                     type: object
