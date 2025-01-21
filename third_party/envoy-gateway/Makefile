@@ -59,7 +59,7 @@ image: $(ENVOY_GATEWAY_IMAGE)
 
 $(ENVOY_GATEWAY_IMAGE): $(ENVOY_GATEWAY_IMAGE_CREATED)
 $(ENVOY_GATEWAY_IMAGE_CREATED): build
-	$(DOCKER_BUILD) --build-arg ARCH=$(ARCH) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
+	$(DOCKER_BUILD) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
 
