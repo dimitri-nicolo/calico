@@ -51,6 +51,7 @@ import (
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	bpfiptables "github.com/projectcalico/calico/felix/bpf/iptables"
 	"github.com/projectcalico/calico/felix/bpf/kprobe"
+	"github.com/projectcalico/calico/felix/bpf/maps"
 	bpfmaps "github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	bpfnat "github.com/projectcalico/calico/felix/bpf/nat"
@@ -532,14 +533,32 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	)
 	dataplaneFeatures := featureDetector.GetFeatures()
 
+	var bpfIPSetsMap, dnsMpx, dnsSets maps.Map
+	var bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 maps.Map
 	if !config.BPFEnabled {
+		setDefault := false
 		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !dataplaneFeatures.NFQueueBypass {
 			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
-			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+			setDefault = true
 		}
-		if config.RulesConfig.NFTables && config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
-			log.Warning("NFTables does not support Inline policy mode. Change DNSPolicyMode to DelayDeniedPacket")
+		if config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+			if config.RulesConfig.NFTables {
+				log.Warning("NFTables does not support Inline policy mode. Falling back to DelayDeniedPacket")
+				setDefault = true
+			}
+			bpfIPSetsMap, dnsMpx, dnsSets = createDNSBpfMaps(proto.IPVersion_IPV4)
+			if config.IPv6Enabled {
+				bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 = createDNSBpfMaps(proto.IPVersion_IPV6)
+			}
+			err := bpfiptables.LoadDNSParserBPFProgram(config.BPFLogLevel, bpfmap.DNSMapsToPin())
+			if err != nil {
+				log.WithError(err).Warning("Failed to load BPF DNS parser program. Maybe the kernel is old. Falling back to DelayDeniedPacket")
+				setDefault = true
+			}
+		}
+		if setDefault {
 			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+			config.RulesConfig.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 		}
 	}
 
@@ -1004,7 +1023,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.MaxIPSetSize,
 			rules.IPSetIDAllTunnelNets))
 		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4, config.RulesConfig.NFTables))
-
 		cleanupBPFState(config)
 	} else {
 		// In BPF mode we still use iptables for raw egress policy, but we
@@ -1015,6 +1033,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// Cleanup any tcp stats program attached in IPTables mode. In eBPF mode, tcp stats program is part of
 		// the main Tc program.
 		tc.CleanUpTcpStatsPrograms()
+		// Cleanup any iptables bpf pins used for DNS inline policy mode.
+		bpfiptables.Cleanup()
 	}
 
 	interfaceRegexes := make([]string, len(config.RulesConfig.WorkloadIfacePrefixes))
@@ -1333,13 +1353,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("conntrackScanner started")
 	} else if config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
 		log.Info("DNSPolicy Inline enabled, setting up BPF IPSets and domain tracker.")
-		setupIPSetsAndDomainTracker(proto.IPVersion_IPV4, config, ipsetsManager, dp)
+		setupIPSetsAndDomainTracker(proto.IPVersion_IPV4, config, ipsetsManager, ruleRenderer, dp, bpfIPSetsMap, dnsMpx, dnsSets)
 		if config.IPv6Enabled {
-			setupIPSetsAndDomainTracker(proto.IPVersion_IPV6, config, ipsetsManagerV6, dp)
-		}
-		err = bpfiptables.LoadDNSParserBPFProgram(config.BPFLogLevel)
-		if err != nil {
-			log.WithError(err).Fatal("Failed to load BPF DNS parser program.")
+			setupIPSetsAndDomainTracker(proto.IPVersion_IPV6, config, ipsetsManagerV6, ruleRenderer, dp, bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6)
 		}
 	}
 
@@ -3376,7 +3392,7 @@ func startBPFDataplaneComponents(
 		bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithIPFamily(6))
 	}
 
-	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, bpfmaps.IpsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer)
+	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, bpfmaps.IpsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer, config.BPFEnabled, config.BPFLogLevel)
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
 	if config.BPFDNSPolicyMode == apiv3.BPFDNSPolicyModeInline {
@@ -3489,11 +3505,10 @@ func createBPFConntrackLivenessScanner(ipFamily proto.IPVersion, config Config) 
 func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
 	config Config,
 	ipSetsMgr *dpsets.IPSetsManager,
-	dp *InternalDataplane) {
-	ipsetsMap, err := bpfmap.CreateBPFIPSetsMap(ipFamily)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create BPF IPSets map.")
-	}
+	ruleRenderer rules.RuleRenderer,
+	dp *InternalDataplane,
+	ipsetsMap, dnsMpx, dnsSets maps.Map) {
+
 	ipSetIDAllocator := idalloc.New()
 	ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
 
@@ -3507,19 +3522,34 @@ func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
 		ipSetProtoEntry = bpfipsets.ProtoIPSetMemberToBPFEntryV6
 	}
 
-	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, ipsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer)
+	ipSets := bpfipsets.NewBPFIPSets(ipSetConfig, ipSetIDAllocator, ipsetsMap, ipSetEntry, ipSetProtoEntry, dp.loopSummarizer, config.BPFEnabled, config.BPFLogLevel)
 	ipSets.SetIPSetNameFilter(func(ipSetName string) bool {
 		return strings.HasPrefix(ipSetName, "d:")
 	})
+	ruleRenderer.SetIPSetIDGetter(ipSetIDAllocator, uint8(ipFamily))
 	dp.ipSets = append(dp.ipSets, ipSets)
 	ipSetsMgr.AddDataplane(ipSets)
-	tracker, err := dnsresolver.NewDomainTracker(int(ipFamily), func(id string) uint64 {
+	tracker, err := dnsresolver.NewDomainTrackerWithMaps(func(id string) uint64 {
 		return ipSets.IDStringToUint64(id)
-	})
+	}, dnsMpx, dnsSets)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create BPF domain tracker.")
 	}
 	ipSetsMgr.AddDomainTracker(tracker)
+}
+
+func createDNSBpfMaps(ipFamily proto.IPVersion) (maps.Map, maps.Map, maps.Map) {
+	ipsetsMap, err := bpfmap.CreateBPFIPSetsMap(ipFamily)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create BPF IPSets map.")
+	}
+
+	dnsMpx, dnsSets, err := dnsresolver.CreateBPFMapsForDNS(int(ipFamily))
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create BPF DNS maps.")
+	}
+
+	return ipsetsMap, dnsMpx, dnsSets
 }
 
 func cleanupBPFState(config Config) {
@@ -3528,9 +3558,14 @@ func cleanupBPFState(config Config) {
 	if err != nil {
 		log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 	}
-	tc.CleanUpProgramsAndPins()
 	bpfutils.RemoveBPFSpecialDevices()
 	if config.DNSPolicyMode != apiv3.DNSPolicyModeInline {
+		// Cleanup all bpf pins including those needed for iptables DNS inline policy.
+		tc.CleanUpProgramsAndPins()
 		bpfiptables.Cleanup()
+	} else {
+		// Cleanup all bpf pins and programs except DNS,
+		// When felix restarts in iptables mode/switches from bpf to iptables.
+		tc.CleanUpProgramsAndPinsExceptDNS()
 	}
 }

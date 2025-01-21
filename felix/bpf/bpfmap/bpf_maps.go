@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/arp"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/bpf/counters"
+	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
 	"github.com/projectcalico/calico/felix/bpf/hook"
 	"github.com/projectcalico/calico/felix/bpf/ifstate"
@@ -203,4 +204,13 @@ func (i *IPMaps) slice() []maps.Map {
 type pinnedMap interface {
 	Path() string
 	Close() error
+}
+
+func DNSMapsToPin() []string {
+	return []string{ipsets.MapParameters.VersionedName(),
+		dnsresolver.DNSPfxMapParams.VersionedName(),
+		dnsresolver.DNSSetMapParams.VersionedName(),
+		ipsets.MapV6Parameters.VersionedName(),
+		dnsresolver.DNSPfxMapParamsV6.VersionedName(),
+		dnsresolver.DNSSetMapParamsV6.VersionedName()}
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/bpf/iptables"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -77,6 +78,9 @@ type bpfIPSets struct {
 	lg *log.Entry
 
 	filterIPSet func(string) bool
+
+	bpfDataplane bool
+	bpfLogLevel  string
 }
 
 func NewBPFIPSets(
@@ -86,6 +90,8 @@ func NewBPFIPSets(
 	entryFromBytes func([]byte) IPSetEntryInterface,
 	protoIPSetMemberToBPFEntry func(uint64, string) IPSetEntryInterface,
 	opRecorder logutils.OpRecorder,
+	bpfDataplane bool,
+	bpfLogLevel string,
 ) *bpfIPSets {
 	return &bpfIPSets{
 		IPVersionConfig:            ipVersionConfig,
@@ -98,6 +104,8 @@ func NewBPFIPSets(
 		ipSetIDAllocator:           ipSetIDAllocator,
 		opRecorder:                 opRecorder,
 		lg:                         log.WithField("bpf family", ipVersionConfig.Family),
+		bpfDataplane:               bpfDataplane,
+		bpfLogLevel:                bpfLogLevel,
 	}
 }
 
@@ -171,6 +179,14 @@ func (m *bpfIPSets) AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members 
 	m.lg.WithFields(log.Fields{"stringID": setMetadata.SetID, "uint64ID": ipSet.ID, "members": members}).Info("IP set added")
 	ipSet.ReplaceMembers(members, m.protoIPSetMemberToBPFEntry)
 	m.markIPSetDirty(ipSet)
+	// bpf ipsets are used in a non-bpf DP.
+	if !m.bpfDataplane {
+		// load the ipset match program and pin it.
+		err := iptables.LoadIPSetsPolicyProgram(ipSet.ID, m.bpfLogLevel, uint8(m.IPVersionConfig.Family.Version()))
+		if err != nil {
+			m.lg.WithFields(log.Fields{"setID": ipSet.ID, "error": err}).Panic("error loading ipset match program")
+		}
+	}
 }
 
 // RemoveIPSet queues up the removal of an IP set, it need not be empty.  The IP sets will be
@@ -188,6 +204,12 @@ func (m *bpfIPSets) RemoveIPSet(setID string) {
 	ipSet.RemoveAll()
 	ipSet.Deleted = true
 	m.markIPSetDirty(ipSet)
+	if !m.bpfDataplane {
+		err := iptables.RemoveIPSetMatchProgram(ipSet.ID, uint8(m.IPVersionConfig.Family.Version()))
+		if err != nil {
+			m.lg.WithFields(log.Fields{"setID": ipSet.ID, "error": err}).Warn("error removing ipset match program")
+		}
+	}
 }
 
 // AddMembers adds the given members to the IP set.  Filters out members that are of the incorrect

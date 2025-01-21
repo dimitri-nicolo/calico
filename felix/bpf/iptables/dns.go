@@ -1,3 +1,5 @@
+// Copyright (c) 2025 Tigera, Inc. All rights reserved.
+
 package iptables
 
 import (
@@ -8,12 +10,10 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
-	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
-	"github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 )
 
-func progFileName(logLevel string, ipver int) string {
+func progFileName(logLevel string, ipver uint8) string {
 	logLevel = strings.ToLower(logLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"
@@ -22,28 +22,37 @@ func progFileName(logLevel string, ipver int) string {
 	return fmt.Sprintf("ipt_match_ipset_%s_co-re_v%d.o", logLevel, ipver)
 }
 
-func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver int) error {
+func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver uint8) error {
+	if _, err := os.Stat(bpfdefs.IPSetMatchProg(ipSetID, ipver)); err == nil {
+		return nil
+	}
+
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, progFileName(bpfLogLevel, ipver))
 	obj, err := bpf.LoadObject(preCompiledBinary, &libbpf.IPTDnsGlobalData{IPSetID: ipSetID})
 	if err != nil {
 		return fmt.Errorf("error loading ipsets policy program for dns %w", err)
 	}
 	defer obj.Close()
-	pinPath := path.Join(bpfdefs.DnsObjDir, fmt.Sprintf("%d_v%d", ipSetID, ipver))
-	err = obj.PinPrograms(pinPath)
+	err = obj.PinPrograms(bpfdefs.IPSetMatchPinPath(ipSetID, ipver))
 	if err != nil {
 		return fmt.Errorf("error pinning program %v", err)
 	}
 	return nil
 }
 
-func LoadDNSParserBPFProgram(bpfLogLevel string) error {
-	mapsToPin := []string{ipsets.MapParameters.VersionedName(),
-		dnsresolver.DNSPfxMapParams.VersionedName(),
-		dnsresolver.DNSSetMapParams.VersionedName(),
-		ipsets.MapV6Parameters.VersionedName(),
-		dnsresolver.DNSPfxMapParamsV6.VersionedName(),
-		dnsresolver.DNSSetMapParamsV6.VersionedName()}
+func RemoveIPSetMatchProgram(ipSetID uint64, ipver uint8) error {
+	progPath := bpfdefs.IPSetMatchProg(ipSetID, ipver)
+	err := os.RemoveAll(progPath)
+	if err != nil {
+		return fmt.Errorf("error deleting ipset match program at %s : %w", progPath, err)
+	}
+	return nil
+}
+
+func LoadDNSParserBPFProgram(bpfLogLevel string, dnsMapsToPin []string) error {
+	if _, err := os.Stat(bpfdefs.DnsParserPinPath); err == nil {
+		return nil
+	}
 	logLevel := strings.ToLower(bpfLogLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"
@@ -57,7 +66,7 @@ func LoadDNSParserBPFProgram(bpfLogLevel string) error {
 		return fmt.Errorf("error creating dns obj directory %w", err)
 	}
 
-	obj, err := bpf.LoadObject(preCompiledBinary, nil, mapsToPin...)
+	obj, err := bpf.LoadObject(preCompiledBinary, nil, dnsMapsToPin...)
 	if err != nil {
 		return fmt.Errorf("error loading bpf dns parser program for iptables %w", err)
 	}
@@ -67,7 +76,6 @@ func LoadDNSParserBPFProgram(bpfLogLevel string) error {
 		return fmt.Errorf("error pinning program %v", err)
 	}
 	return nil
-
 }
 
 func CreateDNSObjPinDir() error {

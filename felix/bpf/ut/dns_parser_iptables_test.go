@@ -3,15 +3,14 @@
 package ut_test
 
 import (
-	"fmt"
 	"net"
 	"os"
-	"path"
 	"testing"
 
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
+	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/iptables"
 	"github.com/projectcalico/calico/felix/ip"
@@ -27,8 +26,7 @@ func TestMatchBPFIpsetsProgramForIPTablesV6(t *testing.T) {
 
 	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 6)
 	Expect(err).NotTo(HaveOccurred())
-
-	pinPath := path.Join(bpfdefs.DnsObjDir+fmt.Sprintf("%d_v6", setID)) + "/" + bpfdefs.IPTMatchIPSetProgram
+	pinPath := bpfdefs.IPSetMatchProg(setID, 6)
 	_, err = os.Stat(pinPath)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -71,8 +69,7 @@ func TestMatchBPFIpsetsProgramForIPTables(t *testing.T) {
 
 	err = iptables.LoadIPSetsPolicyProgram(setID, "debug", 4)
 	Expect(err).NotTo(HaveOccurred())
-
-	pinPath := path.Join(bpfdefs.DnsObjDir+fmt.Sprintf("%d_v4", setID)) + "/" + bpfdefs.IPTMatchIPSetProgram
+	pinPath := bpfdefs.IPSetMatchProg(setID, 4)
 	_, err = os.Stat(pinPath)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -111,10 +108,10 @@ func TestBPFDnsParserProgramForIPTables(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	defer iptables.Cleanup()
 
-	err = iptables.LoadDNSParserBPFProgram("debug")
+	err = iptables.LoadDNSParserBPFProgram("debug", bpfmap.DNSMapsToPin())
 	Expect(err).NotTo(HaveOccurred())
 
-	pinPath := bpfdefs.DnsObjDir + "cali_ipt_parse_dns"
+	pinPath := bpfdefs.DnsObjDir + "/cali_ipt_parse_dns"
 	_, err = os.Stat(pinPath)
 	Expect(err).NotTo(HaveOccurred())
 

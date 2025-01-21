@@ -301,7 +301,6 @@ static long dns_process_answer(__u32 i, void *__ctx)
 		goto failed;
 	}
 
-	CALI_DEBUG("DNS: skipped %d bytes of name\n", bytes);
 	off += bytes + 1;
 
 	struct dns_rr *rr = (void *) scratch->buf;
@@ -319,8 +318,6 @@ static long dns_process_answer(__u32 i, void *__ctx)
 					bpf_ntohs(rr->type), bpf_ntohs(rr->class));
 			goto failed;
 		}
-		CALI_DEBUG("DNS: IP 0x%x\n", *(__u32*)scratch->ip);
-
 		bpf_for_each_map_elem(&cali_dns_sets62, dns_update_sets_with_ip6, ictx, 0);
 
 		barrier(); /* use the barrier so that verifier does not complain abusing map_ptr */
@@ -332,8 +329,6 @@ static long dns_process_answer(__u32 i, void *__ctx)
 					bpf_ntohs(rr->type), bpf_ntohs(rr->class));
 			goto failed;
 		}
-		CALI_DEBUG("DNS: IP 0x%x\n", *(__u32*)scratch->ip);
-
 		bpf_for_each_map_elem(&cali_dns_sets2, dns_update_sets_with_ip, ictx, 0);
 
 		barrier(); /* use the barrier so that verifier does not complain abusing map_ptr */
@@ -387,6 +382,7 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 	struct dns_scratch *scratch;
 	struct dnshdr dnshdr;
 
+#if !CALI_F_IPT_BPF
 	if (!bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_loop) ||
 			!bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_for_each_map_elem)) {
 		/* If there is no bpf_loop or bpf_for_each_map_elem support,
@@ -394,6 +390,7 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 		 */
 		return;
 	}
+#endif
 
 	if (!(scratch = dns_scratch_get())) {
 		CALI_DEBUG("DNS: could not get scratch.\n");
@@ -484,7 +481,6 @@ static CALI_BPF_INLINE void dns_process_datagram(struct cali_tc_ctx *ctx)
 
 	if (v) {
 		CALI_DEBUG("DNS: HIT key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
-		CALI_DEBUG("DNS: HIT id 0x%llx\n", v->dns_id);
 	} else {
 		CALI_DEBUG("MISS key '%s' len '%d'\n", scratch->lpm_key.rev_name, scratch->lpm_key.len);
 		return;

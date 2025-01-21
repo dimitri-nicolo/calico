@@ -197,18 +197,20 @@ func GetK8sDatastoreInfra(index K8sInfraIndex, opts ...CreateOption) (*K8sDatast
 }
 
 func (kds *K8sDatastoreInfra) PerTestSetup(index K8sInfraIndex) {
-	// In BPF mode, start BPF logging.
-	arch := utils.GetSysArch()
-
 	if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" && index == K8SInfraLocalCluster {
-		kds.bpfLog = containers.Run("bpf-log",
-			containers.RunOpts{
-				AutoRemove:       true,
-				IgnoreEmptyLines: true,
-			}, "--privileged",
-			"calico/bpftool:v5.3-"+arch, "/bpftool", "prog", "tracelog")
+		kds.RunBPFLog()
 	}
 	K8sInfra[index].runningTest = ginkgo.CurrentGinkgoTestDescription().FullTestText
+}
+
+func (kds *K8sDatastoreInfra) RunBPFLog() {
+	arch := utils.GetSysArch()
+	kds.bpfLog = containers.Run("bpf-log",
+		containers.RunOpts{
+			AutoRemove:       true,
+			IgnoreEmptyLines: true,
+		}, "--privileged",
+		"calico/bpftool:v5.3-"+arch, "/bpftool", "prog", "tracelog")
 }
 
 func (kds *K8sDatastoreInfra) runK8sApiserver() {

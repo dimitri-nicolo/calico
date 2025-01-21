@@ -14,7 +14,11 @@
 
 package bpfdefs
 
-import "os"
+import (
+	"fmt"
+	"os"
+	"path"
+)
 
 const (
 	DefaultBPFfsPath    = "/sys/fs/bpf"
@@ -23,9 +27,9 @@ const (
 	GlobalPinDir = DefaultBPFfsPath + "/tc/globals/"
 	ObjectDir    = "/usr/lib/calico/bpf"
 
-	DnsObjDir = DefaultBPFfsPath + "/dns/"
+	DnsObjDir = DefaultBPFfsPath + "/dns"
 
-	DnsParserPinPath = DnsObjDir + "cali_ipt_parse_dns"
+	DnsParserPinPath = DnsObjDir + "/cali_ipt_parse_dns"
 
 	IPTMatchIPSetProgram = "cali_ipt_match_ipset"
 )
@@ -36,4 +40,12 @@ func GetCgroupV2Path() string {
 		return DefaultCgroupV2Path
 	}
 	return cgroupV2CustomPath
+}
+
+func IPSetMatchProg(ipSetID uint64, ipver uint8) string {
+	return path.Join(IPSetMatchPinPath(ipSetID, ipver), IPTMatchIPSetProgram)
+}
+
+func IPSetMatchPinPath(ipSetID uint64, ipver uint8) string {
+	return path.Join(DnsObjDir, fmt.Sprintf("ipset_matcher_%d_v%d", ipSetID, ipver))
 }
