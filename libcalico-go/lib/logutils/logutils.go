@@ -58,10 +58,11 @@ func FilterLevels(maxLevel log.Level) []log.Level {
 	return levels
 }
 
-func ConfigureFormatter(componentName string) {
+func ConfigureFormatter(componentName string) *Formatter {
 	formatter := &Formatter{Component: componentName}
 	formatter.init()
 	log.SetFormatter(formatter)
+	return formatter
 }
 
 // Formatter is our custom log formatter designed to balance ease of machine processing
