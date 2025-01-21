@@ -1161,6 +1161,24 @@ type FelixConfigurationSpec struct {
 	// flushes the buffered L7 logs. A value of 0 means no limit. [Default: 1500]
 	L7LogsFilePerNodeLimit *int `json:"l7LogsFilePerNodeLimit,omitempty"`
 
+	// WAFEventLogsFlushInterval configures the interval at which Felix exports WAFEvent logs.
+	// [Default: 15s]
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$`
+	WAFEventLogsFlushInterval *metav1.Duration `json:"wafEventLogsFlushInterval,omitempty" configv1timescale:"seconds"`
+	// WAFEventLogsFileEnabled controls logging WAFEvent logs to a file. If false no WAFEvent logging to file will occur.
+	// [Default: false]
+	WAFEventLogsFileEnabled *bool `json:"wafEventLogsFileEnabled,omitempty"`
+	// WAFEventLogsFileDirectory sets the directory where WAFEvent log files are stored.
+	// [Default: /var/log/calico/waf]
+	WAFEventLogsFileDirectory *string `json:"wafEventLogsFileDirectory,omitempty"`
+	// WAFEventLogsFileMaxFiles sets the number of WAFEvent log files to keep.
+	// [Default: 5]
+	WAFEventLogsFileMaxFiles *int `json:"wafEventLogsFileMaxFiles,omitempty"`
+	// WAFEventLogsFileMaxFileSizeMB sets the max size in MB of WAFEvent log files before rotation.
+	// [Default: 100]
+	WAFEventLogsFileMaxFileSizeMB *int `json:"wafEventLogsFileMaxFileSizeMB,omitempty"`
+
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.
 	WindowsNetworkName *string `json:"windowsNetworkName,omitempty"`

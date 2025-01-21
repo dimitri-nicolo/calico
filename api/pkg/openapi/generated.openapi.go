@@ -6765,6 +6765,40 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
+					"wafEventLogsFlushInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFlushInterval configures the interval at which Felix exports WAFEvent logs. [Default: 15s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"wafEventLogsFileEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileEnabled controls logging WAFEvent logs to a file. If false no WAFEvent logging to file will occur. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"wafEventLogsFileDirectory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileDirectory sets the directory where WAFEvent log files are stored. [Default: /var/log/calico/waf]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"wafEventLogsFileMaxFiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileMaxFiles sets the number of WAFEvent log files to keep. [Default: 5]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"wafEventLogsFileMaxFileSizeMB": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileMaxFileSizeMB sets the max size in MB of WAFEvent log files before rotation. [Default: 100]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"windowsNetworkName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",

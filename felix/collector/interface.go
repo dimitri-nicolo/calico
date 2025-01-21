@@ -29,4 +29,7 @@ type Collector interface {
 	SetProcessInfoCache(ProcessInfoCache)
 	SetDomainLookup(EgressDomainCache)
 	AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpsets.IPSetsManager)
+	WAFReportingHandler() func(*proto.WAFEvent)
+	LogWAFEvents([]*proto.WAFEvent)
+	SetWAFEventsReporter(types.Reporter)
 }

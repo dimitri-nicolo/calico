@@ -51,8 +51,7 @@ func (_ *mockCollector) LogDNS(net.IP, net.IP, *layers.DNS, *time.Duration) {}
 
 func (_ *mockCollector) SetDNSLogReporter(types.Reporter) {}
 
-func (_ *mockCollector) LogL7(*proto.HTTPData, *collector.Data, tuple.Tuple, int) {
-}
+func (_ *mockCollector) LogL7(*proto.HTTPData, *collector.Data, tuple.Tuple, int) {}
 
 func (_ *mockCollector) SetL7LogReporter(types.Reporter) {}
 
@@ -70,6 +69,12 @@ func (_ *mockCollector) SetDomainLookup(collector.EgressDomainCache) {}
 
 func (_ *mockCollector) AddNewDomainDataplaneToIpSetsManager(ipsets.IPFamily, *dpipsets.IPSetsManager) {
 }
+
+func (_ *mockCollector) WAFReportingHandler() func(*proto.WAFEvent) { return nil }
+
+func (_ *mockCollector) LogWAFEvents([]*proto.WAFEvent) {}
+
+func (_ *mockCollector) SetWAFEventsReporter(types.Reporter) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

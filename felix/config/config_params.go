@@ -506,6 +506,12 @@ type Config struct {
 	L7LogsFileAggregationURLCharLimit    int           `config:"int;250"`
 	L7LogsFilePerNodeLimit               int           `config:"int;1500"`
 
+	WAFEventLogsFlushInterval     time.Duration `config:"seconds;15"`
+	WAFEventLogsFileEnabled       bool          `config:"bool;false"`
+	WAFEventLogsFileDirectory     string        `config:"string;/var/log/calico/waf"`
+	WAFEventLogsFileMaxFiles      int           `config:"int;5"`
+	WAFEventLogsFileMaxFileSizeMB int           `config:"int;100"`
+
 	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
 	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`
 	WindowsStatsDumpFilePath        string        `config:"file;c:\\TigeraCalico\\stats\\dump;die-on-fail"`

@@ -48,7 +48,7 @@ const (
 	numBaseFelixConfigs = 151
 
 	// Add private-only fields to this count.
-	numPrivateOnlyFelixConfigs = 111
+	numPrivateOnlyFelixConfigs = 116
 )
 
 var _ = FDescribe("Test the generic configuration update processor and the concrete implementations", func() {

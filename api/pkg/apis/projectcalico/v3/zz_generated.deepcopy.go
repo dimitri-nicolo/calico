@@ -3389,6 +3389,31 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.WAFEventLogsFlushInterval != nil {
+		in, out := &in.WAFEventLogsFlushInterval, &out.WAFEventLogsFlushInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.WAFEventLogsFileEnabled != nil {
+		in, out := &in.WAFEventLogsFileEnabled, &out.WAFEventLogsFileEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.WAFEventLogsFileDirectory != nil {
+		in, out := &in.WAFEventLogsFileDirectory, &out.WAFEventLogsFileDirectory
+		*out = new(string)
+		**out = **in
+	}
+	if in.WAFEventLogsFileMaxFiles != nil {
+		in, out := &in.WAFEventLogsFileMaxFiles, &out.WAFEventLogsFileMaxFiles
+		*out = new(int)
+		**out = **in
+	}
+	if in.WAFEventLogsFileMaxFileSizeMB != nil {
+		in, out := &in.WAFEventLogsFileMaxFileSizeMB, &out.WAFEventLogsFileMaxFileSizeMB
+		*out = new(int)
+		**out = **in
+	}
 	if in.WindowsNetworkName != nil {
 		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
 		*out = new(string)

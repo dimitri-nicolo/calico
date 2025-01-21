@@ -5,19 +5,16 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/fs"
 	"net"
 	"net/url"
 	"os"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
 	"github.com/projectcalico/calico/app-policy/checker"
-	"github.com/projectcalico/calico/app-policy/logger"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
@@ -32,11 +29,9 @@ type Dikastes struct {
 	listenNetwork, listenAddress string
 	perHostAlpEnabled            bool
 	perHostWafEnabled            bool
-	wafLogFile                   string
 	wafRulesetRootFS             fs.FS
 	wafRulesetFiles              []string
 	wafDirectives                []string
-	wafEventsFlushDuration       time.Duration
 	grpcServerOptions            []grpc.ServerOption
 	policyStoreManager           policystore.PolicyStoreManager
 
@@ -77,10 +72,9 @@ func WithALPConfig(enabled bool) DikastesServerOptions {
 	}
 }
 
-func WithWAFConfig(enabled bool, logfile, rulesetRootDir string, files, directives []string) DikastesServerOptions {
+func WithWAFConfig(enabled bool, rulesetRootDir string, files, directives []string) DikastesServerOptions {
 	return func(ds *Dikastes) {
 		ds.perHostWafEnabled = enabled
-		ds.wafLogFile = logfile
 		if rulesetRootDir != "" {
 			// When a ruleset root path is provided, we use it as a root
 			// the fs used to configure WAF rules.
@@ -93,16 +87,9 @@ func WithWAFConfig(enabled bool, logfile, rulesetRootDir string, files, directiv
 	}
 }
 
-func WithWAFFlushDuration(duration time.Duration) DikastesServerOptions {
-	return func(ds *Dikastes) {
-		ds.wafEventsFlushDuration = duration
-	}
-}
-
 func NewDikastesServer(opts ...DikastesServerOptions) *Dikastes {
 	s := &Dikastes{
-		Ready:                  make(chan struct{}),
-		wafEventsFlushDuration: time.Second * 15,
+		Ready: make(chan struct{}),
 	}
 	for _, o := range opts {
 		o(s)
@@ -181,7 +168,9 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 	)
 	syncClient.RegisterGRPCServices(gs)
 	dpStats.RegisterFlushCallback(syncClient.OnStatsCacheFlush)
-	go syncClient.Start(ctx)
+	if err := syncClient.Start(ctx); err != nil {
+		log.WithError(err).Fatal("failed on creating gRPC client")
+	}
 
 	// register ALP check provider. registrations are ordered (first-registered-processed-first)
 	checkServerOptions = append(
@@ -190,10 +179,7 @@ func (s *Dikastes) Serve(ctx context.Context, readyCh ...chan struct{}) {
 		checker.WithRegisteredCheckProvider(checker.NewALPCheckProvider(s.subscriptionType, s.perHostAlpEnabled)),
 	)
 
-	wafLogHandler := logger.New(setupWAFLogging(s.wafLogFile)...)
-	events := waf.NewEventsPipeline(wafLogHandler.Process)
-	go events.Start(ctx, s.wafEventsFlushDuration)
-
+	events := waf.NewEventsPipeline(syncClient.OnWAFEvent)
 	wafServer, err := waf.New(s.wafRulesetRootFS, s.wafRulesetFiles, s.wafDirectives, s.perHostWafEnabled, events)
 	if err != nil {
 		log.Fatalf("cannot initialize WAF: %v", err)
@@ -235,21 +221,4 @@ func (s *Dikastes) Addr() string {
 	}
 	u.Host = s.listenAddress
 	return u.String()
-}
-
-func setupWAFLogging(logFile string) []io.Writer {
-	res := []io.Writer{os.Stderr}
-	if logFile == "" {
-		// blank logfile param. skip logfile setup
-		log.Warn("only logging to stderr")
-		return res
-	}
-	w, err := logger.FileWriter(logFile)
-	if err != nil {
-		log.Warnf("cannot create log file writer (%v). writing to stderr only", err)
-		return res
-	} else {
-		res = append(res, w)
-	}
-	return res
 }

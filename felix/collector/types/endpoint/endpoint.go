@@ -74,7 +74,7 @@ func GetMetadata(ed *calc.EndpointData, ip [16]byte) (Metadata, error) {
 
 	switch k := ed.Key.(type) {
 	case model.WorkloadEndpointKey:
-		ns, name, err := deconstructNamespaceAndNameFromWepName(k.WorkloadID)
+		ns, name, err := DeconstructNamespaceAndNameFromWepName(k.WorkloadID)
 		if err != nil {
 			return Metadata{}, err
 		}
@@ -127,7 +127,7 @@ func getSubnetType(addrBytes [16]byte) subnetType {
 	return PublicNet
 }
 
-func deconstructNamespaceAndNameFromWepName(wepName string) (string, string, error) {
+func DeconstructNamespaceAndNameFromWepName(wepName string) (string, string, error) {
 	parts := strings.Split(wepName, "/")
 	if len(parts) == 2 {
 		return parts[0], parts[1], nil
