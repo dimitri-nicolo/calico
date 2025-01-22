@@ -22,6 +22,10 @@ type GlobalData interface {
 	Set(m *Map) error
 }
 
+type IPTDnsGlobalData struct {
+	IPSetID uint64
+}
+
 type TcGlobalData struct {
 	IfaceName      string
 	HostIPv4       [16]byte

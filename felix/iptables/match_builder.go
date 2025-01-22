@@ -387,3 +387,7 @@ func (m matchCriteria) OwnerGroup(grp string) generictables.MatchCriteria {
 func (m matchCriteria) SourceDestSet(name string) generictables.MatchCriteria {
 	return append(m, fmt.Sprintf("-m set --match-set %s src,dst", name))
 }
+
+func (m matchCriteria) BPFProgram(pinPath string) generictables.MatchCriteria {
+	return append(m, fmt.Sprintf("-m bpf --object-pinned %s", pinPath))
+}

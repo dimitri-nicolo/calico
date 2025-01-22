@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/hashutils"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -226,6 +227,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		newMatch:          r.NewMatch,
 		markAllBlocksPass: r.MarkScratch0,
 		markThisBlockPass: r.MarkScratch1,
+		dnsPolicyMode:     r.Config.DNSPolicyMode,
 	}
 
 	// Port matches.  We only need to render blocks of ports if, in total, there's more than one
@@ -276,10 +278,21 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
 	// in the main rule below.
 	if (len(ruleCopy.DstIpSetIds) == 1) && (len(ruleCopy.DstDomainIpSetIds) == 1) {
-		matchBlockBuilder.AppendDestIPSetMatchBlock(
-			r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
-			r.nameForIPSet(ruleCopy.DstDomainIpSetIds[0], ipVersion),
-		)
+		if r.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+			pinPath, err := r.bpfIPSetMatchProgram(ruleCopy.DstDomainIpSetIds[0], ipVersion)
+			if err != nil {
+				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", ruleCopy.DstDomainIpSetIds[0])
+			}
+			matchBlockBuilder.AppendDestIPSetBPFMatchBlock(
+				r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
+				pinPath,
+			)
+		} else {
+			matchBlockBuilder.AppendDestIPSetMatchBlock(
+				r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
+				r.nameForIPSet(ruleCopy.DstDomainIpSetIds[0], ipVersion),
+			)
+		}
 		ruleCopy.DstIpSetIds = nil
 		ruleCopy.DstDomainIpSetIds = nil
 	}
@@ -348,6 +361,8 @@ type matchBlockBuilder struct {
 	actions  generictables.ActionFactory
 
 	Rules []generictables.Rule
+
+	dnsPolicyMode apiv3.DNSPolicyMode
 }
 
 func (r *matchBlockBuilder) AppendPortMatchBlock(
@@ -441,6 +456,26 @@ func (r *matchBlockBuilder) AppendDestIPSetMatchBlock(ipsetNames ...string) {
 			Action: r.actions.SetMark(markToSet),
 		})
 	}
+
+	// Append the end-of-block rules.
+	r.finishPositiveBlock()
+}
+
+func (r *matchBlockBuilder) AppendDestIPSetBPFMatchBlock(ipsetName, bpfIPSetMatchPinPath string) {
+	// Write out the initial "reset" rule if this is the first block.
+	r.maybeAppendInitialRule(0)
+	// Figure out which bit to set.  See comment in positiveBlockMarkToSet() for details.
+	markToSet := r.positiveBlockMarkToSet()
+
+	r.Rules = append(r.Rules, generictables.Rule{
+		Match:  r.newMatch().DestIPSet(ipsetName),
+		Action: r.actions.SetMark(markToSet),
+	})
+
+	r.Rules = append(r.Rules, generictables.Rule{
+		Match:  r.newMatch().BPFProgram(bpfIPSetMatchPinPath),
+		Action: r.actions.SetMark(markToSet),
+	})
 
 	// Append the end-of-block rules.
 	r.finishPositiveBlock()
@@ -747,6 +782,13 @@ func (r *DefaultRuleRenderer) nameForIPSet(ipsetID string, ipVersion uint8) stri
 	}
 }
 
+func (r *DefaultRuleRenderer) ipSetIDForBPFIPSets(ipsetID string, ipVersion uint8) uint64 {
+	if ipVersion == 4 {
+		return r.IPSetIDGetterV4.GetNoAlloc(ipsetID)
+	}
+	return r.IPSetIDGetterV6.GetNoAlloc(ipsetID)
+}
+
 func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion uint8) generictables.MatchCriteria {
 	match := r.NewMatch()
 
@@ -816,12 +858,24 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	if len(pRule.DstDomainIpSetIds) == 1 {
-		ipsetName := r.nameForIPSet(pRule.DstDomainIpSetIds[0], ipVersion)
-		match = match.DestIPSet(ipsetName)
-		logCxt.WithFields(log.Fields{
-			"ipsetID":   pRule.DstDomainIpSetIds[0],
-			"ipSetName": ipsetName,
-		}).Debug("Adding dst domain IP set match")
+		if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+			pinPath, err := r.bpfIPSetMatchProgram(pRule.DstDomainIpSetIds[0], ipVersion)
+			if err != nil {
+				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", pRule.DstDomainIpSetIds[0])
+			}
+			match = match.BPFProgram(pinPath)
+			logCxt.WithFields(log.Fields{
+				"ipsetID":     pRule.DstDomainIpSetIds[0],
+				"programPath": pinPath,
+			}).Debug("Adding BPF dst domain IP set match")
+		} else {
+			ipsetName := r.nameForIPSet(pRule.DstDomainIpSetIds[0], ipVersion)
+			match = match.DestIPSet(ipsetName)
+			logCxt.WithFields(log.Fields{
+				"ipsetID":   pRule.DstDomainIpSetIds[0],
+				"ipSetName": ipsetName,
+			}).Debug("Adding dst domain IP set match")
+		}
 	} else if len(pRule.DstDomainIpSetIds) > 1 {
 		log.WithField("rule", pRule).Panic(
 			"CalculateRuleMatch() passed more than one DstDomainIpSetIds.")
@@ -1009,4 +1063,17 @@ func ProfileChainName(prefix ProfileChainNamePrefix, profID *proto.ProfileID, nf
 		profID.Name,
 		maxLen,
 	)
+}
+
+func IsDomainIPSet(ipSetName string) bool {
+	ipSetID := ipsets.StripIPSetNamePrefix(ipSetName)
+	return strings.HasPrefix(ipSetID, "d:")
+}
+
+func (r *DefaultRuleRenderer) bpfIPSetMatchProgram(ipSetName string, ipver uint8) (string, error) {
+	ipSetID := r.ipSetIDForBPFIPSets(ipSetName, ipver)
+	if ipSetID == 0 {
+		return "", fmt.Errorf("error getting bpf ipset ID for ipset %s", ipSetName)
+	}
+	return bpfdefs.IPSetMatchProg(ipSetID, ipver), nil
 }

@@ -23,6 +23,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -605,6 +606,49 @@ var _ = Describe("Static", func() {
 									{
 										Match:  Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
 										Action: NfqueueWithBypassAction{QueueNum: 101},
+									},
+									// DNS request capture.
+									{
+										Match:  Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: JumpAction{Target: "cali-log-dns"},
+									},
+									// Incoming host endpoint chains.
+									{Action: ClearMarkAction{Mark: 0xe1}},
+									{
+										Match:  Match().MarkClear(0x10),
+										Action: JumpAction{Target: ChainDispatchFromHostEndPointForward},
+									},
+									// Per-prefix workload jump rules.
+									{
+										Match:  Match().InInterface("cali+"),
+										Action: JumpAction{Target: ChainFromWorkloadDispatch},
+									},
+									{
+										Match:  Match().OutInterface("cali+"),
+										Action: JumpAction{Target: ChainToWorkloadDispatch},
+									},
+									// Outgoing host endpoint chains.
+									{Action: JumpAction{Target: ChainDispatchToHostEndpointForward}},
+									{Action: JumpAction{Target: ChainCIDRBlock}},
+								},
+							}))
+						})
+					})
+					Describe("DNSMode is DNSPolicyModeInline", func() {
+						BeforeEach(func() {
+							conf.DNSPolicyMode = apiv3.DNSPolicyModeInline
+						})
+						It("should include the expected forward chain in the filter chains when DNSMode is Inline", func() {
+							// Only adding a single test for static rules in the DelayDNSResponse mode since the generation
+							// is common to the INPUT, OUTPUT and FORWARD chains.
+							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&generictables.Chain{
+								Name: "cali-FORWARD",
+								Rules: []generictables.Rule{
+									// DNS response capture and queue.
+									{
+										Match: Match().OutInterface("cali+").Protocol("udp").
+											ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP).BPFProgram(bpfdefs.DnsParserPinPath),
+										Action: JumpAction{Target: "cali-log-dns"},
 									},
 									// DNS request capture.
 									{

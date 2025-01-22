@@ -3510,17 +3510,22 @@ NoDelay - Felix does not introduce any delay to the packets. DNS rules may not h
 the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
 connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 
+Inline - Parses DNS response inline with DNS response packet processing within IPTables.
+This guarantees the DNS rules reflect any change immediately.
+This mode works for iptables only and matches the same mode for BPFDNSPolicyMode.
 This setting is ignored on Windows and "NoDelay" is always used.
 
 This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 
+Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
+
 | Detail |   |
 | --- | --- |
 | Environment variable | `FELIX_DNSPolicyMode` |
-| Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>NoDelay</code> (case insensitive) |
+| Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>Inline</code>, <code>NoDelay</code> (case insensitive) |
 | Default value (above encoding) | `DelayDeniedPacket` |
 | `FelixConfiguration` field | `dnsPolicyMode` (YAML) `DNSPolicyMode` (Go API) |
-| `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"NoDelay"</code>. |
+| `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"Inline"</code>, <code>"NoDelay"</code>. |
 | Default value (YAML) | `DelayDeniedPacket` |
 | Notes | Required. | 
 
