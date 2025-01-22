@@ -87,7 +87,7 @@ func main() {
 	bulkDeleteURL := fmt.Sprintf("%sapi/saved_objects/_bulk_delete", kibanaURL)
 
 	// delete honeypods dashboard. Deprecated feature. Removed from 3.20+. Dashboard may still exist if cluster is upgraded from 3.19 or earlier.
-	honeypodsDashboardID := "c66e42c0-c11c-11e8-b274-fbb68ba254a6"
+	honeypodsDashboardID := "1fa34d90-2dc3-11ea-97d3-75fc55c8fec9"
 	deleteDashboard(client, bulkDeleteURL, cfg.ElasticUsername, cfg.ElasticPassword, "honeypodDashboard", honeypodsDashboardID)
 
 	importURL := fmt.Sprintf("%sapi/saved_objects/_import", kibanaURL)
