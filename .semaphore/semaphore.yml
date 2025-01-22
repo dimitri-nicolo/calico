@@ -197,6 +197,10 @@ promotions:
     pipeline_file: push-images/third_party/envoy-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push third-party envoy-ratelimit images
+    pipeline_file: push-images/third_party/envoy-ratelimit.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push third-party prometheus-operator images
     pipeline_file: push-images/third_party/prometheus-operator.yml
     auto_promote:
@@ -1897,6 +1901,24 @@ blocks:
     prologue:
       commands:
         - cd third_party/envoy-gateway
+    jobs:
+      - name: Build binaries
+        matrix:
+          - env_var: ARCH
+            values:
+              - amd64
+              - arm64
+        commands:
+          - ../../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
+- name: envoy-ratelimit
+  run:
+    when: "false or change_in(['/third_party/envoy-ratelimit'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE'], pipeline_file: 'ignore'})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd third_party/envoy-ratelimit
     jobs:
       - name: Build binaries
         matrix:
