@@ -1,16 +1,18 @@
-# Inspired by: https://github.com/envoyproxy/gateway/blob/v1.1.2/tools/docker/envoy-gateway/Dockerfile
-# but modified to use calico/base instead of distroless
+# This is a copy of
+# https://github.com/envoyproxy/gateway/blob/v1.1.2/tools/docker/envoy-gateway/Dockerfile
+# but:
+# - using calico/base instead of distroless
+# - using TARGETARCH instead of TARGETPLATFORM.
 
-FROM alpine:3 AS builder
+FROM busybox AS source
 # Create the data directory for eg
 RUN mkdir -p /var/lib/eg
 
-FROM scratch as source
-ARG TARGETARCH
-COPY bin/envoy-gateway-$TARGETARCH /usr/bin/envoy-gateway
-COPY --from=builder --chown=10001:10001 /var/lib/eg /var/lib/eg
-
 FROM calico/base
-COPY --from=source / /
-USER 10001:10001
-ENTRYPOINT ["/usr/bin/envoy-gateway"]
+ARG TARGETARCH
+COPY bin/envoy-gateway-${TARGETARCH} /usr/local/bin/
+COPY --from=source --chown=65532:65532 /var/lib /var/lib
+
+USER 65532:65532
+
+ENTRYPOINT ["/usr/local/bin/envoy-gateway"]
