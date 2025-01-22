@@ -36,6 +36,7 @@ import (
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware/process"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware/search"
 	"github.com/projectcalico/calico/ui-apis/pkg/middleware/servicegraph"
+	"github.com/projectcalico/calico/ui-apis/pkg/middleware/waf"
 	"github.com/projectcalico/calico/ui-apis/pkg/pip"
 	pipcfg "github.com/projectcalico/calico/ui-apis/pkg/pip/config"
 )
@@ -278,6 +279,33 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					exceptions.EventExceptionsHandler(
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSetFactory,
+						linseed,
+					)))))
+	sm.Handle("/waf/rulesets",
+		middleware.ClusterRequestToResource(eventsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					waf.WAFRulesetsHandler(
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSetFactory,
+						linseed,
+					)))))
+	sm.Handle("/waf/rulesets/{rulesetID}",
+		middleware.ClusterRequestToResource(eventsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					waf.WAFRulesetHandler(
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSetFactory,
+						linseed,
+					)))))
+	sm.Handle("/waf/rulesets/{rulesetID}/rules/{ruleID}",
+		middleware.ClusterRequestToResource(eventsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					waf.WAFRuleDetailsHandler(
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSetFactory,
 						linseed,
