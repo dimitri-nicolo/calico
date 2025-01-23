@@ -38,7 +38,7 @@ global_job_config:
 promotions:
   # Manual promotion for publishing a hashrelease.
   - name: Publish hashrelease
-    pipeline_file: release/hashrelease.yml
+    pipeline_file: release/hashrelease_enterprise.yml
   # Manual promotion for publishing a release.
   - name: Publish official release
     pipeline_file: release/release.yml

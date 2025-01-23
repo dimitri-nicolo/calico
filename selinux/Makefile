@@ -29,12 +29,12 @@ calico.pp: $(SRC_FILES) host-native-build
 		sh -c 'make -f /usr/share/selinux/devel/Makefile calico.pp'
 
 .PHONY: calico-selinux.rhel8
-calico-selinux.rhel8: calico.pp
+calico-selinux.rhel8: bin/yq calico.pp
 	$(info *** Building SELinux RPM for RHEL 8)
 	$(call host_native_rpm_build,rhel8,calico-selinux,$(CALICO_SELINUX_VERSION))
 
 .PHONY: calico-selinux.rhel9
-calico-selinux.rhel9: calico.pp
+calico-selinux.rhel9: bin/yq calico.pp
 	$(info *** Building SELinux RPM for RHEL 9)
 	$(call host_native_rpm_build,rhel9,calico-selinux,$(CALICO_SELINUX_VERSION))
 

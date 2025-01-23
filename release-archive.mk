@@ -35,8 +35,6 @@ RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
 IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml
 
-# Get the version for key-cert-provisioner
-KSP_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.key-cert-provisioner.version')
 
 # The default registry we're pushing to
 REGISTRY := quay.io
@@ -51,18 +49,17 @@ publish-release-archive: release-archive
 release-archive: $(RELEASE_DIR) $(RELEASE_DIR).tgz
 
 $(RELEASE_DIR)/private-registry.md:
-	$(info *** Generating private-registry.md with Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), Key Cert Provisioner $(KSP_VER))
+	$(info *** Generating private-registry.md with Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER))
 	@sed \
 		-e 's/__OP_VERSION__/$(OPERATOR_VER)/g' \
 		-e 's/__CE_VERSION__/$(CALICO_VER)/g' \
-		-e 's/__KSP_VERSION__/$(KSP_VER)/g' \
 		private-registry.md.tpl > $(RELEASE_DIR)/private-registry.md
 
 bin/ocp.tgz:
 	@$(MAKE) -f Makefile $@
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/private-registry.md $(RELEASE_DIR)/README.md bin/ocp.tgz
-	$(info *** Building release archive for Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), Key Cert Provisioner $(KSP_VER), chart release $(CHART_RELEASE))
+	$(info *** Building release archive for Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), chart release $(CHART_RELEASE))
 	$(foreach var,$(IGNORED_MANIFESTS), @find $(RELEASE_DIR) -name $(var) -delete;)
 	@tar -czf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 

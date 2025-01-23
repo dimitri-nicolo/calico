@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
+	"github.com/projectcalico/calico/release/pkg/manager/operator"
 )
 
 // Global configuration for releases.
@@ -83,19 +84,27 @@ var (
 		"calico/test-signer",
 		"calico/typha",
 	}
+	windowsImages = []string{
+		"calico/cni-windows",
+		"calico/node-windows",
+	}
+
+	metadataFileName = "metadata.yaml"
 )
 
 func NewManager(opts ...Option) *CalicoManager {
 	// Configure defaults here.
 	b := &CalicoManager{
-		runner:          &command.RealCommandRunner{},
-		productCode:     utils.CalicoProductCode,
-		validate:        true,
-		buildImages:     true,
-		publishImages:   true,
-		publishTag:      true,
-		publishGithub:   true,
-		imageRegistries: defaultRegistries,
+		runner:           &command.RealCommandRunner{},
+		productCode:      utils.CalicoProductCode,
+		validate:         true,
+		buildImages:      true,
+		publishImages:    true,
+		publishTag:       true,
+		publishGithub:    true,
+		imageRegistries:  defaultRegistries,
+		operatorRegistry: operator.DefaultRegistry,
+		operatorImage:    operator.DefaultImage,
 	}
 
 	// Run through provided options.
@@ -160,8 +169,10 @@ type CalicoManager struct {
 	// calicoVersion is the version of calico to release.
 	calicoVersion string
 
-	// operatorVersion is the version of the operator to release.
-	operatorVersion string
+	// operator variables
+	operatorImage    string
+	operatorRegistry string
+	operatorVersion  string
 
 	// outputDir is the directory to which we should write release artifacts, and from
 	// which we should read them for publishing.
@@ -208,80 +219,12 @@ type CalicoManager struct {
 	githubToken string
 }
 
-// releaseImages returns the set of images that should be expected for a release.
-// This function needs to be kept up-to-date with the actual release artifacts produced for a
-// release if images are added or removed.
-func releaseImages(version, operatorVersion, registry string, overrides []string) []string {
-	imgs := []string{
-		fmt.Sprintf("%soperator:%s", registry, operatorVersion),
-		fmt.Sprintf("%scnx-manager:%s", registry, version),
-		fmt.Sprintf("%svoltron:%s", registry, version),
-		fmt.Sprintf("%sguardian:%s", registry, version),
-		fmt.Sprintf("%scnx-apiserver:%s", registry, version),
-		fmt.Sprintf("%scnx-queryserver:%s", registry, version),
-		fmt.Sprintf("%skube-controllers:%s", registry, version),
-		fmt.Sprintf("%scalicoq:%s", registry, version),
-		fmt.Sprintf("%stypha:%s", registry, version),
-		fmt.Sprintf("%scalicoctl:%s", registry, version),
-		fmt.Sprintf("%scnx-node:%s", registry, version),
-		fmt.Sprintf("%sdikastes:%s", registry, version),
-		fmt.Sprintf("%sdex:%s", registry, version),
-		fmt.Sprintf("%sfluentd:%s", registry, version),
-		fmt.Sprintf("%sui-apis:%s", registry, version),
-		fmt.Sprintf("%skibana:%s", registry, version),
-		fmt.Sprintf("%selasticsearch:%s", registry, version),
-		fmt.Sprintf("%sintrusion-detection-job-installer:%s", registry, version),
-		fmt.Sprintf("%sintrusion-detection-controller:%s", registry, version),
-		fmt.Sprintf("%swebhooks-processor:%s", registry, version),
-		fmt.Sprintf("%scompliance-controller:%s", registry, version),
-		fmt.Sprintf("%scompliance-reporter:%s", registry, version),
-		fmt.Sprintf("%scompliance-snapshotter:%s", registry, version),
-		fmt.Sprintf("%scompliance-server:%s", registry, version),
-		fmt.Sprintf("%scompliance-benchmarker:%s", registry, version),
-		fmt.Sprintf("%singress-collector:%s", registry, version),
-		fmt.Sprintf("%sl7-collector:%s", registry, version),
-		fmt.Sprintf("%sl7-admission-controller:%s", registry, version),
-		fmt.Sprintf("%slicense-agent:%s", registry, version),
-		fmt.Sprintf("%scni:%s", registry, version),
-		fmt.Sprintf("%sfirewall-integration:%s", registry, version),
-		fmt.Sprintf("%segress-gateway:%s", registry, version),
-		fmt.Sprintf("%slinseed:%s", registry, version),
-		fmt.Sprintf("%spolicy-recommendation:%s", registry, version),
-		fmt.Sprintf("%selasticsearch-metrics:%s", registry, version),
-		fmt.Sprintf("%spacketcapture:%s", registry, version),
-		fmt.Sprintf("%sprometheus:%s", registry, version),
-		fmt.Sprintf("%sprometheus-operator:%s", registry, version),
-		fmt.Sprintf("%sprometheus-config-reloader:%s", registry, version),
-		fmt.Sprintf("%sprometheus-service:%s", registry, version),
-		fmt.Sprintf("%ses-gateway:%s", registry, version),
-		fmt.Sprintf("%sdeep-packet-inspection:%s", registry, version),
-		fmt.Sprintf("%seck-operator:%s", registry, version),
-		fmt.Sprintf("%salertmanager:%s", registry, version),
-		fmt.Sprintf("%senvoy:%s", registry, version),
-		fmt.Sprintf("%senvoy-init:%s", registry, version),
-		fmt.Sprintf("%spod2daemon-flexvol:%s", registry, version),
-		fmt.Sprintf("%scsi:%s", registry, version),
-		fmt.Sprintf("%snode-driver-registrar:%s", registry, version),
-		fmt.Sprintf("%skey-cert-provisioner:%s", registry, version),
-		fmt.Sprintf("%sfluentd-windows:%s", registry, version),
-		fmt.Sprintf("%scni-windows:%s", registry, version),
-		fmt.Sprintf("%scnx-node-windows:%s", registry, version),
+func releaseImages(images []string, version, registry, operatorImage, operatorVersion, operatorRegistry string) []string {
+	imgList := []string{fmt.Sprintf("%s/%s:%s", operatorRegistry, operatorImage, operatorVersion)}
+	for _, img := range images {
+		imgList = append(imgList, fmt.Sprintf("%s/%s:%s", registry, img, version))
 	}
-
-	// Iterate through any overrides and set them.
-	// Overrides are of the form <image>:version
-	for _, o := range overrides {
-		name := strings.Split(o, ":")[0]
-		ver := strings.Split(o, ":")[1]
-		for i, img := range imgs {
-			if strings.Contains(img, fmt.Sprintf("%s:", name)) {
-				// Found a match. Override the version.
-				imgs[i] = fmt.Sprintf("%s%s:%s", registry, name, ver)
-				logrus.Infof("Using %s instead of %s", imgs[i], img)
-			}
-		}
-	}
-	return imgs
+	return imgList
 }
 
 func (r *CalicoManager) helmChartVersion() string {
@@ -370,27 +313,24 @@ func (r *CalicoManager) Build() error {
 	return nil
 }
 
-func (r *CalicoManager) BuildMetadata(dir string, overrides ...string) error {
-	type metadata struct {
-		Version          string   `json:"version"`
-		OperatorVersion  string   `json:"operator_version" yaml:"operatorVersion"`
-		Images           []string `json:"images"`
-		HelmChartVersion string   `json:"helm_chart_version" yaml:"helmChartVersion"`
-		CalicoVersion    string   `json:"calico_oss_version" yaml:"CalicoOSSVersion"`
-	}
+type metadata struct {
+	Version          string   `json:"version"`
+	OperatorVersion  string   `json:"operator_version" yaml:"operatorVersion"`
+	Images           []string `json:"images"`
+	HelmChartVersion string   `json:"helm_chart_version" yaml:"helmChartVersion"`
+}
 
-	if err := os.MkdirAll(dir, utils.DirPerms); err != nil {
-		logrus.WithError(err).Errorf("Failed to create metadata folder %s", dir)
+func (r *CalicoManager) BuildMetadata(dir string) error {
+	registry, err := r.getRegistryFromManifests()
+	if err != nil {
 		return err
 	}
 
-	registry := r.getRegistryFromManifests()
 	m := metadata{
 		Version:          r.calicoVersion,
 		OperatorVersion:  r.operatorVersion,
-		Images:           releaseImages(r.calicoVersion, r.operatorVersion, registry, overrides),
+		Images:           releaseImages(append(images, windowsImages...), r.calicoVersion, registry, r.operatorImage, r.operatorVersion, r.operatorRegistry),
 		HelmChartVersion: r.helmChartVersion(),
-		CalicoVersion:    r.determineCalicoVersion(),
 	}
 
 	// Render it as yaml and write it to a file.
@@ -399,7 +339,7 @@ func (r *CalicoManager) BuildMetadata(dir string, overrides ...string) error {
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(dir, "metadata.yaml"), []byte(bs), 0o644)
+	err = os.WriteFile(filepath.Join(dir, metadataFileName), []byte(bs), 0o644)
 	if err != nil {
 		return err
 	}
@@ -407,15 +347,24 @@ func (r *CalicoManager) BuildMetadata(dir string, overrides ...string) error {
 	return nil
 }
 
-// Get the CALICO_VERSION from the node Makefile. This is the version
-// of OSS Calico that we are most recently based off of.
-func (r *CalicoManager) determineCalicoVersion() string {
-	args := []string{"-Po", `CALICO_VERSION=\K(.*)`, "Makefile"}
-	out, err := r.runner.RunInDir(filepath.Join(r.repoRoot, "node"), "grep", args, nil)
+func (r *CalicoManager) getRegistryFromManifests() (string, error) {
+	args := []string{"-Po", `image:\K(.*)`, "calicoctl.yaml"}
+	out, err := r.runner.RunInDir(filepath.Join(r.repoRoot, "manifests"), "grep", args, nil)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return out
+	imgs := strings.Split(out, "\n")
+	for _, i := range imgs {
+		if strings.Contains(i, "operator") {
+			continue
+		} else if strings.Contains(i, "tigera/") {
+			splits := strings.SplitAfter(i, "/tigera/")
+			registry := splits[0]
+			logrus.WithField("registry", registry).Debugf("Using registry from image %s", i)
+			return registry, nil
+		}
+	}
+	return "", fmt.Errorf("failed to find registry from manifests")
 }
 
 func (r *CalicoManager) PreHashreleaseValidate() error {
@@ -1214,26 +1163,6 @@ func (r *CalicoManager) assertManifestVersions(ver string) error {
 	}
 
 	return nil
-}
-
-func (r *CalicoManager) getRegistryFromManifests() string {
-	args := []string{"-Po", `image:\K(.*)`, "calicoctl.yaml"}
-	out, err := r.runner.RunInDir(filepath.Join(r.repoRoot, "manifests"), "grep", args, nil)
-	if err != nil {
-		panic(err)
-	}
-	imgs := strings.Split(out, "\n")
-	for _, i := range imgs {
-		if strings.Contains(i, "operator") {
-			continue
-		} else if strings.Contains(i, "tigera/") {
-			splits := strings.SplitAfter(i, "/tigera/")
-			registry := splits[0]
-			logrus.Infof("Using registry %s from image %s", registry, i)
-			return registry
-		}
-	}
-	panic("Missing version!")
 }
 
 // determineBranch returns the current checked out branch.
