@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"io/fs"
 
-	"github.com/corazawaf/coraza-coreruleset/v4"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
@@ -69,23 +69,23 @@ var _ = Describe("Waf Ruleset Parser Test", func() {
 			Expect(rule.SecRule).To(Equal("SecRule"))
 			Expect(rule.Message).To(Equal("HTTP Parameter Pollution possible via array notation"))
 			Expect(rule.Raw).To(Equal(`SecRule ARGS_NAMES "@rx \[" \
-		"id:921220,\
-		phase:2,\
-		pass,\
-		log,\
-		msg:'HTTP Parameter Pollution possible via array notation',\
-		logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
-		tag:'application-multi',\
-		tag:'language-multi',\
-		tag:'platform-multi',\
-		tag:'attack-protocol',\
-		tag:'paranoia-level/4',\
-		tag:'OWASP_CRS',\
-		tag:'capec/1000/152/137/15/460',\
-		ver:'OWASP_CRS/4.7.0',\
-		severity:'CRITICAL',\
-		setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
-		setvar:'tx.inbound_anomaly_score_pl4=+%{tx.critical_anomaly_score}'"`))
+    "id:921220,\
+    phase:2,\
+    pass,\
+    log,\
+    msg:'HTTP Parameter Pollution possible via array notation',\
+    logdata:'Matched Data: %{TX.0} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}',\
+    tag:'application-multi',\
+    tag:'language-multi',\
+    tag:'platform-multi',\
+    tag:'attack-protocol',\
+    tag:'paranoia-level/4',\
+    tag:'OWASP_CRS',\
+    tag:'capec/1000/152/137/15/460',\
+    ver:'OWASP_CRS/4.7.0',\
+    severity:'CRITICAL',\
+    setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
+    setvar:'tx.inbound_anomaly_score_pl4=+%{tx.critical_anomaly_score}'"`))
 		})
 
 	})
