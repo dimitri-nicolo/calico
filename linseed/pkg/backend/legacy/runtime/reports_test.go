@@ -155,12 +155,8 @@ func TestCreateRuntimeReport(t *testing.T) {
 		results, err := b.List(ctx, clusterInfo, opts)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results.Items))
-		sanitized := testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results)
-		// Linseed populated the GeneratedTime field.  We can't predict it exactly, so copy it
-		// across from the actual to our expected value.
-		require.NotNil(t, sanitized[0].Report.GeneratedTime)
-		f.GeneratedTime = sanitized[0].Report.GeneratedTime
-		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, sanitized)
+		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, clusterInfo.Cluster, results)
+		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, results.Items)
 	})
 }
 
@@ -233,12 +229,8 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results.Items))
-		// Linseed populated the GeneratedTime field.  We can't predict it exactly, so copy it
-		// across from the actual to our expected value.
-		require.NotNil(t, results.Items[0].Report.GeneratedTime)
-		f.GeneratedTime = results.Items[0].Report.GeneratedTime
-		require.Equal(t, []v1.RuntimeReport{{Tenant: tenant, Cluster: cluster, Report: f}},
-			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results))
+		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, clusterInfoA.Cluster, results)
+		require.Equal(t, []v1.RuntimeReport{{Tenant: tenant, Cluster: cluster, Report: f}}, results.Items)
 
 		// Read data and verify for tenant B
 		results, err = b.List(ctx, clusterInfoB, &v1.RuntimeReportParams{
@@ -251,12 +243,8 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results.Items))
-		// Linseed populated the GeneratedTime field.  We can't predict it exactly, so copy it
-		// across from the actual to our expected value.
-		require.NotNil(t, results.Items[0].Report.GeneratedTime)
-		f.GeneratedTime = results.Items[0].Report.GeneratedTime
-		require.Equal(t, []v1.RuntimeReport{{Tenant: anotherTenant, Cluster: cluster, Report: f}},
-			testutils.AssertLogIDAndCopyRuntimeReportsWithoutThem(t, results))
+		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, clusterInfoB.Cluster, results)
+		require.Equal(t, []v1.RuntimeReport{{Tenant: anotherTenant, Cluster: cluster, Report: f}}, results.Items)
 	})
 }
 
@@ -362,8 +350,9 @@ func TestRuntimeSelection(t *testing.T) {
 		require.NoError(t, e)
 		require.Equal(t, len(expectedReports), len(r.Items))
 		for i := range expectedReports {
-			expectedReports[i].GeneratedTime = r.Items[i].Report.GeneratedTime
-			require.Equal(t, expectedReports[i], backendutils.AssertRuntimeReportIDAndReset(t, r.Items[i]).Report)
+			item := r.Items[i]
+			backendutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster, &item)
+			require.Equal(t, expectedReports[i], item.Report)
 		}
 	}
 

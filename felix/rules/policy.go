@@ -21,10 +21,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/generictables"
 	"github.com/projectcalico/calico/felix/hashutils"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
+	"github.com/projectcalico/calico/felix/nftables"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -34,12 +36,12 @@ import (
 func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*generictables.Chain {
 	isStaged := model.PolicyIsStaged(policyID.Name)
 	inbound := generictables.Chain{
-		Name: PolicyChainName(PolicyInboundPfx, policyID),
+		Name: PolicyChainName(PolicyInboundPfx, policyID, r.NFTables),
 		// Note that the policy name includes the tier, so it does not need to be separately specified.
 		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirIngress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s ingress", policyID.Name)),
 	}
 	outbound := generictables.Chain{
-		Name: PolicyChainName(PolicyOutboundPfx, policyID),
+		Name: PolicyChainName(PolicyOutboundPfx, policyID, r.NFTables),
 		// Note that the policy name also includes the tier, so it does not need to be separately specified.
 		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirEgress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s egress", policyID.Name)),
 	}
@@ -48,11 +50,11 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) (inbound, outbound *generictables.Chain) {
 	inbound = &generictables.Chain{
-		Name:  ProfileChainName(ProfileInboundPfx, profileID),
+		Name:  ProfileChainName(ProfileInboundPfx, profileID, r.NFTables),
 		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirIngress, profileID.Name, false, false, fmt.Sprintf("Profile %s ingress", profileID.Name)),
 	}
 	outbound = &generictables.Chain{
-		Name:  ProfileChainName(ProfileOutboundPfx, profileID),
+		Name:  ProfileChainName(ProfileOutboundPfx, profileID, r.NFTables),
 		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirEgress, profileID.Name, false, false, fmt.Sprintf("Profile %s egress", profileID.Name)),
 	}
 	return
@@ -225,6 +227,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		newMatch:          r.NewMatch,
 		markAllBlocksPass: r.MarkScratch0,
 		markThisBlockPass: r.MarkScratch1,
+		dnsPolicyMode:     r.Config.DNSPolicyMode,
 	}
 
 	// Port matches.  We only need to render blocks of ports if, in total, there's more than one
@@ -275,10 +278,21 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
 	// in the main rule below.
 	if (len(ruleCopy.DstIpSetIds) == 1) && (len(ruleCopy.DstDomainIpSetIds) == 1) {
-		matchBlockBuilder.AppendDestIPSetMatchBlock(
-			r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
-			r.nameForIPSet(ruleCopy.DstDomainIpSetIds[0], ipVersion),
-		)
+		if r.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+			pinPath, err := r.bpfIPSetMatchProgram(ruleCopy.DstDomainIpSetIds[0], ipVersion)
+			if err != nil {
+				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", ruleCopy.DstDomainIpSetIds[0])
+			}
+			matchBlockBuilder.AppendDestIPSetBPFMatchBlock(
+				r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
+				pinPath,
+			)
+		} else {
+			matchBlockBuilder.AppendDestIPSetMatchBlock(
+				r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
+				r.nameForIPSet(ruleCopy.DstDomainIpSetIds[0], ipVersion),
+			)
+		}
 		ruleCopy.DstIpSetIds = nil
 		ruleCopy.DstDomainIpSetIds = nil
 	}
@@ -347,6 +361,8 @@ type matchBlockBuilder struct {
 	actions  generictables.ActionFactory
 
 	Rules []generictables.Rule
+
+	dnsPolicyMode apiv3.DNSPolicyMode
 }
 
 func (r *matchBlockBuilder) AppendPortMatchBlock(
@@ -440,6 +456,26 @@ func (r *matchBlockBuilder) AppendDestIPSetMatchBlock(ipsetNames ...string) {
 			Action: r.actions.SetMark(markToSet),
 		})
 	}
+
+	// Append the end-of-block rules.
+	r.finishPositiveBlock()
+}
+
+func (r *matchBlockBuilder) AppendDestIPSetBPFMatchBlock(ipsetName, bpfIPSetMatchPinPath string) {
+	// Write out the initial "reset" rule if this is the first block.
+	r.maybeAppendInitialRule(0)
+	// Figure out which bit to set.  See comment in positiveBlockMarkToSet() for details.
+	markToSet := r.positiveBlockMarkToSet()
+
+	r.Rules = append(r.Rules, generictables.Rule{
+		Match:  r.newMatch().DestIPSet(ipsetName),
+		Action: r.actions.SetMark(markToSet),
+	})
+
+	r.Rules = append(r.Rules, generictables.Rule{
+		Match:  r.newMatch().BPFProgram(bpfIPSetMatchPinPath),
+		Action: r.actions.SetMark(markToSet),
+	})
 
 	// Append the end-of-block rules.
 	r.finishPositiveBlock()
@@ -746,6 +782,13 @@ func (r *DefaultRuleRenderer) nameForIPSet(ipsetID string, ipVersion uint8) stri
 	}
 }
 
+func (r *DefaultRuleRenderer) ipSetIDForBPFIPSets(ipsetID string, ipVersion uint8) uint64 {
+	if ipVersion == 4 {
+		return r.IPSetIDGetterV4.GetNoAlloc(ipsetID)
+	}
+	return r.IPSetIDGetterV6.GetNoAlloc(ipsetID)
+}
+
 func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion uint8) generictables.MatchCriteria {
 	match := r.NewMatch()
 
@@ -815,12 +858,24 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	if len(pRule.DstDomainIpSetIds) == 1 {
-		ipsetName := r.nameForIPSet(pRule.DstDomainIpSetIds[0], ipVersion)
-		match = match.DestIPSet(ipsetName)
-		logCxt.WithFields(log.Fields{
-			"ipsetID":   pRule.DstDomainIpSetIds[0],
-			"ipSetName": ipsetName,
-		}).Debug("Adding dst domain IP set match")
+		if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+			pinPath, err := r.bpfIPSetMatchProgram(pRule.DstDomainIpSetIds[0], ipVersion)
+			if err != nil {
+				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", pRule.DstDomainIpSetIds[0])
+			}
+			match = match.BPFProgram(pinPath)
+			logCxt.WithFields(log.Fields{
+				"ipsetID":     pRule.DstDomainIpSetIds[0],
+				"programPath": pinPath,
+			}).Debug("Adding BPF dst domain IP set match")
+		} else {
+			ipsetName := r.nameForIPSet(pRule.DstDomainIpSetIds[0], ipVersion)
+			match = match.DestIPSet(ipsetName)
+			logCxt.WithFields(log.Fields{
+				"ipsetID":   pRule.DstDomainIpSetIds[0],
+				"ipSetName": ipsetName,
+			}).Debug("Adding dst domain IP set match")
+		}
 	} else if len(pRule.DstDomainIpSetIds) > 1 {
 		log.WithField("rule", pRule).Panic(
 			"CalculateRuleMatch() passed more than one DstDomainIpSetIds.")
@@ -982,18 +1037,43 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	return match
 }
 
-func PolicyChainName(prefix PolicyChainNamePrefix, polID *proto.PolicyID) string {
+func PolicyChainName(prefix PolicyChainNamePrefix, polID *proto.PolicyID, nft bool) string {
+	maxLen := iptables.MaxChainNameLength
+	name := polID.Name
+	if nft {
+		maxLen = nftables.MaxChainNameLength
+
+		// nftables doesn't allow ":" in chain names, so replace with "/".
+		name = strings.Replace(name, "staged:", "staged/", 1)
+	}
 	return hashutils.GetLengthLimitedID(
 		string(prefix),
-		polID.Tier+"/"+polID.Name,
-		iptables.MaxChainNameLength,
+		polID.Tier+"/"+name,
+		maxLen,
 	)
 }
 
-func ProfileChainName(prefix ProfileChainNamePrefix, profID *proto.ProfileID) string {
+func ProfileChainName(prefix ProfileChainNamePrefix, profID *proto.ProfileID, nft bool) string {
+	maxLen := iptables.MaxChainNameLength
+	if nft {
+		maxLen = nftables.MaxChainNameLength
+	}
 	return hashutils.GetLengthLimitedID(
 		string(prefix),
 		profID.Name,
-		iptables.MaxChainNameLength,
+		maxLen,
 	)
+}
+
+func IsDomainIPSet(ipSetName string) bool {
+	ipSetID := ipsets.StripIPSetNamePrefix(ipSetName)
+	return strings.HasPrefix(ipSetID, "d:")
+}
+
+func (r *DefaultRuleRenderer) bpfIPSetMatchProgram(ipSetName string, ipver uint8) (string, error) {
+	ipSetID := r.ipSetIDForBPFIPSets(ipSetName, ipver)
+	if ipSetID == 0 {
+		return "", fmt.Errorf("error getting bpf ipset ID for ipset %s", ipSetName)
+	}
+	return bpfdefs.IPSetMatchProg(ipSetID, ipver), nil
 }

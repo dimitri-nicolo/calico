@@ -50,6 +50,9 @@ type ReportData struct {
 	*apiv3.ReportData `json:",inline"`
 	UISummary         string `json:"uiSummary"`
 	ID                string `json:"id,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 func (r *ReportData) UID() string {
@@ -92,6 +95,9 @@ type Benchmarks struct {
 	Timestamp         metav1.Time     `json:"timestamp"`
 	Error             string          `json:"error,omitempty"`
 	Tests             []BenchmarkTest `json:"tests,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 // Test is a given test within a set of benchmarks.

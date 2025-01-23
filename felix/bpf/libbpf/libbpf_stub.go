@@ -182,3 +182,7 @@ func (t *CTCleanupGlobalData) Set(m *Map) error {
 func (t *CTLBGlobalData) Set(m *Map) error {
 	panic("LIBBPF syscall stub")
 }
+
+func (t *IPTDnsGlobalData) Set(m *Map) error {
+	panic("LIBBPF syscall stub")
+}

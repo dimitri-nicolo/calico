@@ -473,7 +473,7 @@ type Config struct {
 	DNSLogsLatency             bool          `config:"bool;true"`
 
 	// Config for DNS policy.
-	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
+	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse,Inline);DelayDeniedPacket;non-zero"`
 	BPFDNSPolicyMode                 string        `config:"oneof(NoDelay,Inline);Inline;non-zero"`
 	DNSPolicyNfqueueID               int           `config:"int;100"`
 	DNSPolicyNfqueueSize             int           `config:"int;255"`
@@ -505,6 +505,12 @@ type Config struct {
 	L7LogsFileAggregationNumURLPath      int           `config:"int;5"`
 	L7LogsFileAggregationURLCharLimit    int           `config:"int;250"`
 	L7LogsFilePerNodeLimit               int           `config:"int;1500"`
+
+	WAFEventLogsFlushInterval     time.Duration `config:"seconds;15"`
+	WAFEventLogsFileEnabled       bool          `config:"bool;false"`
+	WAFEventLogsFileDirectory     string        `config:"string;/var/log/calico/waf"`
+	WAFEventLogsFileMaxFiles      int           `config:"int;5"`
+	WAFEventLogsFileMaxFileSizeMB int           `config:"int;100"`
 
 	WindowsFlowLogsFileDirectory    string        `config:"string;c:\\TigeraCalico\\flowlogs"`
 	WindowsFlowLogsPositionFilePath string        `config:"string;c:\\TigeraCalico\\flowlogs\\flows.log.pos"`

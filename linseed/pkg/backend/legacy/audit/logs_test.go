@@ -180,7 +180,7 @@ func TestCreateKubeAuditLog(t *testing.T) {
 		// Create the event in ES.
 		resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{f})
 		require.NoError(t, err)
-		require.Equal(t, 0, len(resp.Errors))
+		require.Empty(t, resp.Errors)
 
 		// Refresh the index.
 		err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
@@ -196,6 +196,7 @@ func TestCreateKubeAuditLog(t *testing.T) {
 		// and so the resulting objects do not match.
 		f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
 		f.StageTimestamp = results.Items[0].StageTimestamp
+		f.Cluster = clusterInfo.Cluster // cluster is set by the backend.
 
 		// require.Equal(t, string(f.RequestObject.Raw), string(results.Items[0].RequestObject.Raw))
 		require.Equal(t, f, results.Items[0])
@@ -270,6 +271,7 @@ func TestCreateEEAuditLog(t *testing.T) {
 		// and so the resulting objects do not match.
 		f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
 		f.StageTimestamp = results.Items[0].StageTimestamp
+		f.Cluster = clusterInfo.Cluster // cluster is set by the backend.
 		require.Equal(t, f, results.Items[0])
 	})
 }
@@ -725,6 +727,9 @@ func TestAuditLogFiltering(t *testing.T) {
 				require.Len(t, r.Items, numExpected(testcase))
 				require.Nil(t, r.AfterKey)
 				require.Empty(t, err)
+				for i := range r.Items {
+					backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				}
 
 				// Querying with another tenant ID should result in zero results.
 				r2, err := b.List(ctx, bapi.ClusterInfo{Cluster: cluster, Tenant: "bad-actor"}, &testcase.Params)
@@ -1023,6 +1028,9 @@ func TestSorting(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
+		for i := range r.Items {
+			backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 
 		// Assert that the logs are returned in the correct order.
 		require.Equal(t, log1, r.Items[0])
@@ -1039,6 +1047,9 @@ func TestSorting(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
+		for i := range r.Items {
+			backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+		}
 		require.Equal(t, log2, r.Items[0])
 		require.Equal(t, log1, r.Items[1])
 	})

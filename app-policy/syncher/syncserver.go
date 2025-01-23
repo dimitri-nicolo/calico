@@ -16,7 +16,7 @@ package syncher
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -44,6 +44,8 @@ type SyncClient struct {
 	inSync           bool
 	storeManager     policystore.PolicyStoreManager
 	stats            chan map[statscache.Tuple]statscache.Values
+	wafEvents        chan *proto.WAFEvent
+	client           proto.PolicySyncClient
 }
 
 type ClientOptions func(*SyncClient)
@@ -67,6 +69,7 @@ func NewClient(target string, policyStoreManager policystore.PolicyStoreManager,
 		target: target, dialOpts: dialOpts,
 		storeManager:     policyStoreManager,
 		stats:            make(chan map[statscache.Tuple]statscache.Values),
+		wafEvents:        make(chan *proto.WAFEvent),
 		subscriptionType: DefaultSubscriptionType,
 	}
 	for _, opt := range clientOpts {
@@ -87,13 +90,24 @@ func (s *SyncClient) RegisterGRPCServices(gs *grpc.Server) {
 	healthzv1.RegisterHealthServer(gs, health.NewHealthCheckService(s))
 }
 
-func (s *SyncClient) Start(ctx context.Context) {
-	for {
-		if err := s.connectAndSync(ctx); err != nil {
-			log.Error("connectAndSync error: ", err)
-		}
-		time.Sleep(PolicySyncRetryTime)
+func (s *SyncClient) Start(ctx context.Context) error {
+	// Create the connection with policySync
+	cc, err := grpc.NewClient(s.target, s.dialOpts...)
+	if err != nil {
+		return err
 	}
+	s.client = proto.NewPolicySyncClient(cc)
+	// go routine to close the connection when the context is Done
+	go func() {
+		<-ctx.Done()
+		cc.Close()
+	}()
+
+	go s.sync(ctx)
+	go s.sendStats(ctx)
+	go s.sendWAFEvents(ctx)
+
+	return nil
 }
 
 func (s *SyncClient) OnStatsCacheFlush(v map[statscache.Tuple]statscache.Values) {
@@ -104,49 +118,67 @@ func (s *SyncClient) OnStatsCacheFlush(v map[statscache.Tuple]statscache.Values)
 	s.stats <- v
 }
 
-func (s *SyncClient) connectAndSync(ptx context.Context, cb ...statscache.StatsCacheFlushCallback) error {
-	ctx, cancel := context.WithCancel(ptx)
-	defer cancel()
-
-	s.inSync = false
-	s.storeManager.OnReconnecting()
-
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("connection to PolicySync stopped: %w", err)
-	}
-
-	cc, err := grpc.NewClient(s.target, s.dialOpts...)
-	if err != nil {
-		return fmt.Errorf("failed to connect to PolicySync server %s. %w", s.target, err)
-	}
-	defer cc.Close()
-
-	client := proto.NewPolicySyncClient(cc)
-	stream, err := client.Sync(ctx, s.syncRequest())
-	if err != nil {
-		return fmt.Errorf("failed to stream from PolicySync server: %w", err)
-	}
-	go s.sendStats(ctx, client)
-
-	return s.sync(stream, ctx)
+func (s *SyncClient) OnWAFEvent(v *proto.WAFEvent) {
+	s.wafEvents <- v
 }
 
-func (s *SyncClient) sync(stream proto.PolicySync_SyncClient, ctx context.Context) error {
+func (s *SyncClient) sync(ctx context.Context) {
+	updateC := make(chan *proto.ToDataplane)
+	retryC := make(chan struct{})
+	s.connectSyncStream(ctx, updateC, retryC)
+
 	for {
-		update, err := stream.Recv()
-		if err != nil {
-			return fmt.Errorf("exceeded max stream retries. retrying grpc connection %w", err)
-		}
-		switch update.Payload.(type) {
-		case *proto.ToDataplane_InSync:
-			s.inSync = true
-			s.storeManager.OnInSync()
-		default:
-			s.storeManager.DoWithLock(func(ps *policystore.PolicyStore) {
-				ps.ProcessUpdate(s.subscriptionType, update, false)
-			})
+		select {
+		case <-ctx.Done():
+			s.inSync = false
+			return
+		case <-retryC:
+			s.connectSyncStream(ctx, updateC, retryC)
+		case update := <-updateC:
+			switch update.Payload.(type) {
+			case *proto.ToDataplane_InSync:
+				s.inSync = true
+				s.storeManager.OnInSync()
+			default:
+				s.storeManager.DoWithLock(func(ps *policystore.PolicyStore) {
+					ps.ProcessUpdate(s.subscriptionType, update, false)
+				})
+			}
 		}
 	}
+}
+
+func (s *SyncClient) connectSyncStream(ctx context.Context, updateC chan<- *proto.ToDataplane, retryC chan<- struct{}) {
+	retryFn := func() {
+		<-time.After(PolicySyncRetryTime)
+		retryC <- struct{}{}
+	}
+
+	// try to create the stream
+	log.Debugf("trying to connect Sync stream with PolicySync")
+	s.inSync = false
+	s.storeManager.OnReconnecting()
+	stream, err := s.client.Sync(ctx, s.syncRequest())
+	if err != nil {
+		log.WithError(err).Error("failed to start Sync stream with PolicySync server")
+		go retryFn()
+		return
+	}
+	// read the stream on a go routine
+	go func() {
+		defer retryFn()
+		for {
+			update, err := stream.Recv()
+			if err == io.EOF {
+				return
+			}
+			if err != nil {
+				log.WithError(err).Error("failed to read Sync message from PolicySync")
+				return
+			}
+			updateC <- update
+		}
+	}()
 }
 
 // Readiness returns whether the SyncClient is InSync.
@@ -156,26 +188,94 @@ func (s *SyncClient) Readiness() (ready bool) {
 }
 
 // sendStats is the main stats reporting loop.
-func (s *SyncClient) sendStats(ctx context.Context, client proto.PolicySyncClient) {
+func (s *SyncClient) sendStats(ctx context.Context) {
 	log.Info("Starting sending DataplaneStats to Policy Sync server")
+readLoop:
 	for {
 		select {
-		case a := <-s.stats:
-			for t, v := range a {
-				if err := s.report(ctx, client, t, v); err != nil {
-					// Error reporting stats, exit now to start reconnction processing.
-					log.WithError(err).Warning("Error reporting stats")
-					return
-				}
-			}
 		case <-ctx.Done():
 			return
+		case a := <-s.stats:
+			for t, v := range a {
+				if err := s.report(ctx, t, v); err != nil {
+					log.WithError(err).Warning("Error reporting stats")
+					continue readLoop
+				}
+			}
 		}
 	}
 }
 
+// sendWAFEvents is the main WAFEvents reporting loop.
+func (s *SyncClient) sendWAFEvents(ctx context.Context) {
+	var batch []*proto.WAFEvent
+	var batchC = make(chan []*proto.WAFEvent)
+	var batchCMasked chan []*proto.WAFEvent
+
+	log.Info("Starting sending WAFEvents to Policy Sync server")
+
+	go s.processWAFEventsBatch(ctx, batchC)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case e := <-s.wafEvents:
+			batch = append(batch, e)
+			batchCMasked = batchC
+		case batchCMasked <- batch:
+			batch = nil
+			batchCMasked = nil
+		}
+	}
+}
+
+func (s *SyncClient) processWAFEventsBatch(ctx context.Context, batchC <-chan []*proto.WAFEvent) {
+	var (
+		currentBatch []*proto.WAFEvent
+		ptrBatchC    = batchC
+		retryC       <-chan time.Time
+		stream       proto.PolicySync_ReportWAFClient
+		err          error
+	)
+
+loop:
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case currentBatch = <-ptrBatchC:
+			// Mask channel until we've finished processing this batch.
+			ptrBatchC = nil
+		case <-retryC:
+		}
+
+		if stream == nil {
+			stream, err = s.client.ReportWAF(ctx)
+			if err != nil {
+				log.WithError(err).Error("Error creating ReportWAF stream")
+				retryC = time.After(PolicySyncRetryTime)
+				continue
+			}
+		}
+
+		for i, e := range currentBatch {
+			log.WithField("wafEvent", e).Debug("Sending WAFEvent")
+			if err := stream.Send(e); err != nil {
+				log.WithField("wafEvent", e).Debug("Failed to send WAFEvent")
+				currentBatch = currentBatch[i:]
+				stream = nil
+				retryC = time.After(PolicySyncRetryTime)
+				continue loop
+			}
+		}
+
+		ptrBatchC = batchC
+	}
+}
+
 // report converts the statscache formatted stats and reports it as a proto.DataplaneStats to Felix.
-func (s *SyncClient) report(ctx context.Context, client proto.PolicySyncClient, t statscache.Tuple, v statscache.Values) error {
+func (s *SyncClient) report(ctx context.Context, t statscache.Tuple, v statscache.Values) error {
 	log.Debugf("Reporting statistic to Felix: %s=%s", t, v)
 
 	d := &proto.DataplaneStats{
@@ -203,7 +303,7 @@ func (s *SyncClient) report(ctx context.Context, client proto.PolicySyncClient, 
 			Value:      v.HTTPRequestsDenied,
 		})
 	}
-	if r, err := client.Report(ctx, d); err != nil {
+	if r, err := s.client.Report(ctx, d); err != nil {
 		// Error sending stats, must be a connection issue, so exit now to force a reconnect.
 		return err
 	} else if !r.Successful {

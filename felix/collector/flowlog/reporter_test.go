@@ -94,7 +94,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		for _, fl := range fls {
 			for _, flog := range flogs {
 				if reflect.DeepEqual(flog.FlowMeta, fl.FlowMeta) &&
-					reflect.DeepEqual(flog.FlowPolicySet, fl.FlowPolicySet) &&
+					reflect.DeepEqual(flog.FlowAllPolicySet, fl.FlowAllPolicySet) &&
 					reflect.DeepEqual(flog.FlowExtras, fl.FlowExtras) &&
 					reflect.DeepEqual(flog.FlowLabels, fl.FlowLabels) &&
 					reflect.DeepEqual(flog.FlowProcessReportedStats, fl.FlowProcessReportedStats) {
@@ -154,6 +154,21 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		}
 		return fp
 	}
+	extractFlowPendingPolicies := func(mus ...metric.Update) FlowPolicySet {
+		fp := make(FlowPolicySet)
+		for _, mu := range mus {
+			for idx, r := range mu.PendingRuleIDs {
+				name := fmt.Sprintf("%d|%s|%s.%s|%s|%s", idx,
+					r.TierString(),
+					r.TierString(),
+					r.NameString(),
+					r.ActionString(),
+					r.IndexStr)
+				fp[name] = emptyValue
+			}
+		}
+		return fp
+	}
 	Context("No Aggregation kind specified", func() {
 		BeforeEach(func() {
 			dispatcherMap := map[string]types.Reporter{}
@@ -177,9 +192,10 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
 			expectedFP := extractFlowPolicies(muNoConn1Rule1AllowUpdate)
+			expectedFPP := extractFlowPendingPolicies(muNoConn1Rule1AllowUpdate)
 			expectedFlowExtras := extractFlowExtras(muNoConn1Rule1AllowUpdate)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting the same metric Update with metrics in both directions")
 			Expect(cr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
@@ -188,8 +204,9 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsStarted = 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muConn1Rule1AllowUpdate)
 			expectedFP = extractFlowPolicies(muConn1Rule1AllowUpdate)
+			expectedFPP = extractFlowPendingPolicies(muConn1Rule1AllowUpdate)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting a expired metric Update for the same tuple")
 			Expect(cr.Report(muConn1Rule1AllowExpire)).NotTo(HaveOccurred())
@@ -199,8 +216,9 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsCompleted = 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muConn1Rule1AllowExpire)
 			expectedFP = extractFlowPolicies(muConn1Rule1AllowExpire)
+			expectedFPP = extractFlowPendingPolicies(muConn1Rule1AllowExpire)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting a metric Update for denied packets")
 			Expect(cr.Report(muNoConn3Rule2DenyUpdate)).NotTo(HaveOccurred())
@@ -211,8 +229,9 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsCompleted = 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyUpdate)
 			expectedFP = extractFlowPolicies(muNoConn1Rule2DenyUpdate)
+			expectedFPP = extractFlowPendingPolicies(muNoConn1Rule2DenyUpdate)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionDeny, ReporterSrc,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting a expired denied packet metric Update for the same tuple")
 			Expect(cr.Report(muNoConn3Rule2DenyExpire)).NotTo(HaveOccurred())
@@ -222,8 +241,9 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsCompleted = 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyExpire)
 			expectedFP = extractFlowPolicies(muNoConn1Rule2DenyExpire)
+			expectedFPP = extractFlowPendingPolicies(muNoConn1Rule2DenyExpire)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionDeny, ReporterSrc,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 		})
 		It("aggregates metric updates for the duration of aggregation when reporting to flow logs", func() {
 			By("reporting the same metric Update twice and expiring it immediately")
@@ -237,9 +257,10 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsCompleted := 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire)
 			expectedFP := extractFlowPolicies(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire)
+			expectedFPP := extractFlowPendingPolicies(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire)
 			expectedFlowExtras := extractFlowExtras(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 
 			By("reporting the same tuple different policies should be reported as separate flow logs")
 			Expect(cr.Report(muConn1Rule1AllowUpdate)).NotTo(HaveOccurred())
@@ -253,15 +274,17 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1 := calculatePacketStats(muConn1Rule1AllowUpdate)
 			expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2 := calculatePacketStats(muNoConn1Rule2DenyUpdate)
 			expectedFP1 := extractFlowPolicies(muConn1Rule1AllowUpdate)
+			expectedFPP1 := extractFlowPendingPolicies(muConn1Rule1AllowUpdate)
 			expectedFP2 := extractFlowPolicies(muNoConn1Rule2DenyUpdate)
+			expectedFPP2 := extractFlowPendingPolicies(muNoConn1Rule2DenyUpdate)
 			expectedFlowExtras1 := extractFlowExtras(muConn1Rule1AllowUpdate)
 			expectedFlowExtras2 := extractFlowExtras(muNoConn1Rule2DenyUpdate)
 			// We only care about the flow log entry to exist and don't care about the actual order.
 			expectFlowLogsInEventStream(
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta, noService, nil, nil, expectedFP1, expectedFlowExtras1, noProcessInfo, noTcpStatsInfo),
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta, noService, nil, nil, expectedFP1, expectedFP1, expectedFPP1, expectedFlowExtras1, noProcessInfo, noTcpStatsInfo),
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionDeny, ReporterSrc,
-					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFP2, expectedFPP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
 		})
 
 		It("aggregates metric updates from multiple tuples", func() {
@@ -277,15 +300,17 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1 := calculatePacketStats(muConn1Rule1AllowUpdate)
 			expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2 := calculatePacketStats(muConn2Rule1AllowUpdate)
 			expectedFP1 := extractFlowPolicies(muConn1Rule1AllowUpdate)
+			expectedFPP1 := extractFlowPendingPolicies(muConn1Rule1AllowUpdate)
 			expectedFP2 := extractFlowPolicies(muConn2Rule1AllowUpdate)
+			expectedFPP2 := extractFlowPendingPolicies(muConn2Rule1AllowUpdate)
 			expectedFlowExtras1 := extractFlowExtras(muConn1Rule1AllowUpdate)
 			expectedFlowExtras2 := extractFlowExtras(muConn2Rule1AllowUpdate)
 			// We only care about the flow log entry to exist and don't care about the actual order.
 			expectFlowLogsInEventStream(
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta, noService, nil, nil, expectedFP1, expectedFlowExtras1, noProcessInfo, noTcpStatsInfo),
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta, noService, nil, nil, expectedFP1, expectedFP1, expectedFPP1, expectedFlowExtras1, noProcessInfo, noTcpStatsInfo),
 				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFP2, expectedFPP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
 
 			By("report expirations of the same connections")
 			Expect(cr.Report(muConn1Rule1AllowExpire)).NotTo(HaveOccurred())
@@ -299,15 +324,17 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1 = calculatePacketStats(muConn1Rule1AllowExpire)
 			expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2 = calculatePacketStats(muConn2Rule1AllowExpire)
 			expectedFP1 = extractFlowPolicies(muConn1Rule1AllowExpire)
+			expectedFPP1 = extractFlowPendingPolicies(muConn1Rule1AllowExpire)
 			expectedFP2 = extractFlowPolicies(muConn2Rule1AllowExpire)
+			expectedFPP2 = extractFlowPendingPolicies(muConn2Rule1AllowExpire)
 			expectedFlowExtras1 = extractFlowExtras(muConn1Rule1AllowExpire)
 			expectedFlowExtras2 = extractFlowExtras(muConn2Rule1AllowExpire)
 			// We only care about the flow log entry to exist and don't care about the actual order.
 			expectFlowLogsInEventStream(
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta, noService, nil, nil, expectedFP1, expectedFlowExtras1, noProcessInfo, noTcpStatsInfo),
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta, noService, nil, nil, expectedFP1, expectedFP1, expectedFPP1, expectedFlowExtras1, noProcessInfo, noTcpStatsInfo),
 				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFP2, expectedFPP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
 		})
 		It("Doesn't process flows from Hostendoint to Hostendpoint", func() {
 			By("Reporting a update with host endpoint to host endpoint")
@@ -324,9 +351,10 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
 			expectedFP := extractFlowPolicies(muConn1Rule1AllowUpdateCopy)
+			expectedFPP := extractFlowPendingPolicies(muConn1Rule1AllowUpdateCopy)
 			expectedFlowExtras := extractFlowExtras(muConn1Rule1AllowUpdateCopy)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 		})
 		It("reports the given metric update with original source IPs in a flow log", func() {
 			By("reporting the first metric Update")
@@ -338,10 +366,11 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muWithOrigSourceIPs)
 			expectedFP := extractFlowPolicies(muWithOrigSourceIPs)
+			expectedFPP := extractFlowPendingPolicies(muWithOrigSourceIPs)
 			expectedFlowExtras := extractFlowExtras(muWithOrigSourceIPs)
 			meta := endpoint.Metadata{Type: endpoint.Wep, Namespace: "default", Name: "nginx-412354-5123451", AggregatedName: "nginx-412354-*"}
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, meta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, meta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 		})
 	})
 	Context("Enable Flowlogs for HEPs", func() {
@@ -372,9 +401,10 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedSrcMeta := endpoint.Metadata{Type: endpoint.Hep, Namespace: "-", Name: "eth1", AggregatedName: "localhost"}
 			expectedDstMeta := endpoint.Metadata{Type: endpoint.Hep, Namespace: "-", Name: "eth1", AggregatedName: "remotehost"}
 			expectedFP := extractFlowPolicies(muConn1Rule1AllowUpdateCopy)
+			expectedFPP := extractFlowPendingPolicies(muConn1Rule1AllowUpdateCopy)
 			expectedFlowExtras := extractFlowExtras(muConn1Rule1AllowUpdateCopy)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, ActionAllow, ReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedSrcMeta, expectedDstMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedSrcMeta, expectedDstMeta, noService, nil, nil, expectedFP, expectedFP, expectedFPP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
 		})
 	})
 })
@@ -790,7 +820,7 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 	})
 })
 
-func newExpectedFlowLog(t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterType, pi, po, bi, bo int, srcMeta, dstMeta endpoint.Metadata, dstService FlowService, srcLabels, dstLabels map[string]string, fp FlowPolicySet, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) FlowLog {
+func newExpectedFlowLog(t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterType, pi, po, bi, bo int, srcMeta, dstMeta endpoint.Metadata, dstService FlowService, srcLabels, dstLabels map[string]string, fap, fep, fpp FlowPolicySet, fe FlowExtras, fpi testProcessInfo, tcps testTcpStats) FlowLog {
 	return FlowLog{
 		FlowMeta: FlowMeta{
 			Tuple:      t,
@@ -804,8 +834,10 @@ func newExpectedFlowLog(t tuple.Tuple, nf, nfs, nfc int, a Action, fr reporterTy
 			SrcLabels: srcLabels,
 			DstLabels: dstLabels,
 		},
-		FlowPolicySet: fp,
-		FlowExtras:    fe,
+		FlowAllPolicySet:      fap,
+		FlowEnforcedPolicySet: fep,
+		FlowPendingPolicySet:  fpp,
+		FlowExtras:            fe,
 		FlowProcessReportedStats: FlowProcessReportedStats{
 			ProcessName:     fpi.processName,
 			NumProcessNames: fpi.numProcessNames,

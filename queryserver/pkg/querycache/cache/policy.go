@@ -607,6 +607,34 @@ func (d *policyData) GetSelector() *string {
 	return nil
 }
 
+func (d *policyData) GetNamespaceSelector() *string {
+	switch r := d.resource.(type) {
+	case *apiv3.GlobalNetworkPolicy:
+		return &r.Spec.NamespaceSelector
+	case *apiv3.StagedGlobalNetworkPolicy:
+		return &r.Spec.NamespaceSelector
+	default:
+		log.Debugf("namespaceSelector is not defined for policy of type: %v", r.GetObjectKind())
+	}
+	return nil
+}
+
+func (d *policyData) GetServiceAccountSelector() *string {
+	switch r := d.resource.(type) {
+	case *apiv3.NetworkPolicy:
+		return &r.Spec.ServiceAccountSelector
+	case *apiv3.GlobalNetworkPolicy:
+		return &r.Spec.ServiceAccountSelector
+	case *apiv3.StagedNetworkPolicy:
+		return &r.Spec.ServiceAccountSelector
+	case *apiv3.StagedGlobalNetworkPolicy:
+		return &r.Spec.ServiceAccountSelector
+	default:
+		log.Debugf("serviceAcountSelector is not defined for policy of type: %v", r.GetObjectKind())
+	}
+	return nil
+}
+
 func (d *policyData) GetStagedAction() *apiv3.StagedAction {
 	if d.v1Policy != nil {
 		return d.v1Policy.StagedAction

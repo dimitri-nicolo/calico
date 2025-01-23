@@ -356,6 +356,11 @@ type RuleRenderer interface {
 
 	FilterInputChainAllowWG(ipVersion uint8, c Config, allowAction generictables.Action) []generictables.Rule
 	ICMPv6Filter(action generictables.Action) []generictables.Rule
+	SetIPSetIDGetter(idGetter IPSetIDGetter, ipVersion uint8)
+}
+
+type IPSetIDGetter interface {
+	GetNoAlloc(string) uint64
 }
 
 type DefaultRuleRenderer struct {
@@ -380,10 +385,25 @@ type DefaultRuleRenderer struct {
 	maxNameLength int
 
 	nfqueueRuleDelayDeniedPacket *generictables.Rule
+
+	// The idallocators are used for getting the ipset ID from ipset name
+	// used in bpf ipsets. This is used for DNS policy inline in iptables.
+	IPSetIDGetterV4 IPSetIDGetter
+	IPSetIDGetterV6 IPSetIDGetter
 }
 
 func (r *DefaultRuleRenderer) IptablesFilterDenyAction() generictables.Action {
 	return r.FilterDenyAction
+}
+
+func (r *DefaultRuleRenderer) SetIPSetIDGetter(idGetter IPSetIDGetter, ipVersion uint8) {
+	if ipVersion == 4 {
+		r.IPSetIDGetterV4 = idGetter
+	} else if ipVersion == 6 {
+		r.IPSetIDGetterV6 = idGetter
+	} else {
+		log.WithField("version", ipVersion).Panic("Unknown IP version")
+	}
 }
 
 func (r *DefaultRuleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {

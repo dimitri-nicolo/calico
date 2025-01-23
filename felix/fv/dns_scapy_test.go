@@ -197,6 +197,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		string(api.DNSPolicyModeDelayDNSResponse),
 		string(api.DNSPolicyModeDelayDeniedPacket),
 	}
+	if !NFTMode() {
+		policyModes = append(policyModes, string(api.DNSPolicyModeInline))
+	}
 	if BPFMode() {
 		policyModes = []string{
 			string(api.BPFDNSPolicyModeNoDelay),
@@ -232,6 +235,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = mode
 				} else {
 					opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = mode
+					if mode == string(api.DNSPolicyModeInline) {
+						opts.ExtraEnvVars["FELIX_BPFLOGLEVEL"] = "Debug"
+					}
 				}
 				opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 				opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
@@ -239,6 +245,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 				tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 				infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
+				if !BPFMode() && mode == string(api.DNSPolicyModeInline) {
+					infra.RunBPFLog()
+				}
 
 				// Create a workload, using that profile.
 				for ii := range w {

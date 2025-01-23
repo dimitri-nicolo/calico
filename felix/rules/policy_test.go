@@ -21,8 +21,10 @@ import (
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/generictables"
+	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
@@ -1867,6 +1869,12 @@ var _ = Describe("DNS policy rules", func() {
 			rrConfigNormal.DNSPolicyMode = mode
 			renderer := NewRenderer(rrConfigNormal)
 
+			ipSetID := uint64(0)
+			if mode == apiv3.DNSPolicyModeInline {
+				ipSetAlloc := idalloc.New()
+				renderer.SetIPSetIDGetter(ipSetAlloc, 4)
+				ipSetID = ipSetAlloc.GetOrAlloc("ipsetid2")
+			}
 			iptableRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 
@@ -1900,6 +1908,11 @@ var _ = Describe("DNS policy rules", func() {
 				},
 			}
 
+			if mode == apiv3.DNSPolicyModeInline {
+				progPath := bpfdefs.IPSetMatchProg(ipSetID, 4)
+				expected[2].Match = iptables.Match().BPFProgram(progPath)
+			}
+
 			if expectDNSMark {
 				expected = append(expected, generictables.Rule{
 					Match:  iptables.Match(),
@@ -1912,5 +1925,6 @@ var _ = Describe("DNS policy rules", func() {
 		Entry(apiv3.DNSPolicyModeDelayDeniedPacket, apiv3.DNSPolicyModeDelayDeniedPacket, true),
 		Entry(apiv3.DNSPolicyModeNoDelay, apiv3.DNSPolicyModeNoDelay, false),
 		Entry(apiv3.DNSPolicyModeDelayDNSResponse, apiv3.DNSPolicyModeDelayDNSResponse, false),
+		Entry(apiv3.DNSPolicyModeInline, apiv3.DNSPolicyModeInline, false),
 	)
 })

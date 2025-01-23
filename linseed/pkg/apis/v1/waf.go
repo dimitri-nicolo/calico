@@ -52,6 +52,9 @@ type WAFLog struct {
 	Rules       []WAFRuleHit `json:"rules,omitempty"`
 	Source      *WAFEndpoint `json:"source"`
 	Host        string       `json:"host"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 type WAFEndpoint struct {

@@ -132,6 +132,7 @@ func TestCreateBGPLog(t *testing.T) {
 			results, err := b.List(ctx, clusterInfo, params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(results.Items))
+			backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
 			require.Equal(t, f, results.Items[0])
 
 			// List again with a bogus tenant ID.

@@ -22,7 +22,7 @@ if [[ -z "$repo_root" ]]; then
 fi
 
 version=${2#v}
-title=$(yq -r .[0].title "$repo_root/calico/_data/versions.yml")
+title=$(bin/yq -r .[0].title "$repo_root/calico/_data/versions.yml")
 
 is_master=false
 is_prerelease=false

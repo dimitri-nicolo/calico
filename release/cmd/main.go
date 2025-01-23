@@ -54,7 +54,7 @@ func loadConfig() (*Config, error) {
 
 func Commands(cfg *Config) []*cli.Command {
 	return []*cli.Command{
-		hashreleaseCommand(cfg),
+		enterpriseHashreleaseCommand(cfg),
 		releaseCommand(cfg),
 		branchCommand(cfg),
 	}

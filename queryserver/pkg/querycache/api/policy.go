@@ -13,6 +13,8 @@ type Policy interface {
 	GetOrder() *float64
 	GetStagedAction() *v3.StagedAction
 	GetSelector() *string
+	GetNamespaceSelector() *string
+	GetServiceAccountSelector() *string
 	GetResourceType() Resource
 	IsKubernetesType() bool
 }

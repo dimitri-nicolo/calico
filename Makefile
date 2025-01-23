@@ -35,6 +35,7 @@ clean:
 	$(MAKE) -C cni-plugin clean
 	$(MAKE) -C confd clean
 	$(MAKE) -C felix clean
+	$(MAKE) -C fluent-bit clean
 	$(MAKE) -C kube-controllers clean
 	$(MAKE) -C libcalico-go clean
 	$(MAKE) -C node clean
@@ -42,6 +43,7 @@ clean:
 	$(MAKE) -C key-cert-provisioner clean
 	$(MAKE) -C typha clean
 	$(MAKE) -C release clean
+	$(MAKE) -C selinux clean
 	rm -rf ./bin
 	rm -f $(SUB_CHARTS)
 	rm -rf _release_archive

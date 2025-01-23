@@ -20,9 +20,12 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
+
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 )
 
-func CleanUpCalicoPins(dir string) {
+func CleanUpCalicoPins(dir string, excludeDNS bool, pinsToExclude ...string) {
 	// Look for pinned maps and remove them.
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -31,8 +34,15 @@ func CleanUpCalicoPins(dir string) {
 		if path == "/sys/fs/bpf/calico/sockmap" {
 			return filepath.SkipDir
 		}
-		if strings.HasPrefix(info.Name(), "cali_") || strings.HasPrefix(info.Name(), "calico_") ||
-			strings.HasPrefix(info.Name(), "xdp_cali_") {
+
+		if excludeDNS {
+			if path == bpfdefs.DnsObjDir || strings.Contains(info.Name(), bpfdefs.DnsObjDir) {
+				return filepath.SkipDir
+			}
+		}
+		fileName := info.Name()
+		if !slices.Contains(pinsToExclude, fileName) && strings.HasPrefix(fileName, "cali_") || strings.HasPrefix(fileName, "calico_") ||
+			strings.HasPrefix(fileName, "xdp_cali_") {
 			log.WithField("path", path).Debug("Deleting pinned BPF resource")
 			err = os.Remove(path)
 			if err != nil {

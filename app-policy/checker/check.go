@@ -42,7 +42,11 @@ var (
 	INTERNAL          = int32(code.Code_INTERNAL)
 	UNKNOWN           = int32(code.Code_UNKNOWN)
 
-	rlog = logutils.NewRateLimitedLogger()
+	rlog1 = logutils.NewRateLimitedLogger()
+	rlog2 = logutils.NewRateLimitedLogger()
+	rlog3 = logutils.NewRateLimitedLogger()
+	rlog4 = logutils.NewRateLimitedLogger()
+	rlog5 = logutils.NewRateLimitedLogger()
 )
 
 // Action is an enumeration of actions a policy rule can take if it is matched.
@@ -78,14 +82,14 @@ func LookupEndpointKeysFromSrcDst(store *policystore.PolicyStore, src, dst strin
 
 	// Map the destination
 	if destinationIp, err := ip.ParseCIDROrIP(dst); err != nil {
-		rlog.WithError(err).Errorf("cannot process destination addr %s", dst)
+		rlog1.WithError(err).Errorf("cannot process destination addr %s", dst)
 	} else {
 		log.Debugf("lookup endpoint for destination %s", destinationIp.String())
 		destination = ipToEndpointKeys(store, destinationIp.Addr())
 	}
 	// Map the source
 	if sourceIp, err := ip.ParseCIDROrIP(src); err != nil {
-		rlog.WithError(err).Errorf("cannot process source addr %s", src)
+		rlog2.WithError(err).Errorf("cannot process source addr %s", src)
 	} else {
 		log.Debugf("lookup endpoint for source %s", sourceIp.String())
 		source = ipToEndpointKeys(store, sourceIp.Addr())
@@ -166,7 +170,7 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, flow Flow) (sour
 
 	// Map the destination
 	if destinationIp, err := ip.ParseCIDROrIP(flow.GetDestIP().String()); err != nil {
-		rlog.WithError(err).Errorf("cannot process destination addr %s:%d", flow.GetDestIP().String(), flow.GetDestPort())
+		rlog3.WithError(err).Errorf("cannot process destination addr %s:%d", flow.GetDestIP().String(), flow.GetDestPort())
 	} else {
 		log.Debugf("lookup endpoint for destination %v:%d", destinationIp, flow.GetDestPort())
 		destination = ipToEndpoints(store, destinationIp.Addr())
@@ -174,7 +178,7 @@ func lookupEndpointsFromRequest(store *policystore.PolicyStore, flow Flow) (sour
 
 	// Map the source
 	if sourceIp, err := ip.ParseCIDROrIP(flow.GetSourceIP().String()); err != nil {
-		rlog.WithError(err).Warnf("cannot process source addr %s:%d", flow.GetSourceIP().String(), flow.GetSourcePort())
+		rlog4.WithError(err).Warnf("cannot process source addr %s:%d", flow.GetSourceIP().String(), flow.GetSourcePort())
 	} else {
 		log.Debugf("lookup endpoint for source %s:%d", sourceIp.String(), flow.GetSourcePort())
 		source = ipToEndpoints(store, sourceIp.Addr())
@@ -207,7 +211,7 @@ func checkStore(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir 
 			// Leave action unchanged, packet will be dropped.
 		case policystore.ACCEPT, policystore.LOG_AND_ACCEPT:
 			// Convert action that would result in a drop into an accept.
-			rlog.Info("Invoking DropActionOverride: Converting drop action to allow")
+			rlog5.Info("Invoking DropActionOverride: Converting drop action to allow")
 			s.Code = OK
 		}
 	}
@@ -245,23 +249,24 @@ func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir 
 			policy := store.PolicyByID[pID]
 			action, ruleIndex = checkPolicy(policy, dir, request)
 			log.Debugf("Policy checked (ordinal=%d, profileId=%v, action=%v)", i, pID, action)
+			policyName := getPolicyName(name)
 			switch action {
 			case NO_MATCH:
 				if defaultDenyRuleID == nil {
-					defaultDenyRuleID = calc.NewRuleID(tier.GetName(), pID.GetName(), policy.GetNamespace(), endOfTierDenyIndex, dir, flxrules.RuleActionDeny)
+					defaultDenyRuleID = calc.NewRuleID(tier.GetName(), policyName, policy.GetNamespace(), endOfTierDenyIndex, dir, flxrules.RuleActionDeny)
 				}
 				continue Policy
 			// If the Policy matches, end evaluation (skipping profiles, if any)
 			case ALLOW:
 				s.Code = OK
-				trace = append(trace, calc.NewRuleID(tier.GetName(), pID.GetName(), policy.GetNamespace(), ruleIndex, dir, flxrules.RuleActionAllow))
+				trace = append(trace, calc.NewRuleID(tier.GetName(), policyName, policy.GetNamespace(), ruleIndex, dir, flxrules.RuleActionAllow))
 				return
 			case DENY:
 				s.Code = PERMISSION_DENIED
-				trace = append(trace, calc.NewRuleID(tier.GetName(), pID.GetName(), policy.GetNamespace(), ruleIndex, dir, flxrules.RuleActionDeny))
+				trace = append(trace, calc.NewRuleID(tier.GetName(), policyName, policy.GetNamespace(), ruleIndex, dir, flxrules.RuleActionDeny))
 				return
 			case PASS:
-				trace = append(trace, calc.NewRuleID(tier.GetName(), pID.GetName(), policy.GetNamespace(), ruleIndex, dir, flxrules.RuleActionPass))
+				trace = append(trace, calc.NewRuleID(tier.GetName(), policyName, policy.GetNamespace(), ruleIndex, dir, flxrules.RuleActionPass))
 				// Pass means end evaluation of policies and proceed to next tier (or profiles), if any.
 				break Policy
 			case LOG:
@@ -290,16 +295,17 @@ func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir 
 			profile := store.ProfileByID[pID]
 			action, ruleIndex := checkProfile(profile, dir, request)
 			log.Debugf("Profile checked (ordinal=%d, profileId=%v, action=%v)", i, pID, action)
+			policyName := getPolicyName(name)
 			switch action {
 			case NO_MATCH:
 				continue
 			case ALLOW:
 				s.Code = OK
-				trace = append(trace, calc.NewRuleID(defaultTier, pID.GetName(), "", ruleIndex, dir, flxrules.RuleActionAllow))
+				trace = append(trace, calc.NewRuleID(defaultTier, policyName, "", ruleIndex, dir, flxrules.RuleActionAllow))
 				return
 			case DENY, PASS:
 				s.Code = PERMISSION_DENIED
-				trace = append(trace, calc.NewRuleID(defaultTier, pID.GetName(), "", ruleIndex, dir, flxrules.RuleActionDeny))
+				trace = append(trace, calc.NewRuleID(defaultTier, policyName, "", ruleIndex, dir, flxrules.RuleActionDeny))
 				return
 			case LOG:
 				log.Debug("profile should never return LOG action")
@@ -396,4 +402,24 @@ func getPoliciesByDirection(dir flxrules.RuleDir, tier *proto.TierInfo) []string
 		return tier.EgressPolicies
 	}
 	return tier.IngressPolicies
+}
+
+// getPolicyName Removes any namespace and tier prefix to get the name of the policy only; preserves
+// the "staged:" infix if present.
+func getPolicyName(s string) string {
+	parts := strings.Split(s, ".")
+	if len(parts) > 1 {
+		polName := parts[1]
+		if strings.Contains(s, "staged:") {
+			polName = "staged:" + polName
+		}
+		return polName
+	}
+	// If no period is found and a '/' exists, return only the policy name by removing the namespace prefix.
+	parts = strings.Split(s, "/")
+	if len(parts) > 1 {
+		return parts[1]
+	}
+	// Return the original string if no period or slash is found
+	return s
 }

@@ -17,7 +17,6 @@ import (
 	corazatypes "github.com/corazawaf/coraza/v3/types"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 	mergefs "github.com/jcchavezs/mergefs"
 	mergefsio "github.com/jcchavezs/mergefs/io"
 	log "github.com/sirupsen/logrus"
@@ -65,7 +64,7 @@ func newResponseWithCode(code code.Code, message string) *envoyauthz.CheckRespon
 	return &envoyauthz.CheckResponse{Status: &status.Status{Code: int32(code), Message: message}}
 }
 
-type eventCallbackFn func(interface{})
+type eventCallbackFn func(*proto.WAFEvent)
 
 var _ checker.CheckProvider = (*Server)(nil)
 
@@ -73,8 +72,6 @@ type Server struct {
 	coraza.WAF
 	evp            *wafEventsPipeline
 	perHostEnabled bool
-
-	currPolicyStore *policystore.PolicyStore
 }
 
 func New(rootFS fs.FS, files, directives []string, tproxyEnabled bool, evp *wafEventsPipeline) (*Server, error) {
@@ -88,10 +85,10 @@ func New(rootFS fs.FS, files, directives []string, tproxyEnabled bool, evp *wafE
 	}
 	cfg := coraza.NewWAFConfig().
 		WithRootFS(rootFS).
-		WithRequestBodyAccess().
 		WithErrorCallback(func(rule corazatypes.MatchedRule) {
-			evp.Process(srv.currPolicyStore, rule)
-		})
+			evp.ProcessErrorRule(rule)
+		}).
+		WithRequestBodyAccess()
 
 	for _, f := range files {
 		log.WithField("file", f).Debug("loading directives from file")
@@ -122,9 +119,6 @@ func (w *Server) EnabledForRequest(ps *policystore.PolicyStore, req *envoyauthz.
 }
 
 func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRequest) (*envoyauthz.CheckResponse, error) {
-	// Update current policystore
-	w.currPolicyStore = st
-
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.WithFields(log.Fields{"attributes": checkReq.Attributes}).Debug("check request received")
 	}
@@ -143,80 +137,20 @@ func (w *Server) Check(st *policystore.PolicyStore, checkReq *envoyauthz.CheckRe
 		// in this case, we allow traffic to continue to its destination hop/next processing leg.
 		if len(src) > 0 && len(dst) == 0 {
 			log.Debugf("allowing traffic to continue to its destination hop/next processing leg. (req: %s)", checkReq.String())
-			srcNamespace, srcName := extractFirstWepNameAndNamespace(src)
-
-			// pass header values to the next hop
-			// specifically for the source workload name and namespace
-			resp := &envoyauthz.CheckResponse{
-				Status: &status.Status{Code: int32(code.Code_OK)},
-				HttpResponse: &envoyauthz.CheckResponse_OkResponse{
-					OkResponse: &envoyauthz.OkHttpResponse{
-						Headers: []*envoycore.HeaderValueOption{
-							{
-								Header: &envoycore.HeaderValue{
-									Key:   "x-source-workload-name",
-									Value: srcName,
-								},
-								Append: &wrappers.BoolValue{Value: false},
-							},
-							{
-								Header: &envoycore.HeaderValue{
-									Key:   "x-source-workload-namespace",
-									Value: srcNamespace,
-								},
-								Append: &wrappers.BoolValue{Value: false},
-							},
-						},
-					},
-				},
-			}
-
-			log.Debugf("allowing traffic to continue to its destination hop/next processing leg - repsonse. (resp: %s)", resp)
-			return resp, nil
+			return OK, nil
 		}
 	}
 
-	reqHeaders := httpReq.Headers
-	srcName, ok := reqHeaders["x-source-workload-name"]
-	if !ok {
-		log.Debug("x-source-workload-name header not found")
-	}
-	srcNamespace, ok := reqHeaders["x-source-workload-namespace"]
-	if !ok {
-		log.Debug("x-source-workload-namespace header not found")
-	}
-
 	tx := w.NewTransactionWithID(httpReq.Id)
-
+	//  process the http info for the events pipeline and close the
+	//  transaction
 	defer tx.Close()
 
 	if tx.IsRuleEngineOff() {
 		return OK, nil
 	}
 
-	// after the transaction is closed, process the http info for
-	// the events pipeline
-	defer func() {
-		action := "pass"
-		if in := tx.Interruption(); in != nil {
-			action = in.Action
-		}
-		w.evp.Process(st, &txHttpInfo{
-			txID:         tx.ID(),
-			destIP:       dstHost,
-			host:         httpReq.Host,
-			path:         httpReq.Path,
-			method:       httpReq.Method,
-			protocol:     httpReq.Protocol,
-			headers:      httpReq.Headers,
-			timestamp:    req.Time.AsTime(),
-			srcPort:      srcPort,
-			dstPort:      dstPort,
-			action:       action,
-			srcName:      srcName,
-			srcNamespace: srcNamespace,
-		})
-	}()
+	defer w.evp.Process(checkReq, tx)
 
 	tx.ProcessConnection(srcHost, int(srcPort), dstHost, int(dstPort))
 	tx.ProcessURI(httpReq.Path, httpReq.Method, httpReq.Protocol)
@@ -334,18 +268,4 @@ func peerToHostPort(peer *envoyauthz.AttributeContext_Peer) (host string, port u
 		return
 	}
 	return "127.0.0.1", 80, false
-}
-
-func extractFirstWepNameAndNamespace(weps []proto.WorkloadEndpointID) (string, string) {
-	if len(weps) == 0 {
-		return "", ""
-	}
-
-	wepName := weps[0].WorkloadId
-	parts := strings.Split(wepName, "/")
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-
-	return wepName, ""
 }

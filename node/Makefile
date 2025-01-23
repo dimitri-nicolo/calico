@@ -307,11 +307,11 @@ init-package: $(NODE_CONTAINER_BINARY)
 package: calico-node.rhel8 calico-node.rhel9
 
 .PHONY: calico-node.rhel8
-calico-node.rhel8: host-native-build init-package rhel/calico-node.spec.in
+calico-node.rhel8: bin/yq host-native-build init-package rhel/calico-node.spec.in
 	$(call host_native_rpm_build,rhel8,calico-node,)
 
 .PHONY: calico-node.rhel9
-calico-node.rhel9: host-native-build init-package rhel/calico-node.spec.in
+calico-node.rhel9: bin/yq host-native-build init-package rhel/calico-node.spec.in
 	$(call host_native_rpm_build,rhel9,calico-node,)
 
 ##########################################################################################

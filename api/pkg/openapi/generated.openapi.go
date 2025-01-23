@@ -6615,7 +6615,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"dnsPolicyMode": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DNSPolicyMode specifies how DNS policy programming will be handled. DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches, but did not match. The packet is released after a fixed time, or after the destination IP address was programmed. DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit statistics. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.\n\nThis setting is ignored on Windows and \"NoDelay\" is always used.\n\nThis setting is ignored by eBPF and BPFDNSPolicyMode is used instead.\n\n[Default: DelayDeniedPacket]",
+							Description: "DNSPolicyMode specifies how DNS policy programming will be handled. DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches, but did not match. The packet is released after a fixed time, or after the destination IP address was programmed. DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit statistics. NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.\n\nInline - Parses DNS response inline with DNS response packet processing within IPTables. This guarantees the DNS rules reflect any change immediately. This mode works for iptables only and matches the same mode for BPFDNSPolicyMode. This setting is ignored on Windows and \"NoDelay\" is always used.\n\nThis setting is ignored by eBPF and BPFDNSPolicyMode is used instead.\n\nInline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables. [Default: DelayDeniedPacket]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6761,6 +6761,40 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					"l7LogsFilePerNodeLimit": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Limit on the number of L7 logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable L7 responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered L7 logs. A value of 0 means no limit. [Default: 1500]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"wafEventLogsFlushInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFlushInterval configures the interval at which Felix exports WAFEvent logs. [Default: 15s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"wafEventLogsFileEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileEnabled controls logging WAFEvent logs to a file. If false no WAFEvent logging to file will occur. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"wafEventLogsFileDirectory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileDirectory sets the directory where WAFEvent log files are stored. [Default: /var/log/calico/waf]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"wafEventLogsFileMaxFiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileMaxFiles sets the number of WAFEvent log files to keep. [Default: 5]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"wafEventLogsFileMaxFileSizeMB": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WAFEventLogsFileMaxFileSizeMB sets the max size in MB of WAFEvent log files before rotation. [Default: 100]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

@@ -48,7 +48,7 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/cni:__CE_VERSION__-fips
     docker pull quay.io/tigera/firewall-integration:__CE_VERSION__
     docker pull quay.io/tigera/egress-gateway:__CE_VERSION__
-    docker pull quay.io/tigera/key-cert-provisioner:__KSP_VERSION__
+    docker pull quay.io/tigera/key-cert-provisioner:__CE_VERSION__
     docker pull quay.io/tigera/anomaly_detection_jobs:__CE_VERSION__
     docker pull quay.io/tigera/anomaly-detection-api:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch-metrics:__CE_VERSION__
@@ -115,7 +115,7 @@ registry, and then push the newly tagged images to your own registry.
     docker pull quay.io/tigera/cni:__CE_VERSION__-fips $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__-fips
     docker pull quay.io/tigera/firewall-integration:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/firewall-integration:__CE_VERSION__
     docker pull quay.io/tigera/egress-gateway:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/egress-gateway:__CE_VERSION__
-    docker pull quay.io/tigera/key-cert-provisioner:__KSP_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/key-cert-provisioner:__KSP_VERSION__
+    docker pull quay.io/tigera/key-cert-provisioner:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/key-cert-provisioner:__CE_VERSION__
     docker pull quay.io/tigera/anomaly_detection_jobs:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly_detection_jobs:__CE_VERSION__
     docker pull quay.io/tigera/anomaly-detection-api:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly-detection-api:__CE_VERSION__
     docker pull quay.io/tigera/elasticsearch-metrics:__CE_VERSION__ $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch-metrics:__CE_VERSION__
@@ -181,7 +181,7 @@ registry, and then push the newly tagged images to your own registry.
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/cni:__CE_VERSION__-fips
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/firewall-integration:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/egress-gateway:__CE_VERSION__
-    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/key-cert-provisioner:__KSP_VERSION__
+    docker push $PRIVATE_REGISTRY/$IMAGE_PATH/key-cert-provisioner:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly_detection_jobs:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/anomaly-detection-api:__CE_VERSION__
     docker push $PRIVATE_REGISTRY/$IMAGE_PATH/elasticsearch-metrics:__CE_VERSION__

@@ -116,4 +116,7 @@ var _ = DescribeTable("MatchBuilder",
 	// IPVS.
 	Entry("IPVSConnection", Match().IPVSConnection(), "-m ipvs --ipvs"),
 	Entry("NotIPVSConnection", Match().NotIPVSConnection(), "-m ipvs ! --ipvs"),
+
+	// BPF.
+	Entry("BPFProgram", Match().BPFProgram("/sys/fs/bpf/dns/dns_parser"), "-m bpf --object-pinned /sys/fs/bpf/dns/dns_parser"),
 )

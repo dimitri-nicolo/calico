@@ -174,8 +174,13 @@ func newTestPolicySyncServer(stats chan *proto.DataplaneStats) *testPolicySyncSe
 	}
 }
 
-func (s *testPolicySyncServer) Sync(sr *proto.SyncRequest, pss proto.PolicySync_SyncServer) error {
+func (_ *testPolicySyncServer) Sync(*proto.SyncRequest, proto.PolicySync_SyncServer) error {
 	// Don't do anything with this since our test server will not handle any syncs
+	return nil
+}
+
+func (_ *testPolicySyncServer) ReportWAF(proto.PolicySync_ReportWAFServer) error {
+	// Don't do anything with this since our test server will not handle any WAF Report
 	return nil
 }
 

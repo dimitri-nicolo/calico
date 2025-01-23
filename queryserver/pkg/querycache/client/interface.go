@@ -109,21 +109,23 @@ type QueryPoliciesResp struct {
 
 // The names of the members in the Policy struct should match their corresponding json name for field selection feature to work for the /policies API.
 type Policy struct {
-	UID                  types.UID         `json:"uid,omitempty"`
-	Index                int               `json:"index,omitempty"`
-	Kind                 string            `json:"kind,omitempty"`
-	Name                 string            `json:"name,omitempty"`
-	Namespace            string            `json:"namespace,omitempty"`
-	Tier                 string            `json:"tier,omitempty"`
-	Annotations          map[string]string `json:"annotations,omitempty"`
-	NumHostEndpoints     int               `json:"numHostEndpoints,omitempty"`
-	NumWorkloadEndpoints int               `json:"numWorkloadEndpoints,omitempty"`
-	IngressRules         []RuleDirection   `json:"ingressRules,omitempty"`
-	EgressRules          []RuleDirection   `json:"egressRules,omitempty"`
-	Order                *float64          `json:"order,omitempty"`
-	CreationTime         *v1.Time          `json:"creationTime,omitempty"`
-	StagedAction         *v3.StagedAction  `json:"stagedAction,omitempty" validate:"omitempty"`
-	Selector             *string           `json:"selector,omitempty" validate:"omitempty"`
+	UID                    types.UID         `json:"uid,omitempty"`
+	Index                  int               `json:"index,omitempty"`
+	Kind                   string            `json:"kind,omitempty"`
+	Name                   string            `json:"name,omitempty"`
+	Namespace              string            `json:"namespace,omitempty"`
+	Tier                   string            `json:"tier,omitempty"`
+	Annotations            map[string]string `json:"annotations,omitempty"`
+	NumHostEndpoints       int               `json:"numHostEndpoints,omitempty"`
+	NumWorkloadEndpoints   int               `json:"numWorkloadEndpoints,omitempty"`
+	IngressRules           []RuleDirection   `json:"ingressRules,omitempty"`
+	EgressRules            []RuleDirection   `json:"egressRules,omitempty"`
+	Order                  *float64          `json:"order,omitempty"`
+	CreationTime           *v1.Time          `json:"creationTime,omitempty"`
+	StagedAction           *v3.StagedAction  `json:"stagedAction,omitempty" validate:"omitempty"`
+	Selector               *string           `json:"selector,omitempty" validate:"omitempty"`
+	NamespaceSelector      *string           `json:"namespaceSelector,omitempty" validate:"omitempty"`
+	ServiceAccountSelector *string           `json:"serviceAccountSelector,omitempty" validate:"omitempty"`
 }
 
 type RuleDirection struct {

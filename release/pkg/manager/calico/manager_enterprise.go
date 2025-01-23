@@ -1,0 +1,581 @@
+package calico
+
+import (
+	_ "embed"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"text/template"
+
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+
+	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
+	"github.com/projectcalico/calico/release/internal/pinnedversion"
+	"github.com/projectcalico/calico/release/internal/registry"
+	"github.com/projectcalico/calico/release/internal/utils"
+)
+
+var (
+	defaultEnterpriseRegistry = registry.QuayRegistry
+
+	windowsGCSBucket = "tigera-windows"
+
+	docsURL = "https://docs.tigera.io"
+
+	// images that should be expected for a release.
+	// This list needs to be kept up-to-date
+	// with the actual release artifacts produced for a release
+	// as images are added or removed.
+	enterpriseImages = []string{
+		"cnx-manager",
+		"voltron",
+		"guardian",
+		"cnx-apiserver",
+		"cnx-queryserver",
+		"kube-controllers",
+		"calicoq",
+		"typha",
+		"calicoctl",
+		"cnx-node",
+		"dikastes",
+		"dex",
+		"fluentd",
+		"ui-apis",
+		"kibana",
+		"elasticsearch",
+		"intrusion-detection-job-installer",
+		"intrusion-detection-controller",
+		"webhooks-processor",
+		"compliance-controller",
+		"compliance-reporter",
+		"compliance-snapshotter",
+		"compliance-server",
+		"compliance-benchmarker",
+		"ingress-collector",
+		"l7-collector",
+		"l7-admission-controller",
+		"license-agent",
+		"cni",
+		"firewall-integration",
+		"egress-gateway",
+		"linseed",
+		"policy-recommendation",
+		"elasticsearch-metrics",
+		"packetcapture",
+		"prometheus",
+		"prometheus-operator",
+		"prometheus-config-reloader",
+		"prometheus-service",
+		"es-gateway",
+		"deep-packet-inspection",
+		"eck-operator",
+		"alertmanager",
+		"envoy",
+		"envoy-init",
+		"pod2daemon-flexvol",
+		"csi",
+		"node-driver-registrar",
+		"key-cert-provisioner",
+		"fluentd-windows",
+		"cni-windows",
+		"cnx-node-windows",
+	}
+
+	//go:embed templates/yum.conf.gotmpl
+	rpmRepoTemplate string
+	rhelVersions    = []string{"8", "9"}
+	rpmDirs         = []string{
+		"node",
+		"fluent-bit",
+		"selinux",
+	}
+)
+
+func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *EnterpriseManager {
+	defaultCalicoOpts := []Option{
+		WithImageRegistries([]string{defaultEnterpriseRegistry}),
+		WithBuildImages(false),
+		WithPublishImages(false),
+	}
+	calicoOpts = append(defaultCalicoOpts, calicoOpts...)
+	calicoManager := NewManager(calicoOpts...)
+
+	m := &EnterpriseManager{
+		CalicoManager:         *calicoManager,
+		publishWindowsArchive: true,
+		publishCharts:         true,
+		helmRegistry:          registry.HelmDevRegistry, // Defaults to dev registry as currently only used for hashreleases.
+	}
+
+	for _, o := range opts {
+		if err := o(m); err != nil {
+			logrus.WithError(err).Fatal("Failed to apply option to enterprise manager")
+		}
+	}
+
+	if !m.isHashRelease && m.chartVersion == "" {
+		logrus.Fatal("No chart version specified")
+	}
+	if m.chartVersion != "" {
+		logrus.WithField("chartVersion", m.chartVersion).Info("Using chart version")
+	}
+
+	return m
+}
+
+type EnterpriseManager struct {
+	CalicoManager
+
+	// chartVersion is the version of the helm chart to build.
+	chartVersion string
+
+	enterpriseHashrelease hashreleaseserver.EnterpriseHashrelease
+
+	// publishing options
+	publishWindowsArchive bool
+	publishCharts         bool
+
+	helmRegistry string
+}
+
+func (m *EnterpriseManager) helmChartVersion() string {
+	if m.chartVersion == "" {
+		return m.calicoVersion
+	}
+	return fmt.Sprintf("%s-%s", m.calicoVersion, m.chartVersion)
+}
+
+func (m *EnterpriseManager) resetCharts() {
+	// Reset the changes to the charts directory.
+	if _, err := m.runner.RunInDir(m.repoRoot, "git", []string{"checkout", "charts/"}, nil); err != nil {
+		logrus.WithError(err).Error("Failed to reset changes to charts")
+	}
+}
+
+func (m *EnterpriseManager) BuildHelm() error {
+	if m.isHashRelease {
+		// Reset the changes to the charts directory.
+		defer m.resetCharts()
+
+		if err := m.CalicoManager.modifyHelmChartsValues(); err != nil {
+			return err
+		}
+
+		// Modify the tigera-prometheus-operator values.yaml file to use the calico version.
+		prometheusValuesYAML := filepath.Join(m.repoRoot, "charts", "tigera-prometheus-operator", "values.yaml")
+		if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/tag: .*/tag: %s/g`, m.calicoVersion), prometheusValuesYAML}, nil); err != nil {
+			logrus.WithError(err).Error("Failed to update calicoctl version in values.yaml")
+			return err
+		}
+
+		// Update the registry in the tigera-operator & tigera-prometheus-operator values.yaml file.
+		var registry string
+		if len(m.imageRegistries) > 0 {
+			registry = m.imageRegistries[0]
+		}
+		manifestRegistry, err := m.getRegistryFromManifests()
+		if err != nil {
+			return err
+		}
+		for _, valuesYAML := range []string{filepath.Join(m.repoRoot, "charts", "tigera-operator", "values.yaml"), prometheusValuesYAML} {
+			if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s~%s~%s~g`, manifestRegistry, registry), valuesYAML}, nil); err != nil {
+				logrus.WithField("file", valuesYAML).WithError(err).Error("failed to update registry in values file")
+				return err
+			}
+		}
+	}
+
+	// Build the helm chart, passing the version to use.
+	env := append(os.Environ(), fmt.Sprintf("GIT_VERSION=%s", m.calicoVersion))
+	if m.chartVersion != "" {
+		env = append(env, fmt.Sprintf("CHART_RELEASE=%s", m.chartVersion))
+	}
+	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "chart", env...); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *EnterpriseManager) PreBuildValidation() error {
+	if !m.isHashRelease {
+		return fmt.Errorf("only hash releases are supported for enterprise builds")
+	}
+	return m.CalicoManager.PreBuildValidation()
+}
+
+func (m *EnterpriseManager) generateManifests() error {
+	env := os.Environ()
+	env = append(env, fmt.Sprintf("CALICO_VERSION=%s", m.calicoVersion))
+	env = append(env, fmt.Sprintf("OPERATOR_VERSION=%s", m.operatorVersion))
+	env = append(env, fmt.Sprintf("OPERATOR_REGISTRY=%s", m.operatorRegistry))
+	env = append(env, fmt.Sprintf("REGISTRY=%s", m.imageRegistries[0]))
+	env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
+	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "gen-manifests", env...); err != nil {
+		logrus.WithError(err).Error("Failed to make manifests")
+		return err
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) Build() error {
+	ver := m.calicoVersion
+
+	// Make sure output directory exists.
+	if err := os.MkdirAll(m.uploadDir(), utils.DirPerms); err != nil {
+		return fmt.Errorf("failed to create output dir: %s", err)
+	}
+
+	if m.validate {
+		if err := m.PreBuildValidation(); err != nil {
+			return fmt.Errorf("failed pre-build validation: %s", err)
+		}
+	}
+
+	if err := m.BuildHelm(); err != nil {
+		return err
+	}
+
+	if m.isHashRelease {
+		if err := m.generateManifests(); err != nil {
+			return err
+		}
+		defer m.resetManifests()
+	}
+
+	// Build OCP bundle from manifests
+	if err := m.buildOCPBundle(); err != nil {
+		return err
+	}
+
+	// Build the Windows archive.
+	env := append(os.Environ(), fmt.Sprintf("VERSION=%s", ver))
+	if err := m.makeInDirectoryIgnoreOutput(filepath.Join(m.repoRoot, "node"), "release-windows-archive", env...); err != nil {
+		return fmt.Errorf("failed to build windows archive: %s", err)
+	}
+
+	if err := m.buildArchive(); err != nil {
+		return err
+	}
+
+	// Build the RPMs for non-cluster hosts.
+	if err := m.assembleRPMs(); err != nil {
+		return err
+	}
+
+	if err := m.collectArtifacts(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type enterpriseMetadata struct {
+	metadata      `json:",inline" yaml:",inline"`
+	CalicoVersion string `json:"calico_oss_version" yaml:"CalicoOSSVersion"`
+}
+
+func (m *EnterpriseManager) BuildMetadata(dir string) error {
+	if err := os.MkdirAll(dir, utils.DirPerms); err != nil {
+		logrus.WithError(err).Errorf("Failed to create metadata folder %s", dir)
+		return err
+	}
+	registry, err := m.getRegistryFromManifests()
+	if err != nil {
+		return err
+	}
+
+	calicoVer, err := utils.DetermineCalicoVersion(m.repoRoot)
+	if err != nil {
+		return err
+	}
+	data := enterpriseMetadata{
+		metadata: metadata{
+			Version:          m.calicoVersion,
+			OperatorVersion:  m.operatorVersion,
+			Images:           releaseImages(enterpriseImages, m.calicoVersion, registry, m.operatorImage, m.operatorVersion, m.operatorRegistry),
+			HelmChartVersion: m.helmChartVersion(),
+		},
+		CalicoVersion: calicoVer,
+	}
+
+	// Render it as yaml and write it to a file.
+	bs, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filepath.Join(dir, metadataFileName), []byte(bs), 0o644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *EnterpriseManager) buildArchive() error {
+	// Build the release archive.
+	env := os.Environ()
+	if m.isHashRelease {
+		env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
+	}
+	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "release-archive", env...); err != nil {
+		return err
+	}
+	return nil
+}
+
+type RPMRepoData struct {
+	ReleaseURL string
+	Version    string
+}
+
+func (m *EnterpriseManager) assembleRPMs() error {
+	outDir := filepath.Join(m.uploadDir(), "non-cluster-host-rpms")
+	if err := os.MkdirAll(outDir, utils.DirPerms); err != nil {
+		return err
+	}
+	rsyncOpts := []string{"--recursive", "--prune-empty-dirs", "--exclude=BUILD", "--exclude=SRPMS", "--exclude=*debuginfo*", "--exclude=*debugsource*"}
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		rsyncOpts = append(rsyncOpts, "--verbose", "--progress")
+	}
+	for _, dir := range rpmDirs {
+		logrus.WithField("package", dir).Debug("Building RPM package")
+		if err := m.makeInDirectoryIgnoreOutput(filepath.Join(m.repoRoot, dir), "package"); err != nil {
+			logrus.WithError(err).Errorf("Failed to build RPM package for %s", dir)
+			return err
+		}
+		srcDir := filepath.Join(m.repoRoot, dir, "package") + "/"
+		destDir := outDir + "/"
+		logrus.WithFields(logrus.Fields{
+			"package": dir,
+			"srcDir":  srcDir,
+			"destDir": destDir,
+		}).Debug("Copying RPM package")
+		if _, err := m.runner.Run("rsync", append(rsyncOpts, srcDir, destDir), nil); err != nil {
+			logrus.WithError(err).Errorf("Failed copy %s RPM to %s", dir, destDir)
+			return err
+		}
+	}
+	createrepo := "createrepo_c"
+	var createrepoFound bool
+	if path, err := exec.LookPath(createrepo); err != nil {
+		logrus.WithError(err).Error("Error trying to find createrepo_c in PATH")
+	} else if path == "" {
+		logrus.Error("createrepo_c not found in PATH")
+	} else {
+		createrepoFound = true
+	}
+
+	for _, version := range rhelVersions {
+		if createrepoFound {
+			logrus.WithField("RHELVersion", version).Debug("Creating repo to test with yum/dnf/etc")
+			if _, err := m.runner.RunInDir(filepath.Join(outDir, fmt.Sprintf("rhel%s", version)), createrepo, []string{"."}, nil); err != nil {
+				logrus.WithError(err).Errorf("Failed to create repo for RHEL %s", version)
+				return fmt.Errorf("failed to create repo for RHEL %s: %s", version, err)
+			}
+		} else {
+			logrus.WithField("RHELVersion", version).Warn("createrepo_c not found, skipping repo creation")
+		}
+		logrus.WithField("RHELVersion", version).Debug("Writing yum repo config file")
+		tmpl, err := template.New("yum.conf").Parse(rpmRepoTemplate)
+		if err != nil {
+			return fmt.Errorf("failed to parse yum repo template: %s", err)
+		}
+		f, err := os.Create(filepath.Join(outDir, fmt.Sprintf("calico_rhel%s.repo", version)))
+		if err != nil {
+			return fmt.Errorf("failed to create yum repo config file: %s", err)
+		}
+		defer f.Close()
+		data := &RPMRepoData{
+			ReleaseURL: m.hashrelease.URL(),
+			Version:    version,
+		}
+		if err := tmpl.Execute(f, data); err != nil {
+			logrus.WithField("version", version).WithError(err).Error("Failed to write yum repo config file")
+			return fmt.Errorf("failed to write yum repo config file: %s", err)
+		}
+		logrus.WithField("RHELVersion", version).Debug("Wrote yum repo config file")
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) collectArtifacts() error {
+	// Artifacts will be moved here.
+	uploadDir := m.uploadDir()
+
+	// Add in a release metadata file.
+	err := m.BuildMetadata(uploadDir)
+	if err != nil {
+		return fmt.Errorf("failed to build release metadata file: %s", err)
+	}
+
+	// Add the manifests (this includes OCP bundle).
+	manifestsSrc := filepath.Join(m.repoRoot, "manifests") + "/"
+	manifestsDest := filepath.Join(uploadDir, "manifests") + "/"
+	if err := os.MkdirAll(manifestsDest, utils.DirPerms); err != nil {
+		return fmt.Errorf("failed to create manifests directory: %s", err)
+	}
+	rsyncArgs := []string{"-av", "--delete", "--exclude=generate.sh", "--exclude=README.md", "--exclude=.gitattributes"}
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		rsyncArgs = append(rsyncArgs, "--verbose", "--progress")
+	}
+	if _, err := m.runner.Run("rsync", append(rsyncArgs, manifestsSrc, manifestsDest), nil); err != nil {
+		logrus.WithError(err).Error("Failed to copy manifests to output directory")
+		return err
+	}
+
+	if err := os.MkdirAll(m.scriptsDir(), utils.DirPerms); err != nil {
+		return err
+	}
+
+	// Add the Windows install script
+	if _, err := m.runner.RunInDir(m.repoRoot, "cp", []string{"node/windows-packaging/install-calico-windows.ps1", m.scriptsDir()}, nil); err != nil {
+		return err
+	}
+	// Move the Windows archive to temp dir
+	if _, err := m.runner.RunInDir(m.repoRoot, "cp", []string{fmt.Sprintf("node/dist/tigera-calico-windows-%s.zip", m.calicoVersion), m.tmpDir}, nil); err != nil {
+		return err
+	}
+
+	// Add helm charts
+	charts, err := listCharts(filepath.Join(m.repoRoot, "bin"), m.helmChartVersion())
+	if err != nil {
+		logrus.WithError(err).Error("Failed to get list of charts")
+	}
+	chartsDir := filepath.Join(uploadDir, "charts")
+	if err := os.MkdirAll(chartsDir, utils.DirPerms); err != nil {
+		return fmt.Errorf("failed to create charts directory: %s", err)
+	}
+	for _, chart := range charts {
+		logrus.WithField("chart", chart).Debug("Copying chart")
+		if _, err := m.runner.Run("cp", []string{chart, chartsDir}, nil); err != nil {
+			return err
+		}
+		if strings.HasSuffix(chart, fmt.Sprintf("tigera-operator-%s.tgz", m.helmChartVersion())) {
+			if _, err := m.runner.Run("cp", []string{chart, uploadDir}, nil); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Add the release archive
+	if _, err := m.runner.RunInDir(m.repoRoot, "cp", []string{fmt.Sprintf("_release_archive/release-%s-%s.tgz", m.calicoVersion, m.operatorVersion), uploadDir}, nil); err != nil {
+		return err
+	}
+
+	if err := m.fetchEnterpriseScripts(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func listCharts(dir, version string) ([]string, error) {
+	matchingFiles := []string{}
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			logrus.WithField("path", path).WithError(err).Error("Error accessing path")
+			return nil
+		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".tgz") && strings.Contains(info.Name(), version) {
+			matchingFiles = append(matchingFiles, path)
+		}
+		return nil
+	})
+	return matchingFiles, err
+}
+
+func (m *EnterpriseManager) scriptsDir() string {
+	return filepath.Join(m.uploadDir(), "scripts")
+}
+
+// Retrieve scripts from the docs site and include them in the hashrelease.
+func (m *EnterpriseManager) fetchEnterpriseScripts() error {
+	// Fetch switch-active-operator.sh script from the latest docs
+	switchActiveOperatorFilename := "switch-active-operator.sh"
+	switchActiveOperatorFile, err := os.Create(filepath.Join(m.scriptsDir(), switchActiveOperatorFilename))
+	if err != nil {
+		return err
+	}
+	defer switchActiveOperatorFile.Close()
+	resp, err := http.Get(fmt.Sprintf("%s/%s/next/scripts/%s", docsURL, strings.ReplaceAll(utils.CalicoEnterprise, " ", "-"), switchActiveOperatorFilename))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return err
+	}
+	if _, err := io.Copy(switchActiveOperatorFile, resp.Body); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *EnterpriseManager) PublishRelease() error {
+	// Check that the environment has the necessary prereqs.
+	if err := m.publishPrereqs(); err != nil {
+		return err
+	}
+
+	if err := m.publishWindowsArchiveToGCS(); err != nil {
+		return err
+	}
+
+	if m.isHashRelease {
+		if err := m.publishHelmCharts(); err != nil {
+			return err
+		}
+		if err := m.publishToHashreleaseServer(); err != nil {
+			return fmt.Errorf("failed to publish hashrelease: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func (m *EnterpriseManager) publishWindowsArchiveToGCS() error {
+	if !m.publishWindowsArchive {
+		logrus.Info("Skipping publishing windows archive")
+		return nil
+	}
+
+	bucket := windowsGCSBucket
+	if m.isHashRelease {
+		bucket += "/dev"
+	}
+
+	// Publish the Windows archive.
+	if _, err := m.runner.RunInDir(m.tmpDir, "gsutil", []string{
+		"cp",
+		fmt.Sprintf("tigera-calico-windows-%s.zip", m.calicoVersion),
+		fmt.Sprintf("gs://%s/tigera-calico-windows-%s.zip", bucket, m.enterpriseHashrelease.Name),
+	}, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) publishHelmCharts() error {
+	if !m.publishCharts {
+		logrus.Info("Skipping publishing helm charts")
+		return nil
+	}
+	charts, err := listCharts(filepath.Join(m.uploadDir(), "charts"), m.helmChartVersion())
+	if err != nil {
+		return fmt.Errorf("failed to list charts: %s", err)
+	}
+	for _, chart := range charts {
+		if _, err := m.runner.Run("helm", []string{"helm", "push", chart, m.helmRegistry}, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}

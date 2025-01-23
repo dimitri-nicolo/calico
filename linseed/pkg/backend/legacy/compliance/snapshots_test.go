@@ -122,6 +122,7 @@ func TestCreateSnapshots(t *testing.T) {
 				resp, err := sb.List(ctx, clusterInfo, &p)
 				require.NoError(t, err)
 				require.Len(t, resp.Items, 1)
+				backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 				require.Equal(t, trl, resp.Items[0].ResourceList)
 			})
 
@@ -161,6 +162,7 @@ func TestCreateSnapshots(t *testing.T) {
 				require.NotEmpty(t, resp.Items[0].ID)
 				// Overwrite the ID to match the generated one
 				s1.ID = s1.ResourceList.String()
+				backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 				require.Equal(t, s1, resp.Items[0])
 
 				// Read back data a managed cluster and check it matches.
@@ -171,6 +173,7 @@ func TestCreateSnapshots(t *testing.T) {
 				require.NotEmpty(t, resp.Items[0].ID)
 				// Overwrite the ID to match the generated one
 				s2.ID = s2.ResourceList.String()
+				backendutils.AssertSnapshotClusterAndReset(t, anotherClusterInfo.Cluster, &resp.Items[0])
 				require.Equal(t, s2, resp.Items[0])
 			})
 
@@ -278,6 +281,9 @@ func TestSnapshotsFiltering(t *testing.T) {
 
 				resp, err := sb.List(ctx, clusterInfo, tc.Params)
 				require.NoError(t, err)
+				for i := range resp.Items {
+					backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
+				}
 
 				if tc.Expect1 {
 					require.Contains(t, resp.Items, s1)

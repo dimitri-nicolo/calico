@@ -1,0 +1,51 @@
+version: v1.0
+name: Publish hashrelease
+agent:
+  machine:
+    type: f1-standard-2
+    os_image: ubuntu2204
+execution_time_limit:
+  hours: 1
+
+global_job_config:
+  secrets:
+    # Github SSH secret for pulling private repositories.
+    - name: private-repo
+    # Secret for pushing to the docs box.
+    - name: docs-ssh
+    # Secret for image registries
+    - name: gcloud-registry-access
+    - name: hashrelease-docker-auth
+    - name: iss-image-scanning
+    # Secrets for Slack notifications
+    - name: releasebot-slack
+  prologue:
+    commands:
+      - chmod 0600 ~/.keys/*
+      - ssh-add ~/.keys/*
+      # Install createrepo-c for RPMs
+      - sudo apt-get -qq update && sudo apt-get -qq install --no-install-recommends createrepo-c
+      # Checkout the code and unshallow it.
+      - checkout
+      - retry git fetch --quiet --unshallow
+      # Credentials for accessing gcloud, needed to push images to gcr
+      - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/keys/.registry-viewer-serviceaccount.json
+      - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+      # Registries login
+      - docker login
+      # Authenticate for helm charts
+      - gcloud auth print-access-token | helm registry login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+
+blocks:
+  - name: Publish hashrelease
+    task:
+      jobs:
+        - name: Build and publish hashrelease
+          commands:
+            - make hashrelease
+      prologue:
+        commands:
+          - cd release
+      env_vars:
+        - name: OPERATOR_REGISTRY
+          value: gcr.io/unique-caldron-775/cnx

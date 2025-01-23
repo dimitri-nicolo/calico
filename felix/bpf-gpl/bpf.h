@@ -61,6 +61,9 @@
 #define CALI_KPROBE	(1<<24)
 #define CALI_STATS	(1<<25)
 
+/* Used for BPF programs called from iptables. */
+#define CALI_IPT_BPF	(1<<26)
+
 #ifndef CALI_DROP_WORKLOAD_TO_HOST
 #define CALI_DROP_WORKLOAD_TO_HOST false
 #endif
@@ -102,6 +105,7 @@
 /* EE only */
 #define CALI_F_KPROBE	(((CALI_COMPILE_FLAGS) & CALI_KPROBE) != 0)
 #define CALI_F_STATS	(((CALI_COMPILE_FLAGS) & CALI_STATS) != 0)
+#define CALI_F_IPT_BPF	(((CALI_COMPILE_FLAGS) & CALI_IPT_BPF) != 0)
 
 #define CALI_RES_REDIR_BACK	108 /* packet should be sent back the same iface */
 #define CALI_RES_REDIR_IFINDEX	109 /* packet should be sent straight to
@@ -125,7 +129,7 @@ static CALI_BPF_INLINE void __compile_asserts(void) {
 	COMPILE_TIME_ASSERT(
 		CALI_COMPILE_FLAGS == 0 ||
 		CALI_F_CT_CLEANUP ||
-		!!(CALI_COMPILE_FLAGS & (CALI_CGROUP | CALI_KPROBE | CALI_STATS)) !=
+		!!(CALI_COMPILE_FLAGS & (CALI_CGROUP | CALI_KPROBE | CALI_STATS | CALI_IPT_BPF)) !=
 		!!(CALI_COMPILE_FLAGS & (CALI_TC_HOST_EP | CALI_TC_INGRESS | CALI_TC_TUNNEL | CALI_TC_DSR | CALI_XDP_PROG))
 	);
 	COMPILE_TIME_ASSERT(!CALI_F_DSR || (CALI_F_DSR && CALI_F_FROM_WEP) || (CALI_F_DSR && CALI_F_HEP));
@@ -299,6 +303,8 @@ extern const volatile struct cali_stats_globals __globals;
 
 #if CALI_F_CT_CLEANUP
 extern const volatile struct cali_ct_cleanup_globals __globals;
+#elif CALI_F_IPT_BPF
+extern const volatile struct cali_ipt_dns_globals __globals;
 #else
 extern const volatile struct cali_tc_preamble_globals __globals;
 #endif

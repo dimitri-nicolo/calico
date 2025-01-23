@@ -98,6 +98,9 @@
     },
     "level": {
       "type": "keyword"
+    },
+    "cluster": {
+      "type": "keyword"
     }
   }
 }

@@ -61,4 +61,7 @@ type L7Log struct {
 	Type         string `json:"type"`
 
 	Host string `json:"host"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }

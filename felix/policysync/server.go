@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
@@ -41,20 +42,24 @@ const OutputQueueLen = 100
 // There is a single instance of the Server, it disambiguates connections from different clients by the
 // credentials present in the gRPC request.
 type Server struct {
-	JoinUpdates chan<- interface{}
-	stats       chan<- *proto.DataplaneStats
-	nextJoinUID func() uint64
+	JoinUpdates     chan<- interface{}
+	stats           chan<- *proto.DataplaneStats
+	wafEventHandler func(*proto.WAFEvent)
+	nextJoinUID     func() uint64
 }
 
 func NewServer(joins chan<- interface{}, collector collector.Collector, allocUID func() uint64) *Server {
 	var stats chan<- *proto.DataplaneStats
+	var WafEventHandler func(*proto.WAFEvent)
 	if collector != nil {
 		stats = collector.ReportingChannel()
+		WafEventHandler = collector.WAFReportingHandler()
 	}
 	return &Server{
-		JoinUpdates: joins,
-		stats:       stats,
-		nextJoinUID: allocUID,
+		JoinUpdates:     joins,
+		stats:           stats,
+		wafEventHandler: WafEventHandler,
+		nextJoinUID:     allocUID,
 	}
 }
 
@@ -166,6 +171,24 @@ func (s *Server) Report(ctx context.Context, d *proto.DataplaneStats) (*proto.Re
 		return &proto.ReportResult{Successful: true}, nil
 	case <-ctx.Done():
 		return &proto.ReportResult{Successful: false}, ctx.Err()
+	}
+}
+
+func (s *Server) ReportWAF(stream proto.PolicySync_ReportWAFServer) error {
+	if s.wafEventHandler == nil {
+		log.Error("ReportWAF called but no WAF handler")
+		return errors.New("WAFEvents disabled")
+	}
+
+	for {
+		wafEvent, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&proto.WAFEventResult{Successful: true})
+		}
+		if err != nil {
+			return err
+		}
+		s.wafEventHandler(wafEvent)
 	}
 }
 

@@ -57,18 +57,18 @@ func NewSingleIndexL7LogBackend(c lmaelastic.Client, cache bapi.IndexInitializer
 
 type logWithExtras struct {
 	v1.L7Log `json:",inline"`
-	Cluster  string `json:"cluster"`
 	Tenant   string `json:"tenant,omitempty"`
 }
 
 // prepareForWrite wraps a log in a document that includes the cluster and tenant if
 // the backend is configured to write to a single index.
 func (b *l7LogBackend) prepareForWrite(i bapi.ClusterInfo, l v1.L7Log) interface{} {
+	l.Cluster = i.Cluster
+
 	if b.singleIndex {
 		return &logWithExtras{
-			L7Log:   l,
-			Cluster: i.Cluster,
-			Tenant:  i.Tenant,
+			L7Log:  l,
+			Tenant: i.Tenant,
 		}
 	}
 	return l

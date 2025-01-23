@@ -96,6 +96,8 @@ type DatastoreInfra interface {
 
 	// Stop cleans up anything necessary in preparation for the end of the test.
 	Stop()
+
+	RunBPFLog()
 }
 
 // Creates a default profile that allows workloads with this profile to talk to each

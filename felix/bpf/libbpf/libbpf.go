@@ -449,6 +449,11 @@ func (t *TcGlobalData) Set(m *Map) error {
 	return err
 }
 
+func (i *IPTDnsGlobalData) Set(m *Map) error {
+	_, err := C.bpf_ipt_set_globals(m.bpfMap, C.uint64_t(i.IPSetID))
+	return err
+}
+
 func (c *CTCleanupGlobalData) Set(m *Map) error {
 	_, err := C.bpf_ct_cleanup_set_globals(
 		m.bpfMap,
@@ -469,7 +474,6 @@ func (c *CTCleanupGlobalData) Set(m *Map) error {
 func (c *CTLBGlobalData) Set(m *Map) error {
 	udpNotSeen := c.UDPNotSeen / time.Second // Convert to seconds
 	_, err := C.bpf_ctlb_set_globals(m.bpfMap, C.uint(udpNotSeen), C.bool(c.ExcludeUDP))
-
 	return err
 }
 

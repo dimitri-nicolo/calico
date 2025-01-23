@@ -18,6 +18,9 @@
     },
     "requestCompletedTimestamp": {
       "type": "date"
+    },
+    "cluster": {
+      "type": "keyword"
     }
   }
 }

@@ -66,9 +66,7 @@ func TestFlowLogBasic(t *testing.T) {
 		resp, err := flb.List(ctx, clusterInfo, &opts)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 1)
-		require.NotEmpty(t, resp.Items[0].ID)
-		resp.Items[0].ID = ""
-		resp.Items[0].GeneratedTime = nil
+		backendutils.AssertFlowLogIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
 		require.Equal(t, f, resp.Items[0])
 
 		// Attempt to read it back with a different tenant ID - it should return nothing.
@@ -266,7 +264,7 @@ func TestFlowSorting(t *testing.T) {
 		require.Empty(t, err)
 
 		// Assert that the logs are returned in the correct order.
-		copyOfLogs := backendutils.AssertLogIDAndCopyFlowLogsWithoutID(t, r)
+		copyOfLogs := backendutils.AssertFlowLogsIDAndClusterAndReset(t, clusterInfo.Cluster, r)
 		require.Equal(t, *fl1, copyOfLogs[0])
 		require.Equal(t, *fl2, copyOfLogs[1])
 
@@ -282,7 +280,7 @@ func TestFlowSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
 		require.Empty(t, err)
-		copyOfLogs = backendutils.AssertLogIDAndCopyFlowLogsWithoutID(t, r)
+		copyOfLogs = backendutils.AssertFlowLogsIDAndClusterAndReset(t, clusterInfo.Cluster, r)
 		require.Equal(t, *fl2, copyOfLogs[0])
 		require.Equal(t, *fl1, copyOfLogs[1])
 	})
@@ -620,7 +618,7 @@ func TestFlowLogFiltering(t *testing.T) {
 					return
 				}
 
-				copyOfLogs := backendutils.AssertLogIDAndCopyFlowLogsWithoutID(t, r)
+				copyOfLogs := backendutils.AssertFlowLogsIDAndClusterAndReset(t, clusterInfo.Cluster, r)
 
 				// Assert that the correct logs are returned.
 				if testcase.ExpectLog1 {

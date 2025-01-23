@@ -87,6 +87,58 @@ rules:
       - networkpolicies.crd.projectcalico.org
       - networksets.crd.projectcalico.org
       - tiers.crd.projectcalico.org
+       # Enterprise/Cloud Resources
+      - alertexceptions.crd.projectcalico.org
+      - bfdconfigurations.crd.projectcalico.org
+      - compliances.operator.tigera.io
+      - deeppacketinspections.crd.projectcalico.org
+      - egressgatewaypolicies.crd.projectcalico.org
+      - externalnetworks.crd.projectcalico.org
+      - globalalerts.crd.projectcalico.org
+      - globalalerttemplates.crd.projectcalico.org
+      - globalreports.crd.projectcalico.org
+      - globalreporttypes.crd.projectcalico.org
+      - globalthreatfeeds.crd.projectcalico.org
+      - licensekeys.crd.projectcalico.org
+      - managedclusters.crd.projectcalico.org
+      - packetcaptures.crd.projectcalico.org
+      - policyrecommendationscopes.crd.projectcalico.org
+      - remoteclusterconfigurations.crd.projectcalico.org
+      - securityeventwebhooks.crd.projectcalico.org
+      - stagedglobalnetworkpolicies.crd.projectcalico.org
+      - stagedkubernetesnetworkpolicies.crd.projectcalico.org
+      - stagednetworkpolicies.crd.projectcalico.org
+      - uisettings.crd.projectcalico.org
+      - uisettingsgroups.crd.projectcalico.org
+        # Enterprise Operator CRDs
+      - applicationlayers.operator.tigera.io
+      - authentications.operator.tigera.io
+      - egressgateways.operator.tigera.io
+      - intrusiondetections.operator.tigera.io
+      - logcollectors.operator.tigera.io
+      - logstorages.operator.tigera.io
+      - managementclusterconnections.operator.tigera.io
+      - managementclusters.operator.tigera.io
+      - managers.operator.tigera.io
+      - monitors.operator.tigera.io
+      - nonclusterhosts.operator.tigera.io
+      - packetcaptureapis.operator.tigera.io
+      - policyrecommendations.operator.tigera.io
+      - tlspassthroughroutes.operator.tigera.io
+      - tlsterminatedroutes.operator.tigera.io
+        # Elastic Resources
+      - agents.agent.k8s.elastic.co
+      - apmservers.apm.k8s.elastic.co
+      - beats.beat.k8s.elastic.co
+      - elasticmapsservers.maps.k8s.elastic.co
+      - elasticsearchautoscalers.autoscaling.k8s.elastic.co
+      - elasticsearches.elasticsearch.k8s.elastic.co
+      - enterprisesearches.enterprisesearch.k8s.elastic.co
+      - kibanas.kibana.k8s.elastic.co
+      - logstashes.logstash.k8s.elastic.co
+      - stackconfigpolicies.stackconfigpolicy.k8s.elastic.co
+        # Others
+      - licenseusagereports.usage.tigera.io
   - apiGroups:
       - ""
     resources:
@@ -684,6 +736,7 @@ spec:
           args:
             # Configure tigera-operator to manage installation of the necessary CRDs.
             - -manage-crds=true
+            - -variant=TigeraSecureEnterprise
           volumeMounts:
             - name: var-lib-calico
               readOnly: true

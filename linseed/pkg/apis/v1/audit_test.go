@@ -104,7 +104,8 @@ var (
   "annotations": {
     "brick": "red"
   },
-  "name": "any-name"
+  "name": "any-name",
+  "cluster": "cluster-one"
 }
 `
 	impersonateUser = &authnv1.UserInfo{
@@ -165,8 +166,9 @@ var (
 
 func TestAuditLog_MarshalJSON(t *testing.T) {
 	type fields struct {
-		Event audit.Event
-		Name  *string
+		Event   audit.Event
+		Name    *string
+		Cluster string
 	}
 	tests := []struct {
 		name    string
@@ -174,14 +176,15 @@ func TestAuditLog_MarshalJSON(t *testing.T) {
 		want    []byte
 		wantErr bool
 	}{
-		{"empty", fields{audit.Event{}, nil}, []byte(emptyK8sEvent), false},
-		{"valid audit log", fields{k8sEvent, testutils.StringPtr("any-name")}, []byte(auditLog), false},
+		{"empty", fields{audit.Event{}, nil, ""}, []byte(emptyK8sEvent), false},
+		{"valid audit log", fields{k8sEvent, testutils.StringPtr("any-name"), "cluster-one"}, []byte(auditLog), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			auditLog := &AuditLog{
-				Event: tt.fields.Event,
-				Name:  tt.fields.Name,
+				Event:   tt.fields.Event,
+				Name:    tt.fields.Name,
+				Cluster: tt.fields.Cluster,
 			}
 			got, err := auditLog.MarshalJSON()
 			if (err != nil) != tt.wantErr {
@@ -208,7 +211,7 @@ func TestAuditLog_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			"valid audit", compact([]byte(auditLog)), AuditLog{
-				k8sEvent, testutils.StringPtr("any-name"),
+				k8sEvent, testutils.StringPtr("any-name"), "cluster-one",
 			}, false,
 		},
 	}

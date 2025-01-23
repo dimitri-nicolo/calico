@@ -3,6 +3,7 @@ package policysync
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 
 	log "github.com/sirupsen/logrus"
@@ -25,6 +26,7 @@ type FakePolicySync struct {
 	endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 	profiles  map[proto.ProfileID]*proto.Profile
 	policies  map[proto.PolicyID]*proto.Policy
+	wafEvents []*proto.WAFEvent
 }
 
 func NewFakePolicySync(listenPath string) (*FakePolicySync, error) {
@@ -75,6 +77,19 @@ T:
 	return nil
 }
 
+func (p *FakePolicySync) ReportWAF(stream proto.PolicySync_ReportWAFServer) error {
+	for {
+		event, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&proto.WAFEventResult{Successful: true})
+		}
+		if err != nil {
+			return err
+		}
+		p.wafEvents = append(p.wafEvents, event)
+	}
+}
+
 func (p *FakePolicySync) Report(context.Context, *proto.DataplaneStats) (*proto.ReportResult, error) {
 	return &proto.ReportResult{Successful: true}, nil
 }
@@ -117,4 +132,8 @@ func (p *FakePolicySync) Addr() (_ string) {
 
 func (p *FakePolicySync) ActiveConnections() int {
 	return p.activeCon
+}
+
+func (p *FakePolicySync) GetWAFEvents() []*proto.WAFEvent {
+	return p.wafEvents
 }

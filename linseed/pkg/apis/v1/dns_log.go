@@ -76,6 +76,9 @@ type DNSLog struct {
 	LatencyMax      time.Duration     `json:"latency_max"`
 	Host            string            `json:"host"`
 	ID              string            `json:"id,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 type DNSLatency struct {

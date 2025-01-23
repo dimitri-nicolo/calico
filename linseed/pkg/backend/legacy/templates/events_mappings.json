@@ -87,6 +87,9 @@
     },
     "geo_info": {
       "type": "object"
+    },
+    "cluster": {
+      "type": "keyword"
     }
   }
 }

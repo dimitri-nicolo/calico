@@ -28,6 +28,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
+	"github.com/projectcalico/calico/felix/collector/wafevents"
 	dpsets "github.com/projectcalico/calico/felix/dataplane/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/ip"
@@ -35,6 +36,7 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 const (
@@ -79,6 +81,15 @@ var (
 		Help: "Histogram for measuring latency for processing merging the proto.DataplaneStatistics to the current data cache.",
 	})
 
+	// TODO: find a way to track errors for epStats dump processing as there are no
+	// indicative method to track errors currently
+
+	// wafEventStatsUpdate processing prometheus metrics
+	histogramWAFEventStatsUpdate = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "felix_collector_wafevents_update_processing_latency_seconds",
+		Help: "Histogram for measuring latency for processing merging the proto.WAFEvent to the current data cache.",
+	})
+
 	gaugeDataplaneStatsUpdateErrorsPerMinute = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "felix_collector_dataplanestats_update_processing_errors_per_minute",
 		Help: "Number of errors encountered when processing merging the proto.DataplaneStatistics to the current data cache.",
@@ -100,6 +111,7 @@ func init() {
 	prometheus.MustRegister(histogramDumpStatsLatency)
 	prometheus.MustRegister(gaugeEpStatsCacheSizeLength)
 	prometheus.MustRegister(histogramDataplaneStatsUpdate)
+	prometheus.MustRegister(histogramWAFEventStatsUpdate)
 	prometheus.MustRegister(gaugeDataplaneStatsUpdateErrorsPerMinute)
 
 }
@@ -141,9 +153,12 @@ type collector struct {
 	config                *Config
 	dumpLog               *log.Logger
 	ds                    chan *proto.DataplaneStats
+	wafEventsBatchC       chan []*proto.WAFEvent
+	wafEvents             []*proto.WAFEvent
 	metricReporters       []types.Reporter
 	dnsLogReporter        types.Reporter
 	l7LogReporter         types.Reporter
+	wafEventsReporter     types.Reporter
 	policyStoreManager    policystore.PolicyStoreManager
 	displayDebugTraceLogs bool
 }
@@ -160,6 +175,8 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		config:                cfg,
 		dumpLog:               log.New(),
 		ds:                    make(chan *proto.DataplaneStats, 1000),
+		wafEventsBatchC:       make(chan []*proto.WAFEvent),
+		wafEvents:             []*proto.WAFEvent{},
 		policyStoreManager:    policystore.NewPolicyStoreManager(),
 		displayDebugTraceLogs: cfg.DisplayDebugTraceLogs,
 	}
@@ -168,6 +185,16 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 // ReportingChannel returns the channel used to report dataplane statistics.
 func (c *collector) ReportingChannel() chan<- *proto.DataplaneStats {
 	return c.ds
+}
+
+// WAFReportingHandler returns the function handler used to report WAFEvents.
+func (c *collector) WAFReportingHandler() func(*proto.WAFEvent) {
+	if c.wafEventsReporter == nil {
+		return nil
+	}
+	return func(e *proto.WAFEvent) {
+		c.wafEvents = append(c.wafEvents, e)
+	}
 }
 
 func (c *collector) Start() error {
@@ -213,6 +240,13 @@ func (c *collector) Start() error {
 
 	if c.l7LogReporter != nil {
 		if err := c.l7LogReporter.Start(); err != nil {
+			return err
+		}
+	}
+
+	if c.wafEventsReporter != nil {
+		go c.wafEventsBatchStart()
+		if err := c.wafEventsReporter.Start(); err != nil {
 			return err
 		}
 	}
@@ -271,8 +305,9 @@ func (c *collector) AddNewDomainDataplaneToIpSetsManager(ipFamily ipsets.IPFamil
 
 func (c *collector) startStatsCollectionAndReporting() {
 	var (
-		pktInfoC <-chan PacketInfo
-		ctInfoC  <-chan []ConntrackInfo
+		pktInfoC        <-chan PacketInfo
+		ctInfoC         <-chan []ConntrackInfo
+		wafEventsBatchC chan []*proto.WAFEvent
 	)
 
 	if c.packetInfoReader != nil {
@@ -287,6 +322,10 @@ func (c *collector) startStatsCollectionAndReporting() {
 	// 2. A signal handler that will dump logs on receiving SIGUSR2.
 	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
+		if len(c.wafEvents) > 0 {
+			wafEventsBatchC = c.wafEventsBatchC
+		}
+
 		select {
 		case ctInfos := <-ctInfoC:
 			conntrackProcessStart := time.Now()
@@ -310,6 +349,9 @@ func (c *collector) startStatsCollectionAndReporting() {
 			dataplaneStatsUpdateStart := time.Now()
 			c.convertDataplaneStatsAndApplyUpdate(ds)
 			histogramDataplaneStatsUpdate.Observe(float64(time.Since(dataplaneStatsUpdateStart).Seconds()))
+		case wafEventsBatchC <- c.wafEvents:
+			c.wafEvents = nil
+			wafEventsBatchC = nil
 		case <-c.tickerPolicyEval.Channel():
 			c.updatePendingRuleTraces()
 		}
@@ -498,9 +540,13 @@ func (c *collector) applyConntrackStatUpdate(
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
 func (c *collector) applyNflogStatUpdate(data *Data, ruleID *calc.RuleID, matchIdx, numPkts, numBytes int) {
-	if ru := data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == RuleMatchIsDifferent {
+	var ru RuleMatch
+	if ru = data.AddRuleID(ruleID, matchIdx, numPkts, numBytes); ru == RuleMatchIsDifferent {
 		c.handleDataEndpointOrRulesChanged(data)
 		data.ReplaceRuleID(ruleID, matchIdx, numPkts, numBytes)
+	}
+	if ru == RuleMatchSet || ru == RuleMatchIsDifferent {
+		c.evaluatePendingRuleTraceForLocalEp(data)
 	}
 }
 
@@ -987,27 +1033,31 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 func (c *collector) updatePendingRuleTraces() {
 	// The epStats map may be quite large, so we chose to lock each entry individually to avoid
 	// locking the entire map.
-	for t, data := range c.epStats {
+	for _, data := range c.epStats {
 		if data == nil {
 			continue
 		}
 
-		// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
-		flow := TupleAsFlow(t)
+		c.evaluatePendingRuleTraceForLocalEp(data)
+	}
+}
 
-		if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal {
-			// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
-			c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-				c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
-			})
-		}
+func (c *collector) evaluatePendingRuleTraceForLocalEp(data *Data) {
+	// Convert the tuple to a Dikastes flow, which is used by the rule trace evaluator.
+	flow := TupleAsFlow(data.Tuple)
 
-		if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal {
-			// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
-			c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
-				c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
-			})
-		}
+	if data.DstEp != nil && !data.DstEp.IsHostEndpoint() && data.DstEp.IsLocal {
+		// Evaluate the pending ingress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+			c.evaluatePendingRuleTrace(rules.RuleDirIngress, ps, data.DstEp, flow, &data.IngressPendingRuleIDs)
+		})
+	}
+
+	if data.SrcEp != nil && !data.SrcEp.IsHostEndpoint() && data.SrcEp.IsLocal {
+		// Evaluate the pending egress rule trace for the flow. The policyStoreManager is read-locked.
+		c.policyStoreManager.DoWithReadLock(func(ps *policystore.PolicyStore) {
+			c.evaluatePendingRuleTrace(rules.RuleDirEgress, ps, data.SrcEp, flow, &data.EgressPendingRuleIDs)
+		})
 	}
 }
 
@@ -1270,6 +1320,66 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, t tuple.Tuple, httpDat
 			"src": t.Src,
 			"dst": t.Src,
 		}).Error("Failed to log request")
+	}
+}
+
+func (c *collector) SetWAFEventsReporter(r types.Reporter) {
+	c.wafEventsReporter = r
+}
+
+func (c *collector) wafEventsBatchStart() {
+	for events := range c.wafEventsBatchC {
+		wafEventStatsUpdateStart := time.Now()
+		c.LogWAFEvents(events)
+		histogramWAFEventStatsUpdate.Observe(float64(time.Since(wafEventStatsUpdateStart).Seconds()))
+	}
+}
+
+func (c *collector) LogWAFEvents(events []*proto.WAFEvent) {
+	for _, wafEvent := range events {
+		src := &v1.WAFEndpoint{
+			IP:           wafEvent.SrcIp,
+			PortNum:      wafEvent.SrcPort,
+			PodName:      "-",
+			PodNameSpace: "-",
+		}
+		dst := &v1.WAFEndpoint{
+			IP:           wafEvent.DstIp,
+			PortNum:      wafEvent.DstPort,
+			PodName:      "-",
+			PodNameSpace: "-",
+		}
+
+		// get the src and dst name for the WAF event
+		srcEP, _ := c.luc.GetEndpoint(utils.IpStrTo16Byte(wafEvent.SrcIp))
+		dstEP, _ := c.luc.GetEndpoint(utils.IpStrTo16Byte(wafEvent.DstIp))
+		if srcEP != nil {
+			if wep, ok := srcEP.Key.(model.WorkloadEndpointKey); ok {
+				ns, name, err := endpoint.DeconstructNamespaceAndNameFromWepName(wep.WorkloadID)
+				if err == nil {
+					src.PodName = name
+					src.PodNameSpace = ns
+				}
+			}
+		}
+		if dstEP != nil {
+			if wep, ok := dstEP.Key.(model.WorkloadEndpointKey); ok {
+				ns, name, err := endpoint.DeconstructNamespaceAndNameFromWepName(wep.WorkloadID)
+				if err == nil {
+					dst.PodName = name
+					dst.PodNameSpace = ns
+				}
+			}
+		}
+
+		report := &wafevents.Report{
+			WAFEvent: wafEvent,
+			Src:      src,
+			Dst:      dst,
+		}
+		if err := c.wafEventsReporter.Report(report); err != nil {
+			log.WithError(err).WithField("report", report).Error("Error reporting WAFEvent")
+		}
 	}
 }
 

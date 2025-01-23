@@ -82,20 +82,18 @@ var _ = Describe("DNS Policy", func() {
 // ipsets manager can query which domains belong to which ipsets (which is
 // necessary to build the bpf structures, but it does not receive ip updates and
 // thus does not write the IPs in the sets.
-var _ = Describe("_BPF-SAFE_ Zero latency bpf-only DNS Policy", func() {
-	if !BPFMode() {
+var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix to ipsets", func() {
+	if NFTMode() {
 		return
 	}
-
 	testDnsPolicy(true, false)
 })
 
 // This is the new default for BPF, precessing in BPF, with fixups from Felix
 var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy", func() {
-	if !BPFMode() {
+	if NFTMode() {
 		return
 	}
-
 	testDnsPolicy(true, true)
 })
 
@@ -122,6 +120,9 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	if zeroLatency {
 		msWildcards = []string{"*.microsoft.com"}
 		dnsMode = string(api.BPFDNSPolicyModeInline)
+		if !BPFMode() {
+			dnsMode = string(api.DNSPolicyModeInline)
+		}
 	}
 
 	logAndReport := func(out string, err error) error {
@@ -200,6 +201,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
+		opts.ExtraEnvVars["FELIX_BPFLOGLEVEL"] = "Debug"
 		if dnsMode != "" {
 			if !BPFMode() {
 				opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
@@ -227,6 +229,9 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
+		if zeroLatency && !BPFMode() {
+			infra.RunBPFLog()
+		}
 		// Create a workload, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
@@ -1016,7 +1021,9 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		policyChainName = rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
 			Tier: "default",
 			Name: fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
-		})
+		},
+			NFTMode(),
+		)
 
 		// Allow workloads to connect out to the Internet.
 		tc.Felixes[0].Exec(

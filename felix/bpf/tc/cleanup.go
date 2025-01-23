@@ -25,6 +25,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
+	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -87,7 +88,7 @@ func CleanUpTcpStatsPrograms() {
 }
 
 // CleanUpProgramsAndPins makes a best effort to remove all our TC BPF programs.
-func CleanUpProgramsAndPins() {
+func cleanUpProgramsAndPins(excludeDNS bool, mapsToExclude ...string) {
 	log.Debug("Trying to clean up any left-over BPF state from a previous run.")
 	bpftool := exec.Command("bpftool", "map", "list", "--json")
 	mapsJSON, err := bpftool.Output()
@@ -178,7 +179,15 @@ func CleanUpProgramsAndPins() {
 		return nil
 	})
 
-	bpf.CleanUpCalicoPins(bpfdefs.DefaultBPFfsPath)
+	bpf.CleanUpCalicoPins(bpfdefs.DefaultBPFfsPath, excludeDNS, mapsToExclude...)
+}
+
+func CleanUpProgramsAndPins() {
+	cleanUpProgramsAndPins(false)
+}
+
+func CleanUpProgramsAndPinsExceptDNS() {
+	cleanUpProgramsAndPins(true, bpfmap.DNSMapsToPin()...)
 }
 
 var tcFiltRegex = regexp.MustCompile(`filter .*? bpf .*? id (\d+)`)
