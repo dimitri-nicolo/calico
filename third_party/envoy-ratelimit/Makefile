@@ -36,8 +36,7 @@ bin/envoy-ratelimit-$(ARCH): init-source
 
 .PHONY: clean
 clean:
-	rm -f $(ENVOY_RATELIMIT_DOWNLOADED)
-	rm -f $(ENVOY_RATELIMIT_IMAGE_CREATED)
+	rm -f .envoy-ratelimit.*
 	rm -fr bin/ envoy-ratelimit/
 	-docker image rm -f $$(docker images $(ENVOY_RATELIMIT_IMAGE) -a -q)
 
