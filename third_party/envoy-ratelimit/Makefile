@@ -2,14 +2,10 @@ include ../../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy-ratelimit
 
-ENVOY_RATELIMIT_IMAGE ?= tigera/envoy-ratelimit
+ENVOY_RATELIMIT_IMAGE ?= envoy-ratelimit
 BUILD_IMAGES ?= $(ENVOY_RATELIMIT_IMAGE)
 
 ENVOY_RATELIMIT_VERSION=26f28d78
-
-DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
-BRANCH_NAME = $(ENVOY_RATELIMIT_VERSION)
-LATEST_IMAGE_TAG = latest
 
 ##############################################################################
 # Include lib.Makefile before anything else
@@ -33,12 +29,17 @@ $(ENVOY_RATELIMIT_DOWNLOADED):
 .PHONY: build
 build: bin/envoy-ratelimit-$(ARCH)
 
-LD_FLAGS = -w -s
-
 bin/envoy-ratelimit-$(ARCH): init-source
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			CGO_ENABLED=0 go build -C envoy-ratelimit -o ../bin/envoy-ratelimit-$(ARCH) -ldflags="$(LD_FLAGS)" github.com/envoyproxy/ratelimit/src/service_cmd'
+			CGO_ENABLED=0 go build -C envoy-ratelimit -buildvcs=false -o ../$@ -v -tags=$(TAGS) -ldflags="$(LD_FLAGS) -s -w" github.com/envoyproxy/ratelimit/src/service_cmd'
+
+.PHONY: clean
+clean:
+	rm -f $(ENVOY_RATELIMIT_DOWNLOADED)
+	rm -f $(ENVOY_RATELIMIT_IMAGE_CREATED)
+	rm -fr bin/ envoy-ratelimit/
+	-docker image rm -f $$(docker images $(ENVOY_RATELIMIT_IMAGE) -a -q)
 
 ##############################################################################
 # Image
@@ -50,23 +51,18 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-# intermediate multi-arch image holds our patched envoy -ratelimit.
 .PHONY: image
-image: $(ENVOY_RATELIMIT_IMAGE)
+image: $(BUILD_IMAGES)
 
 $(ENVOY_RATELIMIT_IMAGE): $(ENVOY_RATELIMIT_IMAGE_CREATED)
-$(ENVOY_RATELIMIT_IMAGE_CREATED): build
+$(ENVOY_RATELIMIT_IMAGE_CREATED): Dockerfile build
 	$(DOCKER_BUILD) -t $(ENVOY_RATELIMIT_IMAGE):latest-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 ##############################################################################
 # CI/CD
 ##############################################################################
-.PHONY: cd
-cd: image-all var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
-	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(LATEST_IMAGE_TAG) EXCLUDEARCH="$(EXCLUDEARCH)"
+ci: image
 
-.PHONY: push-manifest
-push-manifest:
-	$(MAKE) push-manifests IMAGETAG=$(LATEST_IMAGE_TAG)
+cd: image-all cd-common

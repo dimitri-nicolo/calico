@@ -2,14 +2,10 @@ include ../../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy-gateway
 
-ENVOY_GATEWAY_IMAGE ?= tigera/envoy-gateway
+ENVOY_GATEWAY_IMAGE ?= envoy-gateway
 BUILD_IMAGES ?= $(ENVOY_GATEWAY_IMAGE)
 
 ENVOY_GATEWAY_VERSION=v1.1.2
-
-DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
-BRANCH_NAME = $(ENVOY_GATEWAY_VERSION)
-LATEST_IMAGE_TAG = latest
 
 ##############################################################################
 # Include lib.Makefile before anything else
@@ -35,13 +31,19 @@ build: bin/envoy-gateway-$(ARCH)
 
 LD_FLAGS = \
 	-X github.com/envoyproxy/gateway/internal/cmd/version.envoyGatewayVersion=$(ENVOY_GATEWAY_VERSION) \
-	-X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=$(GIT_COMMIT) \
-        -s -w
+	-X github.com/envoyproxy/gateway/internal/cmd/version.gitCommitID=$(GIT_COMMIT)
 
 bin/envoy-gateway-$(ARCH): init-source
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			CGO_ENABLED=0 go build -C envoy-gateway -buildvcs=false -o ../bin/envoy-gateway-$(ARCH) -ldflags="$(LD_FLAGS)" github.com/envoyproxy/gateway/cmd/envoy-gateway'
+			CGO_ENABLED=0 go build -C envoy-gateway -buildvcs=false -o ../$@ -v -tags=$(TAGS) -ldflags="$(LD_FLAGS) -s -w" github.com/envoyproxy/gateway/cmd/envoy-gateway'
+
+.PHONY: clean
+clean:
+	rm -f $(ENVOY_GATEWAY_DOWNLOADED)
+	rm -f $(ENVOY_GATEWAY_IMAGE_CREATED)
+	rm -fr bin/ envoy-gateway/
+	-docker image rm -f $$(docker images $(ENVOY_GATEWAY_IMAGE) -a -q)
 
 ##############################################################################
 # Image
@@ -53,23 +55,18 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-# intermediate multi-arch image holds our patched envoy -gateway.
 .PHONY: image
-image: $(ENVOY_GATEWAY_IMAGE)
+image: $(BUILD_IMAGES)
 
 $(ENVOY_GATEWAY_IMAGE): $(ENVOY_GATEWAY_IMAGE_CREATED)
-$(ENVOY_GATEWAY_IMAGE_CREATED): build
+$(ENVOY_GATEWAY_IMAGE_CREATED): Dockerfile build
 	$(DOCKER_BUILD) -t $(ENVOY_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 ##############################################################################
 # CI/CD
 ##############################################################################
-.PHONY: cd
-cd: image-all var-require-one-of-CONFIRM-DRYRUN var-require-all-BRANCH_NAME
-	$(MAKE) retag-build-images-with-registries push-images-to-registries IMAGETAG=$(LATEST_IMAGE_TAG) EXCLUDEARCH="$(EXCLUDEARCH)"
+ci: image
 
-.PHONY: push-manifest
-push-manifest:
-	$(MAKE) push-manifests IMAGETAG=$(LATEST_IMAGE_TAG)
+cd: image-all cd-common
