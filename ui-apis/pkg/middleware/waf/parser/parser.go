@@ -44,16 +44,13 @@ func Parse(f string) ([]Rule, error) {
 		line := scanner.Text()
 		lineLen := len(line)
 		if lineLen == 0 {
-			if currentRule.SecRule != "" || currentRule.Operator != "" {
-				currentRule.Raw = rawLine
+			if currentRule.SecRule != "" && currentRule.Operator != "" {
 				rules = append(rules, currentRule)
-				rawLine = ""
 			}
 
 			currentRule = Rule{}
 			continue
 		}
-		rawLine = rawLine + line + "\n"
 
 		if line[0] == '#' {
 			continue
@@ -71,7 +68,8 @@ func Parse(f string) ([]Rule, error) {
 			continue
 		}
 
-		// Check if line ends with \
+		rawLine += line + "\n"
+		// Check if line ends with \ it is still one rule
 		if line[lineLen-1] == '\\' {
 			linebuffer.WriteString(strings.TrimSuffix(line, "\\"))
 		} else {
@@ -80,21 +78,21 @@ func Parse(f string) ([]Rule, error) {
 			completeLine := linebuffer.String()
 			leading_spaces := len(completeLine) - len(strings.TrimLeft(completeLine, " "))
 			if leading_spaces == 0 {
-				// it is a standalone oneline rule with no space between it and the rule above it
-				if currentRule.SecRule != "" || currentRule.Operator != "" {
-					currentRule.Raw += rawLine
+
+				if currentRule.SecRule != "" && currentRule.Operator != "" {
 					rules = append(rules, currentRule)
-					rawLine = ""
 				}
 
 				currentRule = Rule{}
 			}
 
-			err := EvalLine(strings.TrimLeft(linebuffer.String(), " "), &currentRule)
+			rawLine = strings.TrimSuffix(rawLine, "\n")
+
+			err := EvalLine(strings.TrimLeft(linebuffer.String(), " "), rawLine, &currentRule)
 			if err != nil {
 				return []Rule{}, err
 			}
-			currentRule.Raw = rawLine
+			rawLine = ""
 
 			linebuffer.Reset()
 		}
@@ -108,7 +106,7 @@ func Parse(f string) ([]Rule, error) {
 	return rules, nil
 }
 
-func EvalLine(l string, rule *Rule) error {
+func EvalLine(l, rawRule string, rule *Rule) error {
 	line := strings.TrimSpace(l)
 	if line == "" {
 		return fmt.Errorf("error trimming space from : %v", l)
@@ -134,6 +132,7 @@ func EvalLine(l string, rule *Rule) error {
 			transformations,
 		}
 		rule.Transformation += strings.Join(newString, "")
+		rule.Raw += rawRule
 		return nil
 	}
 
@@ -143,6 +142,7 @@ func EvalLine(l string, rule *Rule) error {
 	rule.Operator = operators
 	rule.Transformation = transformations
 	rule.Variables = variables
+	rule.Raw = rawRule
 
 	rule.Actions, err = parseTransformers(transformations)
 	if err != nil {
