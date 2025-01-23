@@ -8,7 +8,7 @@ FROM busybox AS source
 # Create the data directory for eg
 RUN mkdir -p /var/lib/eg
 
-FROM calico/base
+FROM calico/base:latest-${TARGETARCH}
 ARG TARGETARCH
 COPY bin/envoy-gateway-${TARGETARCH} /usr/local/bin/
 COPY --from=source --chown=65532:65532 /var/lib /var/lib
