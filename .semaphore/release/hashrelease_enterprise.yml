@@ -11,6 +11,8 @@ global_job_config:
   secrets:
     # Github SSH secret for pulling private repositories.
     - name: private-repo
+    # Secret for GitHub API access.
+    - name: marvin-github-token
     # Secret for pushing to the docs box.
     - name: docs-ssh
     # Secret for image registries
@@ -45,6 +47,7 @@ blocks:
             - make hashrelease
       prologue:
         commands:
+          - export GITHUB_TOKEN=${MARVIN_GITHUB_TOKEN}
           - cd release
       env_vars:
         - name: OPERATOR_REGISTRY

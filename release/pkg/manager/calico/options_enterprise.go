@@ -40,3 +40,10 @@ func WithHelmRegistry(registry string) EnterpriseOption {
 		return nil
 	}
 }
+
+func WithRPMs(rpm bool) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.rpm = rpm
+		return nil
+	}
+}

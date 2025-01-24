@@ -277,12 +277,28 @@ func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) 
 	}
 
 	// Configure policy match.
-	q, err := BuildPolicyMatchQuery(opts.PolicyMatches)
+	q, err := BuildAllPolicyMatchQuery(opts.PolicyMatches)
 	if err != nil {
 		return nil, err
 	}
 	if q != nil {
 		query.Filter(q)
+	}
+
+	eq, err := BuildEnforcedPolicyMatchQuery(opts.EnforcedPolicyMatches)
+	if err != nil {
+		return nil, err
+	}
+	if eq != nil {
+		query.Filter(eq)
+	}
+
+	pq, err := BuildPendingPolicyMatchQuery(opts.PendingPolicyMatches)
+	if err != nil {
+		return nil, err
+	}
+	if pq != nil {
+		query.Filter(pq)
 	}
 
 	return query, nil

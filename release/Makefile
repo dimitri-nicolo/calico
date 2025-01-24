@@ -36,7 +36,7 @@ hashrelease: hashrelease-build hashrelease-publish
 hashrelease-build: bin/release var-require-all-GITHUB_TOKEN
 	@bin/release hashrelease build
 
-hashrelease-publish: bin/release var-require-all-GITHUB_TOKEN
+hashrelease-publish: bin/helm bin/release var-require-all-GITHUB_TOKEN
 	@bin/release hashrelease publish
 
 ###############################################################################

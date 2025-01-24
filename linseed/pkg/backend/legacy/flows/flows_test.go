@@ -886,6 +886,202 @@ func TestFlowFiltering(t *testing.T) {
 			ExpectFlow1: true,
 			ExpectFlow2: true,
 		},
+		{
+			Name: "should query based on unprotected flows from pending policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit. This match returns all "unprotected"
+						// flows in all namespaces.
+						Tier:   "__PROFILE__",
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query based on unprotected flows within a namespace and pending policies ",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeAny,
+						Namespaces: []string{"openshift-dns"},
+					},
+				},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit. This match returns all "unprotected"
+						// flows from the openshift-dns namespace.
+						Tier:   "__PROFILE__",
+						Name:   testutils.StringPtr("kns.openshift-dns"),
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should query based on a specific policy hit tier in pending policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+
+			// Both flows have a policy hit in this tier.
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit tier and action in pending policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier:   "default",
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			// Both flows have a policy hit in this tier, but only the second
+			// is allowed by the tier.
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit name and namespace in pending policies",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Name:      testutils.StringPtr("cluster-dns"),
+						Namespace: testutils.StringPtr("kube-system"),
+					},
+				},
+			},
+
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should query based on a specific policy hit name in pending policies - match both global and namespace policies when both tier and namespace are not provided",
+			Params: v1.L3FlowParams{
+				QueryParams: v1.QueryParams{},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Name: testutils.StringPtr("cluster-dns"),
+					},
+				},
+			},
+
+			ExpectFlow1: false,
+			ExpectFlow2: true,
+		},
+		{
+			// This test uses a complex query that ultimately only matches on of the flows
+			// beacause it doesn't include flow1's destination namespace.
+			Name: "should query a flow with a complex multi-part query and pending policy match",
+			Params: v1.L3FlowParams{
+				QueryParams:      v1.QueryParams{},
+				Actions:          []v1.FlowAction{v1.FlowActionAllow, v1.FlowActionDeny},
+				SourceTypes:      []v1.EndpointType{v1.WEP, v1.HEP},
+				DestinationTypes: []v1.EndpointType{v1.WEP, v1.HEP},
+				NamespaceMatches: []v1.NamespaceMatch{
+					{
+						Type:       v1.MatchTypeDest,
+						Namespaces: []string{"openshift-dns"},
+					},
+					{
+						Type:       v1.MatchTypeSource,
+						Namespaces: []string{"default", "tigera-operator"},
+					},
+				},
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						// Match the first flow's profile hit.
+						Tier:   "__PROFILE__",
+						Name:   testutils.StringPtr("kns.openshift-dns"),
+						Action: ActionPtr(v1.FlowActionAllow),
+					},
+				},
+			},
+
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with a kubernetes policy hit in pending policies",
+			Params: v1.L3FlowParams{
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Type:      "knp",
+						Namespace: testutils.StringPtr("default"),
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with a staged policy hit in pending policies",
+			Params: v1.L3FlowParams{
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Staged: true,
+						Tier:   "allow-tigera",
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with namespaced policy hit in pending policies",
+			Params: v1.L3FlowParams{
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Namespace: testutils.StringPtr("default"),
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: false,
+		},
+		{
+			Name: "should return flows with global policy hit in pending policies",
+			Params: v1.L3FlowParams{
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "default",
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
+		{
+			Name: "should return flows with a global policy hit in pending policies",
+			Params: v1.L3FlowParams{
+				PendingPolicyMatches: []v1.PolicyMatch{
+					{
+						Tier: "allow-tigera",
+					},
+				},
+			},
+			ExpectFlow1: true,
+			ExpectFlow2: true,
+		},
 	}
 
 	for _, testcase := range testcases {
@@ -930,6 +1126,15 @@ func TestFlowFiltering(t *testing.T) {
 				WithPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
 				WithPolicy("3|default|default.test-global-policy|pass|1").
 				WithPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
+				WithEnforcedPolicy("0|custom-tier|default/custom-tier.test-policy|pass|2").
+				WithEnforcedPolicy("1|default|default/knp.default.test-k8s-policy|pass|2").
+				WithEnforcedPolicy("2|default|default.test-global-policy|pass|1").
+				WithEnforcedPolicy("3|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
+				WithPendingPolicy("0|allow-tigera|allow-tigera.staged:cluster-dns|pass|1").
+				WithPendingPolicy("1|custom-tier|default/custom-tier.test-policy|pass|2").
+				WithPendingPolicy("2|default|default/knp.default.test-k8s-policy|pass|2").
+				WithPendingPolicy("3|default|default.test-global-policy|pass|1").
+				WithPendingPolicy("4|__PROFILE__|__PROFILE__.kns.openshift-dns|allow|0").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 			exp1 := populateFlowDataN(t, ctx, bld, client, clusterInfo, numLogs)
 
@@ -956,6 +1161,18 @@ func TestFlowFiltering(t *testing.T) {
 				WithPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
 				WithPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
 				WithPolicy("5|default|default.cluster-dns|allow|1").
+				WithEnforcedPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
+				WithEnforcedPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+				WithEnforcedPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
+				WithEnforcedPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
+				WithEnforcedPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
+				WithEnforcedPolicy("5|default|default.cluster-dns|allow|1").
+				WithPendingPolicy("0|allow-tigera|allow-tigera.do-nothing|pass|1").
+				WithPendingPolicy("1|allow-tigera|kube-system/allow-tigera.cluster-dns|pass|1").
+				WithPendingPolicy("2|allow-tigera|allow-tigera.cluster-dns|pass|1").
+				WithPendingPolicy("3|custom-tier|custom-tier.cluster-dns|pass|1").
+				WithPendingPolicy("4|default|test-namespace/default.cluster-dns|pass|1").
+				WithPendingPolicy("5|default|default.cluster-dns|allow|1").
 				WithDestDomains("www.tigera.io", "www.calico.com", "www.kubernetes.io", "www.docker.com")
 
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo, numLogs)

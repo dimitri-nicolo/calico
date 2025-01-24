@@ -48,6 +48,15 @@ const (
 	FlowAggMeanTCPSmoothRTT            = "tcp_mean_smooth_rtt"
 	FlowAggMeanTCPMinRTT               = "tcp_mean_min_rtt"
 	FlowAggMeanTCPMSS                  = "tcp_mean_mss"
+
+	// The path to the policies field in the ES document.
+	policiesPath  = "policies"
+	policiesField = "policies"
+
+	// The keys for the policies sub-fields in the ES document.
+	allPoliciesSubField      = "all_policies"
+	enforcedPoliciesSubField = "enforced_policies"
+	pendingPoliciesSubField  = "pending_policies"
 )
 
 // flowBackend implements the Backend interface for flows stored
@@ -167,10 +176,22 @@ func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Opti
 			Field: "source_labels.labels",
 		},
 		{
-			Name:  "policies",
-			Path:  "policies",
+			Name:  policiesField,
+			Path:  policiesPath,
 			Term:  "by_tiered_policy",
-			Field: "policies.all_policies",
+			Field: fmt.Sprintf("%s.%s", policiesField, allPoliciesSubField),
+		},
+		{
+			Name:  enforcedPoliciesSubField,
+			Path:  policiesPath,
+			Term:  "by_tiered_enforced_policy",
+			Field: fmt.Sprintf("%s.%s", policiesField, enforcedPoliciesSubField),
+		},
+		{
+			Name:  pendingPoliciesSubField,
+			Path:  policiesPath,
+			Term:  "by_tiered_pending_policy",
+			Field: fmt.Sprintf("%s.%s", policiesField, pendingPoliciesSubField),
 		},
 	}
 
@@ -326,7 +347,9 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.SourceLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "source_labels")
 
 	// Add in policies.
-	flow.Policies = getPoliciesFromAggregation(log, bucket.AggregatedTerms)
+	flow.Policies = getPoliciesFromAggregation(log, policiesField, bucket.AggregatedTerms)
+	flow.EnforcedPolicies = getPoliciesFromAggregation(log, enforcedPoliciesSubField, bucket.AggregatedTerms)
+	flow.PendingPolicies = getPoliciesFromAggregation(log, pendingPoliciesSubField, bucket.AggregatedTerms)
 
 	// Add in the destination domains.
 	flow.DestDomains = getDestDomainsFromAggregation(log, bucket.AggregatedTerms)
@@ -435,8 +458,30 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (ela
 	}
 
 	if len(opts.PolicyMatches) > 0 {
-		// Filter-in any flow logs that match any of the given policy matches.
-		q, err := BuildPolicyMatchQuery(opts.PolicyMatches)
+		// Filter-in any flow logs that match any of the given policies.all_policies matches.
+		q, err := BuildAllPolicyMatchQuery(opts.PolicyMatches)
+		if err != nil {
+			return nil, err
+		}
+		if q != nil {
+			query.Filter(q)
+		}
+	}
+
+	if len(opts.EnforcedPolicyMatches) > 0 {
+		// Filter-in any flow logs that match any of the given policies.enforced_policies matches.
+		q, err := BuildEnforcedPolicyMatchQuery(opts.EnforcedPolicyMatches)
+		if err != nil {
+			return nil, err
+		}
+		if q != nil {
+			query.Filter(q)
+		}
+	}
+
+	if len(opts.PendingPolicyMatches) > 0 {
+		// Filter-in any flow logs that match any of the given policies.pending_policies matches.
+		q, err := BuildPendingPolicyMatchQuery(opts.PendingPolicyMatches)
 		if err != nil {
 			return nil, err
 		}
@@ -631,9 +676,9 @@ func getValuesFromAggregation(log *logrus.Entry, terms map[string]*lmaelastic.Ag
 
 // getPoliciesFromPolicyBucket parses the policy logs out from the given AggregationSingleBucket into a FlowResponsePolicy
 // that can be sent back in the response.
-func getPoliciesFromAggregation(log *logrus.Entry, terms map[string]*lmaelastic.AggregatedTerm) []v1.Policy {
+func getPoliciesFromAggregation(log *logrus.Entry, termKey string, terms map[string]*lmaelastic.AggregatedTerm) []v1.Policy {
 	var policies []v1.Policy
-	if terms, found := terms["policies"]; found {
+	if terms, found := terms[termKey]; found {
 		// Policies aren't necessarily ordered in the flow log, so we parse out the
 		// policies from the flow log and sort them first.
 		var policyHits api.SortablePolicyHits
