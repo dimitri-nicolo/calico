@@ -14,7 +14,10 @@
 
 package registry
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Component represents a component in the pinned version file.
 type Component struct {
@@ -34,7 +37,7 @@ func (c Component) String() string {
 	if c.Registry == "" {
 		return fmt.Sprintf("%s:%s", c.Image, c.Version)
 	}
-	return fmt.Sprintf("%s/%s:%s", c.Registry, c.Image, c.Version)
+	return fmt.Sprintf("%s/%s:%s", strings.TrimSuffix(c.Registry, "/"), c.Image, c.Version)
 }
 
 type OperatorComponent struct {
