@@ -72,6 +72,18 @@ type L3FlowParams struct {
 	// If multiple PolicyMatches are provided, they are combined with a logical OR.
 	PolicyMatches []PolicyMatch `json:"policy_matches" validate:"dive"`
 
+	// EnforcedPolicyMatches selects flows based on whether an action is taken on the flow
+	// by the provided tier, based on the enforced trace.
+	// For example, return flows which are allowed by the default tier.
+	// If multiple EnforcedPolicyMatches are provided, they are combined with a logical OR.
+	EnforcedPolicyMatches []PolicyMatch `json:"enforced_policy_matches" validate:"dive"`
+
+	// PendingPolicyMatches selects flows based on whether an action is taken on the flow
+	// by the provided tier, based on the pending trace.
+	// For example, return flows which are allowed by the default tier.
+	// If multiple PendingPolicyMatches are provided, they are combined with a logical OR.
+	PendingPolicyMatches []PolicyMatch `json:"pending_policy_matches" validate:"dive"`
+
 	// Statistics will include different metrics for the L3 flows that are queried
 	// The following metrics can be extracted: connection, tcp, flow and process
 	// If missing, only flow metrics will be generated
@@ -154,7 +166,9 @@ type L3Flow struct {
 	Service *Service `json:"dest_service,omitempty"`
 
 	// Policies applied to this flow, in order.
-	Policies []Policy `json:"policies,omitempty"`
+	Policies         []Policy `json:"policies,omitempty"`
+	EnforcedPolicies []Policy `json:"enforced_policies,omitempty"`
+	PendingPolicies  []Policy `json:"pending_policies,omitempty"`
 
 	// DestDomains are the destination domains of this flow
 	DestDomains []string `json:"dest_domains,omitempty"`

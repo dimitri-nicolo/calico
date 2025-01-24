@@ -140,6 +140,8 @@ type EnterpriseManager struct {
 	publishWindowsArchive bool
 	publishCharts         bool
 
+	rpm bool
+
 	helmRegistry string
 }
 
@@ -205,6 +207,16 @@ func (m *EnterpriseManager) BuildHelm() error {
 func (m *EnterpriseManager) PreBuildValidation() error {
 	if !m.isHashRelease {
 		return fmt.Errorf("only hash releases are supported for enterprise builds")
+	}
+	if m.rpm {
+		createrepo := "createrepo_c"
+		if path, err := exec.LookPath(createrepo); err != nil {
+			logrus.WithError(err).Errorf("Error trying to find %s in PATH", createrepo)
+			return fmt.Errorf("Unable to find %s in PATH", createrepo)
+		} else if path == "" {
+			logrus.Errorf("%s not found in PATH", createrepo)
+			return fmt.Errorf("%s not found in PATH", createrepo)
+		}
 	}
 	return m.CalicoManager.PreBuildValidation()
 }
@@ -330,16 +342,50 @@ func (m *EnterpriseManager) buildArchive() error {
 	return nil
 }
 
-type RPMRepoData struct {
+type rpmRepoData struct {
 	ReleaseURL string
 	Version    string
 }
 
+func createRPMPackageList(dir, out string) error {
+	var rpmFiles []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			logrus.WithError(err).Error("Error accessing path")
+			return nil
+		}
+		if !info.IsDir() && filepath.Ext(path) == ".rpm" {
+			relPath, _ := filepath.Rel(dir, path)
+			rpmFiles = append(rpmFiles, relPath)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	file, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	for _, rpmFileName := range rpmFiles {
+		if _, err := file.WriteString(fmt.Sprintf("%s\n", rpmFileName)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *EnterpriseManager) assembleRPMs() error {
+	if !m.rpm {
+		logrus.Info("Skipping building RPMs")
+		return nil
+	}
 	outDir := filepath.Join(m.uploadDir(), "non-cluster-host-rpms")
 	if err := os.MkdirAll(outDir, utils.DirPerms); err != nil {
 		return err
 	}
+
 	rsyncOpts := []string{"--recursive", "--prune-empty-dirs", "--exclude=BUILD", "--exclude=SRPMS", "--exclude=*debuginfo*", "--exclude=*debugsource*"}
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		rsyncOpts = append(rsyncOpts, "--verbose", "--progress")
@@ -362,25 +408,31 @@ func (m *EnterpriseManager) assembleRPMs() error {
 			return err
 		}
 	}
+
 	createrepo := "createrepo_c"
-	var createrepoFound bool
-	if path, err := exec.LookPath(createrepo); err != nil {
-		logrus.WithError(err).Error("Error trying to find createrepo_c in PATH")
-	} else if path == "" {
-		logrus.Error("createrepo_c not found in PATH")
-	} else {
-		createrepoFound = true
-	}
 
 	for _, version := range rhelVersions {
-		if createrepoFound {
-			logrus.WithField("RHELVersion", version).Debug("Creating repo to test with yum/dnf/etc")
-			if _, err := m.runner.RunInDir(filepath.Join(outDir, fmt.Sprintf("rhel%s", version)), createrepo, []string{"."}, nil); err != nil {
-				logrus.WithError(err).Errorf("Failed to create repo for RHEL %s", version)
-				return fmt.Errorf("failed to create repo for RHEL %s: %s", version, err)
-			}
-		} else {
-			logrus.WithField("RHELVersion", version).Warn("createrepo_c not found, skipping repo creation")
+		rhelDir := filepath.Join(outDir, fmt.Sprintf("rhel%s", version))
+		pkgListPath := filepath.Join(m.tmpDir, fmt.Sprintf("%s-rhel%s-pkglist.txt", m.calicoVersion, version))
+		rpmURL := fmt.Sprintf("%s/non-cluster-host-rpms/rhel%s", m.hashrelease.URL(), version)
+		if err := createRPMPackageList(rhelDir, pkgListPath); err != nil {
+			logrus.WithError(err).Errorf("Failed to create RPM package list for RHEL %s", version)
+			return fmt.Errorf("failed to create RPM package list for RHEL %s: %s", version, err)
+		}
+		logrus.WithField("RHELVersion", version).Debug("Creating repo to test with yum/dnf/etc")
+		args := []string{
+			"--update",
+			"--recycle-pkglist",
+			fmt.Sprintf("--pkglist=%s", pkgListPath),
+			fmt.Sprintf("--baseurl=%s", rpmURL),
+			"--xz", ".",
+		}
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			args = append(args, "--verbose")
+		}
+		if _, err := m.runner.RunInDir(rhelDir, createrepo, args, nil); err != nil {
+			logrus.WithError(err).Errorf("Failed to create repo for RHEL %s", version)
+			return fmt.Errorf("failed to create repo for RHEL %s: %s", version, err)
 		}
 		logrus.WithField("RHELVersion", version).Debug("Writing yum repo config file")
 		tmpl, err := template.New("yum.conf").Parse(rpmRepoTemplate)
@@ -392,8 +444,8 @@ func (m *EnterpriseManager) assembleRPMs() error {
 			return fmt.Errorf("failed to create yum repo config file: %s", err)
 		}
 		defer f.Close()
-		data := &RPMRepoData{
-			ReleaseURL: m.hashrelease.URL(),
+		data := &rpmRepoData{
+			ReleaseURL: rpmURL,
 			Version:    version,
 		}
 		if err := tmpl.Execute(f, data); err != nil {
@@ -573,7 +625,7 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 		return fmt.Errorf("failed to list charts: %s", err)
 	}
 	for _, chart := range charts {
-		if _, err := m.runner.Run("helm", []string{"helm", "push", chart, m.helmRegistry}, nil); err != nil {
+		if _, err := m.runner.RunInDir(filepath.Join(m.repoRoot, utils.ReleaseFolderName), "bin/helm", []string{"push", chart, m.helmRegistry}, nil); err != nil {
 			return err
 		}
 	}

@@ -9,8 +9,6 @@ import (
 	"github.com/projectcalico/calico/release/internal/utils"
 )
 
-const manager = "manager"
-
 var (
 	managerFlags = []cli.Flag{managerOrgFlag, managerRepoFlag, managerBranchFlag}
 
@@ -25,7 +23,7 @@ var (
 		Name:    "manager-repo",
 		Usage:   "The GitHub repository of the manager",
 		EnvVars: []string{"MANAGER_REPO"},
-		Value:   manager,
+		Value:   utils.TigeraManager,
 	}
 
 	managerBranchFlag = &cli.StringFlag{
@@ -66,31 +64,11 @@ var (
 		Name:  "publish-charts",
 		Usage: "Publish the helm charts",
 		Value: true,
-		Action: func(ctx *cli.Context, b bool) error {
-			if b && ctx.String(gcpCredentialsFileFlag.Name) == "" {
-				return fmt.Errorf("gcp-credentials is required when publishing charts")
-			}
-			return nil
-		},
 	}
 )
 
-var (
-	gcpCredentialsFileFlag = &cli.StringFlag{
-		Name:    "gcp-credentials",
-		Usage:   "The path to the GCP credentials file",
-		EnvVars: []string{"GOOGLE_APPLICATION_CREDENTIALS"},
-	}
-
-	authenticateGCPFlag = &cli.BoolFlag{
-		Name:  "authenticate-gcp",
-		Usage: "Authenticate to GCP. Set to false if no GCP authentication is required",
-		Value: true,
-		Action: func(ctx *cli.Context, b bool) error {
-			if b && ctx.String(gcpCredentialsFileFlag.Name) == "" {
-				return fmt.Errorf("gcp-credentials is required when authenticating to GCP")
-			}
-			return nil
-		},
-	}
-)
+var skipRPMsFlag = &cli.BoolFlag{
+	Name:  "skip-rpms",
+	Usage: "Skip building or publishing RPMs",
+	Value: false,
+}

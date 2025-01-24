@@ -13,7 +13,19 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-func BuildPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
+func BuildAllPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
+	return buildPolicyMatchQuery(policyMatches, allPolicyQuery)
+}
+
+func BuildEnforcedPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
+	return buildPolicyMatchQuery(policyMatches, enforcedPolicyQuery)
+}
+
+func BuildPendingPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, error) {
+	return buildPolicyMatchQuery(policyMatches, pendingPolicyQuery)
+}
+
+func buildPolicyMatchQuery(policyMatches []v1.PolicyMatch, policyQuery func(v1.PolicyMatch) (elastic.Query, error)) (*elastic.BoolQuery, error) {
 	if len(policyMatches) == 0 {
 		return nil, nil
 	}
@@ -35,13 +47,33 @@ func BuildPolicyMatchQuery(policyMatches []v1.PolicyMatch) (*elastic.BoolQuery, 
 	return b, nil
 }
 
-func policyQuery(m v1.PolicyMatch) (elastic.Query, error) {
+func allPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
 	matchString, err := CompileStringMatch(m)
 	if err != nil {
 		return nil, err
 	}
 
 	wildcard := elastic.NewWildcardQuery("policies.all_policies", matchString)
+	return elastic.NewNestedQuery("policies", wildcard), nil
+}
+
+func enforcedPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
+	matchString, err := CompileStringMatch(m)
+	if err != nil {
+		return nil, err
+	}
+
+	wildcard := elastic.NewWildcardQuery("policies.enforced_policies", matchString)
+	return elastic.NewNestedQuery("policies", wildcard), nil
+}
+
+func pendingPolicyQuery(m v1.PolicyMatch) (elastic.Query, error) {
+	matchString, err := CompileStringMatch(m)
+	if err != nil {
+		return nil, err
+	}
+
+	wildcard := elastic.NewWildcardQuery("policies.pending_policies", matchString)
 	return elastic.NewNestedQuery("policies", wildcard), nil
 }
 

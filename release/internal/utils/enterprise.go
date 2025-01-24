@@ -11,6 +11,8 @@ import (
 
 const (
 	CalicoEnterprise = "calico enterprise"
+
+	TigeraManager = "manager"
 )
 
 func DetermineCalicoVersion(repoRoot string) (string, error) {
