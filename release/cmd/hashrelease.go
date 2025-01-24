@@ -45,10 +45,11 @@ func hashreleaseCommand(cfg *Config) *cli.Command {
 		Aliases:     []string{"hr"},
 		Usage:       "Build and publish hashreleases.",
 		Flags:       hashreleaseServerFlags,
-		Subcommands: hashreleaseSubCommands(cfg),
+		Subcommands: enterpriseHashreleaseSubCommands(cfg),
 	}
 }
 
+//lint:ignore U1000 This is used in OSS and needs to be kept to avoid conflicts.
 func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 	return []*cli.Command{
 		// The build command is used to produce a new local hashrelease in the output directory.

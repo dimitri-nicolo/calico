@@ -7,19 +7,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"github.com/projectcalico/calico/release/internal/command"
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
 	"github.com/projectcalico/calico/release/pkg/tasks"
 )
-
-func enterpriseHashreleaseCommand(cfg *Config) *cli.Command {
-	cmd := hashreleaseCommand(cfg)
-	cmd.Subcommands = enterpriseHashreleaseSubCommands(cfg)
-	return cmd
-}
 
 func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 	return []*cli.Command{
@@ -37,7 +30,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			flags = append(flags, flag)
 		}
 	}
-	flags = append(flags, chartVersionFlag)
+	flags = append(flags, chartVersionFlag, skipRPMsFlag)
 	flags = append(flags, managerFlags...)
 	return &cli.Command{
 		Name:  "build",
@@ -60,7 +53,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			}
 
 			// Clone the manager repository.
-			managerDir := filepath.Join(cfg.TmpDir, "manager")
+			managerDir := filepath.Join(cfg.TmpDir, utils.TigeraManager)
 			if err := utils.Clone(fmt.Sprintf("git@github.com:%s/%s.git", c.String(managerOrgFlag.Name), c.String(managerRepoFlag.Name)), c.String(managerBranchFlag.Name), managerDir); err != nil {
 				return fmt.Errorf("failed to clone manager repository: %v", err)
 			}
@@ -150,6 +143,7 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, *hashreleaseServerConfig(c)),
+				calico.WithRPMs(!c.Bool(skipRPMsFlag.Name)),
 			}
 
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)
@@ -173,8 +167,6 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 		publishWindowsArchiveFlag,
 		publishChartsFlag,
 		helmRegistryFlag,
-		gcpCredentialsFileFlag,
-		authenticateGCPFlag,
 	)
 	return &cli.Command{
 		Name:  "publish",
@@ -202,12 +194,6 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				return fmt.Errorf("%s hashrelease (%s) has already been published", hashrel.Name, hashrel.Hash)
 			}
 
-			if c.Bool(authenticateGCPFlag.Name) {
-				if err := command.AuthenticateGCR(c.String(gcpCredentialsFileFlag.Name)); err != nil {
-					return fmt.Errorf("failed to authenticate to GCP: %v", err)
-				}
-			}
-
 			// Push the operator hashrelease first before validation.
 			// This is because validation checks all images exists and sends to Image Scan Service
 			o := operator.NewEnterpriseManager(
@@ -233,6 +219,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
 				calico.WithTmpDir(cfg.TmpDir),
+				calico.WithOutputDir(filepath.Join(baseHashreleaseOutputDir(cfg.RepoRootDir), hashrel.Hash)),
 				calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 			}
