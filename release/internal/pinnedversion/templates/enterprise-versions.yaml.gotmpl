@@ -188,11 +188,12 @@
       image: tigera/webhooks-processor
       version: {{.ProductVersion}}
     gateway-api-envoy-gateway:
-      image: envoyproxy/gateway
-      version: v1.1.2
+      image: tigera/envoy-gateway
+      version: {{.ProductVersion}}
     gateway-api-envoy-proxy:
       image: envoyproxy/envoy
       version: distroless-v1.31.0
+      registry: docker.io/
     gateway-api-envoy-ratelimit:
-      image: envoyproxy/ratelimit
-      version: "26f28d78"
+      image: tigera/envoy-ratelimit
+      version: {{.ProductVersion}}
