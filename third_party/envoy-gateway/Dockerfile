@@ -4,11 +4,7 @@
 # - using calico/base instead of distroless
 # - using TARGETARCH instead of TARGETPLATFORM.
 
-ARG QEMU_IMAGE
-FROM ${QEMU_IMAGE} AS qemu
-
-FROM busybox AS source
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
+FROM --platform=linux/amd64 busybox AS source
 # Create the data directory for eg
 RUN mkdir -p /var/lib/eg
 
