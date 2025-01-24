@@ -94,11 +94,12 @@ var (
 var (
 	// Metric update without a connection (ingress stats match those of muConn1Rule1AllowUpdate).
 	muNoConn1Rule1AllowUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
-		HasDenyRule:  false,
-		IsConnection: false,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule1Allow},
+		HasDenyRule:    false,
+		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 1,
 			DeltaBytes:   20,
@@ -107,11 +108,12 @@ var (
 
 	// Identical rule/direction connections with differing tuples
 	muConn1Rule1AllowUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
-		IsConnection: true,
-		HasDenyRule:  false,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule1Allow},
+		IsConnection:   true,
+		HasDenyRule:    false,
 		InMetric: metric.Value{
 			DeltaPackets: 2,
 			DeltaBytes:   22,
@@ -123,11 +125,12 @@ var (
 	}
 
 	muConn1Rule1AllowExpire = metric.Update{
-		UpdateType:   metric.UpdateTypeExpire,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
-		HasDenyRule:  false,
-		IsConnection: true,
+		UpdateType:     metric.UpdateTypeExpire,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule1Allow},
+		HasDenyRule:    false,
+		IsConnection:   true,
 		InMetric: metric.Value{
 			DeltaPackets: 4,
 			DeltaBytes:   44,
@@ -139,11 +142,12 @@ var (
 	}
 
 	muNoConn1Rule2DenyUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{egressRule2Deny},
-		HasDenyRule:  true,
-		IsConnection: false,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{egressRule2Deny},
+		PendingRuleIDs: []*calc.RuleID{egressRule2Deny},
+		HasDenyRule:    true,
+		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 2,
 			DeltaBytes:   40,
@@ -151,11 +155,12 @@ var (
 	}
 
 	muConn2Rule1AllowUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple2,
-		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
-		HasDenyRule:  false,
-		IsConnection: true,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple2,
+		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule1Allow},
+		HasDenyRule:    false,
+		IsConnection:   true,
 		InMetric: metric.Value{
 			DeltaPackets: 7,
 			DeltaBytes:   77,
@@ -163,11 +168,12 @@ var (
 	}
 
 	muConn2Rule1AllowExpire = metric.Update{
-		UpdateType:   metric.UpdateTypeExpire,
-		Tuple:        tuple2,
-		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
-		HasDenyRule:  false,
-		IsConnection: true,
+		UpdateType:     metric.UpdateTypeExpire,
+		Tuple:          tuple2,
+		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule1Allow},
+		HasDenyRule:    false,
+		IsConnection:   true,
 		InMetric: metric.Value{
 			DeltaPackets: 8,
 			DeltaBytes:   88,
@@ -175,11 +181,12 @@ var (
 	}
 
 	muNoConn3Rule2DenyUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple3,
-		RuleIDs:      []*calc.RuleID{egressRule2Deny},
-		HasDenyRule:  true,
-		IsConnection: false,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple3,
+		RuleIDs:        []*calc.RuleID{egressRule2Deny},
+		PendingRuleIDs: []*calc.RuleID{egressRule2Deny},
+		HasDenyRule:    true,
+		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 2,
 			DeltaBytes:   40,
@@ -187,11 +194,12 @@ var (
 	}
 
 	muNoConn3Rule2DenyExpire = metric.Update{
-		UpdateType:   metric.UpdateTypeExpire,
-		Tuple:        tuple3,
-		RuleIDs:      []*calc.RuleID{egressRule2Deny},
-		HasDenyRule:  true,
-		IsConnection: false,
+		UpdateType:     metric.UpdateTypeExpire,
+		Tuple:          tuple3,
+		RuleIDs:        []*calc.RuleID{egressRule2Deny},
+		PendingRuleIDs: []*calc.RuleID{egressRule2Deny},
+		HasDenyRule:    true,
+		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 0,
 			DeltaBytes:   0,
@@ -199,11 +207,12 @@ var (
 	}
 
 	muConn1Rule3AllowUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
-		HasDenyRule:  false,
-		IsConnection: true,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		HasDenyRule:    false,
+		IsConnection:   true,
 		InMetric: metric.Value{
 			DeltaPackets: 2,
 			DeltaBytes:   22,
@@ -215,11 +224,12 @@ var (
 	}
 
 	muConn1Rule3AllowExpire = metric.Update{
-		UpdateType:   metric.UpdateTypeExpire,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
-		HasDenyRule:  false,
-		IsConnection: true,
+		UpdateType:     metric.UpdateTypeExpire,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		HasDenyRule:    false,
+		IsConnection:   true,
 		InMetric: metric.Value{
 			DeltaPackets: 4,
 			DeltaBytes:   44,
@@ -231,11 +241,12 @@ var (
 	}
 
 	muNoConn1Rule4DenyUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{egressRule3Pass, egressRule2Deny},
-		HasDenyRule:  true,
-		IsConnection: false,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{egressRule3Pass, egressRule2Deny},
+		PendingRuleIDs: []*calc.RuleID{egressRule3Pass, egressRule2Deny},
+		HasDenyRule:    true,
+		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 2,
 			DeltaBytes:   40,
@@ -243,11 +254,12 @@ var (
 	}
 
 	muNoConn1Rule4DenyExpire = metric.Update{
-		UpdateType:   metric.UpdateTypeExpire,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{egressRule3Pass, egressRule2Deny},
-		HasDenyRule:  true,
-		IsConnection: false,
+		UpdateType:     metric.UpdateTypeExpire,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{egressRule3Pass, egressRule2Deny},
+		PendingRuleIDs: []*calc.RuleID{egressRule3Pass, egressRule2Deny},
+		HasDenyRule:    true,
+		IsConnection:   false,
 		InMetric: metric.Value{
 			DeltaPackets: 0,
 			DeltaBytes:   0,
@@ -255,11 +267,12 @@ var (
 	}
 
 	muConn1Rule1HTTPReqAllowUpdate = metric.Update{
-		UpdateType:   metric.UpdateTypeReport,
-		Tuple:        tuple1,
-		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
-		HasDenyRule:  false,
-		IsConnection: true,
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
+		PendingRuleIDs: []*calc.RuleID{ingressRule1Allow},
+		HasDenyRule:    false,
+		IsConnection:   true,
 		InMetric: metric.Value{
 			DeltaPackets:             200,
 			DeltaBytes:               22000,
