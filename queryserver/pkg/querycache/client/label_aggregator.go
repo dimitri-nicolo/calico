@@ -342,4 +342,11 @@ var LabelsResourceAuthReviewAttrList = []apiv3.AuthorizationReviewResourceAttrib
 			authhandler.ResourcePods, authhandler.ResourceNamespaces, authhandler.ResourceServiceAccounts,
 		},
 		Verbs: []string{string(rbac.VerbGet), string(rbac.VerbList)},
+	},
+	{
+		APIGroup: authhandler.ApiGroupK8sPolicyNetworking,
+		Resources: []string{
+			authhandler.ResourceAdminNetworkPolicies,
+		},
+		Verbs: []string{string(rbac.VerbGet), string(rbac.VerbList)},
 	}}

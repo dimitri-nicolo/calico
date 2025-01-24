@@ -30,6 +30,8 @@ const (
 	ResourceNetworkPolicies                 = "networkpolicies"
 	ResourceGlobalNetworkPolicy             = "globalnetworkpolicy"
 	ResourceGlobalNetworkPolicies           = "globalnetworkpolicies"
+	ResourceAdminNetworkPolicy              = "adminnetworkpolicy"
+	ResourceAdminNetworkPolicies            = "adminnetworkpolicies"
 	ResourceStageNetworkPolicy              = "stagednetworkpolicy"
 	ResourceStageNetworkPolicies            = "stagednetworkpolicies"
 	ResourceStagedGlobalNetworkPolicy       = "stagedglobalnetworkpolicy"
@@ -45,7 +47,8 @@ const (
 	ResourceGlobalThreatFeed                = "globalthreatfeed"
 	ResourceGlobalThreatFeeds               = "globalthreatfeeds"
 
-	ApiGroupK8sNetworking = "networking.k8s.io"
+	ApiGroupK8sNetworking       = "networking.k8s.io"
+	ApiGroupK8sPolicyNetworking = "policy.networking.k8s.io"
 )
 
 type Permission interface {
@@ -128,6 +131,8 @@ func convertV1KindToResourceType(kind string, name string) string {
 		return ResourceGlobalNetworkPolicies
 	case ResourceNetworkPolicy, ResourceNetworkPolicies:
 		return ResourceNetworkPolicies
+	case ResourceAdminNetworkPolicy, ResourceAdminNetworkPolicies:
+		return ResourceAdminNetworkPolicies
 	case ResourceGlobalNetworkSet, ResourceGlobalNetworkSets:
 		return ResourceGlobalNetworkSets
 	case ResourceNetworkSet, ResourceNetworkSets:
@@ -242,6 +247,11 @@ var PolicyAuthReviewAttrList = []v3.AuthorizationReviewResourceAttributes{
 	{
 		APIGroup:  ApiGroupK8sNetworking,
 		Resources: []string{ResourceNetworkPolicies},
+		Verbs:     []string{string(rbac.VerbWatch), string(rbac.VerbGet), string(rbac.VerbList)},
+	},
+	{
+		APIGroup:  ApiGroupK8sPolicyNetworking,
+		Resources: []string{ResourceAdminNetworkPolicies},
 		Verbs:     []string{string(rbac.VerbWatch), string(rbac.VerbGet), string(rbac.VerbList)},
 	},
 }
