@@ -16,8 +16,7 @@ global_job_config:
     # Secret for pushing to the docs box.
     - name: docs-ssh
     # Secret for image registries
-    - name: gcloud-registry-access
-    - name: hashrelease-docker-auth
+    - name: hashrelease-images
     - name: iss-image-scanning
     # Secrets for Slack notifications
     - name: releasebot-slack
@@ -31,7 +30,6 @@ global_job_config:
       - checkout
       - retry git fetch --quiet --unshallow
       # Credentials for accessing gcloud, needed to push images to gcr
-      - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/keys/.registry-viewer-serviceaccount.json
       - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
       # Registries login
       - docker login
