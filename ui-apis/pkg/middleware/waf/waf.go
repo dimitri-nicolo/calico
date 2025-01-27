@@ -55,7 +55,7 @@ func handleWAFRulesetsRequest(w http.ResponseWriter, r *http.Request, rulesets R
 
 	// Create a context with timeout to ensure we don't block for too long with this query.
 	// This releases timer resources if the operation completes before the timeout.
-	ctx, cancel := context.WithTimeout(r.Context(), time.Minute)
+	ctx, cancel := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
 	defer cancel()
 
 	// Handle the query
@@ -116,7 +116,7 @@ func handleWAFRulesetRequest(w http.ResponseWriter, r *http.Request, rulesets Ru
 
 	// Create a context with timeout to ensure we don't block for too long with this query.
 	// This releases timer resources if the operation completes before the timeout.
-	ctx, cancel := context.WithTimeout(r.Context(), time.Minute)
+	ctx, cancel := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
 	defer cancel()
 
 	// Handle the query
