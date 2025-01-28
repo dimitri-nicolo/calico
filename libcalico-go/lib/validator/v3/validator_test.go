@@ -38,22 +38,23 @@ func intptr(num int) *int {
 
 func init() {
 	// We need some pointers to ints, so just define as values here.
-	Vneg1 := -1
-	V0 := 0
-	V4 := 4
-	V6 := 6
-	V128 := 128
-	V254 := 254
-	V255 := 255
-	V256 := 256
-	Vxffff := 0xffff
-	Vx10000 := 0x10000
-	Vxffffffff := 0xffffffff
-	Vx100000000 := 0x100000000
-	tierOrder := float64(100.0)
-	defaultTierOrder := api.DefaultTierOrder
-	defaultTierBadOrder := float64(10.0)
-	anpTierOrder := api.AdminNetworkPolicyTierOrder
+	var Vneg1 = -1
+	var V0 = 0
+	var V4 = 4
+	var V6 = 6
+	var V128 = 128
+	var V254 = 254
+	var V255 = 255
+	var V256 = 256
+	var Vxffff = 0xffff
+	var Vx10000 = 0x10000
+	var Vxffffffff = 0xffffffff
+	var Vx100000000 = 0x100000000
+	var tierOrder = float64(100.0)
+	var defaultTierOrder = api.DefaultTierOrder
+	var anpTierOrder = api.AdminNetworkPolicyTierOrder
+	var banpTierOrder = api.BaselineAdminNetworkPolicyTierOrder
+	var defaultTierBadOrder = float64(10.0)
 
 	// We need pointers to bools, so define the values here.
 	Vtrue := true
@@ -3052,6 +3053,16 @@ func init() {
 			ObjectMeta: v1.ObjectMeta{Name: names.AdminNetworkPolicyTierName},
 			Spec: api.TierSpec{
 				Order: &anpTierOrder,
+			}}, true),
+		Entry("Tier: disallow baselineadminnetworkpolicy tier with an invalid order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.BaselineAdminNetworkPolicyTierName},
+			Spec: api.TierSpec{
+				Order: &defaultTierBadOrder,
+			}}, false),
+		Entry("Tier: allow baselineadminnetworkpolicy tier with the predefined order", &api.Tier{
+			ObjectMeta: v1.ObjectMeta{Name: names.BaselineAdminNetworkPolicyTierName},
+			Spec: api.TierSpec{
+				Order: &banpTierOrder,
 			}}, true),
 		Entry("Tier: allow a tier with a valid order", &api.Tier{
 			ObjectMeta: v1.ObjectMeta{Name: "platform"},

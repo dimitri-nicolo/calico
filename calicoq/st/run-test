@@ -81,6 +81,8 @@ EOF
         if test "$stderr_lines" -ne 0; then
             echo >>${actual}
             echo "Plus $stderr_lines lines on stderr" >>${actual}
+            echo "stderr:"
+            cat ${stderr}
         fi
         if diff -u ${expected} ${actual}; then
             echo TEST: ${c}/${expected}: PASSED

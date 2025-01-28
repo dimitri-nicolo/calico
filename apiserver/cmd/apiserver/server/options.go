@@ -50,8 +50,8 @@ type CalicoServerOptions struct {
 	PrintSwagger    bool
 	SwaggerFilePath string
 
-	// Enable Admission Controller support.
-	EnableAdmissionController bool
+	// This Kubernetes feature was made default in k8s 1.30, but may not be enabled prior.
+	EnableValidatingAdmissionPolicy bool
 
 	// Use this to populate the managementClusterAddr inside the managementClusterConnection CR.
 	// The parameters below can only be used in conjunction with
@@ -60,9 +60,6 @@ type CalicoServerOptions struct {
 	ManagementClusterAddr          string
 	ManagementClusterCAType        string
 	TunnelSecretName               string
-
-	// This Kubernetes feature was made default in k8s 1.30, but may not be enabled prior.
-	EnableValidatingAdmissionPolicy bool
 
 	StopCh <-chan struct{}
 }

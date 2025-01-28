@@ -5,6 +5,7 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -35,6 +36,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 		done:              make(chan bool),
 		epIDToPolIDs:      make(map[interface{}]map[model.PolicyKey]bool),
 		epIDToProfileIDs:  make(map[interface{}][]string),
+		polIDToPolicy:     make(map[model.PolicyKey]*model.Policy),
 		policySorter:      calc.NewPolicySorter(),
 		evalCmd:           nil,
 		rcc:               NewRemoteClusterHandler(),
@@ -120,6 +122,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 
 	disp.Register(model.WorkloadEndpointKey{}, filterUpdate)
 	disp.Register(model.HostEndpointKey{}, filterUpdate)
+	disp.Register(model.PolicyKey{}, cbs.onPolicyUpdate)
 	disp.Register(model.PolicyKey{}, arc.OnUpdate)
 	disp.Register(model.PolicyKey{}, cbs.policySorter.OnUpdate)
 	disp.Register(model.TierKey{}, cbs.policySorter.OnUpdate)
@@ -169,6 +172,7 @@ type describeCmd struct {
 	dispatcher            *dispatcher.Dispatcher
 	epIDToPolIDs          map[interface{}]map[model.PolicyKey]bool
 	epIDToProfileIDs      map[interface{}][]string
+	polIDToPolicy         map[model.PolicyKey]*model.Policy
 	policySorter          *calc.PolicySorter
 
 	evalCmd *EvalCmd
@@ -337,7 +341,7 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 
 				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
 					log.Infof("Looking at policy %v", pol.Key)
-					if pol.Value.DoNotTrack != untracked {
+					if pol.Value.DoNotTrack() != untracked {
 						continue
 					}
 					if polIDs[pol.Key] {
@@ -354,8 +358,8 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 						}
 
 						polOrder := "default"
-						if pol.Value.Order != nil {
-							polOrder = fmt.Sprint(*pol.Value.Order)
+						if !math.IsInf(pol.Value.Order, 1) {
+							polOrder = fmt.Sprint(pol.Value.Order)
 						}
 
 						policyPrint := PolicyPrint{
@@ -367,7 +371,12 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 						}
 
 						if !cbs.hideSelectors {
-							policyPrint.Selector = pol.Value.Selector
+							policy, ok := cbs.polIDToPolicy[pol.Key]
+							if ok {
+								policyPrint.Selector = policy.Selector
+							} else {
+								policyPrint.Selector = "<missing>"
+							}
 						}
 
 						ep.Policies = append(ep.Policies, policyPrint)
@@ -421,6 +430,16 @@ func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 		// MATT: Removed some handling of empty key: don't understand how it can happen.
 		cbs.dispatcher.OnUpdate(update)
 	}
+}
+
+func (cbs *describeCmd) onPolicyUpdate(update api.Update) (filterOut bool) {
+	polKey := update.Key.(model.PolicyKey)
+	if update.Value == nil {
+		delete(cbs.polIDToPolicy, polKey)
+	} else {
+		cbs.polIDToPolicy[polKey] = update.Value.(*model.Policy)
+	}
+	return false
 }
 
 func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey model.Key) {

@@ -373,12 +373,15 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		t1 := NewTierInfo("tier1")
 		t1.Order = &float1_0
 		t1.Valid = true
-		t1.OrderedPolicies = []PolKV{{Key: p1k, Value: p1}}
+		t1.OrderedPolicies = []PolKV{{Key: p1k, Value: policyMetadata(p1)}}
 
 		td := NewTierInfo("default")
 		td.Order = &float2_0
 		td.Valid = true
-		td.OrderedPolicies = []PolKV{{Key: p2k, Value: p2}, {Key: p3k, Value: p3}}
+		td.OrderedPolicies = []PolKV{
+			{Key: p2k, Value: policyMetadata(p2)},
+			{Key: p3k, Value: policyMetadata(p3)},
+		}
 
 		ts := newTierInfoSlice()
 		ts = append(ts, *t1, *td)
@@ -464,7 +467,12 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			t1 := NewTierInfo("tier1")
 			t1.Order = &float1_0
 			t1.Valid = true
-			t1.OrderedPolicies = []PolKV{{Key: sp1k, Value: sp1}, {Key: p1k, Value: p1}, {Key: sp2k, Value: sp2}, {Key: p2k, Value: p2}}
+			t1.OrderedPolicies = []PolKV{
+				{Key: sp1k, Value: policyMetadata(sp1)},
+				{Key: p1k, Value: policyMetadata(p1)},
+				{Key: sp2k, Value: policyMetadata(sp2)},
+				{Key: p2k, Value: policyMetadata(p2)},
+			}
 
 			By("and adding staged policies in tier default")
 			sp3k := model.PolicyKey{Name: "ns2/staged:knp.default.pol3"}
@@ -483,7 +491,10 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 
 			td := NewTierInfo("default")
 			td.Valid = true
-			td.OrderedPolicies = []PolKV{{Key: sp3k, Value: sp3}, {Key: sp4k, Value: sp4}}
+			td.OrderedPolicies = []PolKV{
+				{Key: sp3k, Value: policyMetadata(sp3)},
+				{Key: sp4k, Value: policyMetadata(sp4)},
+			}
 
 			By("Creating the endpoint data")
 			ts := newTierInfoSlice()
@@ -565,7 +576,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 	var elc *EndpointLookupsCache
 	var updates []api.Update
-	//localIP, _ := IPStringToArray("127.0.0.1")
+	// localIP, _ := IPStringToArray("127.0.0.1")
 	nodeIPStr := "100.0.0.0/26"
 	nodeIP, _ := IPStringToArray(nodeIPStr)
 	nodeIP2Str := "100.0.0.2/26"
@@ -749,4 +760,9 @@ var _ = Describe("EndpointLookupCache tests: Node lookup", func() {
 
 func newTierInfoSlice() []TierInfo {
 	return nil
+}
+
+func policyMetadata(policy *model.Policy) *PolicyMetadata {
+	pm := ExtractPolicyMetadata(policy)
+	return &pm
 }
