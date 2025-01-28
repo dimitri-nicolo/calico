@@ -302,9 +302,10 @@ func StartDataplaneDriver(
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				DNSPolicyMode:       apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
-				DNSPolicyNfqueueID:  int64(configParams.DNSPolicyNfqueueID),
-				DNSPacketsNfqueueID: int64(configParams.DNSPacketsNfqueueID),
+				DNSPolicyMode:         apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
+				NFTablesDNSPolicyMode: apiv3.NFTablesDNSPolicyMode(configParams.NFTablesDNSPolicyMode),
+				DNSPolicyNfqueueID:    int64(configParams.DNSPolicyNfqueueID),
+				DNSPacketsNfqueueID:   int64(configParams.DNSPacketsNfqueueID),
 
 				MarkAccept:               markAccept,
 				MarkPass:                 markPass,
@@ -544,6 +545,7 @@ func StartDataplaneDriver(
 			LookupsCache: lc,
 
 			DNSPolicyMode:                    apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
+			NFTablesDNSPolicyMode:            apiv3.NFTablesDNSPolicyMode(configParams.NFTablesDNSPolicyMode),
 			BPFDNSPolicyMode:                 apiv3.BPFDNSPolicyMode(configParams.BPFDNSPolicyMode),
 			DNSPolicyNfqueueID:               configParams.DNSPolicyNfqueueID,
 			DNSPolicyNfqueueSize:             configParams.DNSPolicyNfqueueSize,

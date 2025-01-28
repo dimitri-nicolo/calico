@@ -204,7 +204,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		opts.ExtraEnvVars["FELIX_BPFLOGLEVEL"] = "Debug"
 		if dnsMode != "" {
 			if !BPFMode() {
-				opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+				if NFTMode() {
+					opts.ExtraEnvVars["FELIX_NFTABLESDNSPOLICYMODE"] = dnsMode
+				} else {
+					opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+				}
 			} else {
 				opts.ExtraEnvVars["FELIX_BPFDNSPOLICYMODE"] = dnsMode
 			}
@@ -965,6 +969,8 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
 		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
+		opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = "delayDeniedPacket"
+		opts.ExtraEnvVars["FELIX_NFTablesDNSPOLICYMODE"] = "delayDeniedPacket"
 		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 

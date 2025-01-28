@@ -194,7 +194,9 @@ func (m *bpfIPSets) AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members 
 func (m *bpfIPSets) RemoveIPSet(setID string) {
 	ipSet := m.getExistingIPSetString(setID)
 	if ipSet == nil {
-		m.lg.WithField("setID", setID).Panic("Received deletion for unknown IP set")
+		if m.isIPSetNeeded(setID) {
+			m.lg.WithField("setID", setID).Panic("Received deletion for unknown IP set")
+		}
 		return
 	}
 	if ipSet.Deleted {
@@ -217,7 +219,9 @@ func (m *bpfIPSets) RemoveIPSet(setID string) {
 func (m *bpfIPSets) AddMembers(setID string, newMembers []string) {
 	ipSet := m.getExistingIPSetString(setID)
 	if ipSet == nil {
-		m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		if m.isIPSetNeeded(setID) {
+			m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		}
 		return
 	}
 	if ipSet.Deleted {
@@ -243,7 +247,9 @@ func (m *bpfIPSets) AddMembers(setID string, newMembers []string) {
 func (m *bpfIPSets) RemoveMembers(setID string, removedMembers []string) {
 	ipSet := m.getExistingIPSetString(setID)
 	if ipSet == nil {
-		m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		if m.isIPSetNeeded(setID) {
+			m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		}
 		return
 	}
 	if ipSet.Deleted {
