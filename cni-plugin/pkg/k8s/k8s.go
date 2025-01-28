@@ -262,11 +262,12 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 
 		// If this is for the default pod interface check for calico IPAM specific annotations and set them if needed.
 		if podInterface.IsDefault && conf.IPAM.Type == "calico-ipam" {
-			var v4pools, v6pools string
+			var v4pools, v6pools, ipFamilies string
 
 			// Sets  the Namespace annotation for IP pools as default
 			v4pools = annotNS["cni.projectcalico.org/ipv4pools"]
 			v6pools = annotNS["cni.projectcalico.org/ipv6pools"]
+			ipFamilies = annotNS["cni.projectcalico.org/ipFamilies"]
 
 			// Gets the POD annotation for IP Pools and overwrites Namespace annotation if it exists
 			v4poolpod := annot["cni.projectcalico.org/ipv4pools"]
@@ -277,15 +278,19 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 			if len(v6poolpod) != 0 {
 				v6pools = v6poolpod
 			}
+			ipFamiliesPod := annot["cni.projectcalico.org/ipFamilies"]
+			if len(ipFamiliesPod) != 0 {
+				ipFamilies = ipFamiliesPod
+			}
 
-			if len(v4pools) != 0 || len(v6pools) != 0 || awsIPRequired {
+			if len(v4pools) != 0 || len(v6pools) != 0 || len(ipFamilies) != 0 || awsIPRequired {
 				// We have some custom data we need to pass to the IPAM plugin. Parse and update our input JSON data.
 				// We parse into a raw map so that we can pass through unknown fields.
 				var stdinData map[string]interface{}
 				if err := json.Unmarshal(args.StdinData, &stdinData); err != nil {
 					return nil, err
 				}
-				var v4PoolSlice, v6PoolSlice []string
+				var v4PoolSlice, v6PoolSlice, ipFamilieSlice []string
 
 				if len(v4pools) > 0 {
 					if err := json.Unmarshal([]byte(v4pools), &v4PoolSlice); err != nil {
@@ -320,6 +325,36 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 					stdinData["ipam"].(map[string]interface{})["aws_subnet_ids"] = awsSubnetIDs
 					logger.WithField("awsSubnetIDs", awsSubnetIDs).Debug(
 						"Setting aws_subnet_ids field to tell IPAM to use an AWS pool.")
+				}
+
+				if len(ipFamilies) > 0 {
+					if err := json.Unmarshal([]byte(ipFamilies), &ipFamilieSlice); err != nil {
+						logger.WithField("IPFamilies", ipFamilies).Error("Error parsing IPFamilies")
+						return nil, err
+					}
+
+					assignV4 := "false"
+					assignV6 := "false"
+					for _, ipFamily := range ipFamilieSlice {
+						switch ipFamily {
+						case "IPv4":
+							assignV4 = "true"
+						case "IPv6":
+							assignV6 = "true"
+						default:
+							logger.WithField("IPFamilies", ipFamilies).Error("Error parsing ipFamilies")
+							return nil, fmt.Errorf("error parsing ipFamilies: %s", ipFamilies)
+						}
+					}
+
+					if _, ok := stdinData["ipam"].(map[string]interface{}); !ok {
+						return nil, errors.New("data on stdin was of unexpected type")
+					}
+
+					stdinData["ipam"].(map[string]interface{})["assign_ipv4"] = &assignV4
+					stdinData["ipam"].(map[string]interface{})["assign_ipv6"] = &assignV6
+					logger.WithField("assign_ipv4", assignV4).Debug("Setting assignV4")
+					logger.WithField("assign_ipv6", assignV6).Debug("Setting assignV6")
 				}
 
 				newData, err := json.Marshal(stdinData)
