@@ -25,6 +25,7 @@ $(ALERTMANAGER_DOWNLOADED):
 	mkdir -p alertmanager
 	curl -sfL https://github.com/prometheus/alertmanager/archive/refs/tags/$(ALERTMANAGER_VERSION).tar.gz | tar xz --strip-components 1 -C alertmanager
 	patch -d alertmanager -p1 < patches/0001-Update-google.golang.org-protobuf-to-v1.36.2.patch
+	patch -d alertmanager -p1 < patches/0002-Patch-go-CVEs.patch
 	touch $@
 
 .PHONY: build
