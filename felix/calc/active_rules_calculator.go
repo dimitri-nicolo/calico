@@ -175,7 +175,9 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 			rules := update.Value.(*model.ProfileRules)
 			oldRules, _ := arc.allProfileRules.Get(key.Name)
 			if reflect.DeepEqual(oldRules, rules) {
-				log.WithField("key", update.Key).Debug("No-op profile change; ignoring.")
+				if log.IsLevelEnabled(log.DebugLevel) {
+					log.WithField("key", update.Key).Debug("No-op profile change; ignoring.")
+				}
 				return
 			}
 			arc.allProfileRules.Set(key.Name, rules)
@@ -203,7 +205,9 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 			log.Debugf("Updating ARC for policy %v", key)
 			policy := update.Value.(*model.Policy)
 			if reflect.DeepEqual(oldPolicy, policy) {
-				log.WithField("key", update.Key).Debug("No-op policy change; ignoring.")
+				if log.IsLevelEnabled(log.DebugLevel) {
+					log.WithField("key", update.Key).Debug("No-op policy change; ignoring.")
+				}
 				return
 			}
 			arc.allPolicies.Set(key, policy)
