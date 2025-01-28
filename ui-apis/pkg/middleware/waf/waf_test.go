@@ -96,8 +96,7 @@ var _ = Describe("WAF middleware tests", func() {
     ver:'OWASP_CRS/4.7.0',\
     severity:'CRITICAL',\
     setvar:'tx.http_violation_score=+%{tx.critical_anomaly_score}',\
-    setvar:'tx.inbound_anomaly_score_pl3=+%{tx.critical_anomaly_score}'"
-`,
+    setvar:'tx.inbound_anomaly_score_pl3=+%{tx.critical_anomaly_score}'"`,
 			}
 			rs := rulesets{
 				client: mockClientSet,
