@@ -44,6 +44,7 @@ GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
 	./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
 	./lib/apis/v3/generated.openapi.go \
 	./lib/apis/v1/generated.openapi.go \
+	./lib/selector/tokenizer/kind_string.go \
 	./lib/apis/usage.tigera.io/v1/zz_generated.deepcopy.go
 
 .PHONY: gen-files
@@ -110,6 +111,9 @@ gen-crds:
 				--output-dir "./lib/apis/v1" \
                 --output-pkg "$(PACKAGE_NAME)/lib/apis/v1" \
                 "$(PACKAGE_NAME)/lib/apis/v1"'
+
+./lib/selector/tokenizer/kind_string.go: ./lib/selector/tokenizer/tokenizer.go
+	$(DOCKER_GO_BUILD) go generate ./lib/selector/tokenizer
 
 ###############################################################################
 # Static checks

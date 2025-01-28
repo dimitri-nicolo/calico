@@ -31,12 +31,19 @@ func NewValidationFilter(sink api.SyncerCallbacks, felixConfig *config.Config) *
 	return &ValidationFilter{
 		sink:   sink,
 		config: felixConfig,
+
+		cachedKVLogEntry: logrus.WithFields(logrus.Fields{
+			"key":   "",
+			"value": "",
+		}),
 	}
 }
 
 type ValidationFilter struct {
 	sink   api.SyncerCallbacks
 	config *config.Config
+
+	cachedKVLogEntry *logrus.Entry
 }
 
 func (v *ValidationFilter) OnStatusUpdated(status api.SyncStatus) {
@@ -47,11 +54,13 @@ func (v *ValidationFilter) OnStatusUpdated(status api.SyncStatus) {
 func (v *ValidationFilter) OnUpdates(updates []api.Update) {
 	filteredUpdates := make([]api.Update, len(updates))
 	for i, update := range updates {
-		logCxt := logrus.WithFields(logrus.Fields{
-			"key":   update.Key,
-			"value": update.Value,
-		})
-		logCxt.Debugf("Validating KV pair.")
+		// WithFields allocates a lot so we re-use a cached log entry for these
+		// logs.
+		logCxt := v.cachedKVLogEntry
+		v.cachedKVLogEntry.Data["key"] = update.Key
+		v.cachedKVLogEntry.Data["value"] = update.Value
+
+		logCxt.Debug("Validating KV pair.")
 		validatorFunc := v1v.Validate
 		if _, isV3 := update.Key.(model.ResourceKey); isV3 {
 			logCxt.Debug("Use v3 validator")
