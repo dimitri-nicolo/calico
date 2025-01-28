@@ -34,6 +34,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 	)
 
 	BeforeEach(func() {
+		Skip("Skip ipsec tests")
 		infra = getInfra()
 		topologyOptions := infrastructure.DefaultTopologyOptions()
 

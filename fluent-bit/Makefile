@@ -51,11 +51,11 @@ $(FLUENT_BIT_DOWNLOADED):
 package: calico-fluent-bit.rhel8 calico-fluent-bit.rhel9
 
 .PHONY: calico-fluent-bit.rhel8
-calico-fluent-bit.rhel8: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in out_linseed.so
+calico-fluent-bit.rhel8:  bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in out_linseed.so
 	$(call host_native_rpm_build,rhel8,calico-fluent-bit,$(FLUENT_BIT_VERSION))
 
 .PHONY: calico-fluent-bit.rhel9
-calico-fluent-bit.rhel9: $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in out_linseed.so
+calico-fluent-bit.rhel9: bin/yq $(FLUENT_BIT_DOWNLOADED) host-native-build rhel/calico-fluent-bit.spec.in out_linseed.so
 	$(call host_native_rpm_build,rhel9,calico-fluent-bit,$(FLUENT_BIT_VERSION))
 
 ###############################################################################

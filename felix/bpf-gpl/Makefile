@@ -71,7 +71,7 @@ all: $(OBJS)
 ut-objs: $(UT_OBJS)
 
 libbpf: $(LIBBPF_FILE_CREATED)
-$(LIBBPF_FILE_CREATED):	
+$(LIBBPF_FILE_CREATED):
 ifeq ("$(wildcard ./$(LIBBPF_DIR))", "")
 	$(info "Directory does not exist.")
 	@echo "Directory does not exist."

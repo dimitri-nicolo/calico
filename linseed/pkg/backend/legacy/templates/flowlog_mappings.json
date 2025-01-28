@@ -147,6 +147,12 @@
       "properties": {
         "all_policies": {
           "type": "keyword"
+        },
+        "enforced_policies": {
+          "type": "keyword"
+        },
+        "pending_policies": {
+          "type": "keyword"
         }
       }
     },
@@ -261,6 +267,9 @@
       "type": "long"
     },
     "host": {
+      "type": "keyword"
+    },
+    "cluster": {
       "type": "keyword"
     }
   }

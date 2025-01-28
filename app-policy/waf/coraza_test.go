@@ -2,6 +2,7 @@ package waf_test
 
 import (
 	_ "embed"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,12 +11,14 @@ import (
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/projectcalico/calico/app-policy/internal/util/testutils"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/felix/proto"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -23,6 +26,7 @@ import (
 var tigeraConfContents string
 
 func TestCorazaWAFAuthzScenarios(t *testing.T) {
+	RegisterTestingT(t)
 	logrus.SetLevel(logrus.TraceLevel)
 
 	corazaWAFScenarios := []corazaWAFScenario{
@@ -144,11 +148,9 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 		// append the file to the directives
 		files = append(files, filepath.Join(tempDir, name))
 	}
-	var observedLogs []*v1.WAFLog
-	cb := func(v interface{}) {
-		if v, ok := v.(*v1.WAFLog); ok {
-			observedLogs = append(observedLogs, v)
-		}
+	var observedLogs []*proto.WAFEvent
+	cb := func(v *proto.WAFEvent) {
+		observedLogs = append(observedLogs, v)
 	}
 	evp := waf.NewEventsPipeline(cb)
 	waf, err := waf.New(
@@ -175,10 +177,13 @@ func runCorazaWAFAuthzScenario(t testing.TB, scenario *corazaWAFScenario) {
 		)
 	}
 
-	evp.Flush()
-	if len(observedLogs) != len(scenario.expectedLogs) {
-		t.Fatalf("Expected %d logs, but got %d", len(scenario.expectedLogs), len(observedLogs))
-	}
+	Eventually(func() error {
+		if len(observedLogs) != len(scenario.expectedLogs) {
+			return fmt.Errorf("Expected %d logs, but got %d", len(scenario.expectedLogs), len(observedLogs))
+		}
+
+		return nil
+	}, "2s", "200ms")
 }
 
 type corazaWAFScenario struct {

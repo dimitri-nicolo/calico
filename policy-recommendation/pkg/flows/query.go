@@ -43,17 +43,39 @@ func (qf *recommendationFlowLogQuery) QueryFlows(params *RecommendationFlowLogQu
 	}
 
 	// Query with the parameters provided
-	pager := linseed.NewListPager[lapi.L3Flow](buildQuery(params))
+	pager := linseed.NewListPager[lapi.L3Flow](buildPendingPolicyMatchQuery(params))
 	flows, err := searchFlows(qf.ctx, qf.client.L3Flows(qf.clusterID).List, pager)
-	if err != nil {
-		return flows, err
+	if err != nil || len(flows) == 0 {
+		// If no pending_policies matches are found, query all_policies matches.
+		// This is done to ensure that versions that don't support the pending_policies
+		// sub-type return matching results.
+		// Policy recommendation follows an additive approach to recommending new rules
+		// getting a match from all_policies and not pending_policies is acceptable.
+		clog.Debug("No pending_policies matches found, querying all_policies matches")
+		pager = linseed.NewListPager[lapi.L3Flow](buildAllPolicyMatchQuery(params))
+		flows, err = searchFlows(qf.ctx, qf.client.L3Flows(qf.clusterID).List, pager)
+		if err != nil {
+			return flows, err
+		}
 	}
 
 	return flows, err
 }
 
+// buildAllPolicyMatchQuery returns a linseed L3 flow query that will return a match to
+// all_policies flows.
+func buildAllPolicyMatchQuery(params *RecommendationFlowLogQueryParams) *lapi.L3FlowParams {
+	return buildQuery(params, false)
+}
+
+// buildPendingPolicyMatchQuery returns a linseed L3 flow query that will return a match to
+// pending_policies flows.
+func buildPendingPolicyMatchQuery(params *RecommendationFlowLogQueryParams) *lapi.L3FlowParams {
+	return buildQuery(params, true)
+}
+
 // buildQuery returns linseed L3 flow query parameters using policy recommendation query parameters.
-func buildQuery(params *RecommendationFlowLogQueryParams) *lapi.L3FlowParams {
+func buildQuery(params *RecommendationFlowLogQueryParams, matchPending bool) *lapi.L3FlowParams {
 	// Parse the start and end times.
 	now := time.Now()
 
@@ -89,8 +111,9 @@ func buildQuery(params *RecommendationFlowLogQueryParams) *lapi.L3FlowParams {
 	// If the request is only for unprotected flows then return a query that will
 	// specifically only pick flows that are allowed by a profile.
 	allow := lapi.FlowActionAllow
+	var policyMatches []lapi.PolicyMatch
 	if params.Unprotected {
-		fp.PolicyMatches = []lapi.PolicyMatch{
+		policyMatches = []lapi.PolicyMatch{
 			{
 				Tier:   "__PROFILE__",
 				Action: &allow,
@@ -99,7 +122,7 @@ func buildQuery(params *RecommendationFlowLogQueryParams) *lapi.L3FlowParams {
 	} else {
 		// Otherwise, return any flows that are seen by the default tier
 		// or allowed by a profile.
-		fp.PolicyMatches = []lapi.PolicyMatch{
+		policyMatches = []lapi.PolicyMatch{
 			{
 				Tier: "default",
 			},
@@ -109,6 +132,13 @@ func buildQuery(params *RecommendationFlowLogQueryParams) *lapi.L3FlowParams {
 			},
 		}
 	}
+
+	if matchPending {
+		fp.PendingPolicyMatches = policyMatches
+	} else {
+		fp.PolicyMatches = policyMatches
+	}
+
 	return &fp
 }
 

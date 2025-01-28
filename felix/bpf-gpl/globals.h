@@ -94,4 +94,8 @@ struct cali_ct_cleanup_globals {
     __u64 icmp_last_seen;
 };
 
+struct cali_ipt_dns_globals {
+        __u64 ip_set_id;
+};
+
 #endif /* __CALI_GLOBALS_H__ */

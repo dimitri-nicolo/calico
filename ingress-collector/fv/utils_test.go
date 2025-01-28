@@ -186,6 +186,11 @@ func (s *testPolicySyncServer) Report(ctx context.Context, dps *proto.DataplaneS
 	}, nil
 }
 
+func (s *testPolicySyncServer) ReportWAF(stream proto.PolicySync_ReportWAFServer) error {
+	// Don't do anything with this since our test server will not handle any WAFEvent
+	return nil
+}
+
 func DeepCopyDpsWithoutHttpData(src *proto.DataplaneStats) *proto.DataplaneStats {
 	return &proto.DataplaneStats{
 		SrcIp:    src.SrcIp,

@@ -1198,6 +1198,71 @@ will launch an external dataplane driver and communicate with it over protobuf.
 | `FelixConfiguration` schema | Boolean. |
 | Default value (YAML) | `true` |
 
+### `WAFEventLogsFileDirectory` (config file) / `wafEventLogsFileDirectory` (YAML)
+
+Sets the directory where WAFEvent log files are stored.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_WAFEventLogsFileDirectory` |
+| Encoding (env var/config file) | String |
+| Default value (above encoding) | `/var/log/calico/waf` |
+| `FelixConfiguration` field | `wafEventLogsFileDirectory` (YAML) `WAFEventLogsFileDirectory` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | `/var/log/calico/waf` |
+
+### `WAFEventLogsFileEnabled` (config file) / `wafEventLogsFileEnabled` (YAML)
+
+Controls logging WAFEvent logs to a file. If false no WAFEvent logging to file will occur.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_WAFEventLogsFileEnabled` |
+| Encoding (env var/config file) | Boolean: <code>true</code>, <code>1</code>, <code>yes</code>, <code>y</code>, <code>t</code> accepted as True; <code>false</code>, <code>0</code>, <code>no</code>, <code>n</code>, <code>f</code> accepted (case insensitively) as False. |
+| Default value (above encoding) | `false` |
+| `FelixConfiguration` field | `wafEventLogsFileEnabled` (YAML) `WAFEventLogsFileEnabled` (Go API) |
+| `FelixConfiguration` schema | Boolean. |
+| Default value (YAML) | `false` |
+
+### `WAFEventLogsFileMaxFileSizeMB` (config file) / `wafEventLogsFileMaxFileSizeMB` (YAML)
+
+Sets the max size in MB of WAFEvent log files before rotation.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_WAFEventLogsFileMaxFileSizeMB` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `100` |
+| `FelixConfiguration` field | `wafEventLogsFileMaxFileSizeMB` (YAML) `WAFEventLogsFileMaxFileSizeMB` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `100` |
+
+### `WAFEventLogsFileMaxFiles` (config file) / `wafEventLogsFileMaxFiles` (YAML)
+
+Sets the number of WAFEvent log files to keep.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_WAFEventLogsFileMaxFiles` |
+| Encoding (env var/config file) | Integer |
+| Default value (above encoding) | `5` |
+| `FelixConfiguration` field | `wafEventLogsFileMaxFiles` (YAML) `WAFEventLogsFileMaxFiles` (Go API) |
+| `FelixConfiguration` schema | Integer |
+| Default value (YAML) | `5` |
+
+### `WAFEventLogsFlushInterval` (config file) / `wafEventLogsFlushInterval` (YAML)
+
+Configures the interval at which Felix exports WAFEvent logs.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_WAFEventLogsFlushInterval` |
+| Encoding (env var/config file) | Seconds (floating point) |
+| Default value (above encoding) | `15` (15s) |
+| `FelixConfiguration` field | `wafEventLogsFlushInterval` (YAML) `WAFEventLogsFlushInterval` (Go API) |
+| `FelixConfiguration` schema | Duration string, for example <code>1m30s123ms</code> or <code>1h5m</code>. |
+| Default value (YAML) | `15s` |
+
 ### `WorkloadSourceSpoofing` (config file) / `workloadSourceSpoofing` (YAML)
 
 Controls whether pods can use the allowedSourcePrefixes annotation to send traffic with a source IP
@@ -3445,17 +3510,22 @@ NoDelay - Felix does not introduce any delay to the packets. DNS rules may not h
 the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
 connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 
+Inline - Parses DNS response inline with DNS response packet processing within IPTables.
+This guarantees the DNS rules reflect any change immediately.
+This mode works for iptables only and matches the same mode for BPFDNSPolicyMode.
 This setting is ignored on Windows and "NoDelay" is always used.
 
 This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 
+Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
+
 | Detail |   |
 | --- | --- |
 | Environment variable | `FELIX_DNSPolicyMode` |
-| Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>NoDelay</code> (case insensitive) |
+| Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>Inline</code>, <code>NoDelay</code> (case insensitive) |
 | Default value (above encoding) | `DelayDeniedPacket` |
 | `FelixConfiguration` field | `dnsPolicyMode` (YAML) `DNSPolicyMode` (Go API) |
-| `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"NoDelay"</code>. |
+| `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"Inline"</code>, <code>"NoDelay"</code>. |
 | Default value (YAML) | `DelayDeniedPacket` |
 | Notes | Required. | 
 

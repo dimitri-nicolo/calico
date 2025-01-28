@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/arp"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/bpf/counters"
+	"github.com/projectcalico/calico/felix/bpf/dnsresolver"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
 	"github.com/projectcalico/calico/felix/bpf/hook"
 	"github.com/projectcalico/calico/felix/bpf/ifstate"
@@ -32,6 +33,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	"github.com/projectcalico/calico/felix/bpf/routes"
 	"github.com/projectcalico/calico/felix/bpf/state"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type IPMaps struct {
@@ -119,6 +121,20 @@ func getIPMaps(ipFamily int) *IPMaps {
 	}
 }
 
+func CreateBPFIPSetsMap(ipFamily proto.IPVersion) (maps.Map, error) {
+	var ipsetsMap maps.Map
+	if ipFamily == proto.IPVersion_IPV6 {
+		ipsetsMap = ipsets.MapV6()
+	} else {
+		ipsetsMap = ipsets.Map()
+	}
+	err := ipsetsMap.EnsureExists()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create %s map, err=%w", ipsetsMap.GetName(), err)
+	}
+	return ipsetsMap, nil
+}
+
 func CreateBPFMaps(ipV6Enabled bool) (*Maps, error) {
 	ret := new(Maps)
 
@@ -132,7 +148,6 @@ func CreateBPFMaps(ipV6Enabled bool) (*Maps, error) {
 	for i, bpfMap := range mps {
 		err := bpfMap.EnsureExists()
 		if err != nil {
-
 			for j := 0; j < i; j++ {
 				m := mps[j]
 				os.Remove(m.(pinnedMap).Path())
@@ -189,4 +204,13 @@ func (i *IPMaps) slice() []maps.Map {
 type pinnedMap interface {
 	Path() string
 	Close() error
+}
+
+func DNSMapsToPin() []string {
+	return []string{ipsets.MapParameters.VersionedName(),
+		dnsresolver.DNSPfxMapParams.VersionedName(),
+		dnsresolver.DNSSetMapParams.VersionedName(),
+		ipsets.MapV6Parameters.VersionedName(),
+		dnsresolver.DNSPfxMapParamsV6.VersionedName(),
+		dnsresolver.DNSSetMapParamsV6.VersionedName()}
 }

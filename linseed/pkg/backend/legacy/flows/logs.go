@@ -56,17 +56,16 @@ func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializ
 
 type flowLogWithExtras struct {
 	v1.FlowLog `json:",inline"`
-	Cluster    string `json:"cluster"`
 	Tenant     string `json:"tenant,omitempty"`
 }
 
-// prepareForWrite wraps a flow log in a document that includes the cluster and tenant if
+// prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
 func (b *flowLogBackend) prepareForWrite(i bapi.ClusterInfo, f v1.FlowLog) interface{} {
+	f.Cluster = i.Cluster
 	if b.singleIndex {
 		return flowLogWithExtras{
 			FlowLog: f,
-			Cluster: i.Cluster,
 			Tenant:  i.Tenant,
 		}
 	}
@@ -278,12 +277,28 @@ func (b *flowLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.FlowLogParams) 
 	}
 
 	// Configure policy match.
-	q, err := BuildPolicyMatchQuery(opts.PolicyMatches)
+	q, err := BuildAllPolicyMatchQuery(opts.PolicyMatches)
 	if err != nil {
 		return nil, err
 	}
 	if q != nil {
 		query.Filter(q)
+	}
+
+	eq, err := BuildEnforcedPolicyMatchQuery(opts.EnforcedPolicyMatches)
+	if err != nil {
+		return nil, err
+	}
+	if eq != nil {
+		query.Filter(eq)
+	}
+
+	pq, err := BuildPendingPolicyMatchQuery(opts.PendingPolicyMatches)
+	if err != nil {
+		return nil, err
+	}
+	if pq != nil {
+		query.Filter(pq)
 	}
 
 	return query, nil

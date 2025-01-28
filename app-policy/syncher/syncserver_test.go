@@ -104,7 +104,9 @@ func TestSyncRestart(t *testing.T) {
 
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
-	go uut.Start(cCtx)
+	if err := uut.Start(cCtx); err != nil {
+		t.Fatal(err)
+	}
 
 	if uut.Readiness() {
 		t.Error("Expected syncClient not to be ready before receiving inSync")
@@ -146,7 +148,9 @@ func TestSyncCancelBeforeInSync(t *testing.T) {
 	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
 	cCtx, cCancel := context.WithCancel(context.Background())
-	go uut.Start(cCtx)
+	if err := uut.Start(cCtx); err != nil {
+		t.Fatal(err)
+	}
 
 	time.Sleep(10 * time.Millisecond)
 	cCancel()
@@ -164,7 +168,9 @@ func TestSyncCancelAfterInSync(t *testing.T) {
 	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 
 	cCtx, cCancel := context.WithCancel(context.Background())
-	go uut.Start(cCtx)
+	if err := uut.Start(cCtx); err != nil {
+		t.Fatal(err)
+	}
 
 	server.SendInSync()
 	Eventually(uut.Readiness, "2s", "100ms").Should(BeTrue())
@@ -186,7 +192,9 @@ func TestSyncServerCancelBeforeInSync(t *testing.T) {
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
 
-	go uut.Start(cCtx)
+	if err := uut.Start(cCtx); err != nil {
+		t.Fatal(err)
+	}
 
 	server.Shutdown()
 	time.Sleep(10 * time.Millisecond)
@@ -208,7 +216,9 @@ func TestDPStatsAfterConnection(t *testing.T) {
 	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 	dpStats := statscache.NewWithFlushInterval(time.Millisecond * 100)
 
-	go uut.Start(ctx)
+	if err := uut.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
 	dpStats.RegisterFlushCallback(uut.OnStatsCacheFlush)
 	go dpStats.Start(ctx)
 
@@ -313,7 +323,9 @@ func TestDPStatsBeforeConnection(t *testing.T) {
 	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 	dpStats := statscache.NewWithFlushInterval(time.Millisecond * 100)
 
-	go uut.Start(ctx)
+	if err := uut.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
 	dpStats.RegisterFlushCallback(uut.OnStatsCacheFlush)
 	go dpStats.Start(ctx)
 
@@ -359,7 +371,9 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 	uut := NewClient(server.GetTarget(), psm, uds.GetDialOptions(), WithSubscriptionType(""))
 	dpStats := statscache.NewWithFlushInterval(time.Millisecond * 100)
 
-	go uut.Start(ctx)
+	if err := uut.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
 	dpStats.RegisterFlushCallback(uut.OnStatsCacheFlush)
 	go dpStats.Start(ctx)
 
@@ -370,6 +384,7 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 	// Stop the server and then send in the stats. We should not receive any updates.
 	server.Stop()
 	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
+	Eventually(uut.Readiness, "2s", "100ms").Should(BeFalse())
 
 	dpStats.Add(statscache.DPStats{
 		Tuple: statscache.Tuple{
@@ -442,7 +457,9 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
-	go uut.Start(cCtx)
+	if err := uut.Start(cCtx); err != nil {
+		t.Fatal(err)
+	}
 
 	// Start the server. This should allow the connection to complete, and we should receive one aggregated
 	// statistic.
@@ -566,6 +583,10 @@ func (s *testSyncServer) Report(_ context.Context, d *proto.DataplaneStats) (*pr
 	return &proto.ReportResult{
 		Successful: true,
 	}, nil
+}
+
+func (s *testSyncServer) ReportWAF(stream proto.PolicySync_ReportWAFServer) error {
+	return nil
 }
 
 func (s *testSyncServer) SendInSync() {

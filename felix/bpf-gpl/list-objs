@@ -32,6 +32,9 @@ for log_level in debug no_log; do
   echo "bin/xdp_${log_level}_co-re_v6.o"
 
   # Calico Enterprise objects
+  echo "bin/ipt_parse_dns_${log_level}_co-re.o"
+  echo "bin/ipt_match_ipset_${log_level}_co-re_v4.o"
+  echo "bin/ipt_match_ipset_${log_level}_co-re_v6.o"
   echo "bin/tcp_kprobe_${log_level}.o"
   echo "bin/udp_kprobe_${log_level}.o"
   echo "bin/tcp_stats_${log_level}.o"

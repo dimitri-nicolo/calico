@@ -116,6 +116,9 @@
     },
     "host": {
       "type": "keyword"
+    },
+    "cluster": {
+      "type": "keyword"
     }
   }
 }

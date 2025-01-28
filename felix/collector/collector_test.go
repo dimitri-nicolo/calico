@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	google_protobuf "github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kapiv1 "k8s.io/api/core/v1"
@@ -30,6 +31,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/collector/utils"
+	"github.com/projectcalico/calico/felix/collector/wafevents"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -2531,6 +2533,131 @@ var _ = Describe("L7 logging", func() {
 		Expect(update.ServiceNamespace).To(Equal(""))
 		Expect(update.ServicePortName).To(Equal(""))
 		Expect(update.ServicePortNum).To(Equal(0))
+	})
+})
+
+type mockWAFEventReporter struct {
+	updates []*wafevents.Report
+}
+
+func (r *mockWAFEventReporter) Start() error {
+	return nil
+}
+
+func (r *mockWAFEventReporter) Report(event interface{}) error {
+	r.updates = append(r.updates, event.(*wafevents.Report))
+	return nil
+}
+
+var _ = Describe("WAFEvent logging", func() {
+	var c *collector
+	var r *mockWAFEventReporter
+	var lep1 *calc.EndpointData = &calc.EndpointData{}
+	var lep2 *calc.EndpointData = &calc.EndpointData{}
+	var we0, we1 *proto.WAFEvent
+	BeforeEach(func() {
+		*lep1 = *localEd1
+		*lep2 = *localEd2
+		lep1.Key = model.WorkloadEndpointKey{WorkloadID: "ns1/localworkloadid1"}
+		lep2.Key = model.WorkloadEndpointKey{WorkloadID: "ns2/localworkloadid2"}
+		epMap := map[[16]byte]*calc.EndpointData{
+			localIp1: lep1,
+			localIp2: lep2,
+		}
+		lm := newMockLookupsCache(epMap, nil, nil, nil)
+		c = newCollector(lm, &Config{
+			AgeTimeout:            time.Duration(10) * time.Second,
+			InitialReportingDelay: time.Duration(5) * time.Second,
+			ExportingInterval:     time.Duration(1) * time.Second,
+			FlowLogsFlushInterval: time.Duration(1) * time.Second,
+			DisplayDebugTraceLogs: true,
+		}).(*collector)
+		r = &mockWAFEventReporter{}
+		c.SetWAFEventsReporter(r)
+		we0 = &proto.WAFEvent{
+			TxId:    "tx000",
+			Host:    "localservice.ns2",
+			SrcIp:   "10.0.0.1",
+			SrcPort: 65500,
+			DstIp:   "10.0.0.2",
+			DstPort: 8080,
+			Rules: []*proto.WAFRuleHit{
+				{
+					Rule: &proto.WAFRule{
+						Id:       "1620",
+						Message:  "Fake rule",
+						Severity: "high",
+						File:     "/etc/m/juana.conf",
+						Line:     "58800",
+					},
+					Disruptive: false,
+				},
+			},
+			Action: "pass",
+			Request: &proto.HTTPRequest{
+				Method:  "GET",
+				Path:    "/420",
+				Version: "HTTP/1.1",
+				Headers: map[string]string{
+					"Content-Type": "application/json",
+				},
+			},
+			Timestamp: google_protobuf.TimestampNow(),
+		}
+		we1 = &proto.WAFEvent{
+			TxId:    "tx001",
+			Host:    "google.com",
+			SrcIp:   "10.3.53.1",
+			SrcPort: 65500,
+			DstIp:   "10.3.53.2",
+			DstPort: 8080,
+			Rules: []*proto.WAFRuleHit{
+				{
+					Rule: &proto.WAFRule{
+						Id:       "1620",
+						Message:  "Fake rule",
+						Severity: "high",
+						File:     "/etc/m/juana.conf",
+						Line:     "58800",
+					},
+					Disruptive: false,
+				},
+			},
+			Action: "pass",
+			Request: &proto.HTTPRequest{
+				Method:  "GET",
+				Path:    "/420",
+				Version: "HTTP/1.1",
+				Headers: map[string]string{
+					"Content-Type": "application/json",
+				},
+			},
+			Timestamp: google_protobuf.TimestampNow(),
+		}
+	})
+
+	It("should get client and server endpoint data", func() {
+		c.LogWAFEvents([]*proto.WAFEvent{we0})
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Src).NotTo(BeNil())
+		Expect(update.Src.PodName).To(Equal("localworkloadid1"))
+		Expect(update.Src.PodNameSpace).To(Equal("ns1"))
+		Expect(update.Dst).NotTo(BeNil())
+		Expect(update.Dst.PodName).To(Equal("localworkloadid2"))
+		Expect(update.Dst.PodNameSpace).To(Equal("ns2"))
+	})
+
+	It("should properly handle empty endpoint data", func() {
+		c.LogWAFEvents([]*proto.WAFEvent{we1})
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.Src).NotTo(BeNil())
+		Expect(update.Src.PodName).To(Equal("-"))
+		Expect(update.Src.PodNameSpace).To(Equal("-"))
+		Expect(update.Dst).NotTo(BeNil())
+		Expect(update.Dst.PodName).To(Equal("-"))
+		Expect(update.Dst.PodNameSpace).To(Equal("-"))
 	})
 })
 

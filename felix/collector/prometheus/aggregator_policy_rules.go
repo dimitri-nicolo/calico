@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/metric"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 // CNX Metrics
@@ -148,15 +149,18 @@ func (pa *PolicyRulesAggregator) RegisterMetrics(registry *prometheus.Registry) 
 // with the metric and ensures the metric will expire if there are no associated connections
 // and no activity within the retention period. Unlike reportMetric, if there is no cached
 // entry for this metric one is not created and therefore the metric will not be reported.
+//
+// The rule metrics associated to enforced policies are updates incoming from the dataplane
+// and the rule metrics associated to staged policies are updates incoming from the policy
+// evaluator.
 func (pa *PolicyRulesAggregator) OnUpdate(mu metric.Update) {
-	if mu.RuleIDs == nil {
-		return
+	enforcedRuleIDs := getEnforcedPolicyRuleIDs(mu)
+	for _, rID := range enforcedRuleIDs {
+		pa.updateRuleKey(RuleAggregateKey{ruleID: rID}, mu)
 	}
-	for _, rID := range mu.RuleIDs {
-		if rID == nil {
-			continue
-		}
-		pa.updateRuleKey(RuleAggregateKey{ruleID: *rID}, mu)
+	stagedRuleIDs := getStagedPolicyRuleIDs(mu)
+	for _, rID := range stagedRuleIDs {
+		pa.updateRuleKey(RuleAggregateKey{ruleID: rID}, mu)
 	}
 }
 
@@ -252,4 +256,35 @@ func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey)
 	}
 
 	delete(pa.ruleAggStats, key)
+}
+
+// getEnforcedPolicyRuleIDs returns the rule IDs that are enforced in the metric update.
+func getEnforcedPolicyRuleIDs(mu metric.Update) []calc.RuleID {
+	if mu.RuleIDs == nil {
+		return nil
+	}
+	enforcedRuleIDs := []calc.RuleID{}
+	for _, rID := range mu.RuleIDs {
+		if rID == nil || model.PolicyIsStaged(rID.Name) {
+			continue
+		}
+		enforcedRuleIDs = append(enforcedRuleIDs, *rID)
+	}
+	return enforcedRuleIDs
+}
+
+// getStagedPolicyRuleIDs returns the rule IDs that are staged, from the pending rule IDs, in the
+// metric update.
+func getStagedPolicyRuleIDs(mu metric.Update) []calc.RuleID {
+	if mu.PendingRuleIDs == nil {
+		return nil
+	}
+	pendingRuleIDs := []calc.RuleID{}
+	for _, rID := range mu.PendingRuleIDs {
+		if rID == nil || !model.PolicyIsStaged(rID.Name) {
+			continue
+		}
+		pendingRuleIDs = append(pendingRuleIDs, *rID)
+	}
+	return pendingRuleIDs
 }

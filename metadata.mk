@@ -23,9 +23,6 @@ PROTOC_VER=v0.1
 UBI8_VERSION=8.10
 UBI9_VERSION=9.4
 
-# Configuration for Semaphore integration.
-ORGANIZATION=tigera
-
 # The Semaphore calico-private ID, used when making calls to the Semaphore API.
 SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657
 
@@ -36,13 +33,14 @@ else
     SECRETS_PATH ?= $(HOME)/secrets
 endif
 
+# Configuration for Semaphore/Github integration.  This needs to be set
+# differently for a forked repo.
+ORGANIZATION = tigera
+GIT_REPO = calico-private
+
 # Part of the git remote that is common to git and HTTP representations.
 # Used to auto-detect the right remote.
-ifeq ($(ORGANIZATION),tigera)
-GIT_REMOTE=$(ORGANIZATION)/calico-private
-else
-GIT_REMOTE=$(ORGANIZATION)/calico
-endif
+GIT_REPO_SLUG ?= $(ORGANIZATION)/$(GIT_REPO)
 
 # Configure git to access repositories using SSH.
 GIT_USE_SSH = true

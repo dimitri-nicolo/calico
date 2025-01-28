@@ -89,6 +89,8 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 	objects["conntrack_cleanup_debug_co-re_v6.o"] = struct{}{}
 	objects["conntrack_cleanup_no_log_co-re_v4.o"] = struct{}{}
 	objects["conntrack_cleanup_no_log_co-re_v6.o"] = struct{}{}
+	objects["ipt_parse_dns_debug_co-re.o"] = struct{}{}
+	objects["ipt_parse_dns_no_log_co-re.o"] = struct{}{}
 	for _, logLevel := range []string{"debug", "no_log"} {
 		for _, btf := range []bool{false, true} {
 			for _, ipv := range []string{"v46", "v4", "v6"} {
@@ -97,6 +99,10 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 					core = "_co-re"
 				}
 				filename := "connect_balancer_" + logLevel + core + fmt.Sprintf("_%s.o", ipv)
+				objects[filename] = struct{}{}
+			}
+			for _, ipv := range []string{"v4", "v6"} {
+				filename := "ipt_match_ipset_" + logLevel + "_co-re" + fmt.Sprintf("_%s.o", ipv)
 				objects[filename] = struct{}{}
 			}
 		}

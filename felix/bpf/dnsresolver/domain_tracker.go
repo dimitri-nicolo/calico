@@ -71,40 +71,36 @@ type saItem struct {
 	sets     set.Set[uint64] /* those sets which directly belong to this domain/wildcard */
 }
 
-func NewDomainTracker(family int, strToUin64 func(string) uint64) (*DomainTracker, error) {
+func CreateBPFMapsForDNS(family int) (maps.Map, maps.Map, error) {
 	var mPfx, mSets maps.Map
 	if family == 4 {
 		mPfx = DNSPrefixMap()
-		err := mPfx.EnsureExists()
-
-		if err != nil {
-			return nil, fmt.Errorf("could not create BPF map: %w", err)
-		}
-
 		mSets = DNSSetMap()
-		err = mSets.EnsureExists()
-
-		if err != nil {
-			return nil, fmt.Errorf("could not create BPF map: %w", err)
-		}
 	} else if family == 6 {
 		mPfx = DNSPrefixMapV6()
-		err := mPfx.EnsureExists()
-
-		if err != nil {
-			return nil, fmt.Errorf("could not create BPF map: %w", err)
-		}
-
 		mSets = DNSSetMapV6()
-		err = mSets.EnsureExists()
-
-		if err != nil {
-			return nil, fmt.Errorf("could not create BPF map: %w", err)
-		}
 	} else {
-		return nil, fmt.Errorf("unknown ip family %d", family)
+		return nil, nil, fmt.Errorf("unknown ip family %d", family)
 	}
 
+	err := mPfx.EnsureExists()
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not create BPF map: %w", err)
+	}
+
+	err = mSets.EnsureExists()
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not create BPF map: %w", err)
+	}
+	return mPfx, mSets, nil
+}
+
+func NewDomainTracker(family int, strToUin64 func(string) uint64) (*DomainTracker, error) {
+	mPfx, mSets, err := CreateBPFMapsForDNS(family)
+	if err != nil {
+		return nil, err
+	}
 	return NewDomainTrackerWithMaps(strToUin64, mPfx, mSets)
 }
 

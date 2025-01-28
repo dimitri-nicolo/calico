@@ -343,6 +343,14 @@ out:
 	return err;
 }
 
+void bpf_ipt_set_globals(struct bpf_map *map, uint64_t ip_set_id)
+{
+	struct cali_ipt_dns_globals data = {
+		.ip_set_id = ip_set_id,
+	};
+	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(data)));
+}
+
 void bpf_ctlb_set_globals(struct bpf_map *map, uint udp_not_seen_timeo, bool exclude_udp)
 {
 	struct cali_ctlb_globals data = {

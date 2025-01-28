@@ -199,31 +199,40 @@ func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
 	// of policies across multiple logs in this builder, and we assume
 	// every log in the flow has the same policies.
 	if b.activeLog != nil && b.activeLog.Policies != nil {
-		for _, p := range b.activeLog.Policies.AllPolicies {
-			if f.Policies == nil {
-				f.Policies = make([]v1.Policy, 0)
+		// A helper to avoid repetition.
+		addPolicies := func(pols []string, targetPolicy *[]v1.Policy) {
+			if len(pols) == 0 {
+				return
 			}
-			h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
-			require.NoError(t, err)
+			if *targetPolicy == nil {
+				*targetPolicy = make([]v1.Policy, 0)
+			}
+			for _, p := range pols {
+				h, err := lmaapi.PolicyHitFromFlowLogPolicyString(p, 1)
+				require.NoError(t, err)
 
-			name := h.Name()
-			if h.IsProfile() {
-				name = fmt.Sprintf("kns.%s", name)
-			}
+				name := h.Name()
+				if h.IsProfile() {
+					name = fmt.Sprintf("kns.%s", name)
+				}
 
-			pol := v1.Policy{
-				Tier:         h.Tier(),
-				Name:         name,
-				Namespace:    h.Namespace(),
-				Action:       string(h.Action()),
-				Count:        f.LogStats.FlowLogCount,
-				RuleID:       h.RuleIdIndex(),
-				IsProfile:    h.IsProfile(),
-				IsStaged:     h.IsStaged(),
-				IsKubernetes: h.IsKubernetes(),
+				*targetPolicy = append(*targetPolicy, v1.Policy{
+					Tier:         h.Tier(),
+					Name:         name,
+					Namespace:    h.Namespace(),
+					Action:       string(h.Action()),
+					Count:        f.LogStats.FlowLogCount,
+					RuleID:       h.RuleIdIndex(),
+					IsProfile:    h.IsProfile(),
+					IsStaged:     h.IsStaged(),
+					IsKubernetes: h.IsKubernetes(),
+				})
 			}
-			f.Policies = append(f.Policies, pol)
 		}
+
+		addPolicies(b.activeLog.Policies.AllPolicies, &f.Policies)
+		addPolicies(b.activeLog.Policies.EnforcedPolicies, &f.EnforcedPolicies)
+		addPolicies(b.activeLog.Policies.PendingPolicies, &f.PendingPolicies)
 	}
 
 	// Add in TCP stats.
@@ -353,10 +362,35 @@ func (b *FlowLogBuilder) WithPolicies(p ...string) *FlowLogBuilder {
 func (b *FlowLogBuilder) WithPolicy(p string) *FlowLogBuilder {
 	if b.activeLog.Policies == nil {
 		b.activeLog.Policies = &v1.FlowLogPolicy{
-			AllPolicies: []string{},
+			AllPolicies:      []string{},
+			EnforcedPolicies: []string{},
+			PendingPolicies:  []string{},
 		}
 	}
 	b.activeLog.Policies.AllPolicies = append(b.activeLog.Policies.AllPolicies, p)
+	return b
+}
+
+func (b *FlowLogBuilder) WithEnforcedPolicy(p string) *FlowLogBuilder {
+	if b.activeLog.Policies == nil {
+		b.activeLog.Policies = &v1.FlowLogPolicy{
+			AllPolicies:      []string{},
+			EnforcedPolicies: []string{},
+			PendingPolicies:  []string{}}
+	}
+	b.activeLog.Policies.EnforcedPolicies = append(b.activeLog.Policies.EnforcedPolicies, p)
+	return b
+}
+
+func (b *FlowLogBuilder) WithPendingPolicy(p string) *FlowLogBuilder {
+	if b.activeLog.Policies == nil {
+		b.activeLog.Policies = &v1.FlowLogPolicy{
+			AllPolicies:      []string{},
+			EnforcedPolicies: []string{},
+			PendingPolicies:  []string{},
+		}
+	}
+	b.activeLog.Policies.PendingPolicies = append(b.activeLog.Policies.PendingPolicies, p)
 	return b
 }
 

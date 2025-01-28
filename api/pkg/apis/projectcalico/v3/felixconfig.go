@@ -78,13 +78,14 @@ const (
 	AWSSecondaryIPEnabledENIPerWorkload = "EnabledENIPerWorkload"
 )
 
-// +kubebuilder:validation:Enum=NoDelay;DelayDeniedPacket;DelayDNSResponse
+// +kubebuilder:validation:Enum=NoDelay;DelayDeniedPacket;DelayDNSResponse;Inline
 type DNSPolicyMode string
 
 const (
 	DNSPolicyModeNoDelay           DNSPolicyMode = "NoDelay"
 	DNSPolicyModeDelayDeniedPacket DNSPolicyMode = "DelayDeniedPacket"
 	DNSPolicyModeDelayDNSResponse  DNSPolicyMode = "DelayDNSResponse"
+	DNSPolicyModeInline            DNSPolicyMode = "Inline"
 )
 
 type BPFDNSPolicyMode string
@@ -1043,12 +1044,16 @@ type FelixConfigurationSpec struct {
 	// the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
 	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 	//
+	// Inline - Parses DNS response inline with DNS response packet processing within IPTables.
+	// This guarantees the DNS rules reflect any change immediately.
+	// This mode works for iptables only and matches the same mode for BPFDNSPolicyMode.
 	// This setting is ignored on Windows and "NoDelay" is always used.
 	//
 	// This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 	//
+	// Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
 	// [Default: DelayDeniedPacket]
-	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse"`
+	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse Inline"`
 	// BPFDNSPolicyMode specifies how DNS policy programming will be handled.
 	// Inline - BPF parses DNS response inline with DNS response packet
 	// processing. This guarantees the DNS rules reflect any change immediately.
@@ -1160,6 +1165,24 @@ type FelixConfigurationSpec struct {
 	// the flush interval, and emits a WARNING log with that count at the same time as it
 	// flushes the buffered L7 logs. A value of 0 means no limit. [Default: 1500]
 	L7LogsFilePerNodeLimit *int `json:"l7LogsFilePerNodeLimit,omitempty"`
+
+	// WAFEventLogsFlushInterval configures the interval at which Felix exports WAFEvent logs.
+	// [Default: 15s]
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$`
+	WAFEventLogsFlushInterval *metav1.Duration `json:"wafEventLogsFlushInterval,omitempty" configv1timescale:"seconds"`
+	// WAFEventLogsFileEnabled controls logging WAFEvent logs to a file. If false no WAFEvent logging to file will occur.
+	// [Default: false]
+	WAFEventLogsFileEnabled *bool `json:"wafEventLogsFileEnabled,omitempty"`
+	// WAFEventLogsFileDirectory sets the directory where WAFEvent log files are stored.
+	// [Default: /var/log/calico/waf]
+	WAFEventLogsFileDirectory *string `json:"wafEventLogsFileDirectory,omitempty"`
+	// WAFEventLogsFileMaxFiles sets the number of WAFEvent log files to keep.
+	// [Default: 5]
+	WAFEventLogsFileMaxFiles *int `json:"wafEventLogsFileMaxFiles,omitempty"`
+	// WAFEventLogsFileMaxFileSizeMB sets the max size in MB of WAFEvent log files before rotation.
+	// [Default: 100]
+	WAFEventLogsFileMaxFileSizeMB *int `json:"wafEventLogsFileMaxFileSizeMB,omitempty"`
 
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.

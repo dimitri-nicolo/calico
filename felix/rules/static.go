@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/generictables"
@@ -879,6 +880,21 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 						ConntrackOrigDstPort(server.Port).
 						ConntrackOrigDst(server.IP),
 					Action: r.NfqueueWithBypass(r.Config.DNSPacketsNfqueueID),
+				},
+			)
+		} else if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+			// We are parsing the DNS response inline by passing the response packet to a BPF Parser.
+			// BPF parser, parses the DNS response and fills the BPF IPSets.
+			// Add an NFLOG rule to snoop responses to felix.
+			rules = append(rules,
+				generictables.Rule{
+					Match: baseMatch.Protocol("udp").
+						ConntrackState("ESTABLISHED").
+						ConntrackOrigDstPort(server.Port).
+						ConntrackOrigDst(server.IP).BPFProgram(bpfdefs.DnsParserPinPath),
+					Action: r.Jump(
+						ChainDNSLog,
+					),
 				},
 			)
 		} else {

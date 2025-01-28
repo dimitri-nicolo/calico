@@ -3,12 +3,51 @@
 package prometheus
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types"
+	"github.com/projectcalico/calico/felix/collector/types/metric"
+	"github.com/projectcalico/calico/felix/rules"
 )
+
+func TestRuleAggregator(t *testing.T) {
+	RegisterTestingT(t)
+
+	// Create a PolicyRulesAggregator
+	pa := NewPolicyRulesAggregator(retentionTime, "testHost")
+
+	enforcedIngressRule1 := calc.NewRuleID("tier1", "ns1/tier.policy1", "", 0, rules.RuleDirIngress, rules.RuleActionPass)
+	enforcedIngressRule3 := calc.NewRuleID("tier4", "ns4/tier.policy3", "", 0, rules.RuleDirIngress, rules.RuleActionAllow)
+	stagedIngressRule1 := calc.NewRuleID("tier2", "ns3/staged:tier.policy1", "", 0, rules.RuleDirIngress, rules.RuleActionPass)
+	stagedIngressRule2 := calc.NewRuleID("tier3", "ns5/staged:tier.policy2", "", 0, rules.RuleDirIngress, rules.RuleActionAllow)
+
+	mu := metric.Update{
+		UpdateType:     metric.UpdateTypeReport,
+		Tuple:          tuple1,
+		RuleIDs:        []*calc.RuleID{enforcedIngressRule1, stagedIngressRule1, stagedIngressRule2, enforcedIngressRule3},
+		PendingRuleIDs: []*calc.RuleID{enforcedIngressRule1, stagedIngressRule1, stagedIngressRule2},
+		HasDenyRule:    false,
+		IsConnection:   false,
+		InMetric: metric.Value{
+			DeltaPackets: 1,
+			DeltaBytes:   20,
+		},
+	}
+
+	By("Updating the aggregator with a set of enforced and staged rules")
+	pa.OnUpdate(mu)
+
+	Expect(pa.retainedRuleAggMetrics).To(HaveLen(4))
+	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *enforcedIngressRule1}))
+	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *enforcedIngressRule3}))
+	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *stagedIngressRule1}))
+	Expect(pa.retainedRuleAggMetrics).To(HaveKey(RuleAggregateKey{ruleID: *stagedIngressRule2}))
+}
 
 var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 	var pa *PolicyRulesAggregator
@@ -24,6 +63,7 @@ var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 		counterRulePackets.Reset()
 		counterRuleBytes.Reset()
 	})
+
 	// First set of test handle adding the same rules with two different connections and
 	// traffic directions.  Connections should not impact the number of Prometheus metrics,
 	// but traffic direction does.

@@ -56,17 +56,17 @@ type benchmarksBackend struct {
 
 type benchmarkWithExtras struct {
 	v1.Benchmarks `json:",inline"`
-	Cluster       string `json:"cluster"`
 	Tenant        string `json:"tenant,omitempty"`
 }
 
-// prepareForWrite wraps a log in a document that includes the cluster and tenant if
+// prepareForWrite sets the cluster field, and wraps the log in a document to set tenant if
 // the backend is configured to write to a single index.
 func (b *benchmarksBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Benchmarks) interface{} {
+	l.Cluster = i.Cluster
+
 	if b.singleIndex {
 		return &benchmarkWithExtras{
 			Benchmarks: l,
-			Cluster:    i.Cluster,
 			Tenant:     i.Tenant,
 		}
 	}

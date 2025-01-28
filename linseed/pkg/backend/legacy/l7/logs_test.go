@@ -57,6 +57,7 @@ func TestL7Logs(t *testing.T) {
 			results, err := lb.List(ctx, clusterInfo, params)
 			require.NoError(t, err)
 			require.Len(t, results.Items, 1)
+			backendutils.AssertL7LogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
 			require.Equal(t, f, results.Items[0])
 		})
 	}

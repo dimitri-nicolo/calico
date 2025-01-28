@@ -57,6 +57,7 @@ flags=0
 #EE only
 ((CALI_KPROBE = 1 << 24))
 ((CALI_STATS = 1 << 25))
+((CALI_IPT_BPF = 1 << 26))
 
 if [[ "${filename}" =~ .*hep.* ]]; then
   # Host endpoint.
@@ -70,6 +71,9 @@ elif [[ "${filename}" =~ .*l3.* ]]; then
   # Any l3 device.
   ((flags |= CALI_TC_L3_DEV | CALI_TC_HOST_EP))
   ep_type="l3dev"
+elif [[ "${filename}" =~ ipt.* ]]; then
+  # All iptables bpf programs are L3
+  ((flags |= CALI_IPT_BPF))
 elif [[ "${filename}" =~ .*connect.* ]]; then
   # Connect-time load balancer (CGROUP attached).
   ((flags |= CALI_CGROUP))

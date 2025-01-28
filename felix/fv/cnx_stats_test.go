@@ -1031,27 +1031,27 @@ var _ = infrastructure.DatastoreDescribe("cnx stats with staged policy tests", [
 					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "tier1", "staged:np1-1", "outbound", "ingress", 0)
 				}()).Should(BeNumerically("==", bytes))
 
-				// Ingress gnp1-2 (staged)
+				// Ingress gnp1-2 (staged) - a verdict was reached in the np1-1 policy, so this policy should not be hit.
 				Expect(func() (int, error) {
 					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "inbound", "ingress", 0)
-				}()).Should(BeNumerically("==", packets))
+				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
 					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "inbound", "ingress", 0)
-				}()).Should(BeNumerically("==", bytes))
+				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
 					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "outbound", "ingress", 0)
-				}()).Should(BeNumerically("==", packets))
+				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
 					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "staged:gnp1-2", "outbound", "ingress", 0)
-				}()).Should(BeNumerically("==", bytes))
+				}()).Should(BeNumerically("==", 0))
 
-				// Ingress knp (staged)
+				// Ingress knp (staged) - a verdict was reached in the np1-1 policy, so this policy should not be hit.
 				Expect(func() (int, error) {
-					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "staged:knp.default.knp2-1", "inbound", "ingress", -1)
-				}()).Should(BeNumerically("==", packets))
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "staged:knp.default.knp2-1", "inbound", "ingress", 0)
+				}()).Should(BeNumerically("==", 0))
 				Expect(func() (int, error) {
-					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "staged:knp.default.knp2-1", "inbound", "ingress", -1)
-				}()).Should(BeNumerically("==", bytes))
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "staged:knp.default.knp2-1", "inbound", "ingress", 0)
+				}()).Should(BeNumerically("==", 0))
 
 				// Profile matches
 				Expect(func() (int, error) {

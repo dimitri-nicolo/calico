@@ -31,14 +31,13 @@ import (
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
-	"github.com/projectcalico/calico/release/pkg/manager/calico"
 )
 
 //go:embed templates/calico-versions.yaml.gotmpl
 var calicoTemplate string
 
 const (
-	pinnedVersionFileName      = "pinned_version.yml"
+	pinnedVersionFileName      = "pinned_versions.yml"
 	operatorComponentsFileName = "pinned_components.yml"
 )
 
@@ -50,7 +49,6 @@ var noImageComponents = []string{
 
 type PinnedVersions interface {
 	GenerateFile() (version.Data, error)
-	ManagerOptions() ([]calico.Option, error)
 }
 
 type OperatorConfig struct {
@@ -74,20 +72,13 @@ func (c OperatorConfig) GitBranch() (string, error) {
 	return command.GitInDir(c.Dir, "rev-parse", "--abbrev-ref", "HEAD")
 }
 
-type CalicoComponent struct {
-	MinorVersion string `yaml:"minor_version"`
-	ArchivePath  string `yaml:"archive_path"`
-}
-
 // PinnedVersion represents an entry in pinned version file.
 type PinnedVersion struct {
 	Title          string                        `yaml:"title"`
-	HelmRelease    string                        `yaml:"helmRelease"`
-	ManifestURL    string                        `yaml:"manifest_url"`
+	ManifestURL    string                        `yaml:"manifests_url"`
 	ReleaseName    string                        `yaml:"release_name,omitempty"`
 	Note           string                        `yaml:"note"`
 	Hash           string                        `yaml:"full_hash,omitempty"`
-	Calico         CalicoComponent               `yaml:"calico"`
 	TigeraOperator registry.Component            `yaml:"tigera-operator"`
 	Components     map[string]registry.Component `yaml:"components"`
 }
@@ -107,7 +98,7 @@ func (d *calicoTemplateData) ReleaseURL() string {
 	return fmt.Sprintf("https://%s.%s", d.ReleaseName, d.BaseDomain)
 }
 
-func pinnedVersionFilePath(outputDir string) string {
+func PinnedVersionFilePath(outputDir string) string {
 	return filepath.Join(outputDir, pinnedVersionFileName)
 }
 
@@ -133,7 +124,7 @@ type CalicoPinnedVersions struct {
 
 // GenerateFile generates the pinned version file.
 func (p *CalicoPinnedVersions) GenerateFile() (version.Data, error) {
-	pinnedVersionPath := pinnedVersionFilePath(p.Dir)
+	pinnedVersionPath := PinnedVersionFilePath(p.Dir)
 
 	productBranch, err := utils.GitBranch(p.RootDir)
 	if err != nil {
@@ -196,19 +187,6 @@ func (p *CalicoPinnedVersions) GenerateFile() (version.Data, error) {
 	return versionData, nil
 }
 
-// ManagerOptions returns the options for the manager.
-func (p *CalicoPinnedVersions) ManagerOptions() ([]calico.Option, error) {
-	pinnedVersion, err := retrievePinnedVersion(p.Dir)
-	if err != nil {
-		return nil, err
-	}
-
-	return []calico.Option{
-		calico.WithVersion(pinnedVersion.Title),
-		calico.WithOperatorVersion(pinnedVersion.TigeraOperator.Version),
-	}, nil
-}
-
 // GenerateOperatorComponents generates the components-version.yaml for operator.
 // It also copies the generated file to the output directory if provided.
 func GenerateOperatorComponents(srcDir, outputDir string) (registry.OperatorComponent, string, error) {
@@ -237,7 +215,7 @@ func GenerateOperatorComponents(srcDir, outputDir string) (registry.OperatorComp
 
 // retrievePinnedVersion retrieves the pinned version from the pinned version file.
 func retrievePinnedVersion(outputDir string) (PinnedVersion, error) {
-	pinnedVersionPath := pinnedVersionFilePath(outputDir)
+	pinnedVersionPath := PinnedVersionFilePath(outputDir)
 	var pinnedVersionFile []PinnedVersion
 	if pinnedVersionData, err := os.ReadFile(pinnedVersionPath); err != nil {
 		return PinnedVersion{}, err

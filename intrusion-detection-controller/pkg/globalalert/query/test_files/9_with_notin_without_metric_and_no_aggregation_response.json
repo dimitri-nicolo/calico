@@ -38,6 +38,12 @@
       "policies": {
         "all_policies": [
           "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+        ],
+        "enforced_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+        ],
+        "pending_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
         ]
       },
       "bytes_in": 730,
@@ -109,6 +115,12 @@
       "reporter": "dst",
       "policies": {
         "all_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+        ],
+        "enforced_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+        ],
+        "pending_policies": [
           "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
         ]
       },
@@ -182,7 +194,15 @@
       "policies": {
         "all_policies": [
           "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
-          "0|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+        ],
+        "enforced_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
+          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+        ],
+        "pending_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
+          "1|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
         ]
       },
       "bytes_in": 4949,

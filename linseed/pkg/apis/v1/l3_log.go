@@ -21,6 +21,18 @@ type FlowLogParams struct {
 	// For example, return flowlogs which are allowed by the default tier.
 	// If multiple PolicyMatches are provided, they are combined with a logical OR.
 	PolicyMatches []PolicyMatch `json:"policy_matches" validate:"dive"`
+
+	// EnforcedPolicyMatches selects flowlogs based on whether an action is taken on the flowlog
+	// by the provided tier, in the enforced trace.
+	// For example, return flowlogs which are allowed by the default tier.
+	// If multiple EnforcedPolicyMatches are provided, they are combined with a logical OR.
+	EnforcedPolicyMatches []PolicyMatch `json:"enforce_policy_matches" validate:"dive"`
+
+	// PendingPolicyMatches selects flowlogs based on whether an action is taken on the flowlog
+	// by the provided tier, in the pending trace.
+	// For example, return flowlogs which are allowed by the default tier.
+	// If multiple PendingPolicyMatches are provided, they are combined with a logical OR.
+	PendingPolicyMatches []PolicyMatch `json:"pending_policy_matches" validate:"dive"`
 }
 
 type IPMatch struct {
@@ -124,10 +136,15 @@ type FlowLog struct {
 	Host      string `json:"host"`
 	Timestamp int64  `json:"@timestamp"`
 	ID        string `json:"id,omitempty"`
+
+	// Cluster is populated by linseed from the request context.
+	Cluster string `json:"cluster,omitempty"`
 }
 
 type FlowLogPolicy struct {
-	AllPolicies []string `json:"all_policies"`
+	AllPolicies      []string `json:"all_policies"`
+	EnforcedPolicies []string `json:"enforced_policies"`
+	PendingPolicies  []string `json:"pending_policies"`
 }
 
 type FlowLogLabels struct {

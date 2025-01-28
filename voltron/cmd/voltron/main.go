@@ -140,7 +140,7 @@ func main() {
 		if cfg.EnableImageAssurance && cfg.ImageAssuranceEndpoint != "" && cfg.ImageAssuranceCABundlePath != "" {
 			bastURL, err := url.Parse(cfg.ImageAssuranceEndpoint)
 			if err != nil {
-				log.WithError(err).Fatalf("failed to parse Bast API endpoint %s", cfg.KibanaEndpoint)
+				log.WithError(err).Fatalf("failed to parse Bast API endpoint %s", cfg.ImageAssuranceEndpoint)
 			}
 
 			sniServiceMap[bastURL.Hostname()] = bastURL.Host

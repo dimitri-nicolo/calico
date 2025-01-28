@@ -176,6 +176,14 @@ promotions:
     pipeline_file: ../third_party/eck-operator/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut third-party Envoy Gateway Release
+    pipeline_file: ../third_party/envoy-gateway/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut third-party Envoy Ratelimit Release
+    pipeline_file: ../third_party/envoy-ratelimit/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut third-party Prometheus Operator Release
     pipeline_file: ../third_party/prometheus-operator/.semaphore/test-cut-release.yml
     auto_promote:

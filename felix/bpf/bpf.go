@@ -2379,8 +2379,10 @@ func LoadObject(file string, data libbpf.GlobalData, mapsToBePinned ...string) (
 				continue
 			}
 
-			if err := data.Set(m); err != nil {
-				return nil, fmt.Errorf("failed to configure %s: %w", file, err)
+			if data != nil {
+				if err := data.Set(m); err != nil {
+					return nil, fmt.Errorf("failed to configure %s: %w", file, err)
+				}
 			}
 			continue
 		}

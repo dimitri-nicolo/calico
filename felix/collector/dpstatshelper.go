@@ -14,6 +14,7 @@ import (
 	p "github.com/projectcalico/calico/felix/collector/prometheus"
 	"github.com/projectcalico/calico/felix/collector/syslog"
 	"github.com/projectcalico/calico/felix/collector/types"
+	"github.com/projectcalico/calico/felix/collector/wafevents"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/wireguard"
@@ -22,9 +23,10 @@ import (
 
 const (
 	// Log dispatcher names
-	FlowLogsFileReporterName = "file"
-	DNSLogsFileReporterName  = "dnsfile"
-	L7LogsFileReporterName   = "l7file"
+	FlowLogsFileReporterName  = "file"
+	DNSLogsFileReporterName   = "dnsfile"
+	L7LogsFileReporterName    = "l7file"
+	WAFEventsFileReporterName = "waf"
 )
 
 // New creates the required dataplane stats collector, reporters and aggregators.
@@ -158,6 +160,21 @@ func New(
 			[]string{L7LogsFileReporterName},
 		)
 		statsCollector.SetL7LogReporter(l7LogReporter)
+	}
+
+	if configParams.WAFEventLogsFileEnabled {
+		statsCollector.SetWAFEventsReporter(wafevents.NewReporter(
+			[]types.Reporter{
+				file.NewReporter(
+					configParams.WAFEventLogsFileDirectory,
+					file.WAFEventLogFilename,
+					configParams.WAFEventLogsFileMaxFileSizeMB,
+					configParams.WAFEventLogsFileMaxFiles,
+				),
+			},
+			configParams.WAFEventLogsFlushInterval,
+			healthAggregator,
+		))
 	}
 
 	return statsCollector

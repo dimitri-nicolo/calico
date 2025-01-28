@@ -90,8 +90,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 
 		// The ID should be set.
 		require.Len(t, resp.Items, 1)
-		require.Equal(t, report.UID(), resp.Items[0].ID)
-		resp.Items[0].ID = ""
+		testutils.AssertReportDataIDAndClusterAndReset(t, report.UID(), cluster, &resp.Items[0])
 		require.Equal(t, reports, resp.Items)
 	})
 
@@ -145,6 +144,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 						EndTime:        metav1.Time{Time: logTime.Add(time.Duration(i+1) * time.Second).UTC()},
 						GenerationTime: metav1.Time{Time: logTime.Add(time.Duration(i+2) * time.Second).UTC()},
 					},
+					Cluster: cluster,
 				},
 			}, reportsWithUTCTime(resp), fmt.Sprintf("Reports #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
@@ -181,6 +181,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 					EndTime:        metav1.Time{Time: logTime.Add(time.Duration(lastItem+1) * time.Second).UTC()},
 					GenerationTime: metav1.Time{Time: logTime.Add(time.Duration(lastItem+2) * time.Second).UTC()},
 				},
+				Cluster: cluster,
 			},
 		}, reportsWithUTCTime(resp), fmt.Sprintf("Reports #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))

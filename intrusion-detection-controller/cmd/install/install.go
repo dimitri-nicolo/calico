@@ -84,6 +84,12 @@ func main() {
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "k8sApiDashboard", k8sApiDashboard)
 	postDashboard(client, bulkCreateURL, cfg.ElasticUsername, cfg.ElasticPassword, "l7Dashboard", l7Dashboard)
 
+	bulkDeleteURL := fmt.Sprintf("%sapi/saved_objects/_bulk_delete", kibanaURL)
+
+	// delete honeypods dashboard. Deprecated feature. Removed from 3.20+. Dashboard may still exist if cluster is upgraded from 3.19 or earlier.
+	honeypodsDashboardID := "1fa34d90-2dc3-11ea-97d3-75fc55c8fec9"
+	deleteDashboard(client, bulkDeleteURL, cfg.ElasticUsername, cfg.ElasticPassword, "honeypodDashboard", honeypodsDashboardID)
+
 	importURL := fmt.Sprintf("%sapi/saved_objects/_import", kibanaURL)
 	uploadDashboardNDJSON(client, importURL, cfg.ElasticUsername, cfg.ElasticPassword, "flowlog-dashboard", "/etc/dashboards/flowlog-dashboard.ndjson")
 }
@@ -142,6 +148,31 @@ func postDashboard(client *http.Client, url, username, password, dashboardName, 
 	})
 	if err != nil {
 		log.Fatalf("unable to create dashboard %s: %v ", dashboardName, err)
+	}
+}
+
+// deleteDashboard makes a performRequest to delete a dashboard from Kibana by its ID.
+// If the Kibana api returns an error we ignore it as the dashboard may or may not exist.
+func deleteDashboard(client *http.Client, url, username, password, dashboardName, dashboardID string) {
+	log.Infof("Deleting dashboard %s...", dashboardName)
+
+	deletePayload := fmt.Sprintf(`[{
+		"id": "%s",
+		"type": "dashboard"
+	}]`, dashboardID)
+
+	err := performRequest(client, func() *http.Request {
+		req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(deletePayload))
+		if err != nil {
+			log.Warnf("unable to delete dashboard %s: %v", dashboardName, err)
+		}
+		req.SetBasicAuth(username, password)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("kbn-xsrf", "reporting")
+		return req
+	})
+	if err != nil {
+		log.Warnf("unable to delete dashboard %s: %v", dashboardName, err)
 	}
 }
 

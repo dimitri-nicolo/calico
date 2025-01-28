@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	FlowLogFilename = "flows.log"
-	DNSLogFilename  = "dns.log"
-	L7LogFilename   = "l7.log"
+	FlowLogFilename     = "flows.log"
+	DNSLogFilename      = "dns.log"
+	L7LogFilename       = "l7.log"
+	WAFEventLogFilename = "waf.log"
 )
 
 // FileReporter is a Reporter that writes logs to a local,
@@ -127,6 +128,19 @@ func (f *FileReporter) Report(logSlice interface{}) (err error) {
 				log.WithError(err).
 					WithField("l7Log", l).
 					Error("Unable to serialize L7 log to JSON")
+				return err
+			}
+		}
+	case []*v1.WAFLog:
+		if log.IsLevelEnabled(log.DebugLevel) {
+			log.WithField("num", len(logs)).Debug("Dispatching WAFEvent logs to file")
+		}
+		for _, l := range logs {
+			err := enc.Encode(l)
+			if err != nil {
+				log.WithError(err).
+					WithField("wafEventLog", l).
+					Error("Unable to serialize WAFEvent log to JSON")
 				return err
 			}
 		}

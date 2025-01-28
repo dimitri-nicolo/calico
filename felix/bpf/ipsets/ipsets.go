@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/bpf/iptables"
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -75,6 +76,11 @@ type bpfIPSets struct {
 	opRecorder logutils.OpRecorder
 
 	lg *log.Entry
+
+	filterIPSet func(string) bool
+
+	bpfDataplane bool
+	bpfLogLevel  string
 }
 
 func NewBPFIPSets(
@@ -84,6 +90,8 @@ func NewBPFIPSets(
 	entryFromBytes func([]byte) IPSetEntryInterface,
 	protoIPSetMemberToBPFEntry func(uint64, string) IPSetEntryInterface,
 	opRecorder logutils.OpRecorder,
+	bpfDataplane bool,
+	bpfLogLevel string,
 ) *bpfIPSets {
 	return &bpfIPSets{
 		IPVersionConfig:            ipVersionConfig,
@@ -96,6 +104,8 @@ func NewBPFIPSets(
 		ipSetIDAllocator:           ipSetIDAllocator,
 		opRecorder:                 opRecorder,
 		lg:                         log.WithField("bpf family", ipVersionConfig.Family),
+		bpfDataplane:               bpfDataplane,
+		bpfLogLevel:                bpfLogLevel,
 	}
 }
 
@@ -156,11 +166,27 @@ func (m *bpfIPSets) deleteIPSetAndReleaseID(ipSet *bpfIPSet) {
 // to ApplyUpdates(), the IP sets will be replaced with the new contents and the set's metadata
 // will be updated as appropriate.
 func (m *bpfIPSets) AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string) {
+	if !m.isIPSetNeeded(setMetadata.SetID) {
+		ipSet := m.getExistingIPSetString(setMetadata.SetID)
+		if ipSet != nil {
+			ipSet.Deleted = true
+			m.markIPSetDirty(ipSet)
+		}
+		return
+	}
 	ipSet := m.getOrCreateIPSet(setMetadata.SetID)
 	ipSet.Type = setMetadata.Type
 	m.lg.WithFields(log.Fields{"stringID": setMetadata.SetID, "uint64ID": ipSet.ID, "members": members}).Info("IP set added")
 	ipSet.ReplaceMembers(members, m.protoIPSetMemberToBPFEntry)
 	m.markIPSetDirty(ipSet)
+	// bpf ipsets are used in a non-bpf DP.
+	if !m.bpfDataplane {
+		// load the ipset match program and pin it.
+		err := iptables.LoadIPSetsPolicyProgram(ipSet.ID, m.bpfLogLevel, uint8(m.IPVersionConfig.Family.Version()))
+		if err != nil {
+			m.lg.WithFields(log.Fields{"setID": ipSet.ID, "error": err}).Panic("error loading ipset match program")
+		}
+	}
 }
 
 // RemoveIPSet queues up the removal of an IP set, it need not be empty.  The IP sets will be
@@ -178,6 +204,12 @@ func (m *bpfIPSets) RemoveIPSet(setID string) {
 	ipSet.RemoveAll()
 	ipSet.Deleted = true
 	m.markIPSetDirty(ipSet)
+	if !m.bpfDataplane {
+		err := iptables.RemoveIPSetMatchProgram(ipSet.ID, uint8(m.IPVersionConfig.Family.Version()))
+		if err != nil {
+			m.lg.WithFields(log.Fields{"setID": ipSet.ID, "error": err}).Warn("error removing ipset match program")
+		}
+	}
 }
 
 // AddMembers adds the given members to the IP set.  Filters out members that are of the incorrect
@@ -398,6 +430,35 @@ func (m *bpfIPSets) markIPSetDirty(data *bpfIPSet) {
 func (m *bpfIPSets) SetFilter(ipSetNames set.Set[string]) {
 	// Not needed for this IP set dataplane.  All known IP sets
 	// are written into the corresponding BPF map.
+}
+
+// SetIPSetNameFilter updates the ipset filter function but does
+// not scan the existing ipsets and apply the filter.
+func (m *bpfIPSets) SetIPSetNameFilter(fn func(ipSetName string) bool) {
+	m.filterIPSet = fn
+}
+
+func (m *bpfIPSets) isIPSetNeeded(name string) bool {
+	if m.filterIPSet == nil {
+		// We're not filtering down to a "needed" set, so all IP sets are needed.
+		return true
+	}
+
+	// We are filtering down, so compare against the needed set.
+	return m.filterIPSet(name)
+}
+
+// ApplyIPSetNameFilter applies the ipset filter to the existing
+// ipsets. The caller should call ApplyIPSetNameFilter after updating
+// the filter function to make sure the filter is applied to
+// the existing ipsets.
+func (m *bpfIPSets) ApplyIPSetNameFilter() {
+	for _, ipset := range m.ipSets {
+		if !m.isIPSetNeeded(ipset.OriginalID) {
+			ipset.Deleted = true
+			m.markIPSetDirty(ipset)
+		}
+	}
 }
 
 type bpfIPSet struct {

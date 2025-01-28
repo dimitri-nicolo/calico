@@ -11,6 +11,12 @@
       "policies": {
         "all_policies": [
           "0|__PROFILE__|__PROFILE__.kns.calico-system|allow"
+        ],
+        "enforced_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.calico-system|allow"
+        ],
+        "pending_policies": [
+          "0|__PROFILE__|__PROFILE__.kns.calico-system|allow"
         ]
       },
       "num_flows": 1,

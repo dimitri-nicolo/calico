@@ -68,12 +68,10 @@ func runServer(ctx context.Context, config *flags.Config, readyCh ...chan struct
 		server.WithALPConfig(config.PerHostALPEnabled),
 		server.WithWAFConfig(
 			config.PerHostWAFEnabled,
-			config.WAFLogFile,
 			config.WAFRulesetRootDir,
 			config.WAFRulesetFiles.Value(),
 			config.WAFDirectives.Value(),
 		),
-		server.WithWAFFlushDuration(config.WAFEventsFlushInterval),
 	)
 	go dikastesServer.Serve(ctx, readyCh...)
 
