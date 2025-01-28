@@ -191,9 +191,8 @@
       image: tigera/envoy-gateway
       version: {{.ProductVersion}}
     gateway-api-envoy-proxy:
-      image: envoyproxy/envoy
-      version: distroless-v1.31.0
-      registry: docker.io/
+      image: tigera/envoy-proxy
+      version: {{.ProductVersion}}
     gateway-api-envoy-ratelimit:
       image: tigera/envoy-ratelimit
       version: {{.ProductVersion}}
