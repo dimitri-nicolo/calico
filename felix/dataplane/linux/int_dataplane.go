@@ -3569,5 +3569,11 @@ func cleanupBPFState(config Config) {
 		// Cleanup all bpf pins and programs except DNS,
 		// When felix restarts in iptables mode/switches from bpf to iptables.
 		tc.CleanUpProgramsAndPinsExceptDNS()
+		// Always cleanup the ipset pins at the beginning. Iptable hold a reference to the used programs
+		// and the pins will get recreated when we resync the dataplane after starting up.
+		err := bpfiptables.CleanupOld(config.BPFLogLevel)
+		if err != nil && !os.IsNotExist(err) {
+			log.WithError(err).Info("Failed to remove BPF IPset matcher pins, ignoring.")
+		}
 	}
 }

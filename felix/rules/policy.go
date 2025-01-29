@@ -1075,5 +1075,5 @@ func (r *DefaultRuleRenderer) bpfIPSetMatchProgram(ipSetName string, ipver uint8
 	if ipSetID == 0 {
 		return "", fmt.Errorf("error getting bpf ipset ID for ipset %s", ipSetName)
 	}
-	return bpfdefs.IPSetMatchProg(ipSetID, ipver), nil
+	return bpfdefs.IPSetMatchProg(ipSetID, ipver, r.BPFLogLevel), nil
 }

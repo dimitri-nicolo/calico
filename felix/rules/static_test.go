@@ -123,6 +123,7 @@ var _ = Describe("Static", func() {
 					KubeNodePortRanges:       []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
 					FilterDenyAction:         denyActionCommand,
 					DNSTrustedServers:        []config.ServerPort{{IP: "1.2.3.4", Port: 53}, {IP: "fd5f:83a5::34:2", Port: 53}},
+					BPFLogLevel:              "debug",
 				}
 			})
 
@@ -647,7 +648,7 @@ var _ = Describe("Static", func() {
 									// DNS response capture and queue.
 									{
 										Match: Match().OutInterface("cali+").Protocol("udp").
-											ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP).BPFProgram(bpfdefs.DnsParserPinPath),
+											ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP).BPFProgram(bpfdefs.IPTDNSParserProg(conf.BPFLogLevel)),
 										Action: JumpAction{Target: "cali-log-dns"},
 									},
 									// DNS request capture.

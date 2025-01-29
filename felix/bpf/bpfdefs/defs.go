@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 )
 
 const (
@@ -29,7 +30,7 @@ const (
 
 	DnsObjDir = DefaultBPFfsPath + "/dns"
 
-	DnsParserPinPath = DnsObjDir + "/cali_ipt_parse_dns"
+	DnsParserProgram = "cali_ipt_parse_dns"
 
 	IPTMatchIPSetProgram = "cali_ipt_match_ipset"
 )
@@ -42,10 +43,30 @@ func GetCgroupV2Path() string {
 	return cgroupV2CustomPath
 }
 
-func IPSetMatchProg(ipSetID uint64, ipver uint8) string {
-	return path.Join(IPSetMatchPinPath(ipSetID, ipver), IPTMatchIPSetProgram)
+func IPSetMatchProg(ipSetID uint64, ipver uint8, logLevel string) string {
+	return path.Join(IPSetMatchPinPath(ipSetID, ipver, logLevel), IPTMatchIPSetProgram)
 }
 
-func IPSetMatchPinPath(ipSetID uint64, ipver uint8) string {
-	return path.Join(DnsObjDir, fmt.Sprintf("ipset_matcher_%d_v%d", ipSetID, ipver))
+func IPSetMatchPinPath(ipSetID uint64, ipver uint8, logLevel string) string {
+	logLevel = logLevelToLower(logLevel)
+	pinPath := path.Join(DnsObjDir, logLevel)
+	return path.Join(pinPath, fmt.Sprintf("ipset_matcher_%d_v%d", ipSetID, ipver))
+}
+
+func IPTDNSParserProg(logLevel string) string {
+	logLevel = logLevelToLower(logLevel)
+	return path.Join(path.Join(DnsObjDir, logLevel), DnsParserProgram)
+}
+
+func logLevelToLower(bpfLogLevel string) string {
+	logLevel := strings.ToLower(bpfLogLevel)
+	if logLevel == "off" {
+		logLevel = "no_log"
+	}
+	return logLevel
+}
+
+func IPTDnsPinPath(bpfLogLevel string) string {
+	logLevel := logLevelToLower(bpfLogLevel)
+	return path.Join(DnsObjDir, logLevel)
 }

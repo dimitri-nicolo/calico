@@ -502,6 +502,7 @@ type Config struct {
 
 	NATOutgoingAddress             net.IP
 	BPFEnabled                     bool
+	BPFLogLevel                    string
 	BPFForceTrackPacketsFromIfaces []string
 
 	ServiceLoopPrevention string

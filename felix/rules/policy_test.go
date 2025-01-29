@@ -1857,6 +1857,7 @@ var _ = Describe("DNS policy rules", func() {
 		MarkDNSPolicy:            0x00001,
 		MarkSkipDNSPolicyNfqueue: 0x400000,
 		MarkEndpoint:             0xff000,
+		BPFLogLevel:              "debug",
 	}
 
 	DescribeTable("with DNSPolicyModes",
@@ -1909,7 +1910,7 @@ var _ = Describe("DNS policy rules", func() {
 			}
 
 			if mode == apiv3.DNSPolicyModeInline {
-				progPath := bpfdefs.IPSetMatchProg(ipSetID, 4)
+				progPath := bpfdefs.IPSetMatchProg(ipSetID, 4, rrConfigNormal.BPFLogLevel)
 				expected[2].Match = iptables.Match().BPFProgram(progPath)
 			}
 

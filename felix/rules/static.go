@@ -891,7 +891,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 					Match: baseMatch.Protocol("udp").
 						ConntrackState("ESTABLISHED").
 						ConntrackOrigDstPort(server.Port).
-						ConntrackOrigDst(server.IP).BPFProgram(bpfdefs.DnsParserPinPath),
+						ConntrackOrigDst(server.IP).BPFProgram(bpfdefs.IPTDNSParserProg(r.BPFLogLevel)),
 					Action: r.Jump(
 						ChainDNSLog,
 					),

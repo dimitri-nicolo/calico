@@ -367,6 +367,7 @@ func StartDataplaneDriver(
 				DNSTrustedServers:                  configParams.DNSTrustedServers,
 				NATOutgoingAddress:                 configParams.NATOutgoingAddress,
 				BPFEnabled:                         configParams.BPFEnabled,
+				BPFLogLevel:                        configParams.BPFLogLevel,
 				BPFForceTrackPacketsFromIfaces:     replaceWildcards(configParams.NFTablesMode == "Enabled", configParams.BPFForceTrackPacketsFromIfaces),
 				ServiceLoopPrevention:              configParams.ServiceLoopPrevention,
 

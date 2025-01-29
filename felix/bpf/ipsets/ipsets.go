@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -194,7 +194,9 @@ func (m *bpfIPSets) AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members 
 func (m *bpfIPSets) RemoveIPSet(setID string) {
 	ipSet := m.getExistingIPSetString(setID)
 	if ipSet == nil {
-		m.lg.WithField("setID", setID).Panic("Received deletion for unknown IP set")
+		if m.isIPSetNeeded(setID) {
+			m.lg.WithField("setID", setID).Panic("Received deletion for unknown IP set")
+		}
 		return
 	}
 	if ipSet.Deleted {
@@ -205,7 +207,7 @@ func (m *bpfIPSets) RemoveIPSet(setID string) {
 	ipSet.Deleted = true
 	m.markIPSetDirty(ipSet)
 	if !m.bpfDataplane {
-		err := iptables.RemoveIPSetMatchProgram(ipSet.ID, uint8(m.IPVersionConfig.Family.Version()))
+		err := iptables.RemoveIPSetMatchProgram(ipSet.ID, uint8(m.IPVersionConfig.Family.Version()), m.bpfLogLevel)
 		if err != nil {
 			m.lg.WithFields(log.Fields{"setID": ipSet.ID, "error": err}).Warn("error removing ipset match program")
 		}
@@ -217,7 +219,9 @@ func (m *bpfIPSets) RemoveIPSet(setID string) {
 func (m *bpfIPSets) AddMembers(setID string, newMembers []string) {
 	ipSet := m.getExistingIPSetString(setID)
 	if ipSet == nil {
-		m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		if m.isIPSetNeeded(setID) {
+			m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		}
 		return
 	}
 	if ipSet.Deleted {
@@ -243,7 +247,9 @@ func (m *bpfIPSets) AddMembers(setID string, newMembers []string) {
 func (m *bpfIPSets) RemoveMembers(setID string, removedMembers []string) {
 	ipSet := m.getExistingIPSetString(setID)
 	if ipSet == nil {
-		m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		if m.isIPSetNeeded(setID) {
+			m.lg.WithField("setID", setID).Panic("Received delta for unknown IP set")
+		}
 		return
 	}
 	if ipSet.Deleted {
