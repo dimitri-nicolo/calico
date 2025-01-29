@@ -5,7 +5,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy-ratelimit
 ENVOY_RATELIMIT_IMAGE ?= envoy-ratelimit
 BUILD_IMAGES ?= $(ENVOY_RATELIMIT_IMAGE)
 
-ENVOY_RATELIMIT_VERSION=26f28d78
+ENVOY_RATELIMIT_VERSION=49af5cca
 
 ##############################################################################
 # Include lib.Makefile before anything else
