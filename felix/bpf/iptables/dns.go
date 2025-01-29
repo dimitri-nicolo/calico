@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/projectcalico/calico/felix/bpf"
@@ -13,35 +14,31 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
 )
 
-func progFileName(logLevel string, ipver uint8) string {
-	logLevel = strings.ToLower(logLevel)
+func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver uint8) error {
+	if _, err := os.Stat(bpfdefs.IPSetMatchProg(ipSetID, ipver, bpfLogLevel)); err == nil {
+		return nil
+	}
+	logLevel := strings.ToLower(bpfLogLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"
 	}
+	progFileName := fmt.Sprintf("ipt_match_ipset_%s_co-re_v%d.o", logLevel, ipver)
+	preCompiledBinary := path.Join(bpfdefs.ObjectDir, progFileName)
 
-	return fmt.Sprintf("ipt_match_ipset_%s_co-re_v%d.o", logLevel, ipver)
-}
-
-func LoadIPSetsPolicyProgram(ipSetID uint64, bpfLogLevel string, ipver uint8) error {
-	if _, err := os.Stat(bpfdefs.IPSetMatchProg(ipSetID, ipver)); err == nil {
-		return nil
-	}
-
-	preCompiledBinary := path.Join(bpfdefs.ObjectDir, progFileName(bpfLogLevel, ipver))
 	obj, err := bpf.LoadObject(preCompiledBinary, &libbpf.IPTDnsGlobalData{IPSetID: ipSetID})
 	if err != nil {
 		return fmt.Errorf("error loading ipsets policy program for dns %w", err)
 	}
 	defer obj.Close()
-	err = obj.PinPrograms(bpfdefs.IPSetMatchPinPath(ipSetID, ipver))
+	err = obj.PinPrograms(bpfdefs.IPSetMatchPinPath(ipSetID, ipver, logLevel))
 	if err != nil {
 		return fmt.Errorf("error pinning program %v", err)
 	}
 	return nil
 }
 
-func RemoveIPSetMatchProgram(ipSetID uint64, ipver uint8) error {
-	progPath := bpfdefs.IPSetMatchProg(ipSetID, ipver)
+func RemoveIPSetMatchProgram(ipSetID uint64, ipver uint8, logLevel string) error {
+	progPath := bpfdefs.IPSetMatchProg(ipSetID, ipver, logLevel)
 	err := os.RemoveAll(progPath)
 	if err != nil {
 		return fmt.Errorf("error deleting ipset match program at %s : %w", progPath, err)
@@ -50,18 +47,20 @@ func RemoveIPSetMatchProgram(ipSetID uint64, ipver uint8) error {
 }
 
 func LoadDNSParserBPFProgram(bpfLogLevel string, dnsMapsToPin []string) error {
-	if _, err := os.Stat(bpfdefs.DnsParserPinPath); err == nil {
+	if _, err := os.Stat(bpfdefs.IPTDNSParserProg(bpfLogLevel)); err == nil {
 		return nil
 	}
+
 	logLevel := strings.ToLower(bpfLogLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"
 	}
 
+	pinPath := path.Join(bpfdefs.DnsObjDir, logLevel)
 	fileToLoad := "ipt_parse_dns_" + logLevel + "_co-re.o"
 	preCompiledBinary := path.Join(bpfdefs.ObjectDir, fileToLoad)
 
-	err := CreateDNSObjPinDir()
+	err := CreateDNSObjPinDir(logLevel)
 	if err != nil {
 		return fmt.Errorf("error creating dns obj directory %w", err)
 	}
@@ -71,20 +70,21 @@ func LoadDNSParserBPFProgram(bpfLogLevel string, dnsMapsToPin []string) error {
 		return fmt.Errorf("error loading bpf dns parser program for iptables %w", err)
 	}
 	defer obj.Close()
-	err = obj.PinPrograms(bpfdefs.DnsObjDir)
+	err = obj.PinPrograms(pinPath)
 	if err != nil {
 		return fmt.Errorf("error pinning program %v", err)
 	}
 	return nil
 }
 
-func CreateDNSObjPinDir() error {
-	_, err := os.Stat(bpfdefs.DnsObjDir)
+func CreateDNSObjPinDir(logLevel string) error {
+	pinPath := path.Join(bpfdefs.DnsObjDir, logLevel)
+	_, err := os.Stat(pinPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
-		if err = os.MkdirAll(bpfdefs.DnsObjDir, 0700); err != nil {
+		if err = os.MkdirAll(pinPath, 0700); err != nil {
 			return err
 		}
 	}
@@ -93,4 +93,26 @@ func CreateDNSObjPinDir() error {
 
 func Cleanup() {
 	os.RemoveAll(bpfdefs.DnsObjDir)
+}
+
+func CleanupOld(logLevel string) error {
+	pinDir := "debug"
+	if strings.ToLower(logLevel) == "debug" {
+		pinDir = "no_log"
+	}
+	os.RemoveAll(path.Join(bpfdefs.DnsObjDir, pinDir))
+	progsToRemove := []string{}
+	err := filepath.Walk(bpfdefs.IPTDnsPinPath(logLevel), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasPrefix(info.Name(), "ipset_matcher") {
+			progsToRemove = append(progsToRemove, path)
+		}
+		return nil
+	})
+	for _, prog := range progsToRemove {
+		os.RemoveAll(prog)
+	}
+	return err
 }

@@ -184,6 +184,10 @@ promotions:
     pipeline_file: ../third_party/envoy-gateway/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut third-party Envoy Proxy Release
+    pipeline_file: ../third_party/envoy-proxy/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut third-party Envoy Ratelimit Release
     pipeline_file: ../third_party/envoy-ratelimit/.semaphore/cut-release.yml
     auto_promote:

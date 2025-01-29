@@ -160,6 +160,10 @@ promotions:
     pipeline_file: push-images/third_party/envoy-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push third-party envoy-proxy images
+    pipeline_file: push-images/third_party/envoy-proxy.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push third-party envoy-ratelimit images
     pipeline_file: push-images/third_party/envoy-ratelimit.yml
     auto_promote:

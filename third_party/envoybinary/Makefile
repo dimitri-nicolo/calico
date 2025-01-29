@@ -3,8 +3,7 @@ include ../../metadata.mk
 PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoybinary
 
 ENVOYBINARY_IMAGE ?= envoybinary
-ENVOY_PROXY_IMAGE ?= envoy-proxy
-BUILD_IMAGES ?= $(ENVOYBINARY_IMAGE) $(ENVOY_PROXY_IMAGE)
+BUILD_IMAGES ?= $(ENVOYBINARY_IMAGE)
 
 ENVOY_VERSION=v1.31.5
 # https://github.com/envoyproxy/envoy/issues/2181
@@ -40,16 +39,14 @@ build: init-source
 	ENVOY_DOCKER_BUILD_DIR=$(shell pwd)/envoy/build ci/run_envoy_docker.sh "ci/do_ci.sh release.server_only"
 
 clean:
-	rm -f ${ENVOY_DOWNLOADED} ${ENVOYBINARY_IMAGE_CREATED} ${ENVOY_PROXY_IMAGE_CREATED} Makefile.common*
+	rm -f ${ENVOY_DOWNLOADED} ${ENVOYBINARY_IMAGE_CREATED} Makefile.common*
 	rm -fr envoy/
 	-docker image rm -f $$(docker images $(ENVOYBINARY_IMAGE) -a -q)
-	-docker image rm -f $$(docker images $(ENVOY_PROXY_IMAGE) -a -q)
 
 ##############################################################################
 # Image
 ##############################################################################
 ENVOYBINARY_IMAGE_CREATED=.envoybinary.created-$(ARCH)
-ENVOY_PROXY_IMAGE_CREATED=.envoy-proxy.created-$(ARCH)
 
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
@@ -67,15 +64,8 @@ endif
 
 $(ENVOYBINARY_IMAGE): $(ENVOYBINARY_IMAGE_CREATED)
 $(ENVOYBINARY_IMAGE_CREATED): Dockerfile build
-	$(DOCKER_BUILD) --target binary --build-arg ENVOY_ARCH=$(ENVOY_ARCH) \
+	$(DOCKER_BUILD) --build-arg ENVOY_ARCH=$(ENVOY_ARCH) \
 		-t $(ENVOYBINARY_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) -f Dockerfile .
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
-	touch $@
-
-$(ENVOY_PROXY_IMAGE): $(ENVOY_PROXY_IMAGE_CREATED)
-$(ENVOY_PROXY_IMAGE_CREATED): Dockerfile build
-	$(DOCKER_BUILD) --target proxy --build-arg ENVOY_ARCH=$(ENVOY_ARCH) \
-		-t $(ENVOY_PROXY_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
 	touch $@
 

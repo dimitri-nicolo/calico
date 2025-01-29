@@ -197,6 +197,10 @@ promotions:
     pipeline_file: push-images/third_party/envoy-gateway.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push third-party envoy-proxy images
+    pipeline_file: push-images/third_party/envoy-proxy.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push third-party envoy-ratelimit images
     pipeline_file: push-images/third_party/envoy-ratelimit.yml
     auto_promote:
@@ -524,9 +528,11 @@ blocks:
 - name: "Felix: Windows FV capz"
   run:
     when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/node', '/hack/test/certs/', '/process/testing/winfv-felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies:
-    - "Felix: Build Windows binaries"
+  dependencies: ["Felix: Build Windows binaries"]
   task:
+    secrets:
+      - name: banzai-secrets
+      - name: private-repo
     prologue:
       commands:
         - az login --service-principal -u "${AZ_SP_ID}" -p "${AZ_SP_PASSWORD}" --tenant "${AZ_TENANT_ID}" --output none

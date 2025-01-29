@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2025 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -207,7 +207,7 @@ func (m *bpfIPSets) RemoveIPSet(setID string) {
 	ipSet.Deleted = true
 	m.markIPSetDirty(ipSet)
 	if !m.bpfDataplane {
-		err := iptables.RemoveIPSetMatchProgram(ipSet.ID, uint8(m.IPVersionConfig.Family.Version()))
+		err := iptables.RemoveIPSetMatchProgram(ipSet.ID, uint8(m.IPVersionConfig.Family.Version()), m.bpfLogLevel)
 		if err != nil {
 			m.lg.WithFields(log.Fields{"setID": ipSet.ID, "error": err}).Warn("error removing ipset match program")
 		}

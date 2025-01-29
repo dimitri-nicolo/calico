@@ -2835,7 +2835,9 @@ func (d *InternalDataplane) onDatastoreMessage(msg interface{}) {
 }
 
 func (d *InternalDataplane) processMsgFromCalcGraph(msg interface{}) {
-	log.WithField("msg", proto.MsgStringer{Msg: msg}).Infof("Received %T update from calculation graph", msg)
+	if log.IsLevelEnabled(log.InfoLevel) {
+		log.Infof("Received %T update from calculation graph. msg=%s", msg, proto.MsgStringer{Msg: msg}.String())
+	}
 	d.datastoreBatchSize++
 	d.dataplaneNeedsSync = true
 	d.recordMsgStat(msg)
@@ -3568,5 +3570,11 @@ func cleanupBPFState(config Config) {
 		// Cleanup all bpf pins and programs except DNS,
 		// When felix restarts in iptables mode/switches from bpf to iptables.
 		tc.CleanUpProgramsAndPinsExceptDNS()
+		// Always cleanup the ipset pins at the beginning. Iptable hold a reference to the used programs
+		// and the pins will get recreated when we resync the dataplane after starting up.
+		err := bpfiptables.CleanupOld(config.BPFLogLevel)
+		if err != nil && !os.IsNotExist(err) {
+			log.WithError(err).Info("Failed to remove BPF IPset matcher pins, ignoring.")
+		}
 	}
 }
