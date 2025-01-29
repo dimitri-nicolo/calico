@@ -3,11 +3,11 @@ package wafevents
 import (
 	cryptorand "crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/go-errors/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector/types"
