@@ -127,7 +127,7 @@ require (
 	github.com/tigera/api v0.0.0-20240708152828-da21375e20da
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
 	github.com/urfave/cli/v2 v2.27.5
-	github.com/vishvananda/netlink v1.3.0
+	github.com/vishvananda/netlink v1.3.1-0.20250128002108-7c2350bd140f
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd/api/v3 v3.5.17
@@ -179,7 +179,10 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
+require (
+	github.com/go-errors/errors v1.4.2
+	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
+)
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -240,7 +243,6 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect

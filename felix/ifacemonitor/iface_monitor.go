@@ -420,7 +420,7 @@ func (m *InterfaceMonitor) resync() error {
 	for {
 		links, err = m.netlinkStub.LinkList()
 		if err != nil {
-			if err == syscall.EINTR && retries > 0 {
+			if errors.Is(err, syscall.EINTR) && retries > 0 {
 				log.WithError(err).Warn("Netlink list operation failed. Retrying")
 				retries--
 				continue
