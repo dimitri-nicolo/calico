@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
@@ -106,10 +107,12 @@ type FailFlags uint64
 
 const (
 	FailNextLinkList FailFlags = 1 << iota
+	FailNextLinkListWrappedEINTR
 	FailNextLinkByName
 	FailNextLinkByNameNotFound
 	FailNextRouteList
 	FailNextRouteListEINTR
+	FailNextRouteListWrappedEINTR
 	FailNextRouteAddOrReplace
 	FailNextRouteAdd
 	FailNextRouteReplace
@@ -142,9 +145,12 @@ const (
 var RoutetableFailureScenarios = []FailFlags{
 	FailNone,
 	FailNextLinkList,
+	FailNextLinkListWrappedEINTR,
 	FailNextLinkByName,
 	FailNextLinkByNameNotFound,
 	FailNextRouteList,
+	FailNextRouteListEINTR,
+	FailNextRouteListWrappedEINTR,
 	FailNextRouteAdd,
 	FailNextRouteDel,
 	FailNextNeighSet,
@@ -158,6 +164,9 @@ func (f FailFlags) String() string {
 	if f&FailNextLinkList != 0 {
 		parts = append(parts, "FailNextLinkList")
 	}
+	if f&FailNextLinkListWrappedEINTR != 0 {
+		parts = append(parts, "FailNextLinkListWrappedEINTR")
+	}
 	if f&FailNextLinkByName != 0 {
 		parts = append(parts, "FailNextLinkByName")
 	}
@@ -166,6 +175,12 @@ func (f FailFlags) String() string {
 	}
 	if f&FailNextRouteList != 0 {
 		parts = append(parts, "FailNextRouteList")
+	}
+	if f&FailNextRouteListEINTR != 0 {
+		parts = append(parts, "FailNextRouteListEINTR")
+	}
+	if f&FailNextRouteListWrappedEINTR != 0 {
+		parts = append(parts, "FailNextRouteListWrappedEINTR")
 	}
 	if f&FailNextRouteAdd != 0 {
 		parts = append(parts, "FailNextRouteAdd")
@@ -460,6 +475,9 @@ func (d *MockNetlinkDataplane) LinkList() ([]netlink.Link, error) {
 	Expect(d.NetlinkOpen).To(BeTrue())
 	if d.shouldFail(FailNextLinkList) {
 		return nil, SimulatedError
+	}
+	if d.shouldFail(FailNextLinkListWrappedEINTR) {
+		return nil, nl.ErrDumpInterrupted
 	}
 	var links []netlink.Link
 	for _, link := range d.NameToLink {
@@ -805,6 +823,9 @@ func (d *MockNetlinkDataplane) RouteListFiltered(family int, filter *netlink.Rou
 
 	if d.shouldFail(FailNextRouteListEINTR) {
 		return routes[:len(routes)/2], unix.EINTR
+	}
+	if d.shouldFail(FailNextRouteListWrappedEINTR) {
+		return routes[:len(routes)/2], nl.ErrDumpInterrupted
 	}
 
 	return routes, nil
