@@ -276,7 +276,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
 	// in the main rule below.
 	if (len(ruleCopy.DstIpSetIds) == 1) && (len(ruleCopy.DstDomainIpSetIds) == 1) {
-		if r.Config.IsDNSPolicyInline() {
+		if r.Config.IsDNSPolicyModeInline() {
 			pinPath, err := r.bpfIPSetMatchProgram(ruleCopy.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
 				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", ruleCopy.DstDomainIpSetIds[0])
@@ -625,7 +625,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	var mark uint32
 
 	// For policy mode DelayDeniedPacket, mark the packet traversing a non-staged policy that contains DNS matches.
-	markDNSPolicyRule := isDNSPolicyRule && !staged && r.Config.IsDNSPolicyDelayDeniedPacket()
+	markDNSPolicyRule := isDNSPolicyRule && !staged && r.Config.IsDNSPolicyModeDelayDeniedPacket()
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -854,7 +854,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	if len(pRule.DstDomainIpSetIds) == 1 {
-		if r.Config.IsDNSPolicyInline() {
+		if r.Config.IsDNSPolicyModeInline() {
 			pinPath, err := r.bpfIPSetMatchProgram(pRule.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
 				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", pRule.DstDomainIpSetIds[0])

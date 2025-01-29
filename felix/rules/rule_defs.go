@@ -649,7 +649,7 @@ func NewRenderer(config Config) RuleRenderer {
 			Action: actions.Allow(),
 		})
 	} else {
-		if config.IsDNSPolicyDelayDeniedPacket() && config.MarkDNSPolicy != 0x0 {
+		if config.IsDNSPolicyModeDelayDeniedPacket() && config.MarkDNSPolicy != 0x0 {
 			nfqueueRuleDelayDeniedPacket = &generictables.Rule{
 				Match: newMatchFn().
 					MarkSingleBitSet(config.MarkDNSPolicy).
@@ -742,7 +742,7 @@ func (c *Config) TPROXYModeEnabled() bool {
 	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
 }
 
-func (c *Config) IsDNSPolicyDelayDNSResponse() bool {
+func (c *Config) IsDNSPolicyModeDelayDNSResponse() bool {
 	if c.BPFEnabled {
 		return false
 	}
@@ -752,7 +752,7 @@ func (c *Config) IsDNSPolicyDelayDNSResponse() bool {
 	return c.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse
 }
 
-func (c *Config) IsDNSPolicyDelayDeniedPacket() bool {
+func (c *Config) IsDNSPolicyModeDelayDeniedPacket() bool {
 	if c.BPFEnabled {
 		return false
 	}
@@ -762,7 +762,7 @@ func (c *Config) IsDNSPolicyDelayDeniedPacket() bool {
 	return c.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket
 }
 
-func (c *Config) IsDNSPolicyNoDelay() bool {
+func (c *Config) IsDNSPolicyModeNoDelay() bool {
 	if c.BPFEnabled {
 		return false
 	}
@@ -772,7 +772,7 @@ func (c *Config) IsDNSPolicyNoDelay() bool {
 	return c.DNSPolicyMode == apiv3.DNSPolicyModeNoDelay
 }
 
-func (c *Config) IsDNSPolicyInline() bool {
+func (c *Config) IsDNSPolicyModeInline() bool {
 	if c.NFTables || c.BPFEnabled {
 		return false
 	}
