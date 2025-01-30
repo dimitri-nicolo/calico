@@ -59,17 +59,11 @@ func (s *forwarder) run(ctx context.Context) {
 		}
 		if event, ok := item.(v1.Event); ok {
 			response, err := s.lsClient.Events(s.clusterName).Create(ctx, []v1.Event{event})
-			if err != nil {
-				log.WithError(err).Error("Failed to send document to Linseed")
-				break
-			}
-
-			if response.Failed != 0 {
+			if err != nil || response.Failed != 0 {
 				log.WithError(err).Error("Failed to send document to Linseed, will retry after interval.")
 				<-time.After(s.retrySendInterval)
 				continue
 			}
-
 		} else {
 			log.Error("Failed to parse the security event in worker queue")
 		}
