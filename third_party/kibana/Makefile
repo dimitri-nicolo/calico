@@ -5,7 +5,7 @@ PACKAGE_NAME?=github.com/projectcalico/calico/third_party/kibana
 KIBANA_IMAGE?=kibana-ubi
 BUILD_IMAGES?=$(KIBANA_IMAGE)
 
-KIBANA_VERSION = 8.16.1
+KIBANA_VERSION = 8.17.1
 
 # required for ci/cd
 DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
