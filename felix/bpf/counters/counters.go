@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	MaxCounterNumber    int = 16
+	MaxCounterNumber    int = 19
 	counterMapKeySize   int = 8
 	counterMapValueSize int = 8
 )
@@ -74,6 +74,9 @@ const (
 	DroppedUnknownRoute
 	AcceptedByEgressGW
 	DroppedBlackholeRoute
+	SourceCollisionHit
+	SourceCollisionResolutionFailed
+	ConntrackCreateFailed
 	// Add counters above this
 	AcceptedByXDP
 	WEPNotReady
@@ -162,6 +165,18 @@ var descriptions DescList = DescList{
 	{
 		Counter:  DroppedBlackholeRoute,
 		Category: "Dropped", Caption: "packets hitting blackhole route",
+	},
+	{
+		Counter:  SourceCollisionHit,
+		Category: "Other", Caption: "packets hitting NAT source collision",
+	},
+	{
+		Counter:  ConntrackCreateFailed,
+		Category: "Dropped", Caption: "failed to create conntrack",
+	},
+	{
+		Counter:  SourceCollisionResolutionFailed,
+		Category: "Dropped", Caption: "NAT source collision resolution failed",
 	},
 }
 

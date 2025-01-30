@@ -42,6 +42,7 @@ spec:
                   will add a rule to drop VXLAN encapsulated traffic from workloads.
                   [Default: false]'
                 type: boolean
+<<<<<<< HEAD
               awsRequestTimeout:
                 description: 'AWSRequestTimeout is the timeout on AWS API requests.
                   [Default: 30s]'
@@ -65,6 +66,8 @@ spec:
                   "EnabledENIPerWorkload" or "Disabled". [Default: Disabled]'
                 pattern: ^(?i)(Enabled|EnabledENIPerWorkload|Disabled)?$
                 type: string
+=======
+>>>>>>> 671a29be87
               awsSrcDstCheck:
                 description: 'AWSSrcDstCheck controls whether Felix will try to change
                   the "source/dest check" setting on the EC2 instance on which it
@@ -123,6 +126,7 @@ spec:
                 - Userspace
                 - BPFProgram
                 type: string
+<<<<<<< HEAD
               bpfDNSPolicyMode:
                 description: 'BPFDNSPolicyMode specifies how DNS policy programming
                   will be handled. Inline - BPF parses DNS response inline with DNS
@@ -134,6 +138,8 @@ spec:
                   fail. This may be problematic for some applications or for very
                   low DNS TTLs. [Default: Inline]'
                 type: string
+=======
+>>>>>>> 671a29be87
               bpfDSROptoutCIDRs:
                 description: BPFDSROptoutCIDRs is a list of CIDRs which are excluded
                   from DSR. That is, clients in those CIDRs will access service node
@@ -181,10 +187,13 @@ spec:
                 items:
                   type: string
                 type: array
+<<<<<<< HEAD
               bpfExportBufferSizeMB:
                 description: 'BPFExportBufferSizeMB in BPF mode, controls the buffer
                   size used for sending BPF events to felix. [Default: 1]'
                 type: integer
+=======
+>>>>>>> 671a29be87
               bpfExtToServiceConnmark:
                 description: 'BPFExtToServiceConnmark in BPF mode, controls a 32bit
                   mark that is set on connections from an external client to a local
@@ -222,6 +231,12 @@ spec:
                 description: 'BPFHostNetworkedNATWithoutCTLB when in BPF mode, controls
                   whether Felix does a NAT without CTLB. This along with BPFConnectTimeLoadBalancing
                   determines the CTLB behavior. [Default: Enabled]'
+<<<<<<< HEAD
+=======
+                enum:
+                - Enabled
+                - Disabled
+>>>>>>> 671a29be87
                 type: string
               bpfKubeProxyEndpointSlicesEnabled:
                 description: BPFKubeProxyEndpointSlicesEnabled is deprecated and has
@@ -331,6 +346,16 @@ spec:
                   information about the BPF policy programs, which can be examined
                   with the calico-bpf command-line tool.
                 type: boolean
+<<<<<<< HEAD
+=======
+              bpfProfiling:
+                description: 'BPFProfiling controls profiling of BPF programs. At
+                  the monent, it can be Disabled or Enabled. [Default: Disabled]'
+                enum:
+                - Enabled
+                - Disabled
+                type: string
+>>>>>>> 671a29be87
               bpfRedirectToPeer:
                 description: 'BPFRedirectToPeer controls which whether it is allowed
                   to forward straight to the peer side of the workload devices. It
@@ -340,12 +365,17 @@ spec:
                   like IPIP tunnel or Wireguard directly to the peer side of the workload''s
                   device. This makes redirection faster, however, it breaks tools
                   like tcpdump on the peer side. Use Enabled with caution. [Default:
+<<<<<<< HEAD
                   Disabled]'
+=======
+                  L2Only]'
+>>>>>>> 671a29be87
                 enum:
                 - Enabled
                 - Disabled
                 - L2Only
                 type: string
+<<<<<<< HEAD
               captureDir:
                 description: 'CaptureDir controls directory to store file capture.
                   [Default: /var/log/calico/pcap]'
@@ -366,6 +396,8 @@ spec:
                   a packet capture. [Default: 3600]'
                 minimum: 1
                 type: integer
+=======
+>>>>>>> 671a29be87
               chainInsertMode:
                 description: 'ChainInsertMode controls whether Felix hooks the kernel''s
                   top-level iptables chains by inserting a rule at the top of the
@@ -436,10 +468,13 @@ spec:
                   Drop]'
                 pattern: ^(?i)(Drop|Accept|Return)?$
                 type: string
+<<<<<<< HEAD
               deletedMetricsRetentionSecs:
                 description: DeletedMetricsRetentionSecs controls how long metrics
                   are retianed after the flow is gone.
                 type: integer
+=======
+>>>>>>> 671a29be87
               deviceRouteProtocol:
                 description: DeviceRouteProtocol controls the protocol to set on routes
                   programmed by Felix. The protocol is an 8-bit label used to identify
@@ -463,6 +498,7 @@ spec:
                   to detect malicious traffic, it can also cause issues with certain
                   multi-NIC scenarios.
                 type: boolean
+<<<<<<< HEAD
               dnsCacheEpoch:
                 description: 'An arbitrary number that can be changed, at runtime,
                   to tell Felix to discard all its learnt DNS information. [Default:
@@ -638,6 +674,8 @@ spec:
                 description: 'EgressIPVXLANVNI is the VNI ID of vxlan tunnel device
                   for egress traffic. [Default: 4097]'
                 type: integer
+=======
+>>>>>>> 671a29be87
               endpointReportingDelay:
                 description: 'EndpointReportingDelay is the delay before Felix reports
                   endpoint status to the datastore. This is only used by the OpenStack
@@ -656,6 +694,7 @@ spec:
                   the directory used by the CNI plugin for PodStartupDelay. [Default:
                   \"\"]"
                 type: string
+<<<<<<< HEAD
               externalNetworkRoutingRulePriority:
                 description: 'ExternalNetworkRoutingRulePriority controls the priority
                   value to use for the external network routing rule. [Default: 102]'
@@ -667,6 +706,8 @@ spec:
                   is enabled.'
                 pattern: ^(?i)(Disabled|Enabled)?$
                 type: string
+=======
+>>>>>>> 671a29be87
               externalNodesList:
                 description: ExternalNodesCIDRList is a list of CIDR's of external,
                   non-Calico nodes from which VXLAN/IPIP overlay traffic will be allowed.  By
@@ -750,6 +791,7 @@ spec:
                 - Enabled
                 - Disabled
                 type: string
+<<<<<<< HEAD
               flowLogsAggregationThresholdBytes:
                 description: FlowLogsAggregationThresholdBytes is used specify how
                   far behind the external pipeline that reads flow logs can be. Default
@@ -897,6 +939,8 @@ spec:
                   This parameter only takes effect when FlowLogsDynamicAggregationEnabled
                   is set to true.
                 type: string
+=======
+>>>>>>> 671a29be87
               genericXDPEnabled:
                 description: 'GenericXDPEnabled enables Generic XDP so network cards
                   that don''t support XDP offload or driver modes can use XDP. This
@@ -1007,6 +1051,7 @@ spec:
                   as Felix auto-detects the MTU based on the MTU of the host''s interfaces.
                   [Default: 0 (auto-detect)]'
                 type: integer
+<<<<<<< HEAD
               ipsecAllowUnsecuredTraffic:
                 description: 'IPSecAllowUnsecuredTraffic controls whether non-IPsec
                   traffic is allowed in addition to IPsec traffic. Enabling this negates
@@ -1037,6 +1082,8 @@ spec:
                   inconsistencies. [Default: 600s]'
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
+=======
+>>>>>>> 671a29be87
               ipsetsRefreshInterval:
                 description: 'IpsetsRefreshInterval controls the period at which Felix
                   re-checks all IP sets to look for discrepancies. Set to 0 to disable
@@ -1137,6 +1184,7 @@ spec:
                 description: IPv6Support controls whether Felix enables support for
                   IPv6 (if supported by the in-use dataplane).
                 type: boolean
+<<<<<<< HEAD
               kubeMasqueradeBit:
                 description: 'KubeMasqueradeBit should be set to the same value as
                   --iptables-masquerade-bit of kube-proxy when TPROXY is used. The
@@ -1144,6 +1192,8 @@ spec:
                   if kube-proxy is using a non-standard setting. Must be within the
                   range of 0-31.  [Default: 14]'
                 type: integer
+=======
+>>>>>>> 671a29be87
               kubeNodePortRanges:
                 description: 'KubeNodePortRanges holds list of port ranges used for
                   service node ports. Only used if felix detects kube-proxy running
@@ -1156,6 +1206,7 @@ spec:
                   pattern: ^.*
                   x-kubernetes-int-or-string: true
                 type: array
+<<<<<<< HEAD
               l7LogsFileAggregationDestinationInfo:
                 description: 'L7LogsFileAggregationDestinationInfo is used to choose
                   the type of aggregation for the destination metadata on L7 log entries.
@@ -1268,16 +1319,21 @@ spec:
                   Felix exports L7 logs. [Default: 300s]'
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
+=======
+>>>>>>> 671a29be87
               logDebugFilenameRegex:
                 description: LogDebugFilenameRegex controls which source code files
                   have their Debug log output included in the logs. Only logs from
                   files with names that match the given regular expression are included.  The
                   filter only applies to Debug level logs.
                 type: string
+<<<<<<< HEAD
               logDropActionOverride:
                 description: LogDropActionOverride specifies whether or not to include
                   the DropActionOverride in the logs when it is triggered.
                 type: boolean
+=======
+>>>>>>> 671a29be87
               logFilePath:
                 description: 'LogFilePath is the full path to the Felix log. Set to
                   none to disable file logging. [Default: /var/log/calico/felix.log]'
@@ -1348,12 +1404,15 @@ spec:
                   other kernel objects. [Default: 10s]'
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
+<<<<<<< HEAD
               nfNetlinkBufSize:
                 description: 'NfNetlinkBufSize controls the size of NFLOG messages
                   that the kernel will try to send to Felix.  NFLOG messages are used
                   to report flow verdicts from the kernel.  Warning: currently increasing
                   the value may cause errors due to a bug in the netlink library.'
                 type: string
+=======
+>>>>>>> 671a29be87
               nftablesFilterAllowAction:
                 description: NftablesFilterAllowAction controls the nftables action
                   that Felix uses to represent the "allow" policy verdict in the filter
@@ -1415,6 +1474,7 @@ spec:
                   to false. This reduces the number of metrics reported, reducing
                   Prometheus load. [Default: true]'
                 type: boolean
+<<<<<<< HEAD
               prometheusMetricsCAFile:
                 description: 'PrometheusMetricsCAFile is the path to the TLS CA file
                   for the Prometheus metrics server. [Default: empty]'
@@ -1423,6 +1483,8 @@ spec:
                 description: 'PrometheusMetricsCertFile is the path to the TLS certificate
                   file for the Prometheus metrics server. [Default: empty]'
                 type: string
+=======
+>>>>>>> 671a29be87
               prometheusMetricsEnabled:
                 description: 'PrometheusMetricsEnabled enables the Prometheus metrics
                   server in Felix if set to true. [Default: false]'
@@ -1431,10 +1493,13 @@ spec:
                 description: 'PrometheusMetricsHost is the host that the Prometheus
                   metrics server should bind to. [Default: empty]'
                 type: string
+<<<<<<< HEAD
               prometheusMetricsKeyFile:
                 description: 'PrometheusMetricsKeyFile is the path to the TLS private
                   key file for the Prometheus metrics server. [Default: empty]'
                 type: string
+=======
+>>>>>>> 671a29be87
               prometheusMetricsPort:
                 description: 'PrometheusMetricsPort is the TCP port that the Prometheus
                   metrics server should bind to. [Default: 9091]'
@@ -1445,6 +1510,7 @@ spec:
                   to false. This reduces the number of metrics reported, reducing
                   Prometheus load. [Default: true]'
                 type: boolean
+<<<<<<< HEAD
               prometheusReporterCAFile:
                 description: PrometheusReporterCAFile is the path to the TLS CA file
                   for the Prometheus per-flow metrics reporter.
@@ -1466,6 +1532,8 @@ spec:
                 description: PrometheusReporterPort is the port that the Prometheus
                   per-flow metrics reporter should bind to.
                 type: integer
+=======
+>>>>>>> 671a29be87
               prometheusWireGuardMetricsEnabled:
                 description: 'PrometheusWireGuardMetricsEnabled disables wireguard
                   metrics collection, which the Prometheus client does by default,
@@ -1547,6 +1615,7 @@ spec:
                 description: 'SidecarAccelerationEnabled enables experimental sidecar
                   acceleration [Default: false]'
                 type: boolean
+<<<<<<< HEAD
               statsDumpFilePath:
                 description: StatsDumpFilePath is the path to write a diagnostic flow
                   logs statistics dump to when triggered by signal.
@@ -1598,6 +1667,23 @@ spec:
               usageReportingInterval:
                 description: 'UsageReportingInterval is unused in Calico Enterprise,
                   usage reporting is permanently disabled. [Default: 86400s]'
+=======
+              usageReportingEnabled:
+                description: 'UsageReportingEnabled reports anonymous Calico version
+                  number and cluster size to projectcalico.org. Logs warnings returned
+                  by the usage server. For example, if a significant security vulnerability
+                  has been discovered in the version of Calico being used. [Default:
+                  true]'
+                type: boolean
+              usageReportingInitialDelay:
+                description: 'UsageReportingInitialDelay controls the minimum delay
+                  before Felix makes a report. [Default: 300s]'
+                pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
+                type: string
+              usageReportingInterval:
+                description: 'UsageReportingInterval controls the interval at which
+                  Felix makes reports. [Default: 86400s]'
+>>>>>>> 671a29be87
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
               useInternalDataplaneDriver:
@@ -1629,6 +1715,7 @@ spec:
                   may need to change this if the default value is in use on your system.
                   [Default: 4096]'
                 type: integer
+<<<<<<< HEAD
               wafEventLogsFileDirectory:
                 description: 'WAFEventLogsFileDirectory sets the directory where WAFEvent
                   log files are stored. [Default: /var/log/calico/waf]'
@@ -1673,6 +1760,8 @@ spec:
                   parameter only takes effect when FlowLogsDynamicAggregationEnabled
                   is set to true.'
                 type: string
+=======
+>>>>>>> 671a29be87
               windowsManageFirewallRules:
                 description: 'WindowsManageFirewallRules configures whether or not
                   Felix will program Windows Firewall rules (to allow inbound access
@@ -1681,6 +1770,7 @@ spec:
                 - Enabled
                 - Disabled
                 type: string
+<<<<<<< HEAD
               windowsNetworkName:
                 description: WindowsNetworkName specifies which Windows HNS networks
                   Felix should operate on.  The default is to match networks that
@@ -1690,6 +1780,8 @@ spec:
                 description: 'WindowsStatsDumpFilePath is used to specify the path
                   of the stats dump file on Windows nodes. [Default: "c:\\TigeraCalico\\stats\\dump"]'
                 type: string
+=======
+>>>>>>> 671a29be87
               wireguardEnabled:
                 description: 'WireguardEnabled controls whether Wireguard is enabled
                   for IPv4 (encapsulating IPv4 traffic over an IPv4 underlay network).

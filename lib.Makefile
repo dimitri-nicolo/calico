@@ -330,7 +330,7 @@ define host_native_rpm_build
 	$(eval version := $(shell $(REPO_ROOT)/hack/generate-rpm-version.sh $(REPO_ROOT) $(3)))
 
 	sed 's/@VERSION@/$(version)/g' rhel/$(2).spec.in > rhel/$(2).spec
-	
+
 	mkdir -p package/$(1) && $(DOCKER_HOST_NATIVE_RUN) \
 		$(HOST_NATIVE_BUILD_IMAGE):$(1) \
 			sh -c 'rpmbuild \
@@ -504,7 +504,6 @@ GIT_COMMIT_MESSAGE?="Automatic Pin Updates"
 GIT_PR_BRANCH_BASE?=$(SEMAPHORE_GIT_BRANCH)
 PIN_UPDATE_BRANCH?=semaphore-auto-pin-updates-$(GIT_PR_BRANCH_BASE)
 GIT_PR_BRANCH_HEAD?=$(PIN_UPDATE_BRANCH)
-GIT_REPO_SLUG?=$(SEMAPHORE_GIT_REPO_SLUG)
 GIT_PIN_UPDATE_COMMIT_FILES?=go.mod go.sum
 GIT_PIN_UPDATE_COMMIT_EXTRA_FILES?=$(GIT_COMMIT_EXTRA_FILES)
 GIT_COMMIT_FILES?=$(GIT_PIN_UPDATE_COMMIT_FILES) $(GIT_PIN_UPDATE_COMMIT_EXTRA_FILES)
@@ -628,7 +627,7 @@ REPO_REL_DIR=$(shell if [ -e hack/format-changed-files.sh ]; then echo '.'; else
 # Format changed files only.
 fix-changed go-fmt-changed goimports-changed:
 	$(DOCKER_RUN) -e release_prefix=$(RELEASE_BRANCH_PREFIX)-v \
-	              -e git_remote=$(GIT_REMOTE) $(CALICO_BUILD) $(REPO_REL_DIR)/hack/format-changed-files.sh
+	              -e git_repo_slug=$(GIT_REPO_SLUG) $(CALICO_BUILD) $(REPO_REL_DIR)/hack/format-changed-files.sh
 
 .PHONY: fix-all go-fmt-all goimports-all
 fix-all go-fmt-all goimports-all:

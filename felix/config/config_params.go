@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2024 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -219,13 +219,14 @@ type Config struct {
 	BPFForceTrackPacketsFromIfaces     []string          `config:"iface-filter-slice;docker+"`
 	BPFDisableGROForIfaces             *regexp.Regexp    `config:"regexp;"`
 	BPFExcludeCIDRsFromNAT             []string          `config:"cidr-list;;"`
+	BPFRedirectToPeer                  string            `config:"oneof(Disabled,Enabled,L2Only);Disabled;non-zero"`
+	BPFProfiling                       string            `config:"oneof(Disabled,Enabled);Disabled;non-zero"`
 	BPFExportBufferSizeMB              int               `config:"int;1;non-zero"`
 
-	FlowLogsCollectProcessInfo  bool   `config:"bool;false"`
-	FlowLogsCollectTcpStats     bool   `config:"bool;false"`
-	FlowLogsCollectProcessPath  bool   `config:"bool;false"`
-	FlowLogsCollectorDebugTrace bool   `config:"bool;false"`
-	BPFRedirectToPeer           string `config:"oneof(Disabled,Enabled,L2Only);Disabled;non-zero"`
+	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
+	FlowLogsCollectTcpStats     bool `config:"bool;false"`
+	FlowLogsCollectProcessPath  bool `config:"bool;false"`
+	FlowLogsCollectorDebugTrace bool `config:"bool;false"`
 
 	// DebugBPFCgroupV2 controls the cgroup v2 path that we apply the connect-time load balancer to.  Most distros
 	// are configured for cgroup v1, which prevents all but the root cgroup v2 from working so this is only useful
