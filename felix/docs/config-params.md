@@ -3540,7 +3540,7 @@ This setting is ignored on Windows and "NoDelay" is always used.
 
 This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 
-Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
+This field has no effect in NFTables mode. Please use NFTablesDNSPolicyMode instead.
 
 | Detail |   |
 | --- | --- |

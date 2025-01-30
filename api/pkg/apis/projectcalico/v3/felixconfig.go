@@ -1060,7 +1060,7 @@ type FelixConfigurationSpec struct {
 	//
 	// This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 	//
-	// Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
+	// This field has no effect in NFTables mode. Please use NFTablesDNSPolicyMode instead.
 	// [Default: Inline]
 	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse Inline"`
 	// BPFDNSPolicyMode specifies how DNS policy programming will be handled.
