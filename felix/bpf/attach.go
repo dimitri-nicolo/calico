@@ -56,6 +56,7 @@ type AttachPoint struct {
 	PolicyIdxV6 int
 	Iface       string
 	LogLevel    string
+	Profiling   string
 }
 
 func (ap *AttachPoint) LogVal() string {

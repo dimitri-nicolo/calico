@@ -52,6 +52,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	"github.com/projectcalico/calico/felix/bpf/perf"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
+	"github.com/projectcalico/calico/felix/bpf/profiling"
 	"github.com/projectcalico/calico/felix/bpf/routes"
 	"github.com/projectcalico/calico/felix/bpf/state"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
@@ -575,6 +576,7 @@ var (
 	natMap, natBEMap, ctMap, rtMap, ipsMap, testStateMap, affinityMap, arpMap, fsafeMap     maps.Map
 	natMapV6, natBEMapV6, ctMapV6, rtMapV6, ipsMapV6, affinityMapV6, arpMapV6, fsafeMapV6   maps.Map
 	stateMap, countersMap, ifstateMap, progMap, progMapXDP, policyJumpMap, policyJumpMapXDP maps.Map
+	profilingMap                                                                            maps.Map
 	perfMap                                                                                 maps.Map
 	allMaps                                                                                 []maps.Map
 )
@@ -603,12 +605,13 @@ func initMapsOnce() {
 		ifstateMap = ifstate.Map()
 		policyJumpMap = jump.Map()
 		policyJumpMapXDP = jump.XDPMap()
+		profilingMap = profiling.Map()
 
 		perfMap = perf.Map("perf_evnt", 512)
 
 		allMaps = []maps.Map{natMap, natBEMap, natMapV6, natBEMapV6, ctMap, ctMapV6, rtMap, rtMapV6, ipsMap, ipsMapV6,
 			stateMap, testStateMap, affinityMap, affinityMapV6, arpMap, arpMapV6, fsafeMap, fsafeMapV6,
-			countersMap, ifstateMap,
+			countersMap, ifstateMap, profilingMap,
 			policyJumpMap, policyJumpMapXDP}
 		for _, m := range allMaps {
 			err := m.EnsureExists()

@@ -437,6 +437,7 @@ func (t *TcGlobalData) Set(m *Map) error {
 		C.uint(t.Flags),
 		C.ushort(t.WgPort),
 		C.ushort(t.Wg6Port),
+		C.ushort(globalData.Profiling),
 		C.uint(t.NatIn),
 		C.uint(t.NatOut),
 		C.ushort(t.EgwVxlanPort),
