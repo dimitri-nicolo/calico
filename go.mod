@@ -181,12 +181,6 @@ require (
 )
 
 require (
-	github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
-	github.com/go-errors/errors v1.4.2
-	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
-)
-
-require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -267,6 +261,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
