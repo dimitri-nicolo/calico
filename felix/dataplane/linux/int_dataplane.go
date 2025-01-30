@@ -322,8 +322,6 @@ type Config struct {
 	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 
-	DNSPolicyMode                    apiv3.DNSPolicyMode
-	NFTablesDNSPolicyMode            apiv3.NFTablesDNSPolicyMode
 	BPFDNSPolicyMode                 apiv3.BPFDNSPolicyMode
 	DNSPolicyNfqueueID               int
 	DNSPolicyNfqueueSize             int
@@ -555,10 +553,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 		if setDefault {
 			if !config.RulesConfig.NFTables {
-				config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 				config.RulesConfig.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 			} else {
-				config.NFTablesDNSPolicyMode = apiv3.NFTablesDNSPolicyModeDelayDeniedPacket
 				config.RulesConfig.NFTablesDNSPolicyMode = apiv3.NFTablesDNSPolicyModeDelayDeniedPacket
 			}
 		}
