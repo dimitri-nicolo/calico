@@ -5,9 +5,6 @@ FROM ${THIRD_PARTY_REGISTRY}/envoybinary:v1.31.5 AS envoybinary
 
 FROM ${UBI9_IMAGE} AS ubi
 
-# Update base packages to pick up security updates.
-RUN microdnf upgrade -y
-
 FROM scratch as source
 
 # dependencies
