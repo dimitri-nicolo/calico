@@ -41,7 +41,7 @@ var _ = Describe("WAF middleware tests", func() {
 		fakeClientSet := fake.NewSimpleClientset().CoreV1()
 		cf, err := fakeClientSet.ConfigMaps("calico-system").Create(context.Background(), &configmap, metav1.CreateOptions{})
 		Expect(err).To(BeNil())
-		Expect(cf).To(Not(BeNil()))
+		Expect(cf).NotTo(BeNil())
 
 		mockClientSet.On("CoreV1").Return(fakeClientSet)
 	})
