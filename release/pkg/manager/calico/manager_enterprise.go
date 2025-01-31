@@ -101,9 +101,12 @@ func NewEnterpriseManager(calicoOpts []Option, opts ...EnterpriseOption) *Enterp
 		WithImageRegistries([]string{defaultEnterpriseRegistry}),
 		WithBuildImages(false),
 		WithPublishImages(false),
+		WithPublishGitTag(false),
+		WithPublishGithubRelease(false),
 	}
 	calicoOpts = append(defaultCalicoOpts, calicoOpts...)
 	calicoManager := NewManager(calicoOpts...)
+	calicoManager.productCode = utils.EnterpriseProductCode
 
 	m := &EnterpriseManager{
 		CalicoManager:         *calicoManager,
@@ -626,7 +629,7 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 	}
 	for _, chart := range charts {
 		if _, err := m.runner.RunInDir(filepath.Join(m.repoRoot, utils.ReleaseFolderName), "bin/helm", []string{"push", chart, m.helmRegistry}, nil); err != nil {
-			return err
+			return fmt.Errorf("failed to push chart %s: %s", chart, err)
 		}
 	}
 	return nil

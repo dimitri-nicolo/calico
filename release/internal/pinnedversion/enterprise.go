@@ -26,6 +26,14 @@ var (
 	}
 	noEntepriseImageComponents = []string{
 		"calico-private",
+		"cnx-manager-proxy",
+		"coreos-alertmanager",
+		"coreos-config-reloader",
+		"coreos-prometheus",
+		"coreos-prometheus-operator",
+		"eck-elasticsearch",
+		"eck-elasticsearch-operator",
+		"eck-kibana",
 	}
 )
 
@@ -238,7 +246,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 	}, nil
 }
 
-func RetrieveEnterpriseImageComponents(outputDir string) (map[string]registry.Component, error) {
+func RetrieveEnterpriseImageComponents(outputDir, reg string) (map[string]registry.Component, error) {
 	pinnedVersion, err := retrieveEnterpisePinnedVersion(outputDir)
 	if err != nil {
 		return nil, err
@@ -254,11 +262,11 @@ func RetrieveEnterpriseImageComponents(outputDir string) (map[string]registry.Co
 			delete(components, name)
 			continue
 		}
-		img := registry.ImageMap[name]
-		if img != "" {
-			component.Image = img
-		} else if component.Image == "" {
+		if component.Image == "" {
 			component.Image = name
+		}
+		if component.Registry == "" && reg != "" {
+			component.Registry = reg
 		}
 		components[name] = component
 	}

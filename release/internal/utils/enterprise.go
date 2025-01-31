@@ -13,6 +13,9 @@ const (
 	CalicoEnterprise = "calico enterprise"
 
 	TigeraManager = "manager"
+
+	// EnterpriseProductCode is the code for calico enterprise.
+	EnterpriseProductCode = "cnx"
 )
 
 func DetermineCalicoVersion(repoRoot string) (string, error) {

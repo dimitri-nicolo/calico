@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
+	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/pkg/manager/calico"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
@@ -24,14 +25,17 @@ func enterpriseHashreleaseSubCommands(cfg *Config) []*cli.Command {
 }
 
 func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
-	flags := []cli.Flag{}
-	for _, flag := range hashreleaseBuildFlags() {
-		if !utils.Contains(flag.Names(), buildImagesFlag.Name) {
-			flags = append(flags, flag)
-		}
-	}
-	flags = append(flags, chartVersionFlag, skipRPMsFlag)
+	flags := append(productFlags, chartVersionFlag)
 	flags = append(flags, managerFlags...)
+	flags = append(flags, operatorBuildFlags...)
+	flags = append(flags,
+		archFlag,
+		registryFlag,
+		skipRPMsFlag,
+		skipOperatorFlag,
+		skipBranchCheckFlag,
+		skipValidationFlag,
+		githubTokenFlag)
 	return &cli.Command{
 		Name:  "build",
 		Usage: "build a Enterprise hashrelease locally",
@@ -139,6 +143,11 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithRepoRemote(c.String(repoRemoteFlag.Name)),
 				calico.WithArchitectures(c.StringSlice(archFlag.Name)),
 			}
+			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
+				calicoOpts = append(calicoOpts, calico.WithImageRegistries(reg))
+			} else {
+				calicoOpts = append(calicoOpts, calico.WithImageRegistries([]string{registry.TigeraDevCIGCRRegistry}))
+			}
 
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
@@ -157,17 +166,17 @@ func enterpriseBuildHashreleaseCommand(cfg *Config) *cli.Command {
 }
 
 func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
-	flags := []cli.Flag{}
-	for _, flag := range hashreleasePublishFlags() {
-		if !utils.Contains(flag.Names(), publishImagesFlag.Name) {
-			flags = append(flags, flag)
-		}
-	}
-	flags = append(flags,
+	flags := append(gitFlags,
+		archFlag,
 		publishWindowsArchiveFlag,
 		publishChartsFlag,
 		helmRegistryFlag,
-	)
+		publishHashreleaseFlag,
+		latestFlag,
+		skipOperatorFlag,
+		skipValidationFlag,
+		skipImageScanFlag)
+	flags = append(flags, imageScannerAPIFlags...)
 	return &cli.Command{
 		Name:  "publish",
 		Usage: "publish a pre-built Enterprise hashrelease",
@@ -223,11 +232,15 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 				calico.WithPublishHashrelease(c.Bool(publishHashreleaseFlag.Name)),
 				calico.WithImageScanning(!c.Bool(skipImageScanFlag.Name), *imageScanningAPIConfig(c)),
 			}
+			componentRegistry := registry.TigeraDevCIGCRRegistry
 			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
 				calicoOpts = append(calicoOpts, calico.WithImageRegistries(reg))
+				componentRegistry = reg[0]
+			} else {
+				calicoOpts = append(calicoOpts, calico.WithImageRegistries([]string{componentRegistry}))
 			}
 
-			components, err := pinnedversion.RetrieveEnterpriseImageComponents(cfg.TmpDir)
+			components, err := pinnedversion.RetrieveEnterpriseImageComponents(cfg.TmpDir, componentRegistry)
 			if err != nil {
 				return fmt.Errorf("failed to retrieve images for the hashrelease: %v", err)
 			}
