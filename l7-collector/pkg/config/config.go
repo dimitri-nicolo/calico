@@ -37,8 +37,8 @@ type Config struct {
 	// Parsed values
 	ParsedLogLevel log.Level
 
-	ListenNetwork string `envoyconfig:"LISTEN_NETWORK"`
-	ListenAddress string `envoyconfig:"LISTEN_ADDRESS"`
+	ListenNetwork string `envconfig:"LISTEN_NETWORK"`
+	ListenAddress string `envconfig:"LISTEN_ADDRESS"`
 }
 
 func MustLoadConfig() *Config {
