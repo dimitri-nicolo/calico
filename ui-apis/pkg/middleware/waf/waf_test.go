@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	. "github.com/onsi/ginkgo"
@@ -14,6 +15,13 @@ import (
 
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
+)
+
+var (
+	// number of .conf files found in
+	// https://github.com/corazawaf/coraza-coreruleset/tree/main/rules/%40owasp_crs
+	// that contains rules with a 'msg' field
+	numOfExpectedFiles = 25
 )
 
 var _ = Describe("WAF middleware tests", func() {
@@ -61,7 +69,7 @@ var _ = Describe("WAF middleware tests", func() {
 			Expect(ruleset.ID).To(Equal("coreruleset-default"))
 			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
 			Expect(ruleset.Files).NotTo(BeEmpty())
-			Expect(ruleset.Files).To(HaveLen(len(crsMap)))
+			Expect(ruleset.Files).To(HaveLen(numOfExpectedFiles))
 		})
 
 		It("Test Get WAF Ruleset", func() {
@@ -75,7 +83,13 @@ var _ = Describe("WAF middleware tests", func() {
 			Expect(ruleset.ID).To(Equal("coreruleset-default"))
 			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
 			Expect(ruleset.Files).NotTo(BeEmpty())
-			Expect(ruleset.Files).To(HaveLen(len(crsMap)))
+			Expect(ruleset.Files).To(HaveLen(numOfExpectedFiles))
+
+			for _, rule := range ruleset.Files {
+				if !strings.HasSuffix(rule.Name, ".conf") {
+					Expect(rule.Name).To(BeNil())
+				}
+			}
 		})
 
 		It("Test Get WAF rule", func() {
