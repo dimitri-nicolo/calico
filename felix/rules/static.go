@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
@@ -871,7 +870,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 			// DNS response INPUT to host-networked client workload, so there is no outgoing interface.
 			baseMatch = r.NewMatch()
 		}
-		if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && r.Config.DNSPacketsNfqueueID != 0 {
+		if r.Config.IsDNSPolicyModeDelayDNSResponse() && r.Config.DNSPacketsNfqueueID != 0 {
 			// We are delaying the DNS response by queueing the response packet.
 			rules = append(rules,
 				generictables.Rule{
@@ -882,7 +881,7 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 					Action: r.NfqueueWithBypass(r.Config.DNSPacketsNfqueueID),
 				},
 			)
-		} else if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+		} else if r.Config.IsDNSPolicyModeInline() {
 			// We are parsing the DNS response inline by passing the response packet to a BPF Parser.
 			// BPF parser, parses the DNS response and fills the BPF IPSets.
 			// Add an NFLOG rule to snoop responses to felix.

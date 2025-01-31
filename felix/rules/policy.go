@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/generictables"
@@ -227,7 +226,6 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		newMatch:          r.NewMatch,
 		markAllBlocksPass: r.MarkScratch0,
 		markThisBlockPass: r.MarkScratch1,
-		dnsPolicyMode:     r.Config.DNSPolicyMode,
 	}
 
 	// Port matches.  We only need to render blocks of ports if, in total, there's more than one
@@ -278,7 +276,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
 	// in the main rule below.
 	if (len(ruleCopy.DstIpSetIds) == 1) && (len(ruleCopy.DstDomainIpSetIds) == 1) {
-		if r.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+		if r.Config.IsDNSPolicyModeInline() {
 			pinPath, err := r.bpfIPSetMatchProgram(ruleCopy.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
 				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", ruleCopy.DstDomainIpSetIds[0])
@@ -361,8 +359,6 @@ type matchBlockBuilder struct {
 	actions  generictables.ActionFactory
 
 	Rules []generictables.Rule
-
-	dnsPolicyMode apiv3.DNSPolicyMode
 }
 
 func (r *matchBlockBuilder) AppendPortMatchBlock(
@@ -629,7 +625,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	var mark uint32
 
 	// For policy mode DelayDeniedPacket, mark the packet traversing a non-staged policy that contains DNS matches.
-	markDNSPolicyRule := isDNSPolicyRule && !staged && r.Config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket
+	markDNSPolicyRule := isDNSPolicyRule && !staged && r.Config.IsDNSPolicyModeDelayDeniedPacket()
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -858,7 +854,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	if len(pRule.DstDomainIpSetIds) == 1 {
-		if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+		if r.Config.IsDNSPolicyModeInline() {
 			pinPath, err := r.bpfIPSetMatchProgram(pRule.DstDomainIpSetIds[0], ipVersion)
 			if err != nil {
 				log.WithError(err).Panicf("error adding bpf match for DomainIPSet %s", pRule.DstDomainIpSetIds[0])
