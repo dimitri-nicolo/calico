@@ -111,7 +111,7 @@ func (d *DockerRunner) TagImage(currentTag, newTag string) error {
 func (d *DockerRunner) PushImage(img string) error {
 	logrus.WithField("image", img).Debug("Pushing image")
 	if _, err := command.Run("docker", []string{"push", img}); err != nil {
-		logrus.WithError(err).Error("failed to create manifest list")
+		logrus.WithField("image", img).WithError(err).Error("failed to create push image")
 		return err
 	}
 	logrus.WithField("image", img).Debug("Image pushed")

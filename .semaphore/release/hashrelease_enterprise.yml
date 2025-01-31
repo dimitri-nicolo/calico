@@ -32,8 +32,7 @@ global_job_config:
       # Credentials for accessing gcloud, needed to push images to gcr
       - gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
       # Registries login
-      - docker login
-      # Authenticate for helm charts
+      - gcloud auth configure-docker --quiet
       - gcloud auth print-access-token | helm registry login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
 
 blocks:
