@@ -39,7 +39,7 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0001-apply-tigera-customization-to-kibana.patch
 	patch -d kibana -p1 < patches/0002-Reduce-all-platforms-to-only-linux-variant.patch
 	patch -d kibana -p1 < patches/0003-support-ubi-arm64-builds.patch
-	patch -d kibana -p1 < patches/0004-update-to-offical-node-js-version-20.15.1.patch
+	patch -d kibana -p1 < patches/0004-update-node-js-version-to-fix-cves.patch
 	cp -r plugins/tigera kibana/plugins/
 	cp -r plugins/google_tag_manager kibana/plugins/
 	touch $@
