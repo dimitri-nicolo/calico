@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
+	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/felix/vxlanfdb"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -872,7 +873,8 @@ var _ = Describe("EgressIPManager", func() {
 			err = manager.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred()) // the manager will not report an error to the dataplane but should report unhealthy
 			Expect(healthAgg.Summary().Ready).To(BeFalse())
-			Expect(manager.pendingWorkloadUpdates).To(HaveKey(*breakingWorkloadUpdate.Id))
+			key := felixtypes.ProtoToWorkloadEndpointID(breakingWorkloadUpdate.Id)
+			Expect(manager.pendingWorkloadUpdates).To(HaveKey(key))
 
 			// resolve the issue
 			resolvingUpdate := proto.WorkloadEndpointRemove{
@@ -886,7 +888,8 @@ var _ = Describe("EgressIPManager", func() {
 			err = manager.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(healthAgg.Summary().Ready).To(BeTrue())
-			Expect(manager.egwTracker.dirtyEgressIPSet).NotTo(ContainElement(*breakingWorkloadUpdate.Id))
+			key = felixtypes.ProtoToWorkloadEndpointID(breakingWorkloadUpdate.Id)
+			Expect(manager.egwTracker.dirtyEgressIPSet).NotTo(ContainElement(key))
 		})
 
 		It("should use same table if endpoint has second ip address", func() {

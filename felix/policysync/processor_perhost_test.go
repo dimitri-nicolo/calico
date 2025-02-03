@@ -34,7 +34,7 @@ func newPerHostMockClient(name, subscriptionType string, uidAllocator *policysyn
 }
 
 func (cl *perHostMockClient) join(ctx context.Context, toUpdates chan interface{}) {
-	sr := proto.SyncRequest{
+	sr := &proto.SyncRequest{
 		SubscriptionType: cl.subscriptionType,
 	}
 

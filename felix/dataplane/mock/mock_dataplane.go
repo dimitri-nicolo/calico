@@ -566,11 +566,11 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 
 	// Enterprise cases below.
 	case *proto.PacketCaptureUpdate:
-		var update = *event
+		var update = event
 		var id = fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint)
 		d.activePacketCaptures.Add(id)
 	case *proto.PacketCaptureRemove:
-		var remove = *event
+		var remove = event
 		var id = fmt.Sprintf("%+v-%+v", remove.Id, remove.Endpoint)
 		Expect(d.activePacketCaptures.Contains(id)).To(BeTrue(),
 			"Received PacketCaptureRemove for non-existent entry")
