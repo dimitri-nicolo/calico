@@ -95,6 +95,15 @@ const (
 	BPFDNSPolicyModeInline  BPFDNSPolicyMode = "Inline"
 )
 
+// +kubebuilder:validation:Enum=NoDelay;DelayDeniedPacket;DelayDNSResponse
+type NFTablesDNSPolicyMode string
+
+const (
+	NFTablesDNSPolicyModeNoDelay           NFTablesDNSPolicyMode = "NoDelay"
+	NFTablesDNSPolicyModeDelayDeniedPacket NFTablesDNSPolicyMode = "DelayDeniedPacket"
+	NFTablesDNSPolicyModeDelayDNSResponse  NFTablesDNSPolicyMode = "DelayDNSResponse"
+)
+
 // +kubebuilder:validation:Enum=Enabled;Disabled
 type FloatingIPType string
 
@@ -1051,8 +1060,8 @@ type FelixConfigurationSpec struct {
 	//
 	// This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 	//
-	// Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
-	// [Default: DelayDeniedPacket]
+	// This field has no effect in NFTables mode. Please use NFTablesDNSPolicyMode instead.
+	// [Default: Inline]
 	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse Inline"`
 	// BPFDNSPolicyMode specifies how DNS policy programming will be handled.
 	// Inline - BPF parses DNS response inline with DNS response packet
@@ -1062,6 +1071,18 @@ type FelixConfigurationSpec struct {
 	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 	// [Default: Inline]
 	BPFDNSPolicyMode *BPFDNSPolicyMode `json:"bpfDNSPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay Inline"`
+	// NFTablesDNSPolicyMode specifies how DNS policy programming will be handled for NFTables.
+	// DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches,
+	// but did not match. The packet is released after a fixed time, or after the destination IP address was programmed.
+	// DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some
+	// latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics
+	// are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit
+	// statistics.
+	// NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time
+	// the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
+	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
+	// [Default: DelayDeniedPacket]
+	NFTablesDNSPolicyMode *NFTablesDNSPolicyMode `json:"nftablesDNSPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse"`
 	// DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed
 	// to ipsets yet. Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
 	DNSPolicyNfqueueID *int `json:"dnsPolicyNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`

@@ -424,9 +424,10 @@ type Config struct {
 
 	WorkloadIfacePrefixes []string
 
-	DNSPolicyMode       apiv3.DNSPolicyMode
-	DNSPolicyNfqueueID  int64
-	DNSPacketsNfqueueID int64
+	DNSPolicyMode         apiv3.DNSPolicyMode
+	NFTablesDNSPolicyMode apiv3.NFTablesDNSPolicyMode
+	DNSPolicyNfqueueID    int64
+	DNSPacketsNfqueueID   int64
 
 	MarkAccept   uint32
 	MarkPass     uint32
@@ -649,7 +650,7 @@ func NewRenderer(config Config) RuleRenderer {
 			Action: actions.Allow(),
 		})
 	} else {
-		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket && config.MarkDNSPolicy != 0x0 {
+		if config.IsDNSPolicyModeDelayDeniedPacket() && config.MarkDNSPolicy != 0x0 {
 			nfqueueRuleDelayDeniedPacket = &generictables.Rule{
 				Match: newMatchFn().
 					MarkSingleBitSet(config.MarkDNSPolicy).
@@ -740,4 +741,41 @@ func NewRenderer(config Config) RuleRenderer {
 
 func (c *Config) TPROXYModeEnabled() bool {
 	return c.TPROXYMode == "Enabled" || c.TPROXYMode == "EnabledAllServices"
+}
+
+func (c *Config) IsDNSPolicyModeDelayDNSResponse() bool {
+	if c.BPFEnabled {
+		return false
+	}
+	if c.NFTables {
+		return c.NFTablesDNSPolicyMode == apiv3.NFTablesDNSPolicyModeDelayDNSResponse
+	}
+	return c.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse
+}
+
+func (c *Config) IsDNSPolicyModeDelayDeniedPacket() bool {
+	if c.BPFEnabled {
+		return false
+	}
+	if c.NFTables {
+		return c.NFTablesDNSPolicyMode == apiv3.NFTablesDNSPolicyModeDelayDeniedPacket
+	}
+	return c.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket
+}
+
+func (c *Config) IsDNSPolicyModeNoDelay() bool {
+	if c.BPFEnabled {
+		return false
+	}
+	if c.NFTables {
+		return c.NFTablesDNSPolicyMode == apiv3.NFTablesDNSPolicyModeNoDelay
+	}
+	return c.DNSPolicyMode == apiv3.DNSPolicyModeNoDelay
+}
+
+func (c *Config) IsDNSPolicyModeInline() bool {
+	if c.NFTables || c.BPFEnabled {
+		return false
+	}
+	return c.DNSPolicyMode == apiv3.DNSPolicyModeInline
 }

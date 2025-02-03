@@ -324,7 +324,6 @@ type Config struct {
 	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 
-	DNSPolicyMode                    apiv3.DNSPolicyMode
 	BPFDNSPolicyMode                 apiv3.BPFDNSPolicyMode
 	DNSPolicyNfqueueID               int
 	DNSPolicyNfqueueSize             int
@@ -539,15 +538,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	var bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 maps.Map
 	if !config.BPFEnabled {
 		setDefault := false
-		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !dataplaneFeatures.NFQueueBypass {
+		if config.RulesConfig.IsDNSPolicyModeDelayDNSResponse() && !dataplaneFeatures.NFQueueBypass {
 			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 			setDefault = true
 		}
-		if config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
-			if config.RulesConfig.NFTables {
-				log.Warning("NFTables does not support Inline policy mode. Falling back to DelayDeniedPacket")
-				setDefault = true
-			}
+		if config.RulesConfig.IsDNSPolicyModeInline() {
 			bpfIPSetsMap, dnsMpx, dnsSets = createDNSBpfMaps(proto.IPVersion_IPV4)
 			if config.IPv6Enabled {
 				bpfIPSetsMapV6, dnsMpxV6, dnsSetsV6 = createDNSBpfMaps(proto.IPVersion_IPV6)
@@ -559,8 +554,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 		}
 		if setDefault {
-			config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
-			config.RulesConfig.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+			if !config.RulesConfig.NFTables {
+				config.RulesConfig.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+			} else {
+				config.RulesConfig.NFTablesDNSPolicyMode = apiv3.NFTablesDNSPolicyModeDelayDeniedPacket
+			}
 		}
 	}
 
@@ -568,7 +566,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	ruleRenderer := config.RuleRendererOverride
 
 	if ruleRenderer == nil {
-
 		if config.RulesConfig.KubernetesProvider == felixconfig.ProviderEKS {
 			var err error
 			config.RulesConfig.EKSPrimaryENI, err = aws.PrimaryInterfaceName()
@@ -884,7 +881,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
-	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket &&
+	if config.RulesConfig.IsDNSPolicyModeDelayDeniedPacket() &&
 		config.RulesConfig.MarkDNSPolicy != 0x0 &&
 		!config.DisableDNSPolicyPacketProcessor {
 
@@ -905,7 +902,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.dnsDeniedPacketProcessor = packetProcessor
 	}
 
-	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse &&
+	if config.RulesConfig.IsDNSPolicyModeDelayDNSResponse() &&
 		config.RulesConfig.DNSPacketsNfqueueID != 0 {
 		packetProcessor := dnsresponsepacket.New(
 			uint16(config.DNSPacketsNfqueueID),
@@ -1353,7 +1350,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 
 		log.Info("conntrackScanner started")
-	} else if config.DNSPolicyMode == apiv3.DNSPolicyModeInline {
+	} else if config.RulesConfig.IsDNSPolicyModeInline() {
 		log.Info("DNSPolicy Inline enabled, setting up BPF IPSets and domain tracker.")
 		setupIPSetsAndDomainTracker(proto.IPVersion_IPV4, config, ipsetsManager, ruleRenderer, dp, bpfIPSetsMap, dnsMpx, dnsSets)
 		if config.IPv6Enabled {
@@ -3563,7 +3560,7 @@ func cleanupBPFState(config Config) {
 		log.WithError(err).Info("Failed to remove BPF connect-time load balancer, ignoring.")
 	}
 	bpfutils.RemoveBPFSpecialDevices()
-	if config.DNSPolicyMode != apiv3.DNSPolicyModeInline {
+	if !config.RulesConfig.IsDNSPolicyModeInline() {
 		// Cleanup all bpf pins including those needed for iptables DNS inline policy.
 		tc.CleanUpProgramsAndPins()
 		bpfiptables.Cleanup()

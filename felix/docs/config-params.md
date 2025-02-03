@@ -1009,6 +1009,29 @@ network stack is used.
 | `FelixConfiguration` schema | String. |
 | Default value (YAML) | `0` |
 
+### `NFTablesDNSPolicyMode` (config file) / `nftablesDNSPolicyMode` (YAML)
+
+Specifies how DNS policy programming will be handled for NFTables.
+DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches,
+but did not match. The packet is released after a fixed time, or after the destination IP address was programmed.
+DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some
+latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics
+are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit
+statistics.
+NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time
+the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
+connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_NFTablesDNSPolicyMode` |
+| Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>NoDelay</code> (case insensitive) |
+| Default value (above encoding) | `DelayDeniedPacket` |
+| `FelixConfiguration` field | `nftablesDNSPolicyMode` (YAML) `NFTablesDNSPolicyMode` (Go API) |
+| `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"NoDelay"</code>. |
+| Default value (YAML) | `DelayDeniedPacket` |
+| Notes | Required. | 
+
 ### `NFTablesMode` (config file) / `nftablesMode` (YAML)
 
 Configures nftables support in Felix.
@@ -3532,16 +3555,16 @@ This setting is ignored on Windows and "NoDelay" is always used.
 
 This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 
-Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
+This field has no effect in NFTables mode. Please use NFTablesDNSPolicyMode instead.
 
 | Detail |   |
 | --- | --- |
 | Environment variable | `FELIX_DNSPolicyMode` |
 | Encoding (env var/config file) | One of: <code>DelayDNSResponse</code>, <code>DelayDeniedPacket</code>, <code>Inline</code>, <code>NoDelay</code> (case insensitive) |
-| Default value (above encoding) | `DelayDeniedPacket` |
+| Default value (above encoding) | `Inline` |
 | `FelixConfiguration` field | `dnsPolicyMode` (YAML) `DNSPolicyMode` (Go API) |
 | `FelixConfiguration` schema | One of: <code>"DelayDNSResponse"</code>, <code>"DelayDeniedPacket"</code>, <code>"Inline"</code>, <code>"NoDelay"</code>. |
-| Default value (YAML) | `DelayDeniedPacket` |
+| Default value (YAML) | `Inline` |
 | Notes | Required. | 
 
 ### `DNSPolicyNfqueueID` (config file) / `dnsPolicyNfqueueID` (YAML)

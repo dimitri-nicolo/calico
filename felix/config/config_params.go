@@ -474,7 +474,8 @@ type Config struct {
 	DNSLogsLatency             bool          `config:"bool;true"`
 
 	// Config for DNS policy.
-	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse,Inline);DelayDeniedPacket;non-zero"`
+	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse,Inline);Inline;non-zero"`
+	NFTablesDNSPolicyMode            string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
 	BPFDNSPolicyMode                 string        `config:"oneof(NoDelay,Inline);Inline;non-zero"`
 	DNSPolicyNfqueueID               int           `config:"int;100"`
 	DNSPolicyNfqueueSize             int           `config:"int;255"`

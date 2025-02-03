@@ -22,8 +22,5 @@ const (
 	// point to a testing repo but the init image will be pushed to quay, so having
 	// these separate allows pulling the proper test images for the Tigera components
 	// and Init image when testing.
-	InitRegistry    = "quay.io/"
-	ECKRegistry     = "gcr.io/unique-caldron-775/cnx/"
-	CSRInitRegistry = "quay.io/"
-	K8sGcrRegistry  = "gcr.io/"
+	InitRegistry = "quay.io/"
 )
