@@ -351,7 +351,7 @@ func checkProfile(profile *proto.Profile, dir flxrules.RuleDir, req *requestCach
 func checkRules(rules []*proto.Rule, req *requestCache, policyNamespace string) (action Action, index int) {
 	for i, r := range rules {
 		if match(policyNamespace, r, req) {
-			log.Debugf("checkRules: Rule matched %v", *r)
+			log.Debugf("checkRules: Rule matched %v", r)
 			a := actionFromString(r.Action)
 			if a != LOG {
 				// We don't support actually logging requests, but if we hit a LOG action, we should

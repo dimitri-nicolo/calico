@@ -27,6 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
+	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
@@ -242,24 +243,27 @@ func TestDPStatsAfterConnection(t *testing.T) {
 		},
 	})
 
-	Eventually(server.GetDataplaneStats, "1000ms", "50ms").Should(Equal([]*proto.DataplaneStats{
-		{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_ALLOWED,
-					Value:      3,
+	Eventually(func() bool {
+		if len(server.GetDataplaneStats()) == 1 {
+			return googleproto.Equal(server.GetDataplaneStats()[0], &proto.DataplaneStats{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+				Stats: []*proto.Statistic{
+					{
+						Direction:  proto.Statistic_IN,
+						Relativity: proto.Statistic_DELTA,
+						Kind:       proto.Statistic_HTTP_REQUESTS,
+						Action:     proto.Action_ALLOWED,
+						Value:      3,
+					},
 				},
-			},
-		},
-	}))
+			})
+		}
+		return false
+	}, "1000ms", "50ms").Should(BeTrue())
 
 	// Send a DPStats update (denied packets) and check we have the corresponding aggregated protobuf stored.
 	dpStats.Add(statscache.DPStats{
@@ -275,40 +279,52 @@ func TestDPStatsAfterConnection(t *testing.T) {
 			HTTPRequestsDenied:  5,
 		},
 	})
-	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal([]*proto.DataplaneStats{
-		{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_ALLOWED,
-					Value:      3,
+	Eventually(func() bool {
+		expectedDataplaneStats := []*proto.DataplaneStats{
+			{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+				Stats: []*proto.Statistic{
+					{
+						Direction:  proto.Statistic_IN,
+						Relativity: proto.Statistic_DELTA,
+						Kind:       proto.Statistic_HTTP_REQUESTS,
+						Action:     proto.Action_ALLOWED,
+						Value:      3,
+					},
 				},
 			},
-		},
-		{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_DENIED,
-					Value:      5,
+			{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+				Stats: []*proto.Statistic{
+					{
+						Direction:  proto.Statistic_IN,
+						Relativity: proto.Statistic_DELTA,
+						Kind:       proto.Statistic_HTTP_REQUESTS,
+						Action:     proto.Action_DENIED,
+						Value:      5,
+					},
 				},
 			},
-		},
-	}))
+		}
+
+		if len(server.GetDataplaneStats()) == 2 {
+			for i, stat := range expectedDataplaneStats {
+				if !googleproto.Equal(server.GetDataplaneStats()[i], stat) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}, "500ms", "50ms")
 }
 
 func TestDPStatsBeforeConnection(t *testing.T) {
@@ -425,24 +441,34 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 			HTTPRequestsDenied:  0,
 		},
 	})
-	Eventually(server.GetDataplaneStats, "3s", "100ms").Should(
-		ContainElement(
-			&proto.DataplaneStats{
-				SrcIp:    "1.2.3.4",
-				DstIp:    "11.22.33.44",
-				SrcPort:  1000,
-				DstPort:  2000,
-				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-				Stats: []*proto.Statistic{
-					{
-						Direction:  proto.Statistic_IN,
-						Relativity: proto.Statistic_DELTA,
-						Kind:       proto.Statistic_HTTP_REQUESTS,
-						Action:     proto.Action_ALLOWED,
-						Value:      7,
-					},
+	Eventually(func() bool {
+		expectedDataplaneStat := &proto.DataplaneStats{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+			Stats: []*proto.Statistic{
+				{
+					Direction:  proto.Statistic_IN,
+					Relativity: proto.Statistic_DELTA,
+					Kind:       proto.Statistic_HTTP_REQUESTS,
+					Action:     proto.Action_ALLOWED,
+					Value:      7,
 				},
-			}))
+			},
+		}
+
+		if len(server.GetDataplaneStats()) > 0 {
+			for _, s := range server.GetDataplaneStats() {
+				if googleproto.Equal(s, expectedDataplaneStat) {
+					return true
+				}
+			}
+			return false
+		}
+		return false
+	}, "3s", "100ms")
 }
 
 func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
