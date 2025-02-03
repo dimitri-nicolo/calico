@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routerule"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -29,7 +30,7 @@ type externalNetworkManager struct {
 	// externalNetworksInfoID maps workload endpoint ID to external networks information
 	// associated with the workload.
 	// This is refered as "cache" in this file.
-	externalNetworksInfoByID map[proto.WorkloadEndpointID]*externalNetworksInfo
+	externalNetworksInfoByID map[types.WorkloadEndpointID]*externalNetworksInfo
 
 	// Active external networks information.
 	activeNetworks map[string]*externalNetwork
@@ -40,11 +41,11 @@ type externalNetworkManager struct {
 
 	// Pending workload endpoints updates, we store these up as OnUpdate is called, then process them
 	// in CompleteDeferredWork.
-	pendingWorkloadUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	pendingWorkloadUpdates map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
 
 	// Pending ExternalNetwork updates, we store these up as OnUpdate is called, then process them
 	// in CompleteDeferredWork.
-	pendingExternalNetworkUpdates map[proto.ExternalNetworkID]*proto.ExternalNetwork
+	pendingExternalNetworkUpdates map[types.ExternalNetworkID]*proto.ExternalNetwork
 
 	opRecorder logutils.OpRecorder
 }
@@ -83,10 +84,10 @@ func newExternalNetworkManagerWithShims(
 	mgr := externalNetworkManager{
 		dpConfig:                      dpConfig,
 		rrGenerator:                   rrGenerator,
-		externalNetworksInfoByID:      map[proto.WorkloadEndpointID]*externalNetworksInfo{},
+		externalNetworksInfoByID:      map[types.WorkloadEndpointID]*externalNetworksInfo{},
 		activeNetworks:                map[string]*externalNetwork{},
-		pendingWorkloadUpdates:        make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		pendingExternalNetworkUpdates: make(map[proto.ExternalNetworkID]*proto.ExternalNetwork),
+		pendingWorkloadUpdates:        make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint),
+		pendingExternalNetworkUpdates: make(map[types.ExternalNetworkID]*proto.ExternalNetwork),
 		opRecorder:                    opRecorder,
 	}
 
@@ -97,16 +98,20 @@ func (m *externalNetworkManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.WorkloadEndpointUpdate:
 		log.WithField("msg", msg).Debug("workload endpoint update")
-		m.pendingWorkloadUpdates[*msg.Id] = msg.Endpoint
+		id := types.ProtoToWorkloadEndpointID(msg.GetId())
+		m.pendingWorkloadUpdates[id] = msg.Endpoint
 	case *proto.WorkloadEndpointRemove:
 		log.WithField("msg", msg).Debug("workload endpoint remove")
-		m.pendingWorkloadUpdates[*msg.Id] = nil
+		id := types.ProtoToWorkloadEndpointID(msg.GetId())
+		m.pendingWorkloadUpdates[id] = nil
 	case *proto.ExternalNetworkUpdate:
 		log.WithField("msg", msg).Debug("external network update")
-		m.pendingExternalNetworkUpdates[*msg.Id] = msg.Network
+		id := types.ProtoToExternalNetworkID(msg.GetId())
+		m.pendingExternalNetworkUpdates[id] = msg.Network
 	case *proto.ExternalNetworkRemove:
 		log.WithField("msg", msg).Debug("external network remove")
-		m.pendingExternalNetworkUpdates[*msg.Id] = nil
+		id := types.ProtoToExternalNetworkID(msg.GetId())
+		m.pendingExternalNetworkUpdates[id] = nil
 	}
 }
 

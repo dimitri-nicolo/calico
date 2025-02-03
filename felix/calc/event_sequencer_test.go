@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	googleproto "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/calc/capture"
@@ -472,8 +473,8 @@ var _ = Describe("PacketCaptures update/remove", func() {
 				},
 				Specification: &proto.PacketCaptureSpecification{
 					BpfFilter: anotherFilter,
-					StartTime: proto.ConvertTime(capture.MinTime),
-					EndTime:   proto.ConvertTime(capture.MaxTime),
+					StartTime: timestamppb.New(capture.MinTime),
+					EndTime:   timestamppb.New(capture.MaxTime),
 				},
 			}}))
 	})
@@ -500,8 +501,8 @@ var _ = Describe("PacketCaptures update/remove", func() {
 				},
 				Specification: &proto.PacketCaptureSpecification{
 					BpfFilter: anyFilter,
-					StartTime: proto.ConvertTime(capture.MinTime),
-					EndTime:   proto.ConvertTime(capture.MaxTime),
+					StartTime: timestamppb.New(capture.MinTime),
+					EndTime:   timestamppb.New(capture.MaxTime),
 				},
 			}}))
 	})
@@ -519,8 +520,8 @@ var _ = Describe("PacketCaptures update/remove", func() {
 			},
 			Specification: &proto.PacketCaptureSpecification{
 				BpfFilter: anyFilter,
-				StartTime: proto.ConvertTime(capture.MinTime),
-				EndTime:   proto.ConvertTime(capture.MaxTime),
+				StartTime: timestamppb.New(capture.MinTime),
+				EndTime:   timestamppb.New(capture.MaxTime),
 			},
 		}}))
 		// Clear messages

@@ -21,6 +21,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/ip"
@@ -114,8 +115,8 @@ type EventSequencer struct {
 	pendingWireguardUpdates       map[string]*model.Wireguard
 	pendingWireguardDeletes       set.Set[string]
 	pendingGlobalBGPConfig        *proto.GlobalBGPConfigUpdate
-	pendingExternalNetworkUpdates map[proto.ExternalNetworkID]*proto.ExternalNetworkUpdate
-	pendingExternalNetworkDeletes set.Set[proto.ExternalNetworkID]
+	pendingExternalNetworkUpdates map[types.ExternalNetworkID]*proto.ExternalNetworkUpdate
+	pendingExternalNetworkDeletes set.Set[types.ExternalNetworkID]
 	pendingPacketCaptureUpdates   map[string]*proto.PacketCaptureUpdate
 	pendingPacketCaptureRemovals  map[string]*proto.PacketCaptureRemove
 	pendingServiceUpdates         map[serviceID]*proto.ServiceUpdate
@@ -139,7 +140,7 @@ type EventSequencer struct {
 	sentWireguard        set.Set[string]
 	sentWireguardV6      set.Set[string]
 	sentServices         set.Set[serviceID]
-	sentExternalNetworks set.Set[proto.ExternalNetworkID]
+	sentExternalNetworks set.Set[types.ExternalNetworkID]
 	sentRemoteIPPools    set.Set[remotePoolID]
 
 	// Enterprise-only fields.
@@ -219,8 +220,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingPacketCaptureRemovals:  map[string]*proto.PacketCaptureRemove{},
 		pendingServiceUpdates:         map[serviceID]*proto.ServiceUpdate{},
 		pendingServiceDeletes:         set.New[serviceID](),
-		pendingExternalNetworkUpdates: map[proto.ExternalNetworkID]*proto.ExternalNetworkUpdate{},
-		pendingExternalNetworkDeletes: set.New[proto.ExternalNetworkID](),
+		pendingExternalNetworkUpdates: map[types.ExternalNetworkID]*proto.ExternalNetworkUpdate{},
+		pendingExternalNetworkDeletes: set.New[types.ExternalNetworkID](),
 		pendingRemoteIPPools:          map[remotePoolID]*proto.RemoteIPAMPoolUpdate{},
 		pendingRemoteIPPoolRemovals:   set.New[remotePoolID](),
 
@@ -241,7 +242,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		sentWireguardV6:      set.New[string](),
 		sentServices:         set.New[serviceID](),
 		sentPacketCapture:    set.New[string](),
-		sentExternalNetworks: set.New[proto.ExternalNetworkID](),
+		sentExternalNetworks: set.New[types.ExternalNetworkID](),
 		sentRemoteIPPools:    set.New[remotePoolID](),
 	}
 	return buf
@@ -942,8 +943,8 @@ func (buf *EventSequencer) OnPacketCaptureActive(key model.ResourceKey, endpoint
 		},
 		Specification: &proto.PacketCaptureSpecification{
 			BpfFilter: spec.BPFFilter,
-			StartTime: proto.ConvertTime(spec.StartTime),
-			EndTime:   proto.ConvertTime(spec.EndTime),
+			StartTime: timestamppb.New(spec.StartTime),
+			EndTime:   timestamppb.New(spec.EndTime),
 		},
 	}
 }
@@ -1497,7 +1498,7 @@ func (buf *EventSequencer) OnExternalNetworkUpdate(update *proto.ExternalNetwork
 		"name":            update.Id.Name,
 		"routeTableIndex": update.Network.RouteTableIndex,
 	}).Debug("External network update")
-	id := *update.Id
+	id := types.ProtoToExternalNetworkID(update.GetId())
 	buf.pendingExternalNetworkDeletes.Discard(id)
 	buf.pendingExternalNetworkUpdates[id] = update
 }
@@ -1506,7 +1507,7 @@ func (buf *EventSequencer) OnExternalNetworkRemove(update *proto.ExternalNetwork
 	log.WithFields(log.Fields{
 		"name": update.Id.Name,
 	}).Debug("External network update")
-	id := *update.Id
+	id := types.ProtoToExternalNetworkID(update.GetId())
 	delete(buf.pendingExternalNetworkUpdates, id)
 	if buf.sentExternalNetworks.Contains(id) {
 		buf.pendingExternalNetworkDeletes.Add(id)
@@ -1518,13 +1519,14 @@ func (buf *EventSequencer) flushExternalNetworkUpdates() {
 		buf.Callback(msg)
 		buf.sentExternalNetworks.Add(id)
 	}
-	buf.pendingExternalNetworkUpdates = make(map[proto.ExternalNetworkID]*proto.ExternalNetworkUpdate)
+	buf.pendingExternalNetworkUpdates = make(map[types.ExternalNetworkID]*proto.ExternalNetworkUpdate)
 	log.Debug("Done flushing external network updates")
 }
 
 func (buf *EventSequencer) flushExternalNetworkRemoves() {
-	buf.pendingExternalNetworkDeletes.Iter(func(id proto.ExternalNetworkID) error {
-		msg := proto.ExternalNetworkRemove{Id: &id}
+	buf.pendingExternalNetworkDeletes.Iter(func(id types.ExternalNetworkID) error {
+		protoID := types.ExternalNetworkIDToProto(id)
+		msg := proto.ExternalNetworkRemove{Id: protoID}
 		buf.Callback(&msg)
 		buf.sentExternalNetworks.Discard(id)
 		return nil

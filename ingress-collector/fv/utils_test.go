@@ -164,6 +164,8 @@ func (cth *CollectorTestHandler) Interval() string {
 }
 
 type testPolicySyncServer struct {
+	proto.UnimplementedPolicySyncServer
+
 	stats chan *proto.DataplaneStats
 }
 

@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
@@ -58,7 +59,7 @@ func (mp *mockPolicyStoreManager) OnInSync() {
 	mp.callstack = append(mp.callstack, "oninsync")
 }
 
-func (mp *mockPolicyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
+func (mp *mockPolicyStoreManager) GetCurrentEndpoints() map[types.WorkloadEndpointID]*proto.WorkloadEndpoint {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
 

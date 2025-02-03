@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	google_protobuf "github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,6 +34,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/wafevents"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
+	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/nfnetlink"
@@ -2602,7 +2603,7 @@ var _ = Describe("WAFEvent logging", func() {
 					"Content-Type": "application/json",
 				},
 			},
-			Timestamp: google_protobuf.TimestampNow(),
+			Timestamp: timestamppb.Now(),
 		}
 		we1 = &proto.WAFEvent{
 			TxId:    "tx001",
@@ -2632,7 +2633,7 @@ var _ = Describe("WAFEvent logging", func() {
 					"Content-Type": "application/json",
 				},
 			},
-			Timestamp: google_protobuf.TimestampNow(),
+			Timestamp: timestamppb.Now(),
 		}
 	})
 
@@ -2878,7 +2879,7 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 	t.Run("should process dataplane info updates and update the policy store", func(t *testing.T) {
 		c, dpInfoChan := setup(t)
 
-		id := proto.WorkloadEndpointID{
+		id := felixtypes.WorkloadEndpointID{
 			OrchestratorId: "test-orchestrator",
 			WorkloadId:     "test-workload",
 			EndpointId:     "test-endpoint",
@@ -2886,7 +2887,7 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 		dpInfo := proto.ToDataplane{
 			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
 				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
-					Id: &id,
+					Id: felixtypes.WorkloadEndpointIDToProto(id),
 					Endpoint: &proto.WorkloadEndpoint{
 						Name: "test-endpoint",
 					},
@@ -2908,12 +2909,12 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 	t.Run("should handle multiple dataplane info updates", func(t *testing.T) {
 		c, dpInfoChan := setup(t)
 
-		id1 := proto.WorkloadEndpointID{
+		id1 := felixtypes.WorkloadEndpointID{
 			OrchestratorId: "test-orchestrator1",
 			WorkloadId:     "test-workload1",
 			EndpointId:     "test-endpoint1",
 		}
-		id2 := proto.WorkloadEndpointID{
+		id2 := felixtypes.WorkloadEndpointID{
 			OrchestratorId: "test-orchestrator2",
 			WorkloadId:     "test-workload2",
 			EndpointId:     "test-endpoint2",
@@ -2922,7 +2923,7 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 		dpInfo1 := proto.ToDataplane{
 			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
 				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
-					Id: &id1,
+					Id: felixtypes.WorkloadEndpointIDToProto(id1),
 					Endpoint: &proto.WorkloadEndpoint{
 						Name: "test-endpoint1",
 					},
@@ -2932,7 +2933,7 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 		dpInfo2 := proto.ToDataplane{
 			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
 				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
-					Id: &id2,
+					Id: felixtypes.WorkloadEndpointIDToProto(id2),
 					Endpoint: &proto.WorkloadEndpoint{
 						Name: "test-endpoint2",
 					},
@@ -3003,7 +3004,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 
 	policyStoreManager := policystore.NewPolicyStoreManager()
 	policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload1",
 			EndpointId:     "eth0",
@@ -3017,7 +3018,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 				},
 			},
 		}
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload2",
 			EndpointId:     "eth0",
@@ -3032,7 +3033,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			},
 		}
 
-		ps.PolicyByID[proto.PolicyID{
+		ps.PolicyByID[felixtypes.PolicyID{
 			Tier: "default",
 			Name: "policy1",
 		}] = &proto.Policy{
@@ -3048,7 +3049,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			},
 		}
 
-		ps.PolicyByID[proto.PolicyID{
+		ps.PolicyByID[felixtypes.PolicyID{
 			Tier: "tier1",
 			Name: "policy11",
 		}] = &proto.Policy{
@@ -3100,7 +3101,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 		},
 	}
 	c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload3",
 			EndpointId:     "eth1",
@@ -3114,7 +3115,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 				},
 			},
 		}
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload4",
 			EndpointId:     "eth1",
@@ -3156,7 +3157,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 
 		// Update the policies
 		c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-			ps.Endpoints[proto.WorkloadEndpointID{
+			ps.Endpoints[felixtypes.WorkloadEndpointID{
 				OrchestratorId: "k8s",
 				WorkloadId:     "default.workload1",
 				EndpointId:     "eth0",
@@ -3170,7 +3171,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 					},
 				},
 			}
-			ps.Endpoints[proto.WorkloadEndpointID{
+			ps.Endpoints[felixtypes.WorkloadEndpointID{
 				OrchestratorId: "k8s",
 				WorkloadId:     "default.workload2",
 				EndpointId:     "eth0",

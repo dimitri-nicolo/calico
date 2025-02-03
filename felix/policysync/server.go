@@ -124,7 +124,7 @@ func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_Sy
 	s.JoinUpdates <- JoinRequest{
 		SubscriptionType: st,
 		JoinMetadata:     joinMeta,
-		SyncRequest:      *syncRequest,
+		SyncRequest:      syncRequest,
 		C:                updates,
 	}
 

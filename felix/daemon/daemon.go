@@ -1507,8 +1507,8 @@ func (fc *DataplaneConnector) handleEgressPodStatusUpdateFromDataplane() {
 				current.Namespace,
 				current.Name,
 				current.Addr,
-				proto.ConvertTimestamp(current.MaintenanceStarted),
-				proto.ConvertTimestamp(current.MaintenanceFinished))
+				current.MaintenanceStarted.AsTime(),
+				current.MaintenanceFinished.AsTime())
 			if err == nil {
 				delete(updates, current.Namespace+"/"+current.Name)
 			} else {

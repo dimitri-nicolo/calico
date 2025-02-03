@@ -39,7 +39,7 @@ const MaxMembersPerMessage = 82200
 type Processor struct {
 	Updates             <-chan interface{}
 	JoinUpdates         chan interface{}
-	perHostPolicyAgents map[uint64]chan<- proto.ToDataplane
+	perHostPolicyAgents map[uint64]chan<- *proto.ToDataplane
 	workloadsByID       map[types.WorkloadEndpointID]*proto.WorkloadEndpointUpdate
 	endpointsByID       map[types.WorkloadEndpointID]*EndpointInfo
 	policyByID          map[types.PolicyID]*policyInfo
@@ -96,7 +96,7 @@ type EndpointInfo struct {
 	// The channel to send updates for this workload to.
 	output             chan<- *proto.ToDataplane
 	subscription       SubscriptionType
-	syncRequest        proto.SyncRequest
+	syncRequest        *proto.SyncRequest
 	currentJoinUID     uint64
 	endpointUpd        *proto.WorkloadEndpointUpdate
 	syncedPolicies     map[types.PolicyID]bool
@@ -119,7 +119,7 @@ type JoinRequest struct {
 	SubscriptionType SubscriptionType
 	// The sync request that initiated the join. This contains details of the features supported by
 	// the consumer.
-	SyncRequest proto.SyncRequest
+	SyncRequest *proto.SyncRequest
 	// C is the channel to send updates to the sync client. Processor closes the channel when the
 	// workload endpoint is removed, or when a new JoinRequest is received for the same endpoint.  If nil, indicates
 	// the client wants to stop receiving updates.
@@ -137,7 +137,7 @@ func NewProcessor(config *config.Config, updates <-chan interface{}) *Processor 
 		Updates: updates,
 		// JoinUpdates from the new servers that have started.
 		JoinUpdates:         make(chan interface{}, 10),
-		perHostPolicyAgents: make(map[uint64]chan<- proto.ToDataplane, 1024),
+		perHostPolicyAgents: make(map[uint64]chan<- *proto.ToDataplane, 1024),
 		workloadsByID:       make(map[types.WorkloadEndpointID]*proto.WorkloadEndpointUpdate),
 		endpointsByID:       make(map[types.WorkloadEndpointID]*EndpointInfo),
 		policyByID:          make(map[types.PolicyID]*policyInfo),
@@ -339,17 +339,16 @@ func (p *Processor) sendToAllPerHostAgents(update interface{}) {
 	}
 }
 
-func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) {
+func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- *proto.ToDataplane) {
 	log.Debug("<---- catching up sync to a per host agent")
 	// profiles
 	for profileID, profile := range p.profileByID {
-		pid := profileID // dear golang, it's weird that i have to do this
 		upd := &proto.ActiveProfileUpdate{
-			Id:      &pid,
+			Id:      types.ProfileIDToProto(profileID),
 			Profile: profile.p,
 		}
 
-		perHostAgent <- proto.ToDataplane{
+		perHostAgent <- &proto.ToDataplane{
 			Payload: &proto.ToDataplane_ActiveProfileUpdate{
 				ActiveProfileUpdate: upd,
 			},
@@ -357,12 +356,11 @@ func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) 
 	}
 	// policies
 	for policyID, policy := range p.policyByID {
-		pid := policyID
 		upd := &proto.ActivePolicyUpdate{
-			Id:     &pid,
+			Id:     types.PolicyIDToProto(policyID),
 			Policy: policy.p,
 		}
-		perHostAgent <- proto.ToDataplane{
+		perHostAgent <- &proto.ToDataplane{
 			Payload: &proto.ToDataplane_ActivePolicyUpdate{
 				ActivePolicyUpdate: upd,
 			},
@@ -370,7 +368,7 @@ func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) 
 	}
 	// service accounts
 	for _, upd := range p.serviceAccountByID {
-		perHostAgent <- proto.ToDataplane{
+		perHostAgent <- &proto.ToDataplane{
 			Payload: &proto.ToDataplane_ServiceAccountUpdate{
 				ServiceAccountUpdate: upd,
 			},
@@ -378,7 +376,7 @@ func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) 
 	}
 	// namespaces
 	for _, upd := range p.namespaceByID {
-		perHostAgent <- proto.ToDataplane{
+		perHostAgent <- &proto.ToDataplane{
 			Payload: &proto.ToDataplane_NamespaceUpdate{
 				NamespaceUpdate: upd,
 			},
@@ -398,7 +396,7 @@ func (p *Processor) catchUpPerHostSyncTo(perHostAgent chan<- proto.ToDataplane) 
 	}
 
 	if p.receivedInSync {
-		perHostAgent <- proto.ToDataplane{
+		perHostAgent <- &proto.ToDataplane{
 			Payload: &proto.ToDataplane_InSync{
 				InSync: &proto.InSync{},
 			},

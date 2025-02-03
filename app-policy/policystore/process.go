@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
@@ -160,7 +161,8 @@ func (store *PolicyStore) processActiveProfileUpdate(update *proto.ActiveProfile
 		log.Error("got ActiveProfileUpdate with nil ProfileID")
 		return
 	}
-	store.ProfileByID[*update.Id] = update.Profile
+	id := types.ProtoToProfileID(update.GetId())
+	store.ProfileByID[id] = update.Profile
 }
 
 func (store *PolicyStore) processActiveProfileRemove(update *proto.ActiveProfileRemove) {
@@ -173,7 +175,8 @@ func (store *PolicyStore) processActiveProfileRemove(update *proto.ActiveProfile
 		log.Error("got ActiveProfileRemove with nil ProfileID")
 		return
 	}
-	delete(store.ProfileByID, *update.Id)
+	id := types.ProtoToProfileID(update.GetId())
+	delete(store.ProfileByID, id)
 }
 
 func (store *PolicyStore) processActivePolicyUpdate(update *proto.ActivePolicyUpdate) {
@@ -186,7 +189,8 @@ func (store *PolicyStore) processActivePolicyUpdate(update *proto.ActivePolicyUp
 		log.Error("got ActivePolicyUpdate with nil PolicyID")
 		return
 	}
-	store.PolicyByID[*update.Id] = update.Policy
+	id := types.ProtoToPolicyID(update.GetId())
+	store.PolicyByID[id] = update.Policy
 }
 
 func (store *PolicyStore) processActivePolicyRemove(update *proto.ActivePolicyRemove) {
@@ -199,7 +203,8 @@ func (store *PolicyStore) processActivePolicyRemove(update *proto.ActivePolicyRe
 		log.Error("got ActivePolicyRemove with nil PolicyID")
 		return
 	}
-	delete(store.PolicyByID, *update.Id)
+	id := types.ProtoToPolicyID(update.GetId())
+	delete(store.PolicyByID, id)
 }
 
 func (store *PolicyStore) processWorkloadEndpointUpdate(subscriptionType string, update *proto.WorkloadEndpointUpdate) {
@@ -214,7 +219,8 @@ func (store *PolicyStore) processWorkloadEndpointUpdate(subscriptionType string,
 	case "per-pod-policies", "":
 		store.Endpoint = update.Endpoint
 	case "per-host-policies":
-		store.Endpoints[*update.Id] = update.Endpoint
+		id := types.ProtoToWorkloadEndpointID(update.GetId())
+		store.Endpoints[id] = update.Endpoint
 		log.Debugf("%d endpoints received so far", len(store.Endpoints))
 		store.wepUpdates.onWorkloadEndpointUpdate(update, store.IPToIndexes)
 	}
@@ -233,7 +239,8 @@ func (store *PolicyStore) processWorkloadEndpointRemove(subscriptionType string,
 	case "per-pod-policies", "":
 		store.Endpoint = nil
 	case "per-host-policies":
-		delete(store.Endpoints, *update.Id)
+		id := types.ProtoToWorkloadEndpointID(update.GetId())
+		delete(store.Endpoints, id)
 		store.wepUpdates.onWorkloadEndpointRemove(update, store.IPToIndexes)
 	}
 }
@@ -244,7 +251,8 @@ func (store *PolicyStore) processServiceAccountUpdate(update *proto.ServiceAccou
 		log.Error("got ServiceAccountUpdate with nil ServiceAccountID")
 		return
 	}
-	store.ServiceAccountByID[*update.Id] = update
+	id := types.ProtoToServiceAccountID(update.GetId())
+	store.ServiceAccountByID[id] = update
 }
 
 func (store *PolicyStore) processServiceAccountRemove(update *proto.ServiceAccountRemove) {
@@ -253,7 +261,8 @@ func (store *PolicyStore) processServiceAccountRemove(update *proto.ServiceAccou
 		log.Error("got ServiceAccountRemove with nil ServiceAccountID")
 		return
 	}
-	delete(store.ServiceAccountByID, *update.Id)
+	id := types.ProtoToServiceAccountID(update.GetId())
+	delete(store.ServiceAccountByID, id)
 }
 
 func (store *PolicyStore) processNamespaceUpdate(update *proto.NamespaceUpdate) {
@@ -262,7 +271,8 @@ func (store *PolicyStore) processNamespaceUpdate(update *proto.NamespaceUpdate) 
 		log.Error("got NamespaceUpdate with nil NamespaceID")
 		return
 	}
-	store.NamespaceByID[*update.Id] = update
+	id := types.ProtoToNamespaceID(update.GetId())
+	store.NamespaceByID[id] = update
 }
 
 func (store *PolicyStore) processNamespaceRemove(update *proto.NamespaceRemove) {
@@ -271,5 +281,6 @@ func (store *PolicyStore) processNamespaceRemove(update *proto.NamespaceRemove) 
 		log.Error("got NamespaceRemove with nil NamespaceID")
 		return
 	}
-	delete(store.NamespaceByID, *update.Id)
+	id := types.ProtoToNamespaceID(update.GetId())
+	delete(store.NamespaceByID, id)
 }

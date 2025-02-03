@@ -5,6 +5,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 type IPToEndpointsIndex interface {
@@ -14,7 +15,7 @@ type IPToEndpointsIndex interface {
 	Delete(k ip.Addr, v *proto.WorkloadEndpointRemove)
 }
 
-type wlMap map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+type wlMap map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
 
 func NewIPToEndpointsIndex() IPToEndpointsIndex {
 	return &IPToEndpointsIndexer{
@@ -28,7 +29,7 @@ type IPToEndpointsIndexer struct {
 
 func (index *IPToEndpointsIndexer) Keys(k ip.Addr) (res []proto.WorkloadEndpointID) {
 	for item := range index.store[k] {
-		res = append(res, item)
+		res = append(res, *types.WorkloadEndpointIDToProto(item))
 	}
 	return
 }
@@ -58,7 +59,8 @@ func (index *IPToEndpointsIndexer) Update(k ip.Addr, v *proto.WorkloadEndpointUp
 		index.store[k] = make(wlMap)
 	}
 
-	index.store[k][*v.Id] = v.Endpoint
+	id := types.ProtoToWorkloadEndpointID(v.Id)
+	index.store[k][id] = v.Endpoint
 }
 
 func (index *IPToEndpointsIndexer) Delete(k ip.Addr, v *proto.WorkloadEndpointRemove) {
@@ -69,7 +71,8 @@ func (index *IPToEndpointsIndexer) Delete(k ip.Addr, v *proto.WorkloadEndpointRe
 	if _, ok := index.store[k]; !ok {
 		return
 	}
-	delete(index.store[k], *v.Id)
+	id := types.ProtoToWorkloadEndpointID(v.Id)
+	delete(index.store[k], id)
 	if len(index.store[k]) == 0 {
 		delete(index.store, k)
 	}

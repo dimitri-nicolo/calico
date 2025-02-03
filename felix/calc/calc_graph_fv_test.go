@@ -960,9 +960,9 @@ func stringifyRoutes(routes set.Set[types.RouteUpdate]) []string {
 	return out
 }
 
-func stringifyPacketCapture(pc set.Set[proto.PacketCaptureUpdate]) []string {
+func stringifyPacketCapture(pc set.Set[types.PacketCaptureUpdate]) []string {
 	out := make([]string, 0, pc.Len())
-	pc.Iter(func(update proto.PacketCaptureUpdate) error {
+	pc.Iter(func(update types.PacketCaptureUpdate) error {
 		out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
 		return nil
 	})

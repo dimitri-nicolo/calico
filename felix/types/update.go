@@ -56,6 +56,12 @@ type RouteUpdate struct {
 	TunnelType    *proto.TunnelType
 }
 
+type PacketCaptureUpdate struct {
+	Id            *proto.PacketCaptureID
+	Endpoint      *proto.WorkloadEndpointID
+	Specification *proto.PacketCaptureSpecification
+}
+
 func ProtoToVXLANTunnelEndpointUpdate(msg *proto.VXLANTunnelEndpointUpdate) VXLANTunnelEndpointUpdate {
 	return VXLANTunnelEndpointUpdate{
 		Node:             msg.Node,
@@ -95,5 +101,13 @@ func ProtoToRouteUpdate(msg *proto.RouteUpdate) RouteUpdate {
 		NatOutgoing:   msg.NatOutgoing,
 		LocalWorkload: msg.LocalWorkload,
 		TunnelType:    msg.TunnelType,
+	}
+}
+
+func ProtoToPacketCaptureUpdate(msg *proto.PacketCaptureUpdate) PacketCaptureUpdate {
+	return PacketCaptureUpdate{
+		Id:            msg.Id,
+		Endpoint:      msg.Endpoint,
+		Specification: msg.Specification,
 	}
 }

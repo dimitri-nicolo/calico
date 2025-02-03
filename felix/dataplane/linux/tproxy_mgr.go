@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 	"github.com/projectcalico/calico/felix/tproxydefs"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -274,8 +275,8 @@ type iptablesEqualIPsChecker struct {
 
 	ipSetsV4, ipSetsV6 tproxyIPSets
 
-	v4Eps map[proto.WorkloadEndpointID][]string
-	v6Eps map[proto.WorkloadEndpointID][]string
+	v4Eps map[types.WorkloadEndpointID][]string
+	v6Eps map[types.WorkloadEndpointID][]string
 
 	ipv4 map[string]int
 	ipv6 map[string]int
@@ -327,8 +328,8 @@ func newIptablesEqualIPsChecker(dpConfig Config, ipSetsV4, ipSetsV6 tproxyIPSets
 		ipSetsV4: ipSetsV4,
 		ipSetsV6: ipSetsV6,
 
-		v4Eps: make(map[proto.WorkloadEndpointID][]string),
-		v6Eps: make(map[proto.WorkloadEndpointID][]string),
+		v4Eps: make(map[types.WorkloadEndpointID][]string),
+		v6Eps: make(map[types.WorkloadEndpointID][]string),
 
 		ipv4: make(map[string]int),
 		ipv6: make(map[string]int),
@@ -370,15 +371,15 @@ func diffNets(now, before []string) (add, del []string) {
 }
 
 func onWorkloadEndpointUpdate(
-	id *proto.WorkloadEndpointID,
+	id types.WorkloadEndpointID,
 	nets []string,
-	eps map[proto.WorkloadEndpointID][]string,
+	eps map[types.WorkloadEndpointID][]string,
 	refs map[string]int,
 	toAdd, toDel map[string]struct{},
 ) {
-	add, del := diffNets(nets, eps[*id])
+	add, del := diffNets(nets, eps[id])
 
-	eps[*id] = nets
+	eps[id] = nets
 
 	for _, ip := range add {
 		refs[ip]++
@@ -398,20 +399,21 @@ func onWorkloadEndpointUpdate(
 }
 
 func (c *iptablesEqualIPsChecker) OnWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
-	onWorkloadEndpointUpdate(msg.Id, msg.Endpoint.Ipv4Nets, c.v4Eps, c.ipv4, c.ipv4ToAdd, c.ipv4ToDel)
+	id := types.ProtoToWorkloadEndpointID(msg.GetId())
+	onWorkloadEndpointUpdate(id, msg.Endpoint.Ipv4Nets, c.v4Eps, c.ipv4, c.ipv4ToAdd, c.ipv4ToDel)
 
 	if c.enabled6 {
-		onWorkloadEndpointUpdate(msg.Id, msg.Endpoint.Ipv6Nets, c.v6Eps, c.ipv6, c.ipv6ToAdd, c.ipv6ToDel)
+		onWorkloadEndpointUpdate(id, msg.Endpoint.Ipv6Nets, c.v6Eps, c.ipv6, c.ipv6ToAdd, c.ipv6ToDel)
 	}
 }
 
 func onWorkloadEndpointRemove(
-	id *proto.WorkloadEndpointID,
-	eps map[proto.WorkloadEndpointID][]string,
+	id types.WorkloadEndpointID,
+	eps map[types.WorkloadEndpointID][]string,
 	refs map[string]int,
 	toAdd, toDel map[string]struct{},
 ) {
-	for _, ip := range eps[*id] {
+	for _, ip := range eps[id] {
 		refs[ip]--
 		if refs[ip] <= 0 {
 			delete(refs, ip)
@@ -419,14 +421,15 @@ func onWorkloadEndpointRemove(
 			delete(toAdd, ip)
 		}
 	}
-	delete(eps, *id)
+	delete(eps, id)
 }
 
 func (c *iptablesEqualIPsChecker) OnWorkloadEndpointRemove(msg *proto.WorkloadEndpointRemove) {
-	onWorkloadEndpointRemove(msg.Id, c.v4Eps, c.ipv4, c.ipv4ToAdd, c.ipv4ToDel)
+	id := types.ProtoToWorkloadEndpointID(msg.GetId())
+	onWorkloadEndpointRemove(id, c.v4Eps, c.ipv4, c.ipv4ToAdd, c.ipv4ToDel)
 
 	if c.enabled6 {
-		onWorkloadEndpointRemove(msg.Id, c.v6Eps, c.ipv6, c.ipv6ToAdd, c.ipv6ToDel)
+		onWorkloadEndpointRemove(id, c.v6Eps, c.ipv6, c.ipv6ToAdd, c.ipv6ToDel)
 	}
 }
 

@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
+	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -1083,7 +1084,7 @@ func (c *collector) lookupProtoWorkloadEndpoint(store *policystore.PolicyStore, 
 		return nil
 	}
 
-	epKey := proto.WorkloadEndpointID{
+	epKey := felixtypes.WorkloadEndpointID{
 		OrchestratorId: getOrchestratorIDFromKey(key),
 		WorkloadId:     getWorkloadIDFromKey(key),
 		EndpointId:     getEndpointIDFromKey(key),

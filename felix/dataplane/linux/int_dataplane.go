@@ -37,6 +37,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/felix/aws"
@@ -1371,8 +1372,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				Namespace:           namespace,
 				Name:                name,
 				Addr:                addr.String(),
-				MaintenanceStarted:  proto.ConvertTime(maintenanceStarted),
-				MaintenanceFinished: proto.ConvertTime(maintenanceFinished),
+				MaintenanceStarted:  timestamppb.New(maintenanceStarted),
+				MaintenanceFinished: timestamppb.New(maintenanceFinished),
 			}
 			return nil
 		}

@@ -111,8 +111,8 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service"}, Value: &policyDNSExternal},
 ).withActivePolicies(
-	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
-	proto.PolicyID{Tier: "default", Name: "default.ext-service"},
+	types.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	types.PolicyID{Tier: "default", Name: "default.ext-service"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
@@ -149,8 +149,8 @@ var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service-2"}, Value: &policyDNSExternal2},
 ).withActivePolicies(
-	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
-	proto.PolicyID{Tier: "default", Name: "default.ext-service-2"},
+	types.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	types.PolicyID{Tier: "default", Name: "default.ext-service-2"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
@@ -181,8 +181,8 @@ var withDNSPolicy3 = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.destination-domains"}, Value: &policyDNSExternal3},
 ).withActivePolicies(
-	proto.PolicyID{Tier: "default", Name: "default.dns-basic"},
-	proto.PolicyID{Tier: "default", Name: "default.destination-domains"},
+	types.PolicyID{Tier: "default", Name: "default.dns-basic"},
+	types.PolicyID{Tier: "default", Name: "default.destination-domains"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
@@ -241,7 +241,7 @@ var routelocalWlTenDotThree = types.RouteUpdate{
 	LocalWorkload: true,
 }
 
-var routelocalWlTenDotOneWithNodeIP = proto.RouteUpdate{
+var routelocalWlTenDotOneWithNodeIP = types.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.1/32",
 	DstNodeName:   localHostname,
@@ -249,7 +249,7 @@ var routelocalWlTenDotOneWithNodeIP = proto.RouteUpdate{
 	LocalWorkload: true,
 }
 
-var routelocalWlTenDotTwoWithNodeIP = proto.RouteUpdate{
+var routelocalWlTenDotTwoWithNodeIP = types.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.2/32",
 	DstNodeName:   localHostname,
@@ -257,7 +257,7 @@ var routelocalWlTenDotTwoWithNodeIP = proto.RouteUpdate{
 	LocalWorkload: true,
 }
 
-var routelocalWlTenDotThreeWithNodeIP = proto.RouteUpdate{
+var routelocalWlTenDotThreeWithNodeIP = types.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.3/32",
 	DstNodeName:   localHostname,
@@ -265,7 +265,7 @@ var routelocalWlTenDotThreeWithNodeIP = proto.RouteUpdate{
 	LocalWorkload: true,
 }
 
-var routelocalWlTenDotFourWithNodeIP = proto.RouteUpdate{
+var routelocalWlTenDotFourWithNodeIP = types.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.4/32",
 	DstNodeName:   localHostname,
@@ -273,7 +273,7 @@ var routelocalWlTenDotFourWithNodeIP = proto.RouteUpdate{
 	LocalWorkload: true,
 }
 
-var routelocalWlTenDotOneWithNodeIPTwo = proto.RouteUpdate{
+var routelocalWlTenDotOneWithNodeIPTwo = types.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.1/32",
 	DstNodeName:   localHostname,
@@ -281,7 +281,7 @@ var routelocalWlTenDotOneWithNodeIPTwo = proto.RouteUpdate{
 	LocalWorkload: true,
 }
 
-var routelocalWlTenDotTwoWithNodeIPTwo = proto.RouteUpdate{
+var routelocalWlTenDotTwoWithNodeIPTwo = types.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.2/32",
 	DstNodeName:   localHostname,
@@ -289,7 +289,7 @@ var routelocalWlTenDotTwoWithNodeIPTwo = proto.RouteUpdate{
 	LocalWorkload: true,
 }
 
-var routelocalWlTenDotThreeWithNodeIPTwo = proto.RouteUpdate{
+var routelocalWlTenDotThreeWithNodeIPTwo = types.RouteUpdate{
 	Type:          proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.3/32",
 	DstNodeName:   localHostname,
@@ -3012,16 +3012,16 @@ var tproxyALPLocalWEP = withHttpMethodPolicy.withKVUpdates(
 	routelocalWlV6ColonOne,
 	routelocalWlV6ColonTwo,
 ).withActivePolicies(
-	proto.PolicyID{Tier: "default", Name: "pol-1"},
+	types.PolicyID{Tier: "default", Name: "pol-1"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
 		{Name: "default", IngressPolicyNames: []string{"pol-1"}, EgressPolicyNames: []string{"pol-1"}},
 	},
 ).withActiveProfiles(
-	proto.ProfileID{Name: "prof-1"},
-	proto.ProfileID{Name: "prof-2"},
-	proto.ProfileID{Name: "prof-missing"},
+	types.ProfileID{Name: "prof-1"},
+	types.ProfileID{Name: "prof-2"},
+	types.ProfileID{Name: "prof-missing"},
 ).withIPSet(
 	tproxydefs.ApplicationLayerPolicyIPSet, []string{
 		"10.0.0.1/32",
@@ -3051,10 +3051,10 @@ var tproxyTwoLocalWEPs = tproxyALPLocalWEP.withKVUpdates(
 		"10.0.0.3/32",
 	},
 ).withActiveProfiles(
-	proto.ProfileID{Name: "prof-1"},
-	proto.ProfileID{Name: "prof-2"},
-	proto.ProfileID{Name: "prof-3"},
-	proto.ProfileID{Name: "prof-missing"},
+	types.ProfileID{Name: "prof-1"},
+	types.ProfileID{Name: "prof-2"},
+	types.ProfileID{Name: "prof-3"},
+	types.ProfileID{Name: "prof-missing"},
 ).withName("tproxyTwoLocalWEPs")
 
 var tproxyTwoLocalWEPsOneNewIPs = tproxyTwoLocalWEPs.withKVUpdates(
@@ -3068,13 +3068,13 @@ var tproxyTwoLocalWEPsOneNewIPs = tproxyTwoLocalWEPs.withKVUpdates(
 	},
 ).withRoutes(
 	// Routes for the local WEPs.
-	proto.RouteUpdate{
+	types.RouteUpdate{
 		Type:          proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "11.0.0.1/32",
 		DstNodeName:   localHostname,
 		LocalWorkload: true,
 	},
-	proto.RouteUpdate{
+	types.RouteUpdate{
 		Type:          proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "11.0.0.2/32",
 		DstNodeName:   localHostname,
@@ -3082,13 +3082,13 @@ var tproxyTwoLocalWEPsOneNewIPs = tproxyTwoLocalWEPs.withKVUpdates(
 	},
 	routelocalWlTenDotTwo,
 	routelocalWlTenDotThree,
-	proto.RouteUpdate{
+	types.RouteUpdate{
 		Type:          proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "fc00:fe12::1/128",
 		DstNodeName:   localHostname,
 		LocalWorkload: true,
 	},
-	proto.RouteUpdate{
+	types.RouteUpdate{
 		Type:          proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "fc00:fe12::2/128",
 		DstNodeName:   localHostname,

@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/policysync"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 type perHostMockClient struct {
@@ -38,7 +39,7 @@ func (cl *perHostMockClient) join(ctx context.Context, toUpdates chan interface{
 	}
 
 	// Buffer outputs so that Processor won't block.
-	output := make(chan proto.ToDataplane)
+	output := make(chan *proto.ToDataplane)
 	cl.meta = policysync.JoinMetadata{
 		EndpointID: testId(cl.name),
 		JoinUID:    cl.uidAllocator.NextUID(),
@@ -61,7 +62,7 @@ func (cl *perHostMockClient) join(ctx context.Context, toUpdates chan interface{
 	cl.onLeaveCancel = cancel
 }
 
-func (cl *perHostMockClient) observe(ctx context.Context, output chan proto.ToDataplane) {
+func (cl *perHostMockClient) observe(ctx context.Context, output chan *proto.ToDataplane) {
 	for {
 		select {
 		case observation := <-output:
@@ -91,7 +92,7 @@ func (cl *perHostMockClient) leave(ctx context.Context, toUpdates chan interface
 func wepUpdate(name string) *proto.WorkloadEndpointUpdate {
 	id := testId(name)
 	return &proto.WorkloadEndpointUpdate{
-		Id:       &id,
+		Id:       types.WorkloadEndpointIDToProto(id),
 		Endpoint: &proto.WorkloadEndpoint{},
 	}
 }

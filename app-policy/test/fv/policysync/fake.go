@@ -10,11 +10,14 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 var _ proto.PolicySyncServer = (*FakePolicySync)(nil)
 
 type FakePolicySync struct {
+	proto.UnimplementedPolicySyncServer
+
 	server     *grpc.Server
 	lis        net.Listener
 	sr         *proto.SyncRequest
@@ -23,9 +26,9 @@ type FakePolicySync struct {
 	disconnect chan struct{}
 	activeCon  int
 
-	endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	profiles  map[proto.ProfileID]*proto.Profile
-	policies  map[proto.PolicyID]*proto.Policy
+	endpoints map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
+	profiles  map[types.ProfileID]*proto.Profile
+	policies  map[types.PolicyID]*proto.Policy
 	wafEvents []*proto.WAFEvent
 }
 
@@ -44,9 +47,9 @@ func NewFakePolicySync(listenPath string) (*FakePolicySync, error) {
 		disconnect: make(chan struct{}, 1),
 		activeCon:  0,
 
-		endpoints: make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		profiles:  make(map[proto.ProfileID]*proto.Profile),
-		policies:  make(map[proto.PolicyID]*proto.Policy),
+		endpoints: make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint),
+		profiles:  make(map[types.ProfileID]*proto.Profile),
+		policies:  make(map[types.PolicyID]*proto.Policy),
 	}
 
 	proto.RegisterPolicySyncServer(s, fakePolicySync)

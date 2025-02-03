@@ -4,14 +4,15 @@ package policystore
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/app-policy/types"
+	apppolicytypes "github.com/projectcalico/calico/app-policy/types"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 type workloadUpdateHandler struct {
 	// workloads we actively know about
-	workloads map[proto.WorkloadEndpointID]*wepWrap
+	workloads map[types.WorkloadEndpointID]*wepWrap
 }
 
 type wepWrap struct {
@@ -29,11 +30,11 @@ func newWep(w *proto.WorkloadEndpoint) *wepWrap {
 
 func newWorkloadEndpointUpdateHandler() *workloadUpdateHandler {
 	return &workloadUpdateHandler{
-		workloads: make(map[proto.WorkloadEndpointID]*wepWrap),
+		workloads: make(map[types.WorkloadEndpointID]*wepWrap),
 	}
 }
 
-func (wuh *workloadUpdateHandler) onResourceUpdate(upd interface{}, cb types.IPToEndpointsIndex) {
+func (wuh *workloadUpdateHandler) onResourceUpdate(upd interface{}, cb apppolicytypes.IPToEndpointsIndex) {
 	switch v := upd.(type) {
 	case *proto.WorkloadEndpointRemove:
 		wuh.onWorkloadEndpointRemove(v, cb)
@@ -43,8 +44,8 @@ func (wuh *workloadUpdateHandler) onResourceUpdate(upd interface{}, cb types.IPT
 	}
 }
 
-func (wuh *workloadUpdateHandler) onWorkloadEndpointUpdate(upd *proto.WorkloadEndpointUpdate, cb types.IPToEndpointsIndex) {
-	id, ep := *upd.Id, newWep(upd.Endpoint)
+func (wuh *workloadUpdateHandler) onWorkloadEndpointUpdate(upd *proto.WorkloadEndpointUpdate, cb apppolicytypes.IPToEndpointsIndex) {
+	id, ep := types.ProtoToWorkloadEndpointID(upd.GetId()), newWep(upd.Endpoint)
 
 	var removals []string
 
@@ -100,9 +101,10 @@ func (wuh *workloadUpdateHandler) onWorkloadEndpointUpdate(upd *proto.WorkloadEn
 	}
 }
 
-func (wuh *workloadUpdateHandler) onWorkloadEndpointRemove(upd *proto.WorkloadEndpointRemove, cb types.IPToEndpointsIndex) {
+func (wuh *workloadUpdateHandler) onWorkloadEndpointRemove(upd *proto.WorkloadEndpointRemove, cb apppolicytypes.IPToEndpointsIndex) {
 	// find former known workload, delete its last known ips
-	if existing, ok := wuh.workloads[*upd.Id]; ok {
+	id := types.ProtoToWorkloadEndpointID(upd.GetId())
+	if existing, ok := wuh.workloads[id]; ok {
 		for net4 := range existing.activeIp4nets {
 			ipNet4, err := ip.ParseCIDROrIP(net4)
 			if err != nil {
@@ -113,5 +115,5 @@ func (wuh *workloadUpdateHandler) onWorkloadEndpointRemove(upd *proto.WorkloadEn
 		}
 	}
 	// finally, forget about this workload
-	delete(wuh.workloads, *upd.Id)
+	delete(wuh.workloads, id)
 }

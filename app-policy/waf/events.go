@@ -6,8 +6,8 @@ import (
 
 	corazatypes "github.com/corazawaf/coraza/v3/types"
 	envoyauthz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	google_protobuf "github.com/gogo/protobuf/types"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/felix/proto"
 )
@@ -75,7 +75,7 @@ func (p *wafEventsPipeline) Process(checkReq *envoyauthz.CheckRequest, tx coraza
 		Version: req.Http.Protocol,
 		Headers: req.Http.Headers,
 	}
-	entry.Timestamp = &google_protobuf.Timestamp{
+	entry.Timestamp = &timestamppb.Timestamp{
 		Seconds: req.Time.Seconds,
 		Nanos:   req.Time.Nanos,
 	}

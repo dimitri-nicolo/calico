@@ -69,7 +69,7 @@ func TestEvaluateEndpointWithMatchingPolicy(t *testing.T) {
 			},
 		},
 	}
-	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
+	store.PolicyByID[types.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
 		InboundRules: []*proto.Rule{
 			{
 				Action: "allow",
@@ -103,7 +103,7 @@ func TestEvaluateEndpointWithNonMatchingPolicy(t *testing.T) {
 			},
 		},
 	}
-	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
+	store.PolicyByID[types.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
 		InboundRules: []*proto.Rule{
 			{
 				Action: "allow",
@@ -132,7 +132,7 @@ func TestEvaluateEndpointWithMatchingProfile(t *testing.T) {
 	ep := &proto.WorkloadEndpoint{
 		ProfileIds: []string{"profile1"},
 	}
-	store.ProfileByID[proto.ProfileID{Name: "profile1"}] = &proto.Profile{
+	store.ProfileByID[types.ProfileID{Name: "profile1"}] = &proto.Profile{
 		InboundRules: []*proto.Rule{
 			{
 				Action: "allow",
@@ -166,7 +166,7 @@ func TestEvaluateEndpointWithNonMatchingProfile(t *testing.T) {
 			},
 		},
 	}
-	store.PolicyByID[proto.PolicyID{Name: "policy1", Tier: "tier1"}] = &proto.Policy{
+	store.PolicyByID[types.PolicyID{Name: "policy1", Tier: "tier1"}] = &proto.Policy{
 		Namespace: "ns1",
 		OutboundRules: []*proto.Rule{
 			{

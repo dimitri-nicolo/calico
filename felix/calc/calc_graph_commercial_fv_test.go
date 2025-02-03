@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
+	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	calinet "github.com/projectcalico/calico/libcalico-go/lib/net"
@@ -44,11 +45,11 @@ var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+	felixtypes.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{Name: "prof-1"},
-	proto.ProfileID{Name: "prof-2"},
-	proto.ProfileID{Name: "prof-missing"},
+	felixtypes.ProfileID{Name: "prof-1"},
+	felixtypes.ProfileID{Name: "prof-2"},
+	felixtypes.ProfileID{Name: "prof-missing"},
 ).withEndpoint(
 	hostEpWithNameId,
 	[]mock.TierInfo{
@@ -68,10 +69,10 @@ var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.3/32", // ep2
 	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{}).withActivePolicies(
-	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+	felixtypes.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{Name: "prof-2"},
-	proto.ProfileID{Name: "prof-3"},
+	felixtypes.ProfileID{Name: "prof-2"},
+	felixtypes.ProfileID{Name: "prof-3"},
 ).withEndpoint(
 	hostEpNoNameId,
 	[]mock.TierInfo{
@@ -102,7 +103,7 @@ var (
 // packet capture that select two local endpoints
 var withCaptureSelectAll = withLocalEndpointsForCapture.withKVUpdates(
 	KVPair{Key: CaptureAllKey, Value: CaptureAllValue},
-).withCapturesUpdates(proto.PacketCaptureUpdate{
+).withCapturesUpdates(felixtypes.PacketCaptureUpdate{
 	Id: &proto.PacketCaptureID{
 		Name:      CaptureAllValue.Name,
 		Namespace: CaptureAllValue.Namespace,
@@ -113,7 +114,7 @@ var withCaptureSelectAll = withLocalEndpointsForCapture.withKVUpdates(
 		EndpointId:     localWlEpCaptureKey1.EndpointID,
 	},
 },
-	proto.PacketCaptureUpdate{
+	felixtypes.PacketCaptureUpdate{
 		Id: &proto.PacketCaptureID{
 			Name:      CaptureAllValue.Name,
 			Namespace: CaptureAllValue.Namespace,
@@ -141,7 +142,7 @@ var withLocalEndpointsForCapture = initialisedStore.withKVUpdates(
 // packet capture that select a single local endpoints
 var withCaptureSelectA = withLocalEndpointsForCapture.withKVUpdates(
 	KVPair{Key: CaptureSelectionKey, Value: CaptureSelectAValue},
-).withCapturesUpdates(proto.PacketCaptureUpdate{
+).withCapturesUpdates(felixtypes.PacketCaptureUpdate{
 	Id: &proto.PacketCaptureID{
 		Name:      CaptureSelectAValue.Name,
 		Namespace: CaptureSelectAValue.Namespace,
@@ -158,7 +159,7 @@ var withCaptureSelectA = withLocalEndpointsForCapture.withKVUpdates(
 var withCaptureSelectTwice = withLocalEndpointsForCapture.withKVUpdates(
 	KVPair{Key: CaptureSelectionKey, Value: CaptureSelectAValue},
 	KVPair{Key: CaptureAllKey, Value: CaptureAllValue},
-).withCapturesUpdates(proto.PacketCaptureUpdate{
+).withCapturesUpdates(felixtypes.PacketCaptureUpdate{
 	Id: &proto.PacketCaptureID{
 		Name:      CaptureSelectAValue.Name,
 		Namespace: CaptureSelectAValue.Namespace,
@@ -169,7 +170,7 @@ var withCaptureSelectTwice = withLocalEndpointsForCapture.withKVUpdates(
 		EndpointId:     localWlEpCaptureKey1.EndpointID,
 	},
 },
-	proto.PacketCaptureUpdate{
+	felixtypes.PacketCaptureUpdate{
 		Id: &proto.PacketCaptureID{
 			Name:      CaptureAllValue.Name,
 			Namespace: CaptureAllValue.Namespace,
@@ -180,7 +181,7 @@ var withCaptureSelectTwice = withLocalEndpointsForCapture.withKVUpdates(
 			EndpointId:     localWlEpCaptureKey1.EndpointID,
 		},
 	},
-	proto.PacketCaptureUpdate{
+	felixtypes.PacketCaptureUpdate{
 		Id: &proto.PacketCaptureID{
 			Name:      CaptureAllValue.Name,
 			Namespace: CaptureAllValue.Namespace,
@@ -201,7 +202,7 @@ var localEp1WithNode = localEp1WithPolicy.withKVUpdates(
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.2",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
@@ -222,7 +223,7 @@ var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
 ).withIPSecBinding(
 	"192.168.0.2", "10.0.0.2",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.2/32",
@@ -245,7 +246,7 @@ var localEp1WithNodesSharingIP = localEp1WithPolicy.withKVUpdates(
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.2",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
@@ -268,7 +269,7 @@ var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.2",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
@@ -375,7 +376,7 @@ var localEp2WithNode = localEp2WithPolicy.withKVUpdates(
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.3",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
@@ -436,7 +437,7 @@ var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
 ).withIPSecBlacklist(
 	"10.0.0.2",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
@@ -478,7 +479,7 @@ var threeEndpointsSharingIPWithNode = localEpsWithPolicy.withKVUpdates(
 ).withIPSecBlacklist(
 	"10.0.0.2",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
@@ -521,7 +522,7 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 ).withIPSecBlacklist(
 	"10.0.0.2",
 ).withRoutes(
-	proto.RouteUpdate{
+	felixtypes.RouteUpdate{
 		Type:        proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
@@ -643,11 +644,11 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 }).withActivePolicies(
-	proto.PolicyID{Tier: "tier-1", Name: "pol-1"},
+	felixtypes.PolicyID{Tier: "tier-1", Name: "pol-1"},
 ).withActiveProfiles(
-	proto.ProfileID{Name: "prof-1"},
-	proto.ProfileID{Name: "prof-2"},
-	proto.ProfileID{Name: "prof-missing"},
+	felixtypes.ProfileID{Name: "prof-1"},
+	felixtypes.ProfileID{Name: "prof-2"},
+	felixtypes.ProfileID{Name: "prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]mock.TierInfo{
@@ -1266,7 +1267,7 @@ var (
 		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("endpointWithDefinedEgressGatewayPolicy")
 
 	endpointWithDifferentEgressGatewayPolicy = initialisedStore.withKVUpdates(
@@ -1341,7 +1342,7 @@ var (
 		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("endpointWithDifferentEgressGatewayPolicy")
 
 	endpointWithOwnLocalEgressGateway = initialisedStore.withKVUpdates(
@@ -1381,14 +1382,14 @@ var (
 		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("endpointWithOwnLocalEgressGateway")
 
 	endpointWithOwnLocalEgressGatewayWithEGWPolicy = initialisedStore.withKVUpdates(
@@ -1455,14 +1456,14 @@ var (
 		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("endpointWithOwnLocalEgressGatewayWithEGWPolicy")
 
 	endpointWithProfileEgressGatewayID = WorkloadEndpointKey{
@@ -1508,7 +1509,7 @@ var (
 		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
 	},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("endpointWithProfileEgressGateway")
 
 	endpointWithProfileWithNoneExistingEgressGatewayPolicy = initialisedStore.withKVUpdates(
@@ -1545,7 +1546,7 @@ var (
 			},
 		},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withIPSet(egressSelectorID("!all()"), []string{}).withName("endpointWithProfileWithNoneExistingEgressGatewayPolicy")
 
 	endpointWithProfileWithEgressGatewayPolicy = initialisedStore.withKVUpdates(
@@ -1608,7 +1609,7 @@ var (
 		egressActiveMemberStr("137.0.0.1/32", gatewayKey.Hostname),
 	},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("endpointWithProfileWithEgressGatewayPolicy")
 
 	endpointWithProfileLocalEgressGateway = initialisedStore.withKVUpdates(
@@ -1651,9 +1652,9 @@ var (
 		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
@@ -1724,9 +1725,9 @@ var (
 		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
@@ -1780,7 +1781,7 @@ var (
 		"orch/wep1p/ep1",
 		[]mock.TierInfo{},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("endpointWithoutProfileEgressGateway")
 
 	twoRemoteEpsSameEgressSelectorLocalGateway = initialisedStore.withKVUpdates(
@@ -1845,14 +1846,14 @@ var (
 		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("twoRemoteEpsSameEgressSelectorLocalGateway")
 
 	twoRemoteEpsSameEgressGatewayPolicyLocalGateway = initialisedStore.withKVUpdates(
@@ -1951,14 +1952,14 @@ var (
 		egressActiveMemberStr("137.0.0.10/32", gatewayKey3.Hostname),
 	},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("twoRemoteEpsSameEgressGatewayPolicyLocalGateway")
 
 	twoRemoteEpsSimilarEgressSelectorLocalGateway = initialisedStore.withKVUpdates(
@@ -2026,14 +2027,14 @@ var (
 		egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 	},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
 	).withActiveProfiles(
-		proto.ProfileID{Name: "egress"},
+		felixtypes.ProfileID{Name: "egress"},
 	).withName("twoRemoteEpsSimilarEgressSelectorLocalGateway")
 
 	twoRemoteEpsSimilarEgressSelectorTwoLocalGateways = twoRemoteEpsSimilarEgressSelectorLocalGateway.withKVUpdates(
@@ -2058,13 +2059,13 @@ var (
 			IsEgressGateway: true,
 		},
 	).withRoutes(
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
-		proto.RouteUpdate{
+		felixtypes.RouteUpdate{
 			Type:          proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.2/32",
 			DstNodeName:   localHostname,
@@ -2183,7 +2184,7 @@ var (
 			ipSetMemberStr,
 		},
 		).withRoutes(
-			proto.RouteUpdate{
+			felixtypes.RouteUpdate{
 				Type:          proto.RouteType_LOCAL_WORKLOAD,
 				Dst:           "137.0.0.1/32",
 				DstNodeName:   localHostname,
@@ -2261,7 +2262,7 @@ var (
 			egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 		},
 		).withRoutes(
-			proto.RouteUpdate{
+			felixtypes.RouteUpdate{
 				Type:          proto.RouteType_LOCAL_WORKLOAD,
 				Dst:           "137.0.0.1/32",
 				DstNodeName:   localHostname,
@@ -2325,9 +2326,9 @@ var (
 			egressActiveMemberStr("137.0.0.1/32", gatewayKeyLocal.Hostname),
 		},
 		).withActiveProfiles(
-			proto.ProfileID{Name: "egress"},
+			felixtypes.ProfileID{Name: "egress"},
 		).withRoutes(
-			proto.RouteUpdate{
+			felixtypes.RouteUpdate{
 				Type:          proto.RouteType_LOCAL_WORKLOAD,
 				Dst:           "137.0.0.1/32",
 				DstNodeName:   localHostname,

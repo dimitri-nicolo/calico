@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/encap"
 	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -70,7 +71,7 @@ func StateWithPool(state State, cluster string, cidr string, flush bool) State {
 		}
 	}
 
-	routeUpdate := proto.RouteUpdate{
+	routeUpdate := types.RouteUpdate{
 		Type:       proto.RouteType_CIDR_INFO,
 		IpPoolType: proto.IPPoolType_VXLAN,
 		Dst:        cidr,
@@ -129,7 +130,7 @@ func StateWithBlock(state State, cluster string, cidr string, flush bool, poolTy
 		}
 	}
 
-	routeUpdate := proto.RouteUpdate{
+	routeUpdate := types.RouteUpdate{
 		Type:        proto.RouteType_REMOTE_WORKLOAD,
 		IpPoolType:  poolType,
 		Dst:         cidr,
@@ -175,14 +176,14 @@ func StateWithNode(state State, cluster string, host string, hostIP string, vxla
 		routeType = proto.RouteType_LOCAL_HOST
 	}
 
-	routeUpdate := proto.RouteUpdate{
+	routeUpdate := types.RouteUpdate{
 		Type:        routeType,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         hostIP + "/32",
 		DstNodeName: keyName,
 		DstNodeIp:   hostIP,
 	}
-	metadataUpdate := proto.HostMetadataV4V6Update{
+	metadataUpdate := &proto.HostMetadataV4V6Update{
 		Hostname: keyName,
 		Ipv4Addr: hostIP + "/24",
 	}
@@ -220,7 +221,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 		Endpoint: kvp.Value,
 	}
 
-	routeUpdate := proto.RouteUpdate{
+	routeUpdate := types.RouteUpdate{
 		Type:        proto.RouteType_REMOTE_WORKLOAD,
 		IpPoolType:  poolType,
 		Dst:         ip + "/32",
@@ -261,13 +262,13 @@ func StateWithVTEP(state State, cluster string, ip string, flush bool, mac strin
 		Key:   HostConfigKey{Name: "IPv4VXLANTunnelAddr", Hostname: keyName},
 		Value: ip,
 	}
-	vtep := proto.VXLANTunnelEndpointUpdate{
+	vtep := types.VXLANTunnelEndpointUpdate{
 		Node:           keyName,
 		Mac:            mac,
 		Ipv4Addr:       ip,
 		ParentDeviceIp: hostIP,
 	}
-	tunnelRouteUpdate := proto.RouteUpdate{
+	tunnelRouteUpdate := types.RouteUpdate{
 		Type:        proto.RouteType_REMOTE_TUNNEL,
 		IpPoolType:  proto.IPPoolType_VXLAN,
 		Dst:         ip + "/32",

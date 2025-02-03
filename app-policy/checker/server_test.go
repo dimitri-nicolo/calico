@@ -67,7 +67,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
-		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+		s.ProfileByID[types.ProfileID{Name: "default"}] = &proto.Profile{
 			InboundRules: []*proto.Rule{{Action: "Allow"}},
 		}
 	})
@@ -138,7 +138,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
-		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+		s.ProfileByID[types.ProfileID{Name: "default"}] = &proto.Profile{
 			InboundRules: []*proto.Rule{{Action: "Deny"}},
 		}
 	})

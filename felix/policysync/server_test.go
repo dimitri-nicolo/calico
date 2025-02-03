@@ -129,7 +129,7 @@ var _ = Describe("Server", func() {
 
 		Context("after calling Sync and joining", func() {
 			var stream *testSyncStream
-			var updates chan<- proto.ToDataplane
+			var updates chan<- *proto.ToDataplane
 			var output chan *proto.ToDataplane
 			syncDone := make(chan bool)
 
@@ -142,13 +142,13 @@ var _ = Describe("Server", func() {
 				}()
 				j := <-joins
 				jr := j.(policysync.JoinRequest)
-				Expect(jr.EndpointID.GetWorkloadId()).To(Equal(WorkloadID))
+				Expect(jr.EndpointID.WorkloadId).To(Equal(WorkloadID))
 				updates = jr.C
 				close(done)
 			})
 
 			It("should stream route messages", func(done Done) {
-				msgs := []proto.ToDataplane{
+				msgs := []*proto.ToDataplane{
 					{Payload: &proto.ToDataplane_RouteUpdate{}},
 					{Payload: &proto.ToDataplane_InSync{}},
 				}

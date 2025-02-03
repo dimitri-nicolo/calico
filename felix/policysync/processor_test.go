@@ -60,7 +60,7 @@ var _ = Describe("Processor", func() {
 	var removeNamespace func(name string)
 	var updateRoute func(dst, dstNodeName, dstNodeIp string)
 	var removeRoute func(dst string)
-	var join func(sr proto.SyncRequest, w string, jid uint64) (chan *proto.ToDataplane, policysync.JoinMetadata)
+	var join func(sr *proto.SyncRequest, w string, jid uint64) (chan *proto.ToDataplane, policysync.JoinMetadata)
 	var leave func(jm policysync.JoinMetadata)
 
 	BeforeEach(func() {
@@ -104,7 +104,7 @@ var _ = Describe("Processor", func() {
 				Dst: dst,
 			}
 		}
-		join = func(sr proto.SyncRequest, w string, jid uint64) (chan *proto.ToDataplane, policysync.JoinMetadata) {
+		join = func(sr *proto.SyncRequest, w string, jid uint64) (chan *proto.ToDataplane, policysync.JoinMetadata) {
 			// Buffer outputs so that Processor won't block.
 			output := make(chan *proto.ToDataplane, 100)
 			joinMeta := policysync.JoinMetadata{
@@ -160,7 +160,7 @@ var _ = Describe("Processor", func() {
 					var accounts [3]types.ServiceAccountID
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+						output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 						for i := 0; i < 3; i++ {
 							msg := <-output
 							accounts[i] = types.ProtoToServiceAccountID(
@@ -198,10 +198,10 @@ var _ = Describe("Processor", func() {
 				})
 
 				Context("on new route sync join", func() {
-					var output chan proto.ToDataplane
+					var output chan *proto.ToDataplane
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+						output, _ = join(&proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
 					})
 
 					It("should get no updates", func() {
@@ -227,7 +227,7 @@ var _ = Describe("Processor", func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						d := types.WorkloadEndpointIDToProto(testId(w))
-						output[i], _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
+						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						updates <- &proto.WorkloadEndpointUpdate{
@@ -280,10 +280,10 @@ var _ = Describe("Processor", func() {
 			})
 
 			Context("with two joined policy sync endpoints each with different drop action override settings", func() {
-				var output [2]chan proto.ToDataplane
+				var output [2]chan *proto.ToDataplane
 
 				BeforeEach(func() {
-					sr := [2]proto.SyncRequest{{
+					sr := [2]*proto.SyncRequest{{
 						SupportsDropActionOverride: true,
 						SubscriptionType:           "per-pod-policies",
 					}, {}}
@@ -298,7 +298,8 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should forward a config update to endpoint 0 only, followed by SA updates to both endpoints", func() {
-					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+					g := <-output[0]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ConfigUpdate{
 							ConfigUpdate: &proto.ConfigUpdate{
 								Config: map[string]string{
@@ -306,21 +307,23 @@ var _ = Describe("Processor", func() {
 								},
 							},
 						},
-					})))
-					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+					})).To(BeTrue())
+					g = <-output[0]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
-					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+					})).To(BeTrue())
+					g = <-output[1]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
+					})).To(BeTrue())
 				})
 			})
 		})
@@ -349,7 +352,7 @@ var _ = Describe("Processor", func() {
 					var accounts [3]types.NamespaceID
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+						output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 						for i := 0; i < 3; i++ {
 							msg := <-output
 							accounts[i] = types.ProtoToNamespaceID(
@@ -378,10 +381,10 @@ var _ = Describe("Processor", func() {
 				})
 
 				Context("on new route sync join", func() {
-					var output chan proto.ToDataplane
+					var output chan *proto.ToDataplane
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+						output, _ = join(&proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
 					})
 
 					It("should get no updates", func() {
@@ -407,7 +410,7 @@ var _ = Describe("Processor", func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						d := types.WorkloadEndpointIDToProto(testId(w))
-						output[i], _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
+						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						updates <- &proto.WorkloadEndpointUpdate{
@@ -466,9 +469,9 @@ var _ = Describe("Processor", func() {
 
 				BeforeEach(func(done Done) {
 					refdId = testId("refd")
-					refdOutput, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "refd", 1)
+					refdOutput, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "refd", 1)
 					unrefdId = testId("unrefd")
-					unrefdOutput, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "unrefd", 2)
+					unrefdOutput, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "unrefd", 2)
 
 					// Ensure the joins are completed by sending a workload endpoint for each.
 					refUpd := &proto.WorkloadEndpointUpdate{
@@ -1001,10 +1004,10 @@ var _ = Describe("Processor", func() {
 			})
 
 			Context("on new route sync join", func() {
-				var output chan proto.ToDataplane
+				var output chan *proto.ToDataplane
 
 				BeforeEach(func() {
-					output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+					output, _ = join(&proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
 				})
 
 				It("should get no updates", func() {
@@ -1031,7 +1034,7 @@ var _ = Describe("Processor", func() {
 		Describe("Profile & Policy updates", func() {
 
 			Context("with two joined policy sync endpoints", func() {
-				var output [2]chan proto.ToDataplane
+				var output [2]chan *proto.ToDataplane
 				var wepID [2]types.WorkloadEndpointID
 				var assertNoUpdate func(i int)
 
@@ -1049,7 +1052,7 @@ var _ = Describe("Processor", func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						wepID[i] = testId(w)
-						output[i], _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
+						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						assertNoUpdate(i)
@@ -1287,7 +1290,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should sync profile & wep when wep joins", func(done Done) {
-					output, _ := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					output, _ := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 
 					g := <-output
 					Expect(googleproto.Equal(g.GetActiveProfileUpdate(), proUpdate)).To(BeTrue())
@@ -1299,7 +1302,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should resync profile & wep", func(done Done) {
-					output, jm := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					output, jm := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 					g := <-output
 					Expect(googleproto.Equal(g.GetActiveProfileUpdate(), proUpdate)).To(BeTrue())
 					g = <-output
@@ -1308,7 +1311,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
+					output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
 					g = <-output
 					Expect(googleproto.Equal(g.GetActiveProfileUpdate(), proUpdate)).To(BeTrue())
 					g = <-output
@@ -1318,7 +1321,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should not resync removed profile", func(done Done) {
-					output, jm := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					output, jm := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 					g := <-output
 					Expect(googleproto.Equal(g.GetActiveProfileUpdate(), proUpdate)).To(BeTrue())
 					g = <-output
@@ -1334,7 +1337,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
+					output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
 					g = <-output
 					Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepUpd2)).To(BeTrue())
 
@@ -1367,7 +1370,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should sync policy & wep when wep joins", func(done Done) {
-					output, _ := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					output, _ := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 
 					g := <-output
 					Expect(googleproto.Equal(g.GetActivePolicyUpdate(), polUpd)).To(BeTrue())
@@ -1379,7 +1382,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should resync policy & wep", func(done Done) {
-					output, jm := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					output, jm := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 					g := <-output
 					Expect(googleproto.Equal(g.GetActivePolicyUpdate(), polUpd)).To(BeTrue())
 					g = <-output
@@ -1388,7 +1391,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
+					output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
 					g = <-output
 					Expect(googleproto.Equal(g.GetActivePolicyUpdate(), polUpd)).To(BeTrue())
 					g = <-output
@@ -1398,7 +1401,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should not resync removed policy", func(done Done) {
-					output, jm := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					output, jm := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 					g := <-output
 					Expect(googleproto.Equal(g.GetActivePolicyUpdate(), polUpd)).To(BeTrue())
 					g = <-output
@@ -1413,7 +1416,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
+					output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
 					g = <-output
 					Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepUpd2)).To(BeTrue())
 
@@ -1422,7 +1425,7 @@ var _ = Describe("Processor", func() {
 			})
 
 			Context("on new route sync join", func() {
-				var output chan proto.ToDataplane
+				var output chan *proto.ToDataplane
 				var wepId = testId("test")
 				var policyID = proto.PolicyID{Tier: TierName, Name: PolicyName}
 				var profileID = proto.ProfileID{Name: ProfileName}
@@ -1436,7 +1439,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- polUpd
 					wepUpd = &proto.WorkloadEndpointUpdate{
-						Id: &wepId,
+						Id: types.WorkloadEndpointIDToProto(wepId),
 						Endpoint: &proto.WorkloadEndpoint{Tiers: []*proto.TierInfo{
 							{
 								Name:           TierName,
@@ -1450,7 +1453,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- proUpdate
 
-					output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+					output, _ = join(&proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
 				})
 
 				It("should get no updates", func() {
@@ -1493,14 +1496,14 @@ var _ = Describe("Processor", func() {
 				})
 
 				Context("on new route sync join", func() {
-					var output chan proto.ToDataplane
-					var routes [3]proto.RouteUpdate
+					var output chan *proto.ToDataplane
+					var routes [3]*proto.RouteUpdate
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+						output, _ = join(&proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
 						for i := 0; i < 3; i++ {
 							msg := <-output
-							routes[i] = *msg.GetRouteUpdate()
+							routes[i] = msg.GetRouteUpdate()
 						}
 					})
 
@@ -1548,10 +1551,10 @@ var _ = Describe("Processor", func() {
 				})
 
 				Context("on new policy sync join", func() {
-					var output chan proto.ToDataplane
+					var output chan *proto.ToDataplane
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+						output, _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 					})
 
 					It("should get no updates", func() {
@@ -1571,17 +1574,17 @@ var _ = Describe("Processor", func() {
 			})
 
 			Context("with two joined policy sync endpoints", func() {
-				var output [2]chan proto.ToDataplane
+				var output [2]chan *proto.ToDataplane
 
 				BeforeEach(func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						d := testId(w)
-						output[i], _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
+						output[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						updates <- &proto.WorkloadEndpointUpdate{
-							Id:       &d,
+							Id:       types.WorkloadEndpointIDToProto(d),
 							Endpoint: &proto.WorkloadEndpoint{},
 						}
 						<-output[i]
@@ -1590,46 +1593,50 @@ var _ = Describe("Processor", func() {
 
 				It("should forward updates to both endpoints", func() {
 					updateServiceAccount("t23", "t2")
-					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+					g := <-output[0]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
-					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+					})).To(BeTrue())
+					g = <-output[1]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
+					})).To(BeTrue())
 				})
 
 				It("should forward removes to both endpoints", func() {
 					removeServiceAccount("t23", "t2")
-					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+					g := <-output[0]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountRemove{
 							ServiceAccountRemove: &proto.ServiceAccountRemove{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
-					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+					})).To(BeTrue())
+					g = <-output[1]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountRemove{
 							ServiceAccountRemove: &proto.ServiceAccountRemove{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
+					})).To(BeTrue())
 				})
 			})
 
 			Context("with two joined policy sync endpoints each with different drop action override settings", func() {
-				var output [2]chan proto.ToDataplane
+				var output [2]chan *proto.ToDataplane
 
 				BeforeEach(func() {
-					sr := [2]proto.SyncRequest{{
+					sr := [2]*proto.SyncRequest{{
 						SupportsDropActionOverride: true,
 						SubscriptionType:           "per-pod-policies",
 					}, {}}
@@ -1644,7 +1651,8 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should forward a config update to endpoint 0 only, followed by SA updates to both endpoints", func() {
-					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+					g := <-output[0]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ConfigUpdate{
 							ConfigUpdate: &proto.ConfigUpdate{
 								Config: map[string]string{
@@ -1652,21 +1660,23 @@ var _ = Describe("Processor", func() {
 								},
 							},
 						},
-					})))
-					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+					})).To(BeTrue())
+					g = <-output[0]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
-					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+					})).To(BeTrue())
+					g = <-output[1]
+					Expect(googleproto.Equal(g, &proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					})))
+					})).To(BeTrue())
 				})
 			})
 		})
@@ -1685,11 +1695,11 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should close old channel on new join", func(done Done) {
-					oldChan, _ := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					oldChan, _ := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 					g := <-oldChan
 					Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepUpd)).To(BeTrue())
 
-					newChan, _ := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
+					newChan, _ := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
 					g = <-newChan
 					Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepUpd)).To(BeTrue())
 
@@ -1699,11 +1709,11 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should ignore stale leave requests", func(done Done) {
-					oldChan, oldMeta := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					oldChan, oldMeta := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 					g := <-oldChan
 					Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepUpd)).To(BeTrue())
 
-					newChan, _ := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
+					newChan, _ := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 2)
 					g = <-newChan
 					Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepUpd)).To(BeTrue())
 
@@ -1718,7 +1728,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should close active connection on clean leave", func(done Done) {
-					c, m := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+					c, m := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 
 					g := <-c
 					Expect(googleproto.Equal(g.GetWorkloadEndpointUpdate(), wepUpd)).To(BeTrue())
@@ -1737,7 +1747,7 @@ var _ = Describe("Processor", func() {
 			})
 
 			It("should handle join & leave without WEP update", func() {
-				c, m := join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
+				c, m := join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, "test", 1)
 				leave(m)
 				Eventually(c).Should(BeClosed())
 			})
@@ -1747,7 +1757,7 @@ var _ = Describe("Processor", func() {
 			It("should send InSync on all open outputs", func(done Done) {
 				var c [2]chan *proto.ToDataplane
 				for i := 0; i < 2; i++ {
-					c[i], _ = join(proto.SyncRequest{SubscriptionType: "per-pod-policies"}, fmt.Sprintf("test%d", i), uint64(i))
+					c[i], _ = join(&proto.SyncRequest{SubscriptionType: "per-pod-policies"}, fmt.Sprintf("test%d", i), uint64(i))
 				}
 				is := &proto.InSync{}
 				updates <- is
@@ -1762,13 +1772,13 @@ var _ = Describe("Processor", func() {
 })
 
 var _ = DescribeTable("Config negotiation tests",
-	func(req proto.SyncRequest, configParams config.Config, expected map[string]string) {
+	func(req *proto.SyncRequest, configParams config.Config, expected map[string]string) {
 		updates := make(chan interface{})
 		uut := policysync.NewProcessor(&configParams, updates)
 		uut.Start()
-		join := func(sr proto.SyncRequest, w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata) {
+		join := func(sr *proto.SyncRequest, w string, jid uint64) (chan *proto.ToDataplane, policysync.JoinMetadata) {
 			// Buffer outputs so that Processor won't block.
-			output := make(chan proto.ToDataplane, 100)
+			output := make(chan *proto.ToDataplane, 100)
 			joinMeta := policysync.JoinMetadata{
 				EndpointID: testId(w),
 				JoinUID:    jid,

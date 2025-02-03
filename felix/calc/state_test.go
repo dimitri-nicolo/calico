@@ -58,8 +58,8 @@ type State struct {
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
-	ExpectedCaptureUpdates               set.Set[proto.PacketCaptureUpdate]
-	ExpectedCaptureRemovals              set.Set[proto.PacketCaptureUpdate]
+	ExpectedCaptureUpdates               set.Set[types.PacketCaptureUpdate]
+	ExpectedCaptureRemovals              set.Set[types.PacketCaptureUpdate]
 	ExpectedEncapsulation                *proto.Encapsulation
 }
 
@@ -92,8 +92,8 @@ func NewState() State {
 		ExpectedEndpointEgressData:           make(map[string]calc.EndpointEgressData),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
-		ExpectedCaptureUpdates:               set.New[proto.PacketCaptureUpdate](),
-		ExpectedCaptureRemovals:              set.New[proto.PacketCaptureUpdate](),
+		ExpectedCaptureUpdates:               set.New[types.PacketCaptureUpdate](),
+		ExpectedCaptureRemovals:              set.New[types.PacketCaptureUpdate](),
 	}
 }
 
@@ -138,7 +138,7 @@ func (s State) Copy() State {
 
 	cpy.ExpectedCachedRemoteEndpoints = append(cpy.ExpectedCachedRemoteEndpoints, s.ExpectedCachedRemoteEndpoints...)
 	if s.ExpectedCaptureUpdates != nil {
-		s.ExpectedCaptureUpdates.Iter(func(item proto.PacketCaptureUpdate) error {
+		s.ExpectedCaptureUpdates.Iter(func(item types.PacketCaptureUpdate) error {
 			cpy.ExpectedCaptureUpdates.Add(item)
 			return nil
 		})
@@ -321,7 +321,7 @@ func (s State) withHostMetadataV4V6(hostMetas ...*proto.HostMetadataV4V6Update) 
 	return newState
 }
 
-func (s State) withCapturesUpdates(updates ...proto.PacketCaptureUpdate) (newState State) {
+func (s State) withCapturesUpdates(updates ...types.PacketCaptureUpdate) (newState State) {
 	newState = s.Copy()
 	if updates != nil {
 		newState.ExpectedCaptureUpdates.AddAll(updates)
