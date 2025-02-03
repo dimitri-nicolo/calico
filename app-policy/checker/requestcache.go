@@ -21,7 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 const SPIFFEIDPattern = "^spiffe://[^/]+/ns/([^/]+)/sa/([^/]+)$"
@@ -110,7 +110,7 @@ func (r *requestCache) getIPSet(id string) policystore.IPSet {
 // initNamespace initializes a namespace from the store.
 func (r *requestCache) initNamespace(name string) *namespace {
 	ns := &namespace{Name: name}
-	id := proto.NamespaceID{Name: name}
+	id := types.NamespaceID{Name: name}
 	msg, ok := r.store.NamespaceByID[id]
 	if ok {
 		ns.Labels = make(map[string]string)
@@ -133,7 +133,7 @@ func (r *requestCache) initPeer(principal string, labels map[string]string) *pee
 	for k, v := range labels {
 		peer.Labels[k] = v
 	}
-	id := proto.ServiceAccountID{Name: peer.Name, Namespace: peer.Namespace}
+	id := types.ServiceAccountID{Name: peer.Name, Namespace: peer.Namespace}
 	msg, ok := r.store.ServiceAccountByID[id]
 	if ok {
 		for k, v := range msg.GetLabels() {

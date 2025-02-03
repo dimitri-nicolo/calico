@@ -28,6 +28,7 @@ var (
 // An implementation of the HealthzServer health check service.
 type healthCheckService struct {
 	healthzv1.UnimplementedHealthServer
+
 	reporter ReadinessReporter
 }
 

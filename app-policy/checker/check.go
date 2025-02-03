@@ -24,13 +24,13 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/status"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
-	"github.com/projectcalico/calico/app-policy/types"
+	apppolicytypes "github.com/projectcalico/calico/app-policy/types"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
-	"github.com/projectcalico/calico/felix/rules"
 	flxrules "github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/tproxydefs"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
@@ -68,7 +68,7 @@ const (
 )
 
 // Evaluate evaluates the flow against the policy store and returns the trace of rules.
-func Evaluate(dir rules.RuleDir, store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, flow Flow) []*calc.RuleID {
+func Evaluate(dir flxrules.RuleDir, store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, flow Flow) []*calc.RuleID {
 	_, trace := checkTiers(store, ep, dir, flow)
 	return trace
 }
@@ -77,7 +77,7 @@ func Evaluate(dir rules.RuleDir, store *policystore.PolicyStore, ep *proto.Workl
 // source and destination addresses.
 func LookupEndpointKeysFromSrcDst(store *policystore.PolicyStore, src, dst string) (source, destination []proto.WorkloadEndpointID, err error) {
 	if store == nil {
-		return source, destination, types.ErrNoStore{}
+		return source, destination, apppolicytypes.ErrNoStore{}
 	}
 
 	// Map the destination
@@ -165,7 +165,7 @@ func checkRequest(store *policystore.PolicyStore, req Flow) status.Status {
 // lookupEndpointsFromRequest looks up the source and destination endpoints for the given flow.
 func lookupEndpointsFromRequest(store *policystore.PolicyStore, flow Flow) (source, destination []*proto.WorkloadEndpoint, err error) {
 	if store == nil {
-		return source, destination, types.ErrNoStore{}
+		return source, destination, apppolicytypes.ErrNoStore{}
 	}
 
 	// Map the destination
@@ -245,7 +245,7 @@ func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir 
 		action := NO_MATCH
 	Policy:
 		for i, name := range policies {
-			pID := proto.PolicyID{Tier: tier.GetName(), Name: name}
+			pID := types.PolicyID{Tier: tier.GetName(), Name: name}
 			policy := store.PolicyByID[pID]
 			action, ruleIndex = checkPolicy(policy, dir, request)
 			log.Debugf("Policy checked (ordinal=%d, profileId=%v, action=%v)", i, pID, action)
@@ -291,7 +291,7 @@ func checkTiers(store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, dir 
 	// If we reach here, there were either no tiers, or a policy PASSed the request.
 	if len(ep.ProfileIds) > 0 {
 		for i, name := range ep.ProfileIds {
-			pID := proto.ProfileID{Name: name}
+			pID := types.ProfileID{Name: name}
 			profile := store.ProfileByID[pID]
 			action, ruleIndex := checkProfile(profile, dir, request)
 			log.Debugf("Profile checked (ordinal=%d, profileId=%v, action=%v)", i, pID, action)

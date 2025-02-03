@@ -496,9 +496,11 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 }
 
 type testSyncServer struct {
-	cxt              context.Context
+	proto.UnimplementedPolicySyncServer
+
+	ctx              context.Context
 	cancel           func()
-	updates          chan proto.ToDataplane
+	updates          chan *proto.ToDataplane
 	path             string
 	gRPCServer       *grpc.Server
 	listener         net.Listener
@@ -509,11 +511,11 @@ type testSyncServer struct {
 }
 
 func newTestSyncServer() *testSyncServer {
-	cxt, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	socketDir := makeTmpListenerDir()
 	socketPath := path.Join(socketDir, ListenerSocket)
 	s := &testSyncServer{
-		cxt: cxt, cancel: cancel, updates: make(chan proto.ToDataplane), path: socketPath, gRPCServer: grpc.NewServer(),
+		ctx: ctx, cancel: cancel, updates: make(chan *proto.ToDataplane), path: socketPath, gRPCServer: grpc.NewServer(),
 		reportSuccessful: true,
 	}
 	proto.RegisterPolicySyncServer(s.gRPCServer, s)
@@ -550,17 +552,17 @@ func (s *testSyncServer) Restart() {
 }
 
 func (s *testSyncServer) Sync(_ *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
-	ctx, cancel := context.WithCancel(s.cxt)
+	ctx, cancel := context.WithCancel(s.ctx)
 	s.cLock.Lock()
 	s.cancelFns = append(s.cancelFns, cancel)
 	s.cLock.Unlock()
-	var update proto.ToDataplane
+	var update *proto.ToDataplane
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case update = <-s.updates:
-			err := stream.Send(&update)
+			err := stream.Send(update)
 			if err != nil {
 				return err
 			}
@@ -590,7 +592,7 @@ func (s *testSyncServer) ReportWAF(stream proto.PolicySync_ReportWAFServer) erro
 }
 
 func (s *testSyncServer) SendInSync() {
-	s.updates <- proto.ToDataplane{Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
+	s.updates <- &proto.ToDataplane{Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
 }
 
 func (s *testSyncServer) GetTarget() string {

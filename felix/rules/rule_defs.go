@@ -29,6 +29,7 @@ import (
 	"github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/nftables"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 const (
@@ -287,7 +288,7 @@ type RuleRenderer interface {
 	StaticRawOutputChain(tcBypassMark uint32, ipVersion uint8, nodelocaldnsBroadcastedIPs []config.ServerPort) *generictables.Chain
 	StaticRawPreroutingChain(ipVersion uint8, nodelocaldnsBroadcastedIPs []config.ServerPort) *generictables.Chain
 
-	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*generictables.Chain
+	WorkloadDispatchChains(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint) []*generictables.Chain
 	WorkloadRPFDispatchChains(ipVersion uint8, gatewayInterfaceNames []string) []*generictables.Chain
 	WorkloadEndpointToIptablesChains(
 		ifaceName string,
@@ -300,17 +301,17 @@ type RuleRenderer interface {
 		ipVersion uint8,
 	) []*generictables.Chain
 
-	WorkloadInterfaceAllowChains(endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*generictables.Chain
+	WorkloadInterfaceAllowChains(endpoints map[types.WorkloadEndpointID]*proto.WorkloadEndpoint) []*generictables.Chain
 
 	EndpointMarkDispatchChains(
 		epMarkMapper EndpointMarkMapper,
-		wlEndpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint,
-		hepEndpoints map[string]proto.HostEndpointID,
+		wlEndpoints map[types.WorkloadEndpointID]*proto.WorkloadEndpoint,
+		hepEndpoints map[string]types.HostEndpointID,
 	) []*generictables.Chain
 
-	HostDispatchChains(map[string]proto.HostEndpointID, string, bool) []*generictables.Chain
-	FromHostDispatchChains(map[string]proto.HostEndpointID, string) []*generictables.Chain
-	ToHostDispatchChains(map[string]proto.HostEndpointID, string) []*generictables.Chain
+	HostDispatchChains(map[string]types.HostEndpointID, string, bool) []*generictables.Chain
+	FromHostDispatchChains(map[string]types.HostEndpointID, string) []*generictables.Chain
+	ToHostDispatchChains(map[string]types.HostEndpointID, string) []*generictables.Chain
 	HostEndpointToFilterChains(
 		ifaceName string,
 		tiers []TierPolicyGroups,
@@ -336,8 +337,8 @@ type RuleRenderer interface {
 		preDNATTiers []TierPolicyGroups,
 	) []*generictables.Chain
 
-	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*generictables.Chain
-	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *generictables.Chain)
+	PolicyToIptablesChains(policyID *types.PolicyID, policy *proto.Policy, ipVersion uint8) []*generictables.Chain
+	ProfileToIptablesChains(profileID *types.ProfileID, policy *proto.Profile, ipVersion uint8) (inbound, outbound *generictables.Chain)
 	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked, staged bool) []generictables.Rule
 	PolicyGroupToIptablesChains(group *PolicyGroup) []*generictables.Chain
 
