@@ -1790,17 +1790,17 @@ var _ = DescribeTable("Config negotiation tests",
 
 		c, _ := join(req, "test", 1)
 		cfg := <-c
-		Expect(&cfg).To(HavePayload(&proto.ConfigUpdate{Config: expected}))
+		Expect(cfg).To(HavePayload(&proto.ConfigUpdate{Config: expected}))
 	},
 
 	Entry("Supports DropActionOverride",
-		proto.SyncRequest{SupportsDropActionOverride: true},
+		&proto.SyncRequest{SupportsDropActionOverride: true},
 		config.Config{DropActionOverride: "LOGandACCEPT"},
 		map[string]string{"DropActionOverride": "LOGandACCEPT"},
 	),
 
 	Entry("Supports DataplaneStats and DropActionOverride",
-		proto.SyncRequest{SupportsDataplaneStats: true, SupportsDropActionOverride: true},
+		&proto.SyncRequest{SupportsDataplaneStats: true, SupportsDropActionOverride: true},
 		config.Config{DropActionOverride: "LOGandACCEPT"},
 		map[string]string{
 			"DropActionOverride":              "LOGandACCEPT",
@@ -1810,7 +1810,7 @@ var _ = DescribeTable("Config negotiation tests",
 	),
 
 	Entry("Supports DataplaneStats (FlowLogFile allowed/denied enabled, but overall disabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
+		&proto.SyncRequest{SupportsDataplaneStats: true},
 		config.Config{
 			FlowLogsFileEnabled:           false,
 			FlowLogsFileEnabledForAllowed: true,
@@ -1823,7 +1823,7 @@ var _ = DescribeTable("Config negotiation tests",
 	),
 
 	Entry("Supports DataplaneStats (FlowLogFile enabled; allowed enabled, denied disabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
+		&proto.SyncRequest{SupportsDataplaneStats: true},
 		config.Config{
 			FlowLogsFileEnabled:           true,
 			FlowLogsFileEnabledForAllowed: true,
@@ -1836,7 +1836,7 @@ var _ = DescribeTable("Config negotiation tests",
 	),
 
 	Entry("Supports DataplaneStats (FlowLogFile enabled; allowed disabled, denied enabled)",
-		proto.SyncRequest{SupportsDataplaneStats: true},
+		&proto.SyncRequest{SupportsDataplaneStats: true},
 		config.Config{
 			FlowLogsFileEnabled:           true,
 			FlowLogsFileEnabledForAllowed: false,

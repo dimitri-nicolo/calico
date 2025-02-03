@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/environment"
@@ -345,16 +346,16 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"Log rules should be correctly rendered",
 		func(ipVer int, in *proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
-			logRule := *in
+			logRule := googleproto.Clone(in).(*proto.Rule)
 			logRule.Action = "log"
-			rules := renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer),
+			rules := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
 			By("Rendering an explicit log prefix")
 			logRule.LogPrefix = "foobar"
-			rules = renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer),
+			rules = renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For deny, should be one match rule that just does the DROP.
 			Expect(len(rules)).To(Equal(1))
@@ -370,9 +371,9 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rrConfigPrefix := rrConfigNormal
 			rrConfigPrefix.LogPrefix = "foobar"
 			renderer := NewRenderer(rrConfigPrefix)
-			logRule := *in
+			logRule := googleproto.Clone(in).(*proto.Rule)
 			logRule.Action = "log"
-			rules := renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer),
+			rules := renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For deny, should be one match rule that just does the DROP.
 			Expect(len(rules)).To(Equal(1))
@@ -380,7 +381,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
 			By("Rendering an explicit log prefix")
 			logRule.LogPrefix = "foobar"
-			rules = renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer),
+			rules = renderer.ProtoRuleToIptablesRules(logRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For deny, should be one match rule that just does the DROP.
 			Expect(len(rules)).To(Equal(1))
@@ -394,9 +395,9 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"Deny (DROP) rules should be correctly rendered",
 		func(ipVer int, in *proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
-			denyRule := *in
+			denyRule := googleproto.Clone(in).(*proto.Rule)
 			denyRule.Action = "deny"
-			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer),
+			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 			// For deny, should be one match rule that just does the DROP.
 			expectedLen := 4
@@ -437,9 +438,9 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"Deny rules should only have NFLOG when policy is staged",
 		func(ipVer int, in *proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
-			denyRule := *in
+			denyRule := googleproto.Clone(in).(*proto.Rule)
 			denyRule.Action = "deny"
-			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer),
+			rules := renderer.ProtoRuleToIptablesRules(denyRule, uint8(ipVer),
 				RuleOwnerTypePolicy, RuleDirIngress, 0, "staged:default.foo", false, true)
 			// For deny, should be one match rule that just does the DROP.
 			Expect(rules).To(HaveLen(2))
@@ -458,7 +459,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"Inbound deny rules should be correctly rendered within a policy",
 		func(ipVer int, in *proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
-			denyRule := *in
+			denyRule := googleproto.Clone(in).(*proto.Rule)
 			denyRule.Action = "deny"
 			policyID := &types.PolicyID{
 				Tier: "default",
@@ -466,7 +467,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			}
 			policy := &proto.Policy{
 				Namespace:     "",
-				InboundRules:  []*proto.Rule{&denyRule},
+				InboundRules:  []*proto.Rule{denyRule},
 				OutboundRules: []*proto.Rule{},
 				Untracked:     false,
 				PreDnat:       false,

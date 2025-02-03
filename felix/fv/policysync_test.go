@@ -1116,7 +1116,7 @@ func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloads
 			hostType = proto.RouteType_REMOTE_HOST
 		}
 
-		updates = append(updates, proto.RouteUpdate{
+		updates = append(updates, types.RouteUpdate{
 			Type:        hostType,
 			IpPoolType:  proto.IPPoolType_NONE,
 			Dst:         ipToCIDR(f.IP),
@@ -1134,7 +1134,7 @@ func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloads
 		} else {
 			workloadType = proto.RouteType_REMOTE_WORKLOAD
 		}
-		updates = append(updates, proto.RouteUpdate{
+		updates = append(updates, types.RouteUpdate{
 			Type:          workloadType,
 			IpPoolType:    proto.IPPoolType_IPIP,
 			Dst:           ipToCIDR(wl.IP),
