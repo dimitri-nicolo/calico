@@ -1093,9 +1093,9 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 	})
 })
 
-func setToSlice(s set.Set[proto.RouteUpdate]) []proto.RouteUpdate {
-	r := make([]proto.RouteUpdate, s.Len())
-	s.Iter(func(item proto.RouteUpdate) error {
+func setToSlice(s set.Set[types.RouteUpdate]) []types.RouteUpdate {
+	r := make([]types.RouteUpdate, s.Len())
+	s.Iter(func(item types.RouteUpdate) error {
 		r = append(r, item)
 		return nil
 	})
@@ -1147,13 +1147,13 @@ func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloads
 }
 
 func expectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
-	Eventually(func() []proto.RouteUpdate {
+	Eventually(func() []types.RouteUpdate {
 		return setToSlice(mockWlClient.ActiveRoutes())
 	}, "5s").Should(ContainElements(updates...))
 }
 
 func notExpectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
-	Eventually(func() []proto.RouteUpdate {
+	Eventually(func() []types.RouteUpdate {
 		return setToSlice(mockWlClient.ActiveRoutes())
 	}, "5s").Should(Not(ContainElements(updates...)))
 }

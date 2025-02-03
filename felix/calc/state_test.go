@@ -94,6 +94,7 @@ func NewState() State {
 		ExpectedNumberOfTiers:                -1,
 		ExpectedCaptureUpdates:               set.New[types.PacketCaptureUpdate](),
 		ExpectedCaptureRemovals:              set.New[types.PacketCaptureUpdate](),
+		ExpectedEncapsulation:                &proto.Encapsulation{},
 	}
 }
 
