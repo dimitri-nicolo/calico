@@ -54,6 +54,7 @@ type RouteUpdate struct {
 	NatOutgoing   bool
 	LocalWorkload bool
 	TunnelType    *proto.TunnelType
+	Borrowed      bool
 }
 
 type PacketCaptureUpdate struct {
@@ -101,6 +102,7 @@ func ProtoToRouteUpdate(msg *proto.RouteUpdate) RouteUpdate {
 		NatOutgoing:   msg.NatOutgoing,
 		LocalWorkload: msg.LocalWorkload,
 		TunnelType:    msg.TunnelType,
+		Borrowed:      msg.Borrowed,
 	}
 }
 
