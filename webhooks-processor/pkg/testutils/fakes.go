@@ -75,7 +75,7 @@ func (w *FakeSecurityEventWebhook) Get(ctx context.Context, name string, opts op
 	return nil, nil
 }
 func (w *FakeSecurityEventWebhook) List(ctx context.Context, opts options.ListOptions) (*api.SecurityEventWebhookList, error) {
-	return nil, nil
+	return &api.SecurityEventWebhookList{}, nil
 }
 
 type FakeConsumer struct {

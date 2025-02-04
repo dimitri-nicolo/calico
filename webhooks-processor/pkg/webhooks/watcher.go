@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	WebhooksWatcherTimeout = 1 * time.Minute
+	WebhooksWatcherTimeout = 2 * time.Minute
 )
 
 type WebhookWatcherUpdater struct {
@@ -55,14 +55,16 @@ func (w *WebhookWatcherUpdater) UpdatesChan() chan<- *api.SecurityEventWebhook {
 }
 
 func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
+	logrus.Info("Webhook updater/watcher started")
 	defer wg.Done()
-	defer logrus.Info("Webhook/updater watcher is terminating")
+	defer logrus.Info("Webhook updater/watcher is terminating")
 
-	watchWait := sync.WaitGroup{}
-	go w.executeUntilContextIsAlive(ctx, &watchWait, w.watchWebhooks)
-	go w.executeUntilContextIsAlive(ctx, &watchWait, w.watchCMs)
-	go w.executeUntilContextIsAlive(ctx, &watchWait, w.watchSecrets)
-	watchWait.Wait()
+	watchGroup := sync.WaitGroup{}
+	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.watchWebhooks)
+	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.watchCMs)
+	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.watchSecrets)
+	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.updateWebhooks)
+	watchGroup.Wait()
 }
 
 func (w *WebhookWatcherUpdater) executeUntilContextIsAlive(ctx context.Context, wg *sync.WaitGroup, f func(context.Context)) {
@@ -112,6 +114,17 @@ func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) {
 		for event := range watcher.ResultChan() {
 			w.controller.K8sEventsChan() <- event
 		}
+	}
+}
+
+func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) {
+	select {
+	case webhook := <-w.webhookUpdatesChan:
+		if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
+			logrus.WithError(err).Error("unable to update webhook definition")
+		}
+	case <-ctx.Done():
+		return
 	}
 }
 
