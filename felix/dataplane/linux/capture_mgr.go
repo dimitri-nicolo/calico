@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/multidict"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -22,9 +23,9 @@ type captureManager struct {
 	// active interfaces
 	activeUpInterfaces set.Set[string]
 	// pending workload endpoint updates
-	pendingWlEpUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	pendingWlEpUpdates map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
 	// active worloads endpoint updates
-	activeWlEndpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	activeWlEndpoints map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
 	// pending updates for packet captures
 	pendingPacketCaptures map[capture.Key]*protoPacketCaptureUpdate
 	// reverse mapping interface name -> capture
@@ -51,8 +52,8 @@ func newCaptureManager(captures capture.ActiveCaptures, wlInterfacePrefixes []st
 	captureManager.wlInterfaceRegexp = regexp.MustCompile("^(" + strings.Join(wlInterfacePrefixes, "|") + ").*")
 	captureManager.activeUpInterfaces = set.New[string]()
 	captureManager.pendingInterfaceUpdates = make(map[string]ifacemonitor.State)
-	captureManager.activeWlEndpoints = make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint)
-	captureManager.pendingWlEpUpdates = make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint)
+	captureManager.activeWlEndpoints = make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint)
+	captureManager.pendingWlEpUpdates = make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint)
 	captureManager.activePacketCaptures = captures
 	captureManager.pendingPacketCaptures = make(map[capture.Key]*protoPacketCaptureUpdate)
 	captureManager.interfaceToPacketCapture = multidict.New[string, captureTuple]()
@@ -65,11 +66,13 @@ func (c *captureManager) OnUpdate(protoBufMsg interface{}) {
 	case *proto.WorkloadEndpointUpdate:
 		// store workload endpoint id to a workload endpoint
 		log.WithField("msg", protoBufMsg).Debug("Received WorkloadEndpointUpdate")
-		c.pendingWlEpUpdates[*msg.Id] = msg.Endpoint
+		id := types.ProtoToWorkloadEndpointID(msg.GetId())
+		c.pendingWlEpUpdates[id] = msg.Endpoint
 	case *proto.WorkloadEndpointRemove:
 		// store workload endpoint id to nil
 		log.WithField("msg", protoBufMsg).Debug("Received WorkloadEndpointRemove")
-		c.pendingWlEpUpdates[*msg.Id] = nil
+		id := types.ProtoToWorkloadEndpointID(msg.GetId())
+		c.pendingWlEpUpdates[id] = nil
 	case *proto.PacketCaptureUpdate:
 		// store a packet capture id to workload endpoint id
 		log.WithField("msg", protoBufMsg).Debug("Received PacketCaptureUpdate")
@@ -129,7 +132,8 @@ func (c *captureManager) CompleteDeferredWork() error {
 		// batches until the workload endpoint has been matched and the interface state is
 		// marked as UP.
 		if v != nil {
-			workload, hasAWorkloadEndpoint := c.activeWlEndpoints[*v.WorkloadEndpointID]
+			id := types.ProtoToWorkloadEndpointID(v.WorkloadEndpointID)
+			workload, hasAWorkloadEndpoint := c.activeWlEndpoints[id]
 			// We only start a capture if both the conditions below are met
 			// Otherwise, a capture will not be marked as active
 			if hasAWorkloadEndpoint && c.activeUpInterfaces.Contains(workload.Name) {
@@ -141,7 +145,7 @@ func (c *captureManager) CompleteDeferredWork() error {
 					c.interfaceToPacketCapture.Discard(spec.DeviceName, captureTuple{key: k, specification: previousSpec})
 				}
 				var spec = capture.Specification{DeviceName: workload.Name, BPFFilter: v.GetBpfFilter(),
-					StartTime: proto.ConvertTimestamp(v.StartTime), EndTime: proto.ConvertTimestamp(v.EndTime)}
+					StartTime: v.StartTime.AsTime(), EndTime: v.EndTime.AsTime()}
 				err := c.activePacketCaptures.Add(k, spec)
 				if err != nil {
 					log.WithField("CAPTURE", k.CaptureName).WithError(err).Error("Failed to start capture")

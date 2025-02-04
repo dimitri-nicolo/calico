@@ -6,8 +6,8 @@ import (
 
 type MockObserver struct {
 	ThisWorkloadSnapShot *proto.RouteUpdate
-	WorkloadsSnapshot    map[string][]proto.RouteUpdate
-	TunnelsSnapshot      map[string][]proto.RouteUpdate
+	WorkloadsSnapshot    map[string][]*proto.RouteUpdate
+	TunnelsSnapshot      map[string][]*proto.RouteUpdate
 	NumNotifications     int
 }
 

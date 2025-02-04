@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/routetable/ownershippol"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/felix/vxlanfdb"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
@@ -283,14 +284,14 @@ type egressIPManager struct {
 	tableIndexToEgressTable map[int]*egressTable
 	egwTracker              *EgressGWTracker
 
-	activeWorkloads      map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	workloadToTableIndex map[proto.WorkloadEndpointID]int
+	activeWorkloads      map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
+	workloadToTableIndex map[types.WorkloadEndpointID]int
 
-	workloadMaintenanceWindows map[proto.WorkloadEndpointID]gateway
+	workloadMaintenanceWindows map[types.WorkloadEndpointID]gateway
 
 	// Pending workload endpoints updates, we store these up as OnUpdate is called, then process them
 	// in CompleteDeferredWork.
-	pendingWorkloadUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	pendingWorkloadUpdates map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
 
 	// VXLAN configuration.
 	vxlanDevice string
@@ -411,10 +412,10 @@ func newEgressIPManagerWithShims(
 		tableIndexStack:            tableIndexStack,
 		tableIndexToRouteTable:     make(map[int]routetable.Interface),
 		tableIndexToEgressTable:    make(map[int]*egressTable),
-		pendingWorkloadUpdates:     make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		activeWorkloads:            make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		workloadToTableIndex:       make(map[proto.WorkloadEndpointID]int),
-		workloadMaintenanceWindows: make(map[proto.WorkloadEndpointID]gateway),
+		pendingWorkloadUpdates:     make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint),
+		activeWorkloads:            make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint),
+		workloadToTableIndex:       make(map[types.WorkloadEndpointID]int),
+		workloadMaintenanceWindows: make(map[types.WorkloadEndpointID]gateway),
 		egwTracker: NewEgressGWTracker(
 			context.Background(),
 			healthReportC,
@@ -455,10 +456,12 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 		m.egwTracker.OnIPSetRemove(msg)
 	case *proto.WorkloadEndpointUpdate:
 		log.WithField("msg", msg).Debug("workload endpoint update")
-		m.pendingWorkloadUpdates[*msg.Id] = msg.Endpoint
+		id := types.ProtoToWorkloadEndpointID(msg.GetId())
+		m.pendingWorkloadUpdates[id] = msg.Endpoint
 	case *proto.WorkloadEndpointRemove:
 		log.WithField("msg", msg).Debug("workload endpoint remove")
-		m.pendingWorkloadUpdates[*msg.Id] = nil
+		id := types.ProtoToWorkloadEndpointID(msg.GetId())
+		m.pendingWorkloadUpdates[id] = nil
 	case *proto.HostMetadataUpdate:
 		log.WithField("msg", msg).Debug("host meta update")
 		if msg.Hostname == m.dpConfig.FelixHostname {
@@ -798,8 +801,8 @@ func (m *egressIPManager) processGatewayUpdates() error {
 	return lastErr
 }
 
-func (m *egressIPManager) sortedWorkloadIDs() []proto.WorkloadEndpointID {
-	var workloadIDs []proto.WorkloadEndpointID
+func (m *egressIPManager) sortedWorkloadIDs() []types.WorkloadEndpointID {
+	var workloadIDs []types.WorkloadEndpointID
 	for workloadID := range m.activeWorkloads {
 		workloadIDs = append(workloadIDs, workloadID)
 	}
@@ -823,7 +826,7 @@ func (m *egressIPManager) sortedWorkloadIDs() []proto.WorkloadEndpointID {
 func (m *egressIPManager) processWorkloadUpdates() error {
 	var lastErr error
 	// Handle pending workload endpoint updates.
-	var ids []proto.WorkloadEndpointID
+	var ids []types.WorkloadEndpointID
 	for id := range m.pendingWorkloadUpdates {
 		ids = append(ids, id)
 	}
@@ -837,9 +840,9 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 		return ids[i].OrchestratorId < ids[j].OrchestratorId
 	})
 
-	existingTables := make(map[proto.WorkloadEndpointID]*egressTable)
-	var workloadsToUseExistingTable []proto.WorkloadEndpointID
-	var workloadsToUseNewTable []proto.WorkloadEndpointID
+	existingTables := make(map[types.WorkloadEndpointID]*egressTable)
+	var workloadsToUseExistingTable []types.WorkloadEndpointID
+	var workloadsToUseNewTable []types.WorkloadEndpointID
 	if m.initialKernelState != nil {
 		log.Info("Processing workloads after restart. Will attempt to reuse existing rules and tables to preserve traffic.")
 		// Look for any routing rules and tables which can be reused.
@@ -1176,7 +1179,7 @@ func (m *egressIPManager) setL3Routes(rawTable routetable.Interface, t *egressTa
 	rTable.SetRoutes(routetable.InterfaceNone, noIfaceRoutes)
 }
 
-func (m *egressIPManager) createWorkloadRuleAndTable(workloadID proto.WorkloadEndpointID, workload *proto.WorkloadEndpoint) error {
+func (m *egressIPManager) createWorkloadRuleAndTable(workloadID types.WorkloadEndpointID, workload *proto.WorkloadEndpoint) error {
 	index, err := m.getNextTableIndex()
 	if err != nil {
 		return err
@@ -1214,7 +1217,7 @@ func (m *egressIPManager) createWorkloadRuleAndTable(workloadID proto.WorkloadEn
 	return nil
 }
 
-func (m *egressIPManager) createWorkloadRuleAndTableWithIndex(workloadID proto.WorkloadEndpointID, workload *proto.WorkloadEndpoint, table *egressTable) {
+func (m *egressIPManager) createWorkloadRuleAndTableWithIndex(workloadID types.WorkloadEndpointID, workload *proto.WorkloadEndpoint, table *egressTable) {
 	// Create new route rules and a route table for this workload.
 	log.WithFields(log.Fields{
 		"workloadID":  workloadID,
@@ -1229,7 +1232,7 @@ func (m *egressIPManager) createWorkloadRuleAndTableWithIndex(workloadID proto.W
 	}
 }
 
-func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID, workload *proto.WorkloadEndpoint) {
+func (m *egressIPManager) deleteWorkloadRuleAndTable(id types.WorkloadEndpointID, workload *proto.WorkloadEndpoint) {
 	index, exists := m.workloadToTableIndex[id]
 	if !exists {
 		// This can occur if the workload has already been deleted as a result of an IPSet becoming empty, and then a
@@ -1588,7 +1591,7 @@ func (m *egressIPManager) configureVXLANDevice(nodeIP net.IP, mtu int) error {
 	return nil
 }
 
-func (m *egressIPManager) determineRouteNextHops(workloadID proto.WorkloadEndpointID, ipSetID string, maxNextHops int, preferLocalEGW bool) (set.Set[ip.Addr], error) {
+func (m *egressIPManager) determineRouteNextHops(workloadID types.WorkloadEndpointID, ipSetID string, maxNextHops int, preferLocalEGW bool) (set.Set[ip.Addr], error) {
 	members, exists := m.egwTracker.GatewaysByID(ipSetID)
 	if !exists {
 		log.Infof("Workload with ID: %s references an empty set of gateways: %s. Setting its next hops to none.", workloadID, ipSetID)
@@ -1619,7 +1622,7 @@ func (m *egressIPManager) determineRouteNextHops(workloadID proto.WorkloadEndpoi
 // reserveFromInitialState searches the rules and tables found from the kernel, and looks for route rules for all the
 // workload's IP addresses which point to a route table with the correct number of hops, which are currently not
 // terminating.
-func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoint, workloadID proto.WorkloadEndpointID) (*egressTable, bool) {
+func (m *egressIPManager) reserveFromInitialState(workload *proto.WorkloadEndpoint, workloadID types.WorkloadEndpointID) (*egressTable, bool) {
 	state := m.initialKernelState
 	if state == nil {
 		return nil, false
@@ -1793,7 +1796,7 @@ func workloadNumHops(egressMaxNextHops int, ipSetSize int) int {
 }
 
 // usageMap returns a map from the number of workloads using the hop to a slice of the hops
-func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs set.Set[ip.Addr], tableMap map[int]*egressTable) map[int][]ip.Addr {
+func usageMap(workloadID types.WorkloadEndpointID, gatewayIPs set.Set[ip.Addr], tableMap map[int]*egressTable) map[int][]ip.Addr {
 	// calculate the number of wl pods referencing each gw pod.
 	gwPodRefs := make(map[ip.Addr]int)
 	gatewayIPs.Iter(func(ipAddr ip.Addr) error {

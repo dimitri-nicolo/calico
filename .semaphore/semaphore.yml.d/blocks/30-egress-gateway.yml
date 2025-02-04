@@ -35,9 +35,7 @@
     jobs:
       - name: Build image
         commands:
-          # Skip building protofbufs because the build fails on ARM due to missing image.
-          # We know they are up-to-date because an earlier build job checks already.
-          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64 SKIP_PROTOBUF=true
+          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
     epilogue:
       always:
         commands:

@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -47,10 +48,10 @@ func (s *mockIPSetsSource) GetIPSetMembers(setID string) (set.Set[string], error
 }
 
 type mockEndpointsSource struct {
-	rawHep map[proto.HostEndpointID]*proto.HostEndpoint
+	rawHep map[types.HostEndpointID]*proto.HostEndpoint
 }
 
-func (s *mockEndpointsSource) GetRawHostEndpoints() map[proto.HostEndpointID]*proto.HostEndpoint {
+func (s *mockEndpointsSource) GetRawHostEndpoints() map[types.HostEndpointID]*proto.HostEndpoint {
 	return s.rawHep
 }
 
@@ -136,6 +137,10 @@ func testAllProtoRuleFieldsAreKnown() {
 	t := reflect.TypeOf(proto.Rule{})
 	for i := 0; i < t.NumField(); i++ {
 		name := t.Field(i).Name
+		// skip protobuf fields
+		if name == "state" || name == "sizeCache" || name == "unknownFields" {
+			continue
+		}
 		Expect(knownProtoRuleFields.Contains(name)).To(BeTrue(), "It looks like that the field %s is a new addition to the proto.Rule struct. Please check if it affects XDP optimizations in any way, update the isValidRuleForXDP function and the \"invalid policies\" unit test if needed, and then add the name to the knownProtoRuleFields slice above. Please DO NOT blindly add the field to the slice without checking its influence on the XDP optimization.", name)
 	}
 }
@@ -150,7 +155,7 @@ type updatePolicyType struct {
 }
 
 func (up *updatePolicyType) Do(ipState *xdpIPState) {
-	policyID := proto.PolicyID{Tier: "default", Name: up.policyID}
+	policyID := types.PolicyID{Tier: "default", Name: up.policyID}
 	policy := &proto.Policy{InboundRules: up.inRules}
 	ipState.updatePolicy(policyID, policy)
 }
@@ -160,7 +165,7 @@ type removePolicyType struct {
 }
 
 func (rp *removePolicyType) Do(ipState *xdpIPState) {
-	policyID := proto.PolicyID{Tier: "default", Name: rp.policyID}
+	policyID := types.PolicyID{Tier: "default", Name: rp.policyID}
 	ipState.removePolicy(policyID)
 }
 
@@ -205,7 +210,7 @@ type addInterfaceType struct {
 }
 
 func (ai *addInterfaceType) Do(ipState *xdpIPState) {
-	ipState.addInterface(ai.ifaceName, proto.HostEndpointID{EndpointId: ai.endpointID})
+	ipState.addInterface(ai.ifaceName, types.HostEndpointID{EndpointId: ai.endpointID})
 }
 
 type removeInterfaceType struct {
@@ -222,7 +227,7 @@ type updateInterfaceType struct {
 }
 
 func (ui *updateInterfaceType) Do(ipState *xdpIPState) {
-	ipState.updateInterface(ui.ifaceName, proto.HostEndpointID{EndpointId: ui.endpointID})
+	ipState.updateInterface(ui.ifaceName, types.HostEndpointID{EndpointId: ui.endpointID})
 }
 
 type updateHostEndpointType struct {
@@ -230,7 +235,7 @@ type updateHostEndpointType struct {
 }
 
 func (uh *updateHostEndpointType) Do(ipState *xdpIPState) {
-	ipState.updateHostEndpoint(proto.HostEndpointID{EndpointId: uh.endpointID})
+	ipState.updateHostEndpoint(types.HostEndpointID{EndpointId: uh.endpointID})
 }
 
 type removeHostEndpointType struct {
@@ -238,7 +243,7 @@ type removeHostEndpointType struct {
 }
 
 func (rh *removeHostEndpointType) Do(ipState *xdpIPState) {
-	ipState.removeHostEndpoint(proto.HostEndpointID{EndpointId: rh.endpointID})
+	ipState.removeHostEndpoint(types.HostEndpointID{EndpointId: rh.endpointID})
 }
 
 var _ testCBEvent = &updatePolicyType{}
@@ -379,19 +384,19 @@ type testIfaceData struct {
 
 func testStateToRealState(testIfaces map[string]testIfaceData, testEligiblePolicies map[string][][]string, realState *xdpSystemState) {
 	for ifaceName, ifaceData := range testIfaces {
-		policiesToSetIDs := make(map[proto.PolicyID]set.Set[string], len(ifaceData.policiesToSets))
+		policiesToSetIDs := make(map[types.PolicyID]set.Set[string], len(ifaceData.policiesToSets))
 		for policyID, setIDs := range ifaceData.policiesToSets {
-			protoID := proto.PolicyID{Tier: "default", Name: policyID}
+			protoID := types.PolicyID{Tier: "default", Name: policyID}
 			setIDsSet := set.FromArray(setIDs)
 			policiesToSetIDs[protoID] = setIDsSet
 		}
 		realState.IfaceNameToData[ifaceName] = xdpIfaceData{
-			EpID:             proto.HostEndpointID{EndpointId: ifaceData.epID},
+			EpID:             types.HostEndpointID{EndpointId: ifaceData.epID},
 			PoliciesToSetIDs: policiesToSetIDs,
 		}
 	}
 	for policyID, testRules := range testEligiblePolicies {
-		protoID := proto.PolicyID{Tier: "default", Name: policyID}
+		protoID := types.PolicyID{Tier: "default", Name: policyID}
 		rules := make([]xdpRule, 0, len(testRules))
 		for _, setIDs := range testRules {
 			rules = append(rules, xdpRule{
@@ -456,9 +461,9 @@ var _ = Describe("XDP state", func() {
 					expectedNcs := newXDPSystemState()
 					testStateToRealState(s.currentState, s.eligiblePolicies, cs)
 					testStateToRealState(s.newCurrentState, s.newEligiblePolicies, expectedNcs)
-					rawHep := make(map[proto.HostEndpointID]*proto.HostEndpoint, len(s.endpoints))
+					rawHep := make(map[types.HostEndpointID]*proto.HostEndpoint, len(s.endpoints))
 					for epID, policyIDs := range s.endpoints {
-						protoEpID := proto.HostEndpointID{
+						protoEpID := types.HostEndpointID{
 							EndpointId: epID,
 						}
 						protoEndpoint := &proto.HostEndpoint{
@@ -2732,10 +2737,10 @@ var _ = Describe("XDP state", func() {
 					for iface, needsXDP := range s.newState {
 						data := xdpIfaceData{}
 						if needsXDP {
-							policyID := proto.PolicyID{Tier: "default", Name: "bar"}
-							endpointID := proto.HostEndpointID{EndpointId: "foo"}
+							policyID := types.PolicyID{Tier: "default", Name: "bar"}
+							endpointID := types.HostEndpointID{EndpointId: "foo"}
 							data.EpID = endpointID
-							data.PoliciesToSetIDs = map[proto.PolicyID]set.Set[string]{
+							data.PoliciesToSetIDs = map[types.PolicyID]set.Set[string]{
 								policyID: set.From("ipset"),
 							}
 						}

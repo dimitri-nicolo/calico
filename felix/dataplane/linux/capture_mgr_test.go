@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
@@ -50,8 +51,8 @@ var _ = Describe("PacketCapture Manager", func() {
 	}
 
 	emptySpecification := &proto.PacketCaptureSpecification{
-		StartTime: proto.ConvertTime(time.Time{}),
-		EndTime:   proto.ConvertTime(time.Time{}),
+		StartTime: timestamppb.New(time.Time{}),
+		EndTime:   timestamppb.New(time.Time{}),
 	}
 
 	DescribeTable("Buffers packet captures until interfaces are up",
@@ -826,8 +827,8 @@ var _ = Describe("PacketCapture Manager", func() {
 					},
 					Specification: &proto.PacketCaptureSpecification{
 						BpfFilter: "anyfilter",
-						StartTime: proto.ConvertTime(time.Time{}),
-						EndTime:   proto.ConvertTime(time.Time{}),
+						StartTime: timestamppb.New(time.Time{}),
+						EndTime:   timestamppb.New(time.Time{}),
 					},
 				},
 			},

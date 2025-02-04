@@ -27,10 +27,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
+	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
@@ -58,7 +60,7 @@ func (mp *mockPolicyStoreManager) OnInSync() {
 	mp.callstack = append(mp.callstack, "oninsync")
 }
 
-func (mp *mockPolicyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
+func (mp *mockPolicyStoreManager) GetCurrentEndpoints() map[types.WorkloadEndpointID]*proto.WorkloadEndpoint {
 	mp.mu.Lock()
 	defer mp.mu.Unlock()
 
@@ -241,24 +243,27 @@ func TestDPStatsAfterConnection(t *testing.T) {
 		},
 	})
 
-	Eventually(server.GetDataplaneStats, "1000ms", "50ms").Should(Equal([]*proto.DataplaneStats{
-		{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_ALLOWED,
-					Value:      3,
+	Eventually(func() bool {
+		if len(server.GetDataplaneStats()) == 1 {
+			return googleproto.Equal(server.GetDataplaneStats()[0], &proto.DataplaneStats{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+				Stats: []*proto.Statistic{
+					{
+						Direction:  proto.Statistic_IN,
+						Relativity: proto.Statistic_DELTA,
+						Kind:       proto.Statistic_HTTP_REQUESTS,
+						Action:     proto.Action_ALLOWED,
+						Value:      3,
+					},
 				},
-			},
-		},
-	}))
+			})
+		}
+		return false
+	}, "1000ms", "50ms").Should(BeTrue())
 
 	// Send a DPStats update (denied packets) and check we have the corresponding aggregated protobuf stored.
 	dpStats.Add(statscache.DPStats{
@@ -274,40 +279,52 @@ func TestDPStatsAfterConnection(t *testing.T) {
 			HTTPRequestsDenied:  5,
 		},
 	})
-	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal([]*proto.DataplaneStats{
-		{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_ALLOWED,
-					Value:      3,
+	Eventually(func() bool {
+		expectedDataplaneStats := []*proto.DataplaneStats{
+			{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+				Stats: []*proto.Statistic{
+					{
+						Direction:  proto.Statistic_IN,
+						Relativity: proto.Statistic_DELTA,
+						Kind:       proto.Statistic_HTTP_REQUESTS,
+						Action:     proto.Action_ALLOWED,
+						Value:      3,
+					},
 				},
 			},
-		},
-		{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_DENIED,
-					Value:      5,
+			{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+				Stats: []*proto.Statistic{
+					{
+						Direction:  proto.Statistic_IN,
+						Relativity: proto.Statistic_DELTA,
+						Kind:       proto.Statistic_HTTP_REQUESTS,
+						Action:     proto.Action_DENIED,
+						Value:      5,
+					},
 				},
 			},
-		},
-	}))
+		}
+
+		if len(server.GetDataplaneStats()) == 2 {
+			for i, stat := range expectedDataplaneStats {
+				if !googleproto.Equal(server.GetDataplaneStats()[i], stat) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}, "500ms", "50ms")
 }
 
 func TestDPStatsBeforeConnection(t *testing.T) {
@@ -424,24 +441,34 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 			HTTPRequestsDenied:  0,
 		},
 	})
-	Eventually(server.GetDataplaneStats, "3s", "100ms").Should(
-		ContainElement(
-			&proto.DataplaneStats{
-				SrcIp:    "1.2.3.4",
-				DstIp:    "11.22.33.44",
-				SrcPort:  1000,
-				DstPort:  2000,
-				Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
-				Stats: []*proto.Statistic{
-					{
-						Direction:  proto.Statistic_IN,
-						Relativity: proto.Statistic_DELTA,
-						Kind:       proto.Statistic_HTTP_REQUESTS,
-						Action:     proto.Action_ALLOWED,
-						Value:      7,
-					},
+	Eventually(func() bool {
+		expectedDataplaneStat := &proto.DataplaneStats{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "TCP"}},
+			Stats: []*proto.Statistic{
+				{
+					Direction:  proto.Statistic_IN,
+					Relativity: proto.Statistic_DELTA,
+					Kind:       proto.Statistic_HTTP_REQUESTS,
+					Action:     proto.Action_ALLOWED,
+					Value:      7,
 				},
-			}))
+			},
+		}
+
+		if len(server.GetDataplaneStats()) > 0 {
+			for _, s := range server.GetDataplaneStats() {
+				if googleproto.Equal(s, expectedDataplaneStat) {
+					return true
+				}
+			}
+			return false
+		}
+		return false
+	}, "3s", "100ms")
 }
 
 func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
@@ -496,9 +523,11 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 }
 
 type testSyncServer struct {
-	cxt              context.Context
+	proto.UnimplementedPolicySyncServer
+
+	ctx              context.Context
 	cancel           func()
-	updates          chan proto.ToDataplane
+	updates          chan *proto.ToDataplane
 	path             string
 	gRPCServer       *grpc.Server
 	listener         net.Listener
@@ -509,11 +538,11 @@ type testSyncServer struct {
 }
 
 func newTestSyncServer() *testSyncServer {
-	cxt, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	socketDir := makeTmpListenerDir()
 	socketPath := path.Join(socketDir, ListenerSocket)
 	s := &testSyncServer{
-		cxt: cxt, cancel: cancel, updates: make(chan proto.ToDataplane), path: socketPath, gRPCServer: grpc.NewServer(),
+		ctx: ctx, cancel: cancel, updates: make(chan *proto.ToDataplane), path: socketPath, gRPCServer: grpc.NewServer(),
 		reportSuccessful: true,
 	}
 	proto.RegisterPolicySyncServer(s.gRPCServer, s)
@@ -550,17 +579,17 @@ func (s *testSyncServer) Restart() {
 }
 
 func (s *testSyncServer) Sync(_ *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
-	ctx, cancel := context.WithCancel(s.cxt)
+	ctx, cancel := context.WithCancel(s.ctx)
 	s.cLock.Lock()
 	s.cancelFns = append(s.cancelFns, cancel)
 	s.cLock.Unlock()
-	var update proto.ToDataplane
+	var update *proto.ToDataplane
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case update = <-s.updates:
-			err := stream.Send(&update)
+			err := stream.Send(update)
 			if err != nil {
 				return err
 			}
@@ -590,7 +619,7 @@ func (s *testSyncServer) ReportWAF(stream proto.PolicySync_ReportWAFServer) erro
 }
 
 func (s *testSyncServer) SendInSync() {
-	s.updates <- proto.ToDataplane{Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
+	s.updates <- &proto.ToDataplane{Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
 }
 
 func (s *testSyncServer) GetTarget() string {

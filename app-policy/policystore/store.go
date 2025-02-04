@@ -19,8 +19,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/app-policy/types"
+	apppolicytypes "github.com/projectcalico/calico/app-policy/types"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 // DropActionOverride is an enumeration of the available values for the DropActionOverride
@@ -37,7 +38,7 @@ const (
 // PolicyStore is a data store that holds Calico policy information.
 type PolicyStore struct {
 	// route looker upper
-	IPToIndexes types.IPToEndpointsIndex
+	IPToIndexes apppolicytypes.IPToEndpointsIndex
 
 	// Config settings
 	DropActionOverride              DropActionOverride
@@ -46,12 +47,12 @@ type PolicyStore struct {
 
 	// Cache data
 	Endpoint           *proto.WorkloadEndpoint
-	Endpoints          map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	PolicyByID         map[proto.PolicyID]*proto.Policy
-	ProfileByID        map[proto.ProfileID]*proto.Profile
+	Endpoints          map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
+	PolicyByID         map[types.PolicyID]*proto.Policy
+	ProfileByID        map[types.ProfileID]*proto.Profile
 	IPSetByID          map[string]IPSet
-	ServiceAccountByID map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
-	NamespaceByID      map[proto.NamespaceID]*proto.NamespaceUpdate
+	ServiceAccountByID map[types.ServiceAccountID]*proto.ServiceAccountUpdate
+	NamespaceByID      map[types.NamespaceID]*proto.NamespaceUpdate
 
 	// has this store seen inSync?
 	InSync bool
@@ -61,14 +62,14 @@ type PolicyStore struct {
 
 func NewPolicyStore() *PolicyStore {
 	ps := &PolicyStore{
-		IPToIndexes:        types.NewIPToEndpointsIndex(),
+		IPToIndexes:        apppolicytypes.NewIPToEndpointsIndex(),
 		DropActionOverride: DROP,
-		Endpoints:          make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
+		Endpoints:          make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		IPSetByID:          make(map[string]IPSet),
-		ProfileByID:        make(map[proto.ProfileID]*proto.Profile),
-		PolicyByID:         make(map[proto.PolicyID]*proto.Policy),
-		ServiceAccountByID: make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
-		NamespaceByID:      make(map[proto.NamespaceID]*proto.NamespaceUpdate),
+		ProfileByID:        make(map[types.ProfileID]*proto.Profile),
+		PolicyByID:         make(map[types.PolicyID]*proto.Policy),
+		ServiceAccountByID: make(map[types.ServiceAccountID]*proto.ServiceAccountUpdate),
+		NamespaceByID:      make(map[types.NamespaceID]*proto.NamespaceUpdate),
 
 		wepUpdates: newWorkloadEndpointUpdateHandler(),
 	}
@@ -94,7 +95,7 @@ type PolicyStoreManager interface {
 	// tells PSM of syncher state 'connection (re-)established and in-sync'
 	OnInSync()
 
-	GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	GetCurrentEndpoints() map[types.WorkloadEndpointID]*proto.WorkloadEndpoint
 }
 
 type PolicyStoreManagerOption func(*policyStoreManager)
@@ -142,11 +143,11 @@ func (m *policyStoreManager) DoWithLock(cb func(*PolicyStore)) {
 	log.Tracef("StoreManager callback done, releasing lock")
 }
 
-func (m *policyStoreManager) GetCurrentEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
+func (m *policyStoreManager) GetCurrentEndpoints() map[types.WorkloadEndpointID]*proto.WorkloadEndpoint {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	copy := make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint, len(m.current.Endpoints))
+	copy := make(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint, len(m.current.Endpoints))
 	for k, v := range m.current.Endpoints {
 		copy[k] = v
 	}

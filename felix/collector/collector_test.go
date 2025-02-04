@@ -12,9 +12,10 @@ import (
 	"testing"
 	"time"
 
-	google_protobuf "github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	googleproto "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/wafevents"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
+	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/nfnetlink"
@@ -750,7 +752,7 @@ var inALPEntry = proto.DataplaneStats{
 }
 
 var dpStatsHTTPDataValue = 23
-var dpStatsEntryWithFwdFor = proto.DataplaneStats{
+var dpStatsEntryWithFwdFor = &proto.DataplaneStats{
 	SrcIp:   remoteIp1Str,
 	DstIp:   localIp1Str,
 	SrcPort: int32(srcPort),
@@ -1666,7 +1668,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
-			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithFwdFor)
+			c.convertDataplaneStatsAndApplyUpdate(dpStatsEntryWithFwdFor)
 			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 
@@ -1683,7 +1685,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
 
 			By("Sending in another dataplane stats update and check for updated tracked data")
-			updatedDpStatsEntryWithFwdFor := dpStatsEntryWithFwdFor
+			updatedDpStatsEntryWithFwdFor := googleproto.Clone(dpStatsEntryWithFwdFor).(*proto.DataplaneStats)
 			updatedDpStatsEntryWithFwdFor.HttpData = []*proto.HTTPData{
 				{
 					XForwardedFor: publicIP1Str,
@@ -1693,14 +1695,14 @@ var _ = Describe("Conntrack Datasource", func() {
 				},
 			}
 			expectedOrigSourceIPs = []net2.IP{net2.ParseIP(publicIP1Str), net2.ParseIP(publicIP2Str)}
-			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithFwdFor)
+			c.convertDataplaneStatsAndApplyUpdate(updatedDpStatsEntryWithFwdFor)
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
 
 			By("Sending in another dataplane stats update with only counts and check for updated tracked data")
-			updatedDpStatsEntryWithOnlyHttpStats := dpStatsEntryWithFwdFor
+			updatedDpStatsEntryWithOnlyHttpStats := googleproto.Clone(dpStatsEntryWithFwdFor).(*proto.DataplaneStats)
 			updatedDpStatsEntryWithOnlyHttpStats.HttpData = []*proto.HTTPData{}
-			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithOnlyHttpStats)
+			c.convertDataplaneStatsAndApplyUpdate(updatedDpStatsEntryWithOnlyHttpStats)
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(3*dpStatsHTTPDataValue - 1))
 		})
@@ -1708,13 +1710,13 @@ var _ = Describe("Conntrack Datasource", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
-			dpStatsEntryWithRealIP := dpStatsEntryWithFwdFor
+			dpStatsEntryWithRealIP := googleproto.Clone(dpStatsEntryWithFwdFor).(*proto.DataplaneStats)
 			dpStatsEntryWithRealIP.HttpData = []*proto.HTTPData{
 				{
 					XRealIp: publicIP1Str,
 				},
 			}
-			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithRealIP)
+			c.convertDataplaneStatsAndApplyUpdate(dpStatsEntryWithRealIP)
 			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			// know update is complete
@@ -1730,7 +1732,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
 
 			By("Sending a dataplane stats update with x-real-ip and check for updated tracked data")
-			updatedDpStatsEntryWithRealIP := dpStatsEntryWithRealIP
+			updatedDpStatsEntryWithRealIP := googleproto.Clone(dpStatsEntryWithRealIP).(*proto.DataplaneStats)
 			updatedDpStatsEntryWithRealIP.HttpData = []*proto.HTTPData{
 				{
 					XRealIp: publicIP1Str,
@@ -1740,14 +1742,14 @@ var _ = Describe("Conntrack Datasource", func() {
 				},
 			}
 			expectedOrigSourceIPs = []net2.IP{net2.ParseIP(publicIP1Str), net2.ParseIP(publicIP2Str)}
-			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithRealIP)
+			c.convertDataplaneStatsAndApplyUpdate(updatedDpStatsEntryWithRealIP)
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
 
 			By("Sending in another dataplane stats update with only counts and check for updated tracked data")
-			updatedDpStatsEntryWithOnlyHttpStats := dpStatsEntryWithRealIP
+			updatedDpStatsEntryWithOnlyHttpStats := googleproto.Clone(dpStatsEntryWithRealIP).(*proto.DataplaneStats)
 			updatedDpStatsEntryWithOnlyHttpStats.HttpData = []*proto.HTTPData{}
-			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithOnlyHttpStats)
+			c.convertDataplaneStatsAndApplyUpdate(updatedDpStatsEntryWithOnlyHttpStats)
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(3*dpStatsHTTPDataValue - 1))
 		})
@@ -1755,7 +1757,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
 			t := tuple.New(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
-			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithFwdFor)
+			c.convertDataplaneStatsAndApplyUpdate(dpStatsEntryWithFwdFor)
 			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
 			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
 			// know update is complete
@@ -1770,7 +1772,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
 
 			By("Sending in another dataplane stats update and check for updated tracked data")
-			updatedDpStatsEntryWithFwdForAndRealIP := dpStatsEntryWithFwdFor
+			updatedDpStatsEntryWithFwdForAndRealIP := googleproto.Clone(dpStatsEntryWithFwdFor).(*proto.DataplaneStats)
 			updatedDpStatsEntryWithFwdForAndRealIP.HttpData = []*proto.HTTPData{
 				{
 					XForwardedFor: publicIP1Str,
@@ -1781,7 +1783,7 @@ var _ = Describe("Conntrack Datasource", func() {
 				},
 			}
 			expectedOrigSourceIPs = []net2.IP{net2.ParseIP(publicIP1Str), net2.ParseIP(publicIP2Str)}
-			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithFwdForAndRealIP)
+			c.convertDataplaneStatsAndApplyUpdate(updatedDpStatsEntryWithFwdForAndRealIP)
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			// We subtract 1 because the second update contains an overlapping IP that is accounted for.
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
@@ -1952,7 +1954,7 @@ var _ = Describe("Reporting Metrics", func() {
 					}
 					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuIngress)))
 					By("Sending a dataplane stats update with HTTP Data")
-					c.ds <- &dpStatsEntryWithFwdFor
+					c.ds <- dpStatsEntryWithFwdFor
 					tmuOrigIP := testMetricUpdate{
 						updateType:    metric.UpdateTypeReport,
 						tpl:           *ingressPktAllowTuple,
@@ -1969,7 +1971,7 @@ var _ = Describe("Reporting Metrics", func() {
 				unknownRuleID := calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
 				It("should receive metric", func() {
 					By("Sending a dataplane stats update with HTTP Data")
-					c.ds <- &dpStatsEntryWithFwdFor
+					c.ds <- dpStatsEntryWithFwdFor
 					tmuOrigIP := testMetricUpdate{
 						updateType:    metric.UpdateTypeReport,
 						tpl:           *ingressPktAllowTuple,
@@ -2602,7 +2604,7 @@ var _ = Describe("WAFEvent logging", func() {
 					"Content-Type": "application/json",
 				},
 			},
-			Timestamp: google_protobuf.TimestampNow(),
+			Timestamp: timestamppb.Now(),
 		}
 		we1 = &proto.WAFEvent{
 			TxId:    "tx001",
@@ -2632,7 +2634,7 @@ var _ = Describe("WAFEvent logging", func() {
 					"Content-Type": "application/json",
 				},
 			},
-			Timestamp: google_protobuf.TimestampNow(),
+			Timestamp: timestamppb.Now(),
 		}
 	})
 
@@ -2849,8 +2851,8 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 	RegisterTestingT(t)
 
 	// Setup helper function to initialize the collector and channel, and register cleanup.
-	setup := func(t *testing.T) (*collector, chan proto.ToDataplane) {
-		dpInfoChan := make(chan proto.ToDataplane, 10)
+	setup := func(t *testing.T) (*collector, chan *proto.ToDataplane) {
+		dpInfoChan := make(chan *proto.ToDataplane, 10)
 		c := &collector{
 			policyStoreManager: policystore.NewPolicyStoreManager(),
 		}
@@ -2865,9 +2867,9 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 		return c, dpInfoChan
 	}
 
-	insync := func(dpInfoChan chan proto.ToDataplane) {
+	insync := func(dpInfoChan chan *proto.ToDataplane) {
 		// Ensure that the test channel is closed at the end of each test
-		dpInfo := proto.ToDataplane{
+		dpInfo := &proto.ToDataplane{
 			Payload: &proto.ToDataplane_InSync{
 				InSync: &proto.InSync{},
 			},
@@ -2878,15 +2880,15 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 	t.Run("should process dataplane info updates and update the policy store", func(t *testing.T) {
 		c, dpInfoChan := setup(t)
 
-		id := proto.WorkloadEndpointID{
+		id := felixtypes.WorkloadEndpointID{
 			OrchestratorId: "test-orchestrator",
 			WorkloadId:     "test-workload",
 			EndpointId:     "test-endpoint",
 		}
-		dpInfo := proto.ToDataplane{
+		dpInfo := &proto.ToDataplane{
 			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
 				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
-					Id: &id,
+					Id: felixtypes.WorkloadEndpointIDToProto(id),
 					Endpoint: &proto.WorkloadEndpoint{
 						Name: "test-endpoint",
 					},
@@ -2908,31 +2910,31 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 	t.Run("should handle multiple dataplane info updates", func(t *testing.T) {
 		c, dpInfoChan := setup(t)
 
-		id1 := proto.WorkloadEndpointID{
+		id1 := felixtypes.WorkloadEndpointID{
 			OrchestratorId: "test-orchestrator1",
 			WorkloadId:     "test-workload1",
 			EndpointId:     "test-endpoint1",
 		}
-		id2 := proto.WorkloadEndpointID{
+		id2 := felixtypes.WorkloadEndpointID{
 			OrchestratorId: "test-orchestrator2",
 			WorkloadId:     "test-workload2",
 			EndpointId:     "test-endpoint2",
 		}
 
-		dpInfo1 := proto.ToDataplane{
+		dpInfo1 := &proto.ToDataplane{
 			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
 				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
-					Id: &id1,
+					Id: felixtypes.WorkloadEndpointIDToProto(id1),
 					Endpoint: &proto.WorkloadEndpoint{
 						Name: "test-endpoint1",
 					},
 				},
 			},
 		}
-		dpInfo2 := proto.ToDataplane{
+		dpInfo2 := &proto.ToDataplane{
 			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
 				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
-					Id: &id2,
+					Id: felixtypes.WorkloadEndpointIDToProto(id2),
 					Endpoint: &proto.WorkloadEndpoint{
 						Name: "test-endpoint2",
 					},
@@ -2956,7 +2958,7 @@ func TestLoopDataplaneInfoUpdates(t *testing.T) {
 	})
 
 	t.Run("should not panic when the channel is closed", func(t *testing.T) {
-		dpInfoChan := make(chan proto.ToDataplane, 10)
+		dpInfoChan := make(chan *proto.ToDataplane, 10)
 		c := &collector{
 			policyStoreManager: policystore.NewPolicyStoreManager(),
 		}
@@ -3003,7 +3005,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 
 	policyStoreManager := policystore.NewPolicyStoreManager()
 	policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload1",
 			EndpointId:     "eth0",
@@ -3017,7 +3019,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 				},
 			},
 		}
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload2",
 			EndpointId:     "eth0",
@@ -3032,7 +3034,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			},
 		}
 
-		ps.PolicyByID[proto.PolicyID{
+		ps.PolicyByID[felixtypes.PolicyID{
 			Tier: "default",
 			Name: "policy1",
 		}] = &proto.Policy{
@@ -3048,7 +3050,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 			},
 		}
 
-		ps.PolicyByID[proto.PolicyID{
+		ps.PolicyByID[felixtypes.PolicyID{
 			Tier: "tier1",
 			Name: "policy11",
 		}] = &proto.Policy{
@@ -3100,7 +3102,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 		},
 	}
 	c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload3",
 			EndpointId:     "eth1",
@@ -3114,7 +3116,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 				},
 			},
 		}
-		ps.Endpoints[proto.WorkloadEndpointID{
+		ps.Endpoints[felixtypes.WorkloadEndpointID{
 			OrchestratorId: "k8s",
 			WorkloadId:     "default.workload4",
 			EndpointId:     "eth1",
@@ -3156,7 +3158,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 
 		// Update the policies
 		c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
-			ps.Endpoints[proto.WorkloadEndpointID{
+			ps.Endpoints[felixtypes.WorkloadEndpointID{
 				OrchestratorId: "k8s",
 				WorkloadId:     "default.workload1",
 				EndpointId:     "eth0",
@@ -3170,7 +3172,7 @@ func TestRunPendingRuleTraceEvaluation(t *testing.T) {
 					},
 				},
 			}
-			ps.Endpoints[proto.WorkloadEndpointID{
+			ps.Endpoints[felixtypes.WorkloadEndpointID{
 				OrchestratorId: "k8s",
 				WorkloadId:     "default.workload2",
 				EndpointId:     "eth0",

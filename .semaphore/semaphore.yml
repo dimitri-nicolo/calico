@@ -316,9 +316,7 @@ blocks:
     jobs:
       - name: build binary
         commands:
-          # Skip building protofbufs because the build fails on ARM due to missing image.
-          # We know they are up-to-date because an earlier build job checks already.
-          - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64 SKIP_PROTOBUF=true
+          - ../.semaphore/run-and-monitor build-arm64.log make build arch=arm64
 - name: calicoctl
   run:
     when: "false or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -512,8 +510,7 @@ blocks:
     jobs:
       - name: Build binary
         commands:
-          # Skipping protobuf build because it fails on ARM (but the pre-flight check ensures it's up-to-date).
-          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64 SKIP_PROTOBUF=true
+          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
 - name: "Felix: Build Windows binaries"
   run:
     when: "false or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1075,9 +1072,7 @@ blocks:
     jobs:
       - name: Build image
         commands:
-          # Skip building protofbufs because the build fails on ARM due to missing image.
-          # We know they are up-to-date because an earlier build job checks already.
-          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64 SKIP_PROTOBUF=true
+          - ../.semaphore/run-and-monitor build-arm64.log make image ARCH=arm64
     epilogue:
       always:
         commands:

@@ -5,10 +5,10 @@ package wafevents
 import (
 	"time"
 
-	google_protobuf "github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/projectcalico/calico/felix/collector/types"
 	"github.com/projectcalico/calico/felix/proto"
@@ -95,7 +95,7 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 						"User-Agent": "Firefox",
 					},
 				},
-				Timestamp: &google_protobuf.Timestamp{Seconds: 58800},
+				Timestamp: &timestamppb.Timestamp{Seconds: 58800},
 			},
 		}
 		// r1, sql injection, block
@@ -150,7 +150,7 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 						"User-Agent": "Firefox",
 					},
 				},
-				Timestamp: &google_protobuf.Timestamp{Seconds: 58800},
+				Timestamp: &timestamppb.Timestamp{Seconds: 58800},
 			},
 		}
 		// r2, OS File Access Attempt, block
@@ -215,7 +215,7 @@ var _ = Describe("WAFEvent Log Reporter", func() {
 						"User-Agent": "Firefox",
 					},
 				},
-				Timestamp: &google_protobuf.Timestamp{Seconds: 58800},
+				Timestamp: &timestamppb.Timestamp{Seconds: 58800},
 			},
 		}
 	})

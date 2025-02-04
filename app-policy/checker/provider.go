@@ -13,6 +13,7 @@ import (
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 type CheckProvider interface {
@@ -72,7 +73,8 @@ func GetSidecar(ps *policystore.PolicyStore, req *authz.CheckRequest) (sidecar *
 	if len(dest) == 0 {
 		return
 	}
-	if sidecar, ok = ps.Endpoints[dest[0]]; ok && sidecar.ApplicationLayer != nil {
+	id := types.ProtoToWorkloadEndpointID(&dest[0])
+	if sidecar, ok = ps.Endpoints[id]; ok && sidecar.ApplicationLayer != nil {
 		return
 	}
 	sidecar = nil

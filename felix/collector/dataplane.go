@@ -126,5 +126,5 @@ type EgressDomainCache interface {
 type DataplaneInfoReader interface {
 	Start() error
 	Stop()
-	DataplaneInfoChan() <-chan proto.ToDataplane
+	DataplaneInfoChan() <-chan *proto.ToDataplane
 }

@@ -4,7 +4,6 @@ package policysync_test
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -12,10 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/policysync"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 type perHostMockClient struct {
@@ -24,7 +25,7 @@ type perHostMockClient struct {
 	name, subscriptionType string
 	uidAllocator           *policysync.UIDAllocator
 	meta                   policysync.JoinMetadata
-	observations           []string
+	observations           []*proto.ToDataplane
 	onLeaveCancel          context.CancelFunc
 }
 
@@ -33,12 +34,12 @@ func newPerHostMockClient(name, subscriptionType string, uidAllocator *policysyn
 }
 
 func (cl *perHostMockClient) join(ctx context.Context, toUpdates chan interface{}) {
-	sr := proto.SyncRequest{
+	sr := &proto.SyncRequest{
 		SubscriptionType: cl.subscriptionType,
 	}
 
 	// Buffer outputs so that Processor won't block.
-	output := make(chan proto.ToDataplane)
+	output := make(chan *proto.ToDataplane)
 	cl.meta = policysync.JoinMetadata{
 		EndpointID: testId(cl.name),
 		JoinUID:    cl.uidAllocator.NextUID(),
@@ -61,13 +62,12 @@ func (cl *perHostMockClient) join(ctx context.Context, toUpdates chan interface{
 	cl.onLeaveCancel = cancel
 }
 
-func (cl *perHostMockClient) observe(ctx context.Context, output chan proto.ToDataplane) {
+func (cl *perHostMockClient) observe(ctx context.Context, output chan *proto.ToDataplane) {
 	for {
 		select {
 		case observation := <-output:
-			s := fmt.Sprintf("%T: %v", observation.Payload, observation.Payload)
 			cl.lock.Lock()
-			cl.observations = append(cl.observations, s)
+			cl.observations = append(cl.observations, observation)
 			cl.lock.Unlock()
 		case <-ctx.Done():
 			return
@@ -75,7 +75,7 @@ func (cl *perHostMockClient) observe(ctx context.Context, output chan proto.ToDa
 	}
 }
 
-func (cl *perHostMockClient) readObservations(readFn func([]string)) {
+func (cl *perHostMockClient) readObservations(readFn func([]*proto.ToDataplane)) {
 	cl.lock.Lock()
 	defer cl.lock.Unlock()
 
@@ -91,7 +91,7 @@ func (cl *perHostMockClient) leave(ctx context.Context, toUpdates chan interface
 func wepUpdate(name string) *proto.WorkloadEndpointUpdate {
 	id := testId(name)
 	return &proto.WorkloadEndpointUpdate{
-		Id:       &id,
+		Id:       types.WorkloadEndpointIDToProto(id),
 		Endpoint: &proto.WorkloadEndpoint{},
 	}
 }
@@ -146,10 +146,76 @@ func TestProcessorWithHostmodeClients(t *testing.T) {
 
 	expectedUpdatesCount := len(wepNames) + len(profileNames) + 1
 
+	// all clients should have same observations on updates
+	expectedObservations := []*proto.ToDataplane{
+		{
+			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
+				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
+					Id: &proto.WorkloadEndpointID{
+						OrchestratorId: "k8s",
+						WorkloadId:     "a",
+						EndpointId:     "eth0",
+					},
+					Endpoint: &proto.WorkloadEndpoint{},
+				},
+			},
+		},
+		{
+			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
+				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
+					Id: &proto.WorkloadEndpointID{
+						OrchestratorId: "k8s",
+						WorkloadId:     "b",
+						EndpointId:     "eth0",
+					},
+					Endpoint: &proto.WorkloadEndpoint{},
+				},
+			},
+		},
+		{
+			Payload: &proto.ToDataplane_WorkloadEndpointUpdate{
+				WorkloadEndpointUpdate: &proto.WorkloadEndpointUpdate{
+					Id: &proto.WorkloadEndpointID{
+						OrchestratorId: "k8s",
+						WorkloadId:     "c",
+						EndpointId:     "eth0",
+					},
+					Endpoint: &proto.WorkloadEndpoint{},
+				},
+			},
+		},
+		{
+			Payload: &proto.ToDataplane_ActiveProfileUpdate{
+				ActiveProfileUpdate: &proto.ActiveProfileUpdate{
+					Id: &proto.ProfileID{Name: "j"},
+				},
+			},
+		},
+		{
+			Payload: &proto.ToDataplane_ActiveProfileUpdate{
+				ActiveProfileUpdate: &proto.ActiveProfileUpdate{
+					Id: &proto.ProfileID{Name: "k"},
+				},
+			},
+		},
+		{
+			Payload: &proto.ToDataplane_ActiveProfileUpdate{
+				ActiveProfileUpdate: &proto.ActiveProfileUpdate{
+					Id: &proto.ProfileID{Name: "l"},
+				},
+			},
+		},
+		{
+			Payload: &proto.ToDataplane_InSync{
+				InSync: &proto.InSync{},
+			},
+		},
+	}
+
 	for _, d := range []*perHostMockClient{d1, d2, d3} {
-		var observations []string
+		var observations []*proto.ToDataplane
 		hasNumberOfObservations := func() (res bool) {
-			d.readObservations(func(o []string) {
+			d.readObservations(func(o []*proto.ToDataplane) {
 				res = len(o) == expectedUpdatesCount
 				if res {
 					observations = o
@@ -164,19 +230,18 @@ func TestProcessorWithHostmodeClients(t *testing.T) {
 		)
 		assert.Len(t, observations, expectedUpdatesCount, "clients connected AFTER updates should have the correct number of updates")
 
-		// all clients should have same observations on updates
-		assert.ElementsMatch(t,
-			[]string{
-				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:<orchestrator_id:"k8s" workload_id:"a" endpoint_id:"eth0" > endpoint:<> }`,
-				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:<orchestrator_id:"k8s" workload_id:"b" endpoint_id:"eth0" > endpoint:<> }`,
-				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:<orchestrator_id:"k8s" workload_id:"c" endpoint_id:"eth0" > endpoint:<> }`,
-				`*proto.ToDataplane_ActiveProfileUpdate: &{id:<name:"j" > }`,
-				`*proto.ToDataplane_ActiveProfileUpdate: &{id:<name:"k" > }`,
-				`*proto.ToDataplane_ActiveProfileUpdate: &{id:<name:"l" > }`,
-				`*proto.ToDataplane_InSync: &{}`,
-			},
-			observations,
-		)
+		visited := make([]bool, len(observations))
+		for _, eo := range expectedObservations {
+			found := false
+			for i, o := range observations {
+				if !visited[i] && googleproto.Equal(eo, o) {
+					visited[i] = true
+					found = true
+					break
+				}
+			}
+			assert.True(t, found, "expected observation not found: %v", eo)
+		}
 	}
 
 	// clients leave

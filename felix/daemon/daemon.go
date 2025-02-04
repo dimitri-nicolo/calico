@@ -1265,7 +1265,7 @@ func (fc *DataplaneConnector) readMessagesFromDataplane() {
 }
 
 func (fc *DataplaneConnector) handleProcessStatusUpdate(ctx context.Context, msg *proto.ProcessStatusUpdate) {
-	log.Debugf("Status update from dataplane driver: %v", *msg)
+	log.Debugf("Status update from dataplane driver: %v", msg)
 	statusReport := model.StatusReport{
 		Timestamp:     msg.IsoTimestamp,
 		UptimeSeconds: msg.Uptime,
@@ -1507,8 +1507,8 @@ func (fc *DataplaneConnector) handleEgressPodStatusUpdateFromDataplane() {
 				current.Namespace,
 				current.Name,
 				current.Addr,
-				proto.ConvertTimestamp(current.MaintenanceStarted),
-				proto.ConvertTimestamp(current.MaintenanceFinished))
+				current.MaintenanceStarted.AsTime(),
+				current.MaintenanceFinished.AsTime())
 			if err == nil {
 				delete(updates, current.Namespace+"/"+current.Name)
 			} else {

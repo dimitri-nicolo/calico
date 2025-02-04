@@ -5,6 +5,7 @@ package fv_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/proto"
 )
@@ -32,7 +33,7 @@ var _ = Describe("Ingress Collector FV Test", func() {
 			// Validate the result
 			var result *proto.DataplaneStats
 			Eventually(handler.StatsChan(), handler.Timeout(), handler.Interval()).Should(Receive(&result))
-			Expect(result).To(Equal(basicLogDps))
+			Expect(googleproto.Equal(result, basicLogDps)).To(BeTrue())
 		})
 	})
 
@@ -44,7 +45,7 @@ var _ = Describe("Ingress Collector FV Test", func() {
 			// Validate the result
 			var result *proto.DataplaneStats
 			Eventually(handler.StatsChan(), handler.Timeout(), handler.Interval()).Should(Receive(&result))
-			Expect(result).To(Equal(basicLogDps))
+			Expect(googleproto.Equal(result, basicLogDps)).To(BeTrue())
 		})
 	})
 

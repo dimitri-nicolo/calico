@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/policysync"
 	"github.com/projectcalico/calico/felix/proto"
@@ -42,7 +43,7 @@ var _ = Describe("Server", func() {
 
 		Context("after calling Sync and joining", func() {
 			var stream *testSyncStream
-			var updates chan<- proto.ToDataplane
+			var updates chan<- *proto.ToDataplane
 			var output chan *proto.ToDataplane
 			syncDone := make(chan bool)
 
@@ -55,20 +56,20 @@ var _ = Describe("Server", func() {
 				}()
 				j := <-joins
 				jr := j.(policysync.JoinRequest)
-				Expect(jr.EndpointID.GetWorkloadId()).To(Equal(WorkloadID))
+				Expect(jr.EndpointID.WorkloadId).To(Equal(WorkloadID))
 				updates = jr.C
 				close(done)
 			})
 
 			It("should stream policy messages", func(done Done) {
-				msgs := []proto.ToDataplane{
+				msgs := []*proto.ToDataplane{
 					{Payload: &proto.ToDataplane_WorkloadEndpointUpdate{}},
 					{Payload: &proto.ToDataplane_InSync{}},
 				}
 				for _, msg := range msgs {
 					updates <- msg
 					g := <-output
-					Expect(g).To(Equal(&msg))
+					Expect(googleproto.Equal(g, msg)).To(BeTrue())
 				}
 
 				close(done)
@@ -78,7 +79,7 @@ var _ = Describe("Server", func() {
 				BeforeEach(func(done Done) {
 					// Queue up 10 messages. This should not block because the updates channel should be buffered.
 					for i := 0; i < 10; i++ {
-						updates <- proto.ToDataplane{}
+						updates <- &proto.ToDataplane{}
 					}
 					close(done)
 				})
@@ -92,11 +93,11 @@ var _ = Describe("Server", func() {
 
 					It("should drain updates channel, send leave request and end Sync", func(done Done) {
 						for i := 0; i < 10; i++ {
-							updates <- proto.ToDataplane{}
+							updates <- &proto.ToDataplane{}
 						}
 						j := <-joins
 						lr := j.(policysync.LeaveRequest)
-						Expect(lr.EndpointID.GetWorkloadId()).To(Equal(WorkloadID))
+						Expect(lr.EndpointID.WorkloadId).To(Equal(WorkloadID))
 						close(updates)
 						<-syncDone
 						close(done)
@@ -115,7 +116,7 @@ var _ = Describe("Server", func() {
 						}
 						j := <-joins
 						lr := j.(policysync.LeaveRequest)
-						Expect(lr.EndpointID.GetWorkloadId()).To(Equal(WorkloadID))
+						Expect(lr.EndpointID.WorkloadId).To(Equal(WorkloadID))
 						<-syncDone
 						close(done)
 					})
@@ -128,7 +129,7 @@ var _ = Describe("Server", func() {
 
 		Context("after calling Sync and joining", func() {
 			var stream *testSyncStream
-			var updates chan<- proto.ToDataplane
+			var updates chan<- *proto.ToDataplane
 			var output chan *proto.ToDataplane
 			syncDone := make(chan bool)
 
@@ -141,20 +142,20 @@ var _ = Describe("Server", func() {
 				}()
 				j := <-joins
 				jr := j.(policysync.JoinRequest)
-				Expect(jr.EndpointID.GetWorkloadId()).To(Equal(WorkloadID))
+				Expect(jr.EndpointID.WorkloadId).To(Equal(WorkloadID))
 				updates = jr.C
 				close(done)
 			})
 
 			It("should stream route messages", func(done Done) {
-				msgs := []proto.ToDataplane{
+				msgs := []*proto.ToDataplane{
 					{Payload: &proto.ToDataplane_RouteUpdate{}},
 					{Payload: &proto.ToDataplane_InSync{}},
 				}
 				for _, msg := range msgs {
 					updates <- msg
 					g := <-output
-					Expect(g).To(Equal(&msg))
+					Expect(googleproto.Equal(g, msg)).To(BeTrue())
 				}
 
 				close(done)
@@ -180,8 +181,12 @@ func (*testSyncStream) RecvMsg(m interface{}) error {
 	panic("not implemented")
 }
 
-func (*testSyncStream) Send(m *proto.ToDataplane) error {
-	panic("not implemented")
+func (s *testSyncStream) Send(m *proto.ToDataplane) error {
+	s.output <- m
+	if s.sendErr {
+		return errors.New("test error")
+	}
+	return nil
 }
 
 func (*testSyncStream) SetHeader(metadata.MD) error {

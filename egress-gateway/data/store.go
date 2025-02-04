@@ -27,8 +27,8 @@ type RouteStore interface {
 	// Routes returns all data aggregated by the store, grouped by node where relevant
 	Routes() (
 		thisWorkload *proto.RouteUpdate,
-		workloadsByNodeName map[string][]proto.RouteUpdate,
-		tunnelsByNodeName map[string][]proto.RouteUpdate,
+		workloadsByNodeName map[string][]*proto.RouteUpdate,
+		tunnelsByNodeName map[string][]*proto.RouteUpdate,
 	)
 	// Subscribe allows Observers to subscribe to store updates
 	Subscribe(RouteObserver)
@@ -87,28 +87,28 @@ func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPo
 // Routes returns all data aggregated by the store, grouped by node where relevant
 func (s *routeStore) Routes() (
 	thisWorkload *proto.RouteUpdate,
-	workloadsByNodeName map[string][]proto.RouteUpdate,
-	tunnelsByNodeName map[string][]proto.RouteUpdate,
+	workloadsByNodeName map[string][]*proto.RouteUpdate,
+	tunnelsByNodeName map[string][]*proto.RouteUpdate,
 ) {
-	workloadsByNodeName = make(map[string][]proto.RouteUpdate)
-	tunnelsByNodeName = make(map[string][]proto.RouteUpdate)
+	workloadsByNodeName = make(map[string][]*proto.RouteUpdate)
+	tunnelsByNodeName = make(map[string][]*proto.RouteUpdate)
 	s.read(func(s *routeStore) {
 		// group all remote workloads
 		for _, workload := range s.remoteWorkloadUpdatesByDst {
 			nodeName := workload.DstNodeName
 			if _, ok := workloadsByNodeName[nodeName]; !ok {
-				workloadsByNodeName[nodeName] = make([]proto.RouteUpdate, 0)
+				workloadsByNodeName[nodeName] = make([]*proto.RouteUpdate, 0)
 			}
-			workloadsByNodeName[nodeName] = append(workloadsByNodeName[nodeName], *workload)
+			workloadsByNodeName[nodeName] = append(workloadsByNodeName[nodeName], workload)
 		}
 
 		// group all tunnels
 		for _, tunnel := range s.tunnelUpdatesByDst {
 			nodeName := tunnel.DstNodeName
 			if _, ok := tunnelsByNodeName[nodeName]; !ok {
-				tunnelsByNodeName[nodeName] = make([]proto.RouteUpdate, 0)
+				tunnelsByNodeName[nodeName] = make([]*proto.RouteUpdate, 0)
 			}
-			tunnelsByNodeName[nodeName] = append(tunnelsByNodeName[nodeName], *tunnel)
+			tunnelsByNodeName[nodeName] = append(tunnelsByNodeName[nodeName], tunnel)
 		}
 
 		thisWorkload = s.latestGatewayUpdate
@@ -142,7 +142,7 @@ func (s *routeStore) SyncForever(ctx context.Context) {
 				updates = s.getUpdatesPipeline()
 				s.inSync = false
 				s.clear()
-			} else {
+			} else if update != nil {
 				// begin parsing pipeline updates
 				log.WithField("update", update).Debug("parsing new update from upstream...")
 

@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/routetable/ownershippol"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -42,8 +43,8 @@ type awsIPManager struct {
 	poolIDsBySubnetID         map[string]set.Set[string]
 	localAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
 	localRouteDestsBySubnetID map[string]set.Set[ip.CIDR]
-	workloadEndpointsByID     map[proto.WorkloadEndpointID]awsEndpointInfo
-	workloadEndpointIDsByCIDR map[ip.CIDR]set.Set[proto.WorkloadEndpointID]
+	workloadEndpointsByID     map[types.WorkloadEndpointID]awsEndpointInfo
+	workloadEndpointIDsByCIDR map[ip.CIDR]set.Set[types.WorkloadEndpointID]
 	awsResyncNeeded           bool
 
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
@@ -129,8 +130,8 @@ func NewAWSIPManager(
 		poolIDsBySubnetID:         map[string]set.Set[string]{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 		localRouteDestsBySubnetID: map[string]set.Set[ip.CIDR]{},
-		workloadEndpointsByID:     map[proto.WorkloadEndpointID]awsEndpointInfo{},
-		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set[proto.WorkloadEndpointID]{},
+		workloadEndpointsByID:     map[types.WorkloadEndpointID]awsEndpointInfo{},
+		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set[types.WorkloadEndpointID]{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
 		routeTablesByIfaceName: map[string]routetable.Interface{},
@@ -359,7 +360,7 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 }
 
 func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
-	wepID := *msg.Id
+	wepID := types.ProtoToWorkloadEndpointID(msg.GetId())
 	newEP := awsEndpointInfo{
 		IPv4Nets:   parseCIDRSlice(msg.Endpoint.Ipv4Nets),
 		ElasticIPs: parseIPSlice(msg.Endpoint.AwsElasticIps),
@@ -376,15 +377,16 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 }
 
 func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
-	logCtx := logrus.WithField("id", *msg.Id)
-	changed := a.onWorkloadUpdateOrRemove(logCtx, *msg.Id, nil)
+	id := types.ProtoToWorkloadEndpointID(msg.GetId())
+	logCtx := logrus.WithField("id", id)
+	changed := a.onWorkloadUpdateOrRemove(logCtx, id, nil)
 	if changed {
 		logCtx.Debug("Workload endpoint with elastic IPs removed.")
 		a.queueAWSResync("workload removed")
 	}
 }
 
-func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID proto.WorkloadEndpointID, newEP *awsEndpointInfo) (changed bool) {
+func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID types.WorkloadEndpointID, newEP *awsEndpointInfo) (changed bool) {
 	oldEP := a.workloadEndpointsByID[wepID]
 	var newEIPs []ip.Addr
 	if newEP == nil {
@@ -412,7 +414,7 @@ func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID prot
 	if len(newEIPs) > 0 {
 		for _, cidr := range newEP.IPv4Nets {
 			if a.workloadEndpointIDsByCIDR[cidr] == nil {
-				a.workloadEndpointIDsByCIDR[cidr] = set.New[proto.WorkloadEndpointID]()
+				a.workloadEndpointIDsByCIDR[cidr] = set.New[types.WorkloadEndpointID]()
 			}
 			a.workloadEndpointIDsByCIDR[cidr].Add(wepID)
 		}
@@ -454,7 +456,7 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 	// returning the intersection of their elastic IPs.  That way we only assign IPs that are valid for all
 	// pods sharing the IP.
 	var elasticIPs set.Set[ip.Addr]
-	weps.Iter(func(wepID proto.WorkloadEndpointID) error {
+	weps.Iter(func(wepID types.WorkloadEndpointID) error {
 		wep := a.workloadEndpointsByID[wepID]
 		elasticIPsThisWEP := set.New[ip.Addr]()
 		for _, eip := range wep.ElasticIPs {

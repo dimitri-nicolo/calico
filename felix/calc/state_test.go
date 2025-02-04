@@ -20,10 +20,12 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	googleproto "google.golang.org/protobuf/proto"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -37,28 +39,28 @@ type State struct {
 	// than a map to give us a deterministic ordering of injection.
 	DatastoreState                       []model.KVPair
 	ExpectedIPSets                       map[string]set.Set[string]
-	ExpectedPolicyIDs                    set.Set[proto.PolicyID]
-	ExpectedUntrackedPolicyIDs           set.Set[proto.PolicyID]
-	ExpectedPreDNATPolicyIDs             set.Set[proto.PolicyID]
-	ExpectedProfileIDs                   set.Set[proto.ProfileID]
-	ExpectedRoutes                       set.Set[proto.RouteUpdate]
-	ExpectedVTEPs                        set.Set[proto.VXLANTunnelEndpointUpdate]
+	ExpectedPolicyIDs                    set.Set[types.PolicyID]
+	ExpectedUntrackedPolicyIDs           set.Set[types.PolicyID]
+	ExpectedPreDNATPolicyIDs             set.Set[types.PolicyID]
+	ExpectedProfileIDs                   set.Set[types.ProfileID]
+	ExpectedRoutes                       set.Set[types.RouteUpdate]
+	ExpectedVTEPs                        set.Set[types.VXLANTunnelEndpointUpdate]
 	ExpectedIPSecBindings                set.Set[mock.IPSecBinding]
 	ExpectedIPSecBlacklist               set.Set[string]
 	ExpectedCachedRemoteEndpoints        []*calc.EndpointData
-	ExpectedWireguardEndpoints           set.Set[proto.WireguardEndpointUpdate]
-	ExpectedWireguardV6Endpoints         set.Set[proto.WireguardEndpointV6Update]
+	ExpectedWireguardEndpoints           set.Set[types.WireguardEndpointUpdate]
+	ExpectedWireguardV6Endpoints         set.Set[types.WireguardEndpointV6Update]
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
-	ExpectedHostMetadataV4V6             map[string]proto.HostMetadataV4V6Update
+	ExpectedHostMetadataV4V6             map[string]*proto.HostMetadataV4V6Update
 	ExpectedEndpointEgressData           map[string]calc.EndpointEgressData
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
-	ExpectedCaptureUpdates               set.Set[proto.PacketCaptureUpdate]
-	ExpectedCaptureRemovals              set.Set[proto.PacketCaptureUpdate]
-	ExpectedEncapsulation                proto.Encapsulation
+	ExpectedCaptureUpdates               set.Set[types.PacketCaptureUpdate]
+	ExpectedCaptureRemovals              set.Set[types.PacketCaptureUpdate]
+	ExpectedEncapsulation                *proto.Encapsulation
 }
 
 func (s State) String() string {
@@ -72,26 +74,27 @@ func NewState() State {
 	return State{
 		DatastoreState:                       []model.KVPair{},
 		ExpectedIPSets:                       make(map[string]set.Set[string]),
-		ExpectedPolicyIDs:                    set.New[proto.PolicyID](),
-		ExpectedUntrackedPolicyIDs:           set.New[proto.PolicyID](),
-		ExpectedPreDNATPolicyIDs:             set.New[proto.PolicyID](),
-		ExpectedProfileIDs:                   set.New[proto.ProfileID](),
-		ExpectedRoutes:                       set.New[proto.RouteUpdate](),
-		ExpectedVTEPs:                        set.New[proto.VXLANTunnelEndpointUpdate](),
+		ExpectedPolicyIDs:                    set.New[types.PolicyID](),
+		ExpectedUntrackedPolicyIDs:           set.New[types.PolicyID](),
+		ExpectedPreDNATPolicyIDs:             set.New[types.PolicyID](),
+		ExpectedProfileIDs:                   set.New[types.ProfileID](),
+		ExpectedRoutes:                       set.New[types.RouteUpdate](),
+		ExpectedVTEPs:                        set.New[types.VXLANTunnelEndpointUpdate](),
 		ExpectedIPSecBindings:                set.New[mock.IPSecBinding](),
 		ExpectedIPSecBlacklist:               nil, // Created on demand, nil means "ignore"
 		ExpectedCachedRemoteEndpoints:        []*calc.EndpointData{},
-		ExpectedWireguardEndpoints:           set.New[proto.WireguardEndpointUpdate](),
-		ExpectedWireguardV6Endpoints:         set.New[proto.WireguardEndpointV6Update](),
+		ExpectedWireguardEndpoints:           set.New[types.WireguardEndpointUpdate](),
+		ExpectedWireguardV6Endpoints:         set.New[types.WireguardEndpointV6Update](),
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
-		ExpectedHostMetadataV4V6:             make(map[string]proto.HostMetadataV4V6Update),
+		ExpectedHostMetadataV4V6:             make(map[string]*proto.HostMetadataV4V6Update),
 		ExpectedEndpointEgressData:           make(map[string]calc.EndpointEgressData),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
-		ExpectedCaptureUpdates:               set.New[proto.PacketCaptureUpdate](),
-		ExpectedCaptureRemovals:              set.New[proto.PacketCaptureUpdate](),
+		ExpectedCaptureUpdates:               set.New[types.PacketCaptureUpdate](),
+		ExpectedCaptureRemovals:              set.New[types.PacketCaptureUpdate](),
+		ExpectedEncapsulation:                &proto.Encapsulation{},
 	}
 }
 
@@ -136,12 +139,12 @@ func (s State) Copy() State {
 
 	cpy.ExpectedCachedRemoteEndpoints = append(cpy.ExpectedCachedRemoteEndpoints, s.ExpectedCachedRemoteEndpoints...)
 	if s.ExpectedCaptureUpdates != nil {
-		s.ExpectedCaptureUpdates.Iter(func(item proto.PacketCaptureUpdate) error {
+		s.ExpectedCaptureUpdates.Iter(func(item types.PacketCaptureUpdate) error {
 			cpy.ExpectedCaptureUpdates.Add(item)
 			return nil
 		})
 	}
-	cpy.ExpectedEncapsulation = s.ExpectedEncapsulation
+	cpy.ExpectedEncapsulation = googleproto.Clone(s.ExpectedEncapsulation).(*proto.Encapsulation)
 
 	cpy.Name = s.Name
 
@@ -244,9 +247,9 @@ func (s State) withName(name string) (newState State) {
 	return newState
 }
 
-func (s State) withActivePolicies(ids ...proto.PolicyID) (newState State) {
+func (s State) withActivePolicies(ids ...types.PolicyID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedPolicyIDs = set.New[proto.PolicyID]()
+	newState.ExpectedPolicyIDs = set.New[types.PolicyID]()
 	for _, id := range ids {
 		newState.ExpectedPolicyIDs.Add(id)
 	}
@@ -271,55 +274,55 @@ func (s State) withTotalActivePolicies(count int) (newState State) {
 	return newState
 }
 
-func (s State) withUntrackedPolicies(ids ...proto.PolicyID) (newState State) {
+func (s State) withUntrackedPolicies(ids ...types.PolicyID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedUntrackedPolicyIDs = set.New[proto.PolicyID]()
+	newState.ExpectedUntrackedPolicyIDs = set.New[types.PolicyID]()
 	for _, id := range ids {
 		newState.ExpectedUntrackedPolicyIDs.Add(id)
 	}
 	return newState
 }
 
-func (s State) withPreDNATPolicies(ids ...proto.PolicyID) (newState State) {
+func (s State) withPreDNATPolicies(ids ...types.PolicyID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedPreDNATPolicyIDs = set.New[proto.PolicyID]()
+	newState.ExpectedPreDNATPolicyIDs = set.New[types.PolicyID]()
 	for _, id := range ids {
 		newState.ExpectedPreDNATPolicyIDs.Add(id)
 	}
 	return newState
 }
 
-func (s State) withActiveProfiles(ids ...proto.ProfileID) (newState State) {
+func (s State) withActiveProfiles(ids ...types.ProfileID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedProfileIDs = set.New[proto.ProfileID]()
+	newState.ExpectedProfileIDs = set.New[types.ProfileID]()
 	for _, id := range ids {
 		newState.ExpectedProfileIDs.Add(id)
 	}
 	return newState
 }
 
-func (s State) withVTEPs(vteps ...proto.VXLANTunnelEndpointUpdate) (newState State) {
+func (s State) withVTEPs(vteps ...types.VXLANTunnelEndpointUpdate) (newState State) {
 	newState = s.Copy()
 	newState.ExpectedVTEPs = set.FromArray(vteps)
 	return newState
 }
 
-func (s State) withRoutes(routes ...proto.RouteUpdate) (newState State) {
+func (s State) withRoutes(routes ...types.RouteUpdate) (newState State) {
 	newState = s.Copy()
 	newState.ExpectedRoutes = set.FromArray(routes)
 	return newState
 }
 
-func (s State) withHostMetadataV4V6(hostMetas ...proto.HostMetadataV4V6Update) (newState State) {
+func (s State) withHostMetadataV4V6(hostMetas ...*proto.HostMetadataV4V6Update) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedHostMetadataV4V6 = make(map[string]proto.HostMetadataV4V6Update)
+	newState.ExpectedHostMetadataV4V6 = make(map[string]*proto.HostMetadataV4V6Update)
 	for _, v := range hostMetas {
 		newState.ExpectedHostMetadataV4V6[v.Hostname] = v
 	}
 	return newState
 }
 
-func (s State) withCapturesUpdates(updates ...proto.PacketCaptureUpdate) (newState State) {
+func (s State) withCapturesUpdates(updates ...types.PacketCaptureUpdate) (newState State) {
 	newState = s.Copy()
 	if updates != nil {
 		newState.ExpectedCaptureUpdates.AddAll(updates)
@@ -358,19 +361,19 @@ func (s State) withIPSecBlacklist(endpointAddr ...string) (newState State) {
 	return
 }
 
-func (s State) withExpectedEncapsulation(encap proto.Encapsulation) (newState State) {
+func (s State) withExpectedEncapsulation(encap *proto.Encapsulation) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedEncapsulation = encap
+	newState.ExpectedEncapsulation = googleproto.Clone(encap).(*proto.Encapsulation)
 	return newState
 }
 
-func (s State) withWireguardEndpoints(endpoints ...proto.WireguardEndpointUpdate) (newState State) {
+func (s State) withWireguardEndpoints(endpoints ...types.WireguardEndpointUpdate) (newState State) {
 	newState = s.Copy()
 	newState.ExpectedWireguardEndpoints = set.FromArray(endpoints)
 	return newState
 }
 
-func (s State) withWireguardV6Endpoints(endpoints ...proto.WireguardEndpointV6Update) (newState State) {
+func (s State) withWireguardV6Endpoints(endpoints ...types.WireguardEndpointV6Update) (newState State) {
 	newState = s.Copy()
 	newState.ExpectedWireguardV6Endpoints = set.FromArray(endpoints)
 	return newState

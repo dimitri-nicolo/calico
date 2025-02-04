@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/uds"
 )
 
@@ -116,7 +117,7 @@ func ensureSocketFileAccessible(filePath string) error {
 	return nil
 }
 
-func (d *Dikastes) GetWorkloadEndpoints() map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint {
+func (d *Dikastes) GetWorkloadEndpoints() map[types.WorkloadEndpointID]*proto.WorkloadEndpoint {
 	return d.policyStoreManager.GetCurrentEndpoints()
 }
 

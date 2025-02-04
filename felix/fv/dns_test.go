@@ -26,8 +26,8 @@ import (
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
-	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/felix/types"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -1024,7 +1024,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 		policy, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
-		policyChainName = rules.PolicyChainName(rules.PolicyOutboundPfx, &proto.PolicyID{
+		policyChainName = rules.PolicyChainName(rules.PolicyOutboundPfx, &types.PolicyID{
 			Tier: "default",
 			Name: fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
 		},

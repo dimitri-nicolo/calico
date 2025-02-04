@@ -52,8 +52,7 @@
     jobs:
       - name: Build binary
         commands:
-          # Skipping protobuf build because it fails on ARM (but the pre-flight check ensures it's up-to-date).
-          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64 SKIP_PROTOBUF=true
+          - ../.semaphore/run-and-monitor build-arm64.log make build ARCH=arm64
 - name: "Felix: Build Windows binaries"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']${DEFAULT_BRANCH}})"

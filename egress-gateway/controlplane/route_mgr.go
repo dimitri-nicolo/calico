@@ -253,8 +253,8 @@ func (m *RouteManager) NotifyResync(s data.RouteStore) {
 // data is returned as a map of nodeName:tunnel key-pairs
 func calculateActiveTunnelsForNodes(
 	thisWorkload *proto.RouteUpdate,
-	workloadsByNodeName map[string][]proto.RouteUpdate,
-	tunnelsByNodeName map[string][]proto.RouteUpdate,
+	workloadsByNodeName map[string][]*proto.RouteUpdate,
+	tunnelsByNodeName map[string][]*proto.RouteUpdate,
 ) map[string]*proto.RouteUpdate {
 	gatewayEncapType := thisWorkload.IpPoolType // will the gateway receive packets that have been sNAT'd by the node's tunnel?
 	gatewayNodeHasWireguard := false            // wireguard tunnels will take precedence if nodes are peered - we search for this device next
@@ -263,7 +263,7 @@ func calculateActiveTunnelsForNodes(
 	gatewayNodeTunnels := tunnelsByNodeName[thisWorkload.DstNodeName]
 	log.Debugf("searching gateway's host tunnels for wireguard devices: %+v", gatewayNodeTunnels)
 	for _, tunnel := range gatewayNodeTunnels {
-		if protoutil.IsWireguardTunnel(&tunnel) {
+		if protoutil.IsWireguardTunnel(tunnel) {
 			gatewayNodeHasWireguard = true
 			log.Debug("wireguard device found on gateway host")
 		}
@@ -290,9 +290,9 @@ func calculateActiveTunnelsForNodes(
 		// wireguard tunnels take precedence over overlay tunnels - if both are enabled, wireguard is used
 		for _, tunnel := range tunnels {
 			// this is our best guess that wireguard will be used
-			if gatewayNodeHasWireguard && protoutil.IsWireguardTunnel(&tunnel) {
+			if gatewayNodeHasWireguard && protoutil.IsWireguardTunnel(tunnel) {
 				log.Debugf("found wireguard peer: %+v", tunnel)
-				activeTunnel = &tunnel
+				activeTunnel = tunnel
 				break // highest priority tunnel matched, no need to check any more
 			} else if gatewayEncapType == tunnel.IpPoolType {
 				// the remote host has an encap tunnel, and our workload has encap enabled.
@@ -307,7 +307,7 @@ func calculateActiveTunnelsForNodes(
 						continue
 					}
 				}
-				activeTunnel = &tunnel
+				activeTunnel = tunnel
 			}
 		}
 		log.Debugf("added tunnel %+v", activeTunnel)
@@ -321,7 +321,7 @@ func calculateActiveTunnelsForNodes(
 // workload to all other workloads via VXLAN. Special FDB cases arising from the use of additional tunnels in neighbouring
 // hosts are not covered, and are expected to be passed in via fdbNeighsByHWAddr
 func (m *RouteManager) createWorkloadNeighsAndRoutes(
-	workloadsByNodeName map[string][]proto.RouteUpdate,
+	workloadsByNodeName map[string][]*proto.RouteUpdate,
 	fdbNeighsByHWAddr map[string]netlink.Neigh,
 ) (
 	routesByDstCIDR map[string]netlink.Route,
@@ -334,7 +334,7 @@ func (m *RouteManager) createWorkloadNeighsAndRoutes(
 	for _, workloads := range workloadsByNodeName {
 		for _, wl := range workloads {
 			// create an ARP entry for this workload's host (ARP entries dont need to know about tunnels)
-			arpNeigh, err := m.newNeigh(&wl, false, netlink.FAMILY_V4)
+			arpNeigh, err := m.newNeigh(wl, false, netlink.FAMILY_V4)
 			if err != nil {
 				log.WithError(err).Warnf("could not parse ARP neigh from RouteUpdate: %+v", wl)
 				continue
@@ -344,7 +344,7 @@ func (m *RouteManager) createWorkloadNeighsAndRoutes(
 
 			// fill in default FDB neighs if a tunnel entry isnt already added
 			if _, ok := fdbNeighsByHWAddr[arpNeigh.HardwareAddr.String()]; !ok {
-				fdbNeigh, err := m.newNeigh(&wl, false, syscall.AF_BRIDGE)
+				fdbNeigh, err := m.newNeigh(wl, false, syscall.AF_BRIDGE)
 				if err != nil {
 					log.WithError(err).Warnf("could not parse FDB neigh from RouteUpdate: %+v", wl)
 					continue
@@ -354,7 +354,7 @@ func (m *RouteManager) createWorkloadNeighsAndRoutes(
 			}
 
 			// finally, create the route that will encap returning egress packets for this CIDR
-			encapRoute, err := m.newRoute(&wl, false)
+			encapRoute, err := m.newRoute(wl, false)
 			if err != nil {
 				log.WithError(err).Warnf("could not parse encap route from RouteUpdate: %+v", wl)
 				continue

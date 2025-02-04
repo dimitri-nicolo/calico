@@ -28,11 +28,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	googleproto "google.golang.org/protobuf/proto"
 
 	. "github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/mock"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -902,6 +904,11 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(mockDataplane.ActiveWireguardV6Endpoints()).To(Equal(state.ExpectedWireguardV6Endpoints),
 		"Active IPv6 Wireguard Endpoints were incorrect after moving to state: %v",
 		state.Name)
+	for key, protoHostMetadataV4V6 := range mockDataplane.ActiveHostMetadataV4V6() {
+		Expect(googleproto.Equal(protoHostMetadataV4V6, state.ExpectedHostMetadataV4V6[key])).To(BeTrue(),
+			"Active Host MetadataV4V6 were incorrect after moving to state: %v",
+			state.Name)
+	}
 	Expect(mockDataplane.ActiveHostMetadataV4V6()).To(Equal(state.ExpectedHostMetadataV4V6),
 		"Active Host MetadataV4V6 were incorrect after moving to state: %v",
 		state.Name)
@@ -938,14 +945,14 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(toSlice(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringifyPacketCapture(state.ExpectedCaptureUpdates)),
 		"Active packet captured were incorrect after moving to state: %v",
 		state.Name)
-	Expect(mockDataplane.Encapsulation()).To(Equal(state.ExpectedEncapsulation),
+	Expect(googleproto.Equal(mockDataplane.Encapsulation(), state.ExpectedEncapsulation)).To(BeTrue(),
 		"Encapsulation incorrect after moving to state: %v",
 		state.Name)
 }
 
-func stringifyRoutes(routes set.Set[proto.RouteUpdate]) []string {
+func stringifyRoutes(routes set.Set[types.RouteUpdate]) []string {
 	out := make([]string, 0, routes.Len())
-	routes.Iter(func(item proto.RouteUpdate) error {
+	routes.Iter(func(item types.RouteUpdate) error {
 		out = append(out, fmt.Sprintf("%+v", item))
 		return nil
 	})
@@ -953,9 +960,9 @@ func stringifyRoutes(routes set.Set[proto.RouteUpdate]) []string {
 	return out
 }
 
-func stringifyPacketCapture(pc set.Set[proto.PacketCaptureUpdate]) []string {
+func stringifyPacketCapture(pc set.Set[types.PacketCaptureUpdate]) []string {
 	out := make([]string, 0, pc.Len())
-	pc.Iter(func(update proto.PacketCaptureUpdate) error {
+	pc.Iter(func(update types.PacketCaptureUpdate) error {
 		out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
 		return nil
 	})

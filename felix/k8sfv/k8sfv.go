@@ -22,12 +22,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	//nolint:staticcheck // Ignore SA1019 deprecated
-	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -130,7 +128,9 @@ var _ = AfterSuite(func() {
 	fmt.Println("")
 	for _, family := range metricFamilies {
 		if strings.HasPrefix(*family.Name, "k8sfv") {
-			fmt.Println(proto.MarshalTextString(family))
+			out, err := proto.Marshal(family)
+			panicIfError(err)
+			fmt.Println(string(out))
 		}
 	}
 })

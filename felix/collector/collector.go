@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
+	felixtypes "github.com/projectcalico/calico/felix/types"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -360,12 +361,12 @@ func (c *collector) startStatsCollectionAndReporting() {
 
 // loopProcessingDataplaneInfoUpdates processes the dataplane info updates. The dataplaneInfoReader
 // is expected to be started before calling this function.
-func (c *collector) loopProcessingDataplaneInfoUpdates(dpInfoC <-chan proto.ToDataplane) {
+func (c *collector) loopProcessingDataplaneInfoUpdates(dpInfoC <-chan *proto.ToDataplane) {
 	for dpInfo := range dpInfoC {
 		c.policyStoreManager.DoWithLock(func(ps *policystore.PolicyStore) {
 			log.Debugf("Dataplane payload: %v and sequenceNumber: %d, ", dpInfo.Payload, dpInfo.SequenceNumber)
 			// Get the data and update the endpoints.
-			ps.ProcessUpdate(perHostPolicySubscription, &dpInfo, true)
+			ps.ProcessUpdate(perHostPolicySubscription, dpInfo, true)
 		})
 		if _, ok := dpInfo.Payload.(*proto.ToDataplane_InSync); ok {
 			// Sync the policy store. This will swap the pending store to the active store. Setting the
@@ -1083,7 +1084,7 @@ func (c *collector) lookupProtoWorkloadEndpoint(store *policystore.PolicyStore, 
 		return nil
 	}
 
-	epKey := proto.WorkloadEndpointID{
+	epKey := felixtypes.WorkloadEndpointID{
 		OrchestratorId: getOrchestratorIDFromKey(key),
 		WorkloadId:     getWorkloadIDFromKey(key),
 		EndpointId:     getEndpointIDFromKey(key),

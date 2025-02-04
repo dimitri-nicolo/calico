@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/types"
 )
 
 func TestCheckStoreNoHTTP(t *testing.T) {
@@ -30,7 +31,7 @@ func TestCheckStoreNoHTTP(t *testing.T) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
-		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+		s.ProfileByID[types.ProfileID{Name: "default"}] = &proto.Profile{
 			InboundRules: []*proto.Rule{{Action: "Allow"}},
 		}
 	})
@@ -66,7 +67,7 @@ func TestCheckStoreHTTPAllowed(t *testing.T) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
-		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+		s.ProfileByID[types.ProfileID{Name: "default"}] = &proto.Profile{
 			InboundRules: []*proto.Rule{{Action: "Allow"}},
 		}
 	})
@@ -137,7 +138,7 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 		s.Endpoint = &proto.WorkloadEndpoint{
 			ProfileIds: []string{"default"},
 		}
-		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+		s.ProfileByID[types.ProfileID{Name: "default"}] = &proto.Profile{
 			InboundRules: []*proto.Rule{{Action: "Deny"}},
 		}
 	})
