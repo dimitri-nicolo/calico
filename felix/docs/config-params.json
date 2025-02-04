@@ -3924,7 +3924,8 @@
           "Description": "Determines the size of conntrack map based on the number of CPUs. If set to a\nnon-zero value, overrides BPFMapSizeConntrack with `BPFMapSizePerCPUConntrack * (Number of CPUs)`.\nThis map must be large enough to hold an entry for each active connection. Warning: changing the size of the\nconntrack map can cause disruption.",
           "DescriptionHTML": "<p>Determines the size of conntrack map based on the number of CPUs. If set to a\nnon-zero value, overrides BPFMapSizeConntrack with <code>BPFMapSizePerCPUConntrack * (Number of CPUs)</code>.\nThis map must be large enough to hold an entry for each active connection. Warning: changing the size of the\nconntrack map can cause disruption.</p>",
           "UserEditable": true,
-          "GoType": "*int"
+          "GoType": "*int",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
