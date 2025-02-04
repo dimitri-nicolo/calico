@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,130 +56,86 @@ func (w *WebhookWatcherUpdater) UpdatesChan() chan<- *api.SecurityEventWebhook {
 
 func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	defer logrus.Info("Webhook watcher is terminating")
+	defer logrus.Info("Webhook/updater watcher is terminating")
 
-	webhookUpdates := make(chan *api.SecurityEventWebhook)
+	watchWait := sync.WaitGroup{}
+	go w.executeUntilContextIsAlive(ctx, &watchWait, w.watchWebhooks)
+	go w.executeUntilContextIsAlive(ctx, &watchWait, w.watchCMs)
+	go w.executeUntilContextIsAlive(ctx, &watchWait, w.watchSecrets)
+	watchWait.Wait()
+}
 
-	go func() {
-		for {
-			select {
-			case webhook := <-webhookUpdates:
-				logEntry(webhook).Debug("Updating webhook")
-				if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
-					logrus.WithError(err).Warn("Unable to update SecurityEventWebhook definition")
-				}
-			case <-ctx.Done():
-				return
-			}
+func (w *WebhookWatcherUpdater) executeUntilContextIsAlive(ctx context.Context, wg *sync.WaitGroup, f func(context.Context)) {
+	wg.Add(1)
+	for ctx.Err() == nil {
+		f(ctx)
+	}
+	wg.Done()
+}
+
+func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
+	var watchRevision string
+	if cms, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
+		logrus.WithError(err).Fatal("unable to list configmaps")
+		return
+	} else {
+		watchRevision = cms.ResourceVersion
+		for _, secret := range cms.Items {
+			w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
 		}
-	}()
-
-	// initialize configmap and secret watchers
-	var cmWatcher watch.Interface
-	var secretWatcher watch.Interface
-	var err error
-	var useSecret, useConfigmaps bool
-
-	errorCh := make(chan error, 1)
-	// start webhook watcher in its own retry loop goroutine
-	go w.webhookRetryWatcher(ctx, errorCh)
-
-	for {
-
-		select {
-		case webhook := <-w.webhookUpdatesChan:
-			webhookUpdates <- webhook
-			useConfigmaps, useSecret = w.checkWebhooksForConfigmapsAndSecret(ctx)
-		case <-ctx.Done():
-			return
-		case err = <-errorCh:
-			logrus.Fatal(err)
+	}
+	if watcher, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
+		logrus.WithError(err).Fatal("unable to watch for configmaps changes")
+		return
+	} else {
+		for event := range watcher.ResultChan() {
+			w.controller.K8sEventsChan() <- event
 		}
-
-		if useConfigmaps && cmWatcher == nil {
-			cmWatcher, err = w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
-
-			if err != nil {
-				logrus.WithError(err).Error("Unable to watch ConfigMap resources")
-				return
-			}
-		}
-
-		if useSecret && secretWatcher == nil {
-			secretWatcher, err = w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{})
-
-			if err != nil {
-				logrus.WithError(err).Error("Unable to watch Secret resources")
-				return
-			}
-		}
-
-		if cmWatcher != nil {
-			configMapEvent, ok := <-cmWatcher.ResultChan()
-			if ok {
-				w.controller.K8sEventsChan() <- configMapEvent
-			}
-		}
-
-		if secretWatcher != nil {
-			secretEvent, ok := <-secretWatcher.ResultChan()
-			if ok {
-				w.controller.K8sEventsChan() <- secretEvent
-			}
-		}
-
-		// disable configmap & secret watchers if no webhooks use configmaps or secrets
-		if !useConfigmaps && cmWatcher != nil {
-			cmWatcher.Stop()
-			cmWatcher = nil
-		}
-
-		if !useSecret && secretWatcher != nil {
-			secretWatcher.Stop()
-			secretWatcher = nil
-		}
-
 	}
 }
 
-func (w *WebhookWatcherUpdater) webhookRetryWatcher(ctx context.Context, errorCh chan<- error) {
-	logrus.Info("webhook watcher is starting")
-	defer logrus.Info("webhook watcher is terminating")
-
-	for ctx.Err() == nil {
-		watcherCtx, watcherCtxCancel := context.WithTimeout(ctx, WebhooksWatcherTimeout)
-		watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{})
-		if err != nil {
-			logrus.WithError(err).Error("Unable to watch for SecurityEventWebhook resources")
-			errorCh <- err
-			watcherCtxCancel()
-			return
+func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) {
+	var watchRevision string
+	if secrets, err := w.client.CoreV1().Secrets(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
+		logrus.WithError(err).Fatal("unable to list secrets")
+		return
+	} else {
+		watchRevision = secrets.ResourceVersion
+		for _, secret := range secrets.Items {
+			w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
 		}
+	}
+	if watcher, err := w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
+		logrus.WithError(err).Fatal("unable to watch for secrets changes")
+		return
+	} else {
+		for event := range watcher.ResultChan() {
+			w.controller.K8sEventsChan() <- event
+		}
+	}
+}
+
+func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) {
+	var watchRevision string
+	if webhooks, err := w.whClient.List(ctx, options.ListOptions{}); err != nil {
+		logrus.WithError(err).Fatal("unable to list webhooks")
+		return
+	} else {
+		watchRevision = webhooks.ResourceVersion
+		for _, webhook := range webhooks.Items {
+			w.controller.WebhookEventsChan() <- calicoWatch.Event{Type: calicoWatch.Added, Previous: nil, Object: &webhook}
+		}
+	}
+
+	watcherCtx, watcherCtxCancel := context.WithTimeout(ctx, WebhooksWatcherTimeout)
+	defer watcherCtxCancel()
+
+	if watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{ResourceVersion: watchRevision}); err != nil {
+		logrus.WithError(err).Fatal("unable to watch for webhook changes")
+		return
+	} else {
 		for event := range watcher.ResultChan() {
 			w.controller.WebhookEventsChan() <- event
 		}
-		watcherCtxCancel()
 	}
-}
-
-func (w *WebhookWatcherUpdater) checkWebhooksForConfigmapsAndSecret(ctx context.Context) (bool, bool) {
-	useConfigmaps, useSecret := false, false
-	listopts := options.ListOptions{}
-	webhooks, err := w.whClient.List(ctx, listopts)
-	if err != nil {
-		logrus.Debugf("error while getting webhooks : %v", err)
-	} else if webhooks != nil {
-		for _, hook := range webhooks.Items {
-			for _, config := range hook.Spec.Config {
-				if config.ValueFrom.ConfigMapKeyRef != nil {
-					useConfigmaps = true
-				}
-
-				if config.ValueFrom.SecretKeyRef != nil {
-					useSecret = true
-				}
-			}
-		}
-	}
-	return useConfigmaps, useSecret
 }
