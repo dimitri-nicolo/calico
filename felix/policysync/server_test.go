@@ -181,8 +181,12 @@ func (*testSyncStream) RecvMsg(m interface{}) error {
 	panic("not implemented")
 }
 
-func (*testSyncStream) Send(m *proto.ToDataplane) error {
-	panic("not implemented")
+func (s *testSyncStream) Send(m *proto.ToDataplane) error {
+	s.output <- m
+	if s.sendErr {
+		return errors.New("test error")
+	}
+	return nil
 }
 
 func (*testSyncStream) SetHeader(metadata.MD) error {
