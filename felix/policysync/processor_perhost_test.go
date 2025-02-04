@@ -168,12 +168,12 @@ func TestProcessorWithHostmodeClients(t *testing.T) {
 		// all clients should have same observations on updates
 		assert.ElementsMatch(t,
 			[]string{
-				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:<orchestrator_id:"k8s" workload_id:"a" endpoint_id:"eth0" > endpoint:<> }`,
-				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:<orchestrator_id:"k8s" workload_id:"b" endpoint_id:"eth0" > endpoint:<> }`,
-				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:<orchestrator_id:"k8s" workload_id:"c" endpoint_id:"eth0" > endpoint:<> }`,
-				`*proto.ToDataplane_ActiveProfileUpdate: &{id:<name:"j" > }`,
-				`*proto.ToDataplane_ActiveProfileUpdate: &{id:<name:"k" > }`,
-				`*proto.ToDataplane_ActiveProfileUpdate: &{id:<name:"l" > }`,
+				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:{orchestrator_id:"k8s" workload_id:"a" endpoint_id:"eth0"} endpoint:{}}`,
+				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:{orchestrator_id:"k8s" workload_id:"b" endpoint_id:"eth0"} endpoint:{}}`,
+				`*proto.ToDataplane_WorkloadEndpointUpdate: &{id:{orchestrator_id:"k8s" workload_id:"c" endpoint_id:"eth0"} endpoint:{}}`,
+				`*proto.ToDataplane_ActiveProfileUpdate: &{id:{name:"j"}}`,
+				`*proto.ToDataplane_ActiveProfileUpdate: &{id:{name:"k"}}`,
+				`*proto.ToDataplane_ActiveProfileUpdate: &{id:{name:"l"}}`,
 				`*proto.ToDataplane_InSync: &{}`,
 			},
 			observations,
