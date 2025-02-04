@@ -943,8 +943,8 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 								wl.WorkloadEndpoint.Spec.Pod = "fv-pod-churn" + iStr
 								wl.ConfigureInInfra(infra)
 
-								updates := make([]interface{}, 0)
-								updates = append(updates, proto.RouteUpdate{
+								updates := make([]types.RouteUpdate, 0)
+								updates = append(updates, types.RouteUpdate{
 									Type:          proto.RouteType_LOCAL_WORKLOAD,
 									IpPoolType:    proto.IPPoolType_IPIP,
 									Dst:           ipToCIDR(wl.IP),
@@ -1106,8 +1106,8 @@ func ipToCIDR(ip string) string {
 	return fmt.Sprintf("%s/32", ip)
 }
 
-func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloadsPerFelix []*workload.Workload) []interface{} {
-	updates := make([]interface{}, 0)
+func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloadsPerFelix []*workload.Workload) []types.RouteUpdate {
+	updates := make([]types.RouteUpdate, 0)
 	for i, f := range felixes {
 		var hostType proto.RouteType
 		if i == localIndex {
@@ -1146,16 +1146,24 @@ func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloads
 	return updates
 }
 
-func expectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
-	Eventually(func() []types.RouteUpdate {
-		return setToSlice(mockWlClient.ActiveRoutes())
-	}, "5s").Should(ContainElements(updates...))
+func toInterfaceSlice[T any](s []T) []interface{} {
+	r := make([]interface{}, len(s))
+	for i, v := range s {
+		r[i] = v
+	}
+	return r
 }
 
-func notExpectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
+func expectRouteUpdates(mockWlClient *mockWorkloadClient, updates []types.RouteUpdate) {
 	Eventually(func() []types.RouteUpdate {
 		return setToSlice(mockWlClient.ActiveRoutes())
-	}, "5s").Should(Not(ContainElements(updates...)))
+	}, "5s").Should(ContainElements(toInterfaceSlice(updates)))
+}
+
+func notExpectRouteUpdates(mockWlClient *mockWorkloadClient, updates []types.RouteUpdate) {
+	Eventually(func() []types.RouteUpdate {
+		return setToSlice(mockWlClient.ActiveRoutes())
+	}, "5s").Should(Not(ContainElements(toInterfaceSlice(updates))))
 }
 
 func unixDialer(target string, timeout time.Duration) (net.Conn, error) {

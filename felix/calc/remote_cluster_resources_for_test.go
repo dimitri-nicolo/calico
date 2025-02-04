@@ -78,7 +78,6 @@ func StateWithPool(state State, cluster string, cidr string, flush bool) State {
 	}
 
 	newState := state.Copy()
-	fmt.Printf("Sridhar %+v\n", newState)
 	newState.DatastoreState = append(newState.DatastoreState, kvp)
 	if flush {
 		newState.ExpectedRoutes.Add(routeUpdate)
