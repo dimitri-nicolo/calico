@@ -1508,45 +1508,60 @@ var _ = Describe("Processor", func() {
 					})
 
 					It("should get 3 updates", func() {
-						Expect(routes).To(ContainElement(proto.RouteUpdate{
-							Type:        proto.RouteType_REMOTE_WORKLOAD,
-							IpPoolType:  proto.IPPoolType_NONE,
-							Dst:         "172.0.2.1/32",
-							DstNodeName: "node1",
-							DstNodeIp:   "172.0.1.1",
-						}))
-						Expect(routes).To(ContainElement(proto.RouteUpdate{
-							Type:        proto.RouteType_REMOTE_WORKLOAD,
-							IpPoolType:  proto.IPPoolType_NONE,
-							Dst:         "172.0.2.2/32",
-							DstNodeName: "node2",
-							DstNodeIp:   "172.0.1.2",
-						}))
-						Expect(routes).To(ContainElement(proto.RouteUpdate{
-							Type:        proto.RouteType_REMOTE_WORKLOAD,
-							IpPoolType:  proto.IPPoolType_NONE,
-							Dst:         "172.0.2.3/32",
-							DstNodeName: "node3",
-							DstNodeIp:   "172.0.1.3",
-						}))
+						expectedRouteUpdates := []*proto.RouteUpdate{
+							{
+								Type:        proto.RouteType_REMOTE_WORKLOAD,
+								IpPoolType:  proto.IPPoolType_NONE,
+								Dst:         "172.0.2.1/32",
+								DstNodeName: "node1",
+								DstNodeIp:   "172.0.1.1",
+							},
+							{
+								Type:        proto.RouteType_REMOTE_WORKLOAD,
+								IpPoolType:  proto.IPPoolType_NONE,
+								Dst:         "172.0.2.2/32",
+								DstNodeName: "node2",
+								DstNodeIp:   "172.0.1.2",
+							},
+							{
+								Type:        proto.RouteType_REMOTE_WORKLOAD,
+								IpPoolType:  proto.IPPoolType_NONE,
+								Dst:         "172.0.2.3/32",
+								DstNodeName: "node3",
+								DstNodeIp:   "172.0.1.3",
+							},
+						}
+
+						for _, expected := range expectedRouteUpdates {
+							found := false
+							for _, r := range routes {
+								if googleproto.Equal(r, expected) {
+									found = true
+									break
+								}
+							}
+							Expect(found).To(BeTrue())
+						}
 					})
 
 					It("should pass updates", func() {
 						updateRoute("172.0.2.4/32", "node4", "172.0.1.4")
 						msg := <-output
-						Expect(msg.GetRouteUpdate()).To(Equal(&proto.RouteUpdate{
+						expectedRouteUpdate := &proto.RouteUpdate{
 							Type:        proto.RouteType_REMOTE_WORKLOAD,
 							IpPoolType:  proto.IPPoolType_NONE,
 							Dst:         "172.0.2.4/32",
 							DstNodeName: "node4",
 							DstNodeIp:   "172.0.1.4",
-						}))
+						}
+						Expect(googleproto.Equal(msg.GetRouteUpdate(), expectedRouteUpdate)).To(BeTrue())
 					})
 
 					It("should pass removes", func() {
 						removeRoute("172.0.2.4/32")
 						msg := <-output
-						Expect(msg.GetRouteRemove()).To(Equal(&proto.RouteRemove{Dst: "172.0.2.4/32"}))
+						expectedRouteRemove := &proto.RouteRemove{Dst: "172.0.2.4/32"}
+						Expect(googleproto.Equal(msg.GetRouteRemove(), expectedRouteRemove)).To(BeTrue())
 					})
 				})
 
