@@ -76,9 +76,9 @@ var _ = Describe("WAF middleware tests", func() {
 			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
 			Expect(ruleset.Files).NotTo(BeEmpty())
 
-			for _, rule := range ruleset.Files {
-				if !strings.HasSuffix(rule.Name, ".conf") {
-					Expect(rule.Name).To(BeNil())
+			for _, file := range ruleset.Files {
+				if !strings.HasSuffix(file.Name, ".conf") {
+					Expect(file.Name).To(BeNil())
 				}
 			}
 		})
