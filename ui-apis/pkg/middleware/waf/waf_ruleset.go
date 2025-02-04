@@ -76,11 +76,11 @@ func (rs rulesets) GetRuleset(ctx context.Context, id string) (*v1.WAFRuleset, e
 		if strings.HasSuffix(fileName, ".conf") {
 			parsedData, err := parser.Parse(data)
 			if err != nil {
-				return &v1.WAFRuleset{}, err
+				return nil, err
 			}
 
 			convertedRules := convertToRules(parsedData)
-			if convertedRules == nil {
+			if len(convertedRules) == 0 {
 				// file contains no rules with 'msg' field
 				continue
 			}

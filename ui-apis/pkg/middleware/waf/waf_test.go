@@ -17,13 +17,6 @@ import (
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 )
 
-var (
-	// number of .conf files found in
-	// https://github.com/corazawaf/coraza-coreruleset/tree/main/rules/%40owasp_crs
-	// that contains rules with a 'msg' field
-	numOfExpectedFiles = 25
-)
-
 var _ = Describe("WAF middleware tests", func() {
 	var mockClientSet *lmak8s.MockClientSet
 
@@ -69,7 +62,6 @@ var _ = Describe("WAF middleware tests", func() {
 			Expect(ruleset.ID).To(Equal("coreruleset-default"))
 			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
 			Expect(ruleset.Files).NotTo(BeEmpty())
-			Expect(ruleset.Files).To(HaveLen(numOfExpectedFiles))
 		})
 
 		It("Test Get WAF Ruleset", func() {
@@ -83,11 +75,35 @@ var _ = Describe("WAF middleware tests", func() {
 			Expect(ruleset.ID).To(Equal("coreruleset-default"))
 			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
 			Expect(ruleset.Files).NotTo(BeEmpty())
-			Expect(ruleset.Files).To(HaveLen(numOfExpectedFiles))
 
 			for _, rule := range ruleset.Files {
 				if !strings.HasSuffix(rule.Name, ".conf") {
 					Expect(rule.Name).To(BeNil())
+				}
+			}
+		})
+
+		It("Test Get special WAF Ruleset", func() {
+			rs := rulesets{
+				client: mockClientSet,
+			}
+			ctx := context.Background()
+			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
+			Expect(err).To(BeNil())
+
+			Expect(ruleset.ID).To(Equal("coreruleset-default"))
+			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
+			Expect(ruleset.Files).NotTo(BeEmpty())
+
+			for _, file := range ruleset.Files {
+				// check we don't send files with rules that don't contain a 'msg' field
+				// this file has no rules with a message field so it should not be present
+				Expect(file.Name).ToNot(Equal("REQUEST-905-COMMON-EXCEPTIONS.conf"))
+
+				// https://github.com/corazawaf/coraza-coreruleset/blob/main/rules/%40owasp_crs/REQUEST-911-METHOD-ENFORCEMENT.conf
+				// should only have 1 rule we are interested in
+				if file.Name == "REQUEST-911-METHOD-ENFORCEMENT.conf" {
+					Expect(len(file.Rules)).To(Equal(1))
 				}
 			}
 		})
