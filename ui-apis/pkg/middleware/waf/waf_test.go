@@ -83,7 +83,7 @@ var _ = Describe("WAF middleware tests", func() {
 			}
 		})
 
-		It("Test Get special WAF Ruleset", func() {
+		It("Test Filtering WAF Ruleset", func() {
 			rs := rulesets{
 				client: mockClientSet,
 			}
