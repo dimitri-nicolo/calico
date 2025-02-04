@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
+	errr "github.com/projectcalico/calico/release/pkg/errors"
 	"github.com/projectcalico/calico/release/pkg/manager/operator"
 )
 
@@ -634,7 +635,10 @@ func (r *CalicoManager) hashreleasePrereqs() error {
 		if err != nil {
 			return fmt.Errorf("errors checking images: %s", err)
 		} else if len(missingImages) > 0 {
-			return fmt.Errorf("missing images for hashrelease: %v", missingImages)
+			return errr.ErrHashreleaseMissingImages{
+				Hashrelease:   r.hashrelease,
+				MissingImages: missingImages,
+			}
 		}
 		logrus.Info("All images required for hashrelease have been published")
 	}
