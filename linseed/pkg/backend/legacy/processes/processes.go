@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -20,6 +20,7 @@ import (
 const (
 	defaultAggregationSize = 1000
 
+	clusterKey        = "agg-cluster"
 	sourceNameAggrKey = "agg-source_name_aggr"
 	processNameKey    = "agg-process_name"
 	processIDKey      = "agg-process_id"
@@ -85,7 +86,7 @@ func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 	search := b.lmaclient.Backend().Search(b.index.Index(i)).
 		Query(query).
 		From(startFrom).
-		Aggregation(sourceNameAggrKey, aggregation).
+		Aggregation(clusterKey, aggregation).
 		Size(0)
 
 	results, err := search.Do(ctx)
@@ -119,9 +120,9 @@ func (b *processBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 
 func (b *processBackend) ConvertElasticResult(log *logrus.Entry, results *elastic.SearchResult) ([]v1.ProcessInfo, error) {
 	// Handle the results.
-	aggItems, found := results.Aggregations.Terms(sourceNameAggrKey)
+	aggItems, found := results.Aggregations.Terms(clusterKey)
 	if !found {
-		err := fmt.Errorf("failed to get key %s in aggregation from search results", sourceNameAggrKey)
+		err := fmt.Errorf("failed to get key %s in aggregation from search results", clusterKey)
 		return nil, err
 	}
 
@@ -137,35 +138,50 @@ func (b *processBackend) ConvertElasticResult(log *logrus.Entry, results *elasti
 
 // convertBucket turns a composite aggregation bucket into one or more ProcessInfos.
 func (b *processBackend) convertBucket(log *logrus.Entry, bucket *elastic.AggregationBucketKeyItem) []v1.ProcessInfo {
-	endpoint, ok := bucket.Key.(string)
-	if !ok {
-		log.Warnf("failed to convert bucket key %v to string", bucket.Key)
-		return nil
-	}
 
-	if processNameItems, found := bucket.Aggregations.Terms(processNameKey); !found {
-		log.Warnf("failed to get bucket key %s in sub-aggregation", processNameKey)
+	if srcNameAggrItems, found := bucket.Aggregations.Terms(sourceNameAggrKey); !found {
+		log.Warnf("failed to get bucket key %s in sub-aggregation", sourceNameAggrKey)
 		return nil
 	} else {
+		cluster, ok := bucket.Key.(string)
+		if !ok {
+			log.Warnf("failed to convert bucket key %v to string", bucket.Key)
+			return nil
+		}
 		// Each endpoint may have one or more processes present, each with one or more process IDs.
 		procs := []v1.ProcessInfo{}
-		for _, bb := range processNameItems.Buckets {
-			if processName, ok := bb.Key.(string); !ok {
-				log.Warnf("failed to convert bucket key %v to string", bb.Key)
-				continue
+		for _, srcNameAggrBucket := range srcNameAggrItems.Buckets {
+			endpoint, ok := srcNameAggrBucket.Key.(string)
+			if !ok {
+				log.Warnf("failed to convert bucket key %v to string", srcNameAggrBucket.Key)
+				return nil
+			}
+
+			if processNameItems, found := srcNameAggrBucket.Aggregations.Terms(processNameKey); !found {
+				log.Warnf("failed to get bucket key %s in sub-aggregation", processNameKey)
+				return nil
 			} else {
-				if processIDItems, found := bb.Aggregations.Terms(processIDKey); !found {
-					log.Warnf("failed to get bucket key %s in sub-aggregation", processIDKey)
-					continue
-				} else {
-					process := v1.ProcessInfo{
-						Name:     processName,
-						Endpoint: endpoint,
-						Count:    len(processIDItems.Buckets),
+				for _, bb := range processNameItems.Buckets {
+					if processName, ok := bb.Key.(string); !ok {
+						log.Warnf("failed to convert bucket key %v to string", bb.Key)
+						continue
+					} else {
+						if processIDItems, found := bb.Aggregations.Terms(processIDKey); !found {
+							log.Warnf("failed to get bucket key %s in sub-aggregation", processIDKey)
+							continue
+						} else {
+							process := v1.ProcessInfo{
+								Cluster:  cluster,
+								Name:     processName,
+								Endpoint: endpoint,
+								Count:    len(processIDItems.Buckets),
+							}
+							procs = append(procs, process)
+						}
 					}
-					procs = append(procs, process)
 				}
 			}
+
 		}
 		return procs
 	}
@@ -220,9 +236,14 @@ func getAggregation(esClient *elastic.Client) (*elastic.TermsAggregation, error)
 	//       }
 	//     }
 	//   }
+	aggCluster := elastic.NewTermsAggregation()
+	aggCluster.Field("cluster")
+	aggCluster.Size(defaultAggregationSize)
+
 	aggSourceNameAggr := elastic.NewTermsAggregation()
 	aggSourceNameAggr.Field("source_name_aggr")
 	aggSourceNameAggr.Size(defaultAggregationSize)
+	aggCluster.SubAggregation(sourceNameAggrKey, aggSourceNameAggr)
 
 	aggProcessName := elastic.NewTermsAggregation()
 	aggProcessName.Field("process_name")
@@ -234,5 +255,5 @@ func getAggregation(esClient *elastic.Client) (*elastic.TermsAggregation, error)
 	aggProcessID.Size(defaultAggregationSize)
 	aggProcessName.SubAggregation(processIDKey, aggProcessID)
 
-	return aggSourceNameAggr, nil
+	return aggCluster, nil
 }

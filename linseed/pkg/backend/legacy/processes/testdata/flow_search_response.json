@@ -1,252 +1,262 @@
 {
-  "took" : 11,
-  "timed_out" : false,
-  "_shards" : {
-    "total" : 1,
-    "successful" : 1,
-    "skipped" : 0,
-    "failed" : 0
+  "took": 11,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
   },
-  "hits" : {
-    "total" : {
-      "value" : 7701,
-      "relation" : "eq"
+  "hits": {
+    "total": {
+      "value": 7701,
+      "relation": "eq"
     },
-    "max_score" : null,
-    "hits" : [ ]
+    "max_score": null,
+    "hits": []
   },
-  "aggregations" : {
-    "agg-source_name_aggr" : {
-      "doc_count_error_upper_bound" : 0,
-      "sum_other_doc_count" : 0,
-      "buckets" : [
+  "aggregations": {
+    "agg-cluster": {
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0,
+      "buckets": [
         {
-          "key" : "checkoutservice-69c8ff664b-*",
-          "doc_count" : 3668,
-          "agg-process_name" : {
-            "doc_count_error_upper_bound" : 0,
-            "sum_other_doc_count" : 0,
-            "buckets" : [
+          "key": "cluster-ushdjisc",
+          "doc_count": 7701,
+          "agg-source_name_aggr": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
               {
-                "key" : "/src/checkoutservice",
-                "doc_count" : 3668,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
+                "key": "checkoutservice-69c8ff664b-*",
+                "doc_count": 3668,
+                "agg-process_name": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
                     {
-                      "key" : "23374",
-                      "doc_count" : 1736
-                    },
-                    {
-                      "key" : "7755",
-                      "doc_count" : 994
-                    },
-                    {
-                      "key" : "7988",
-                      "doc_count" : 896
-                    },
-                    {
-                      "key" : "6382",
-                      "doc_count" : 42
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        {
-          "key" : "frontend-99684f7f8-*",
-          "doc_count" : 2477,
-          "agg-process_name" : {
-            "doc_count_error_upper_bound" : 0,
-            "sum_other_doc_count" : 0,
-            "buckets" : [
-              {
-                "key" : "/src/server",
-                "doc_count" : 2477,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
-                    {
-                      "key" : "6454",
-                      "doc_count" : 1146
-                    },
-                    {
-                      "key" : "8316",
-                      "doc_count" : 1024
-                    },
-                    {
-                      "key" : "8848",
-                      "doc_count" : 307
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        {
-          "key" : "adservice-77d5cd745d-*",
-          "doc_count" : 719,
-          "agg-process_name" : {
-            "doc_count_error_upper_bound" : 0,
-            "sum_other_doc_count" : 0,
-            "buckets" : [
-              {
-                "key" : "/usr/local/openjdk-8/bin/java",
-                "doc_count" : 719,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
-                    {
-                      "key" : "12646",
-                      "doc_count" : 346
-                    },
-                    {
-                      "key" : "12994",
-                      "doc_count" : 197
-                    },
-                    {
-                      "key" : "13737",
-                      "doc_count" : 176
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        {
-          "key" : "loadgenerator-555fbdc87d-*",
-          "doc_count" : 280,
-          "agg-process_name" : {
-            "doc_count_error_upper_bound" : 0,
-            "sum_other_doc_count" : 0,
-            "buckets" : [
-              {
-                "key" : "/usr/local/bin/python",
-                "doc_count" : 272,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
-                    {
-                      "key" : "10596",
-                      "doc_count" : 144
-                    },
-                    {
-                      "key" : "10764",
-                      "doc_count" : 128
+                      "key": "/src/checkoutservice",
+                      "doc_count": 3668,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "23374",
+                            "doc_count": 1736
+                          },
+                          {
+                            "key": "7755",
+                            "doc_count": 994
+                          },
+                          {
+                            "key": "7988",
+                            "doc_count": 896
+                          },
+                          {
+                            "key": "6382",
+                            "doc_count": 42
+                          }
+                        ]
+                      }
                     }
                   ]
                 }
               },
               {
-                "key" : "/usr/local/bin/locust",
-                "doc_count" : 7,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
+                "key": "frontend-99684f7f8-*",
+                "doc_count": 2477,
+                "agg-process_name": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
                     {
-                      "key" : "12230",
-                      "doc_count" : 7
+                      "key": "/src/server",
+                      "doc_count": 2477,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "6454",
+                            "doc_count": 1146
+                          },
+                          {
+                            "key": "8316",
+                            "doc_count": 1024
+                          },
+                          {
+                            "key": "8848",
+                            "doc_count": 307
+                          }
+                        ]
+                      }
                     }
                   ]
                 }
               },
               {
-                "key" : "wget",
-                "doc_count" : 1,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
+                "key": "adservice-77d5cd745d-*",
+                "doc_count": 719,
+                "agg-process_name": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
                     {
-                      "key" : "9075",
-                      "doc_count" : 1
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        {
-          "key" : "recommendationservice-5f8c456796-*",
-          "doc_count" : 279,
-          "agg-process_name" : {
-            "doc_count_error_upper_bound" : 0,
-            "sum_other_doc_count" : 0,
-            "buckets" : [
-              {
-                "key" : "python",
-                "doc_count" : 271,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
-                    {
-                      "key" : "11517",
-                      "doc_count" : 143
-                    },
-                    {
-                      "key" : "12700",
-                      "doc_count" : 128
+                      "key": "/usr/local/openjdk-8/bin/java",
+                      "doc_count": 719,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "12646",
+                            "doc_count": 346
+                          },
+                          {
+                            "key": "12994",
+                            "doc_count": 197
+                          },
+                          {
+                            "key": "13737",
+                            "doc_count": 176
+                          }
+                        ]
+                      }
                     }
                   ]
                 }
               },
               {
-                "key" : "/usr/local/bin/python",
-                "doc_count" : 8,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
+                "key": "loadgenerator-555fbdc87d-*",
+                "doc_count": 280,
+                "agg-process_name": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
                     {
-                      "key" : "12625",
-                      "doc_count" : 7
+                      "key": "/usr/local/bin/python",
+                      "doc_count": 272,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "10596",
+                            "doc_count": 144
+                          },
+                          {
+                            "key": "10764",
+                            "doc_count": 128
+                          }
+                        ]
+                      }
                     },
                     {
-                      "key" : "24466",
-                      "doc_count" : 1
+                      "key": "/usr/local/bin/locust",
+                      "doc_count": 7,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "12230",
+                            "doc_count": 7
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "key": "wget",
+                      "doc_count": 1,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "9075",
+                            "doc_count": 1
+                          }
+                        ]
+                      }
                     }
                   ]
                 }
-              }
-            ]
-          }
-        },
-        {
-          "key" : "cartservice-74f56fd4b-*",
-          "doc_count" : 278,
-          "agg-process_name" : {
-            "doc_count_error_upper_bound" : 0,
-            "sum_other_doc_count" : 0,
-            "buckets" : [
+              },
               {
-                "key" : "/app/cartservice",
-                "doc_count" : 278,
-                "agg-process_id" : {
-                  "doc_count_error_upper_bound" : 0,
-                  "sum_other_doc_count" : 0,
-                  "buckets" : [
+                "key": "recommendationservice-5f8c456796-*",
+                "doc_count": 279,
+                "agg-process_name": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
                     {
-                      "key" : "6465",
-                      "doc_count" : 143
+                      "key": "python",
+                      "doc_count": 271,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "11517",
+                            "doc_count": 143
+                          },
+                          {
+                            "key": "12700",
+                            "doc_count": 128
+                          }
+                        ]
+                      }
                     },
                     {
-                      "key" : "7198",
-                      "doc_count" : 128
-                    },
+                      "key": "/usr/local/bin/python",
+                      "doc_count": 8,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "12625",
+                            "doc_count": 7
+                          },
+                          {
+                            "key": "24466",
+                            "doc_count": 1
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "key": "cartservice-74f56fd4b-*",
+                "doc_count": 278,
+                "agg-process_name": {
+                  "doc_count_error_upper_bound": 0,
+                  "sum_other_doc_count": 0,
+                  "buckets": [
                     {
-                      "key" : "8620",
-                      "doc_count" : 7
+                      "key": "/app/cartservice",
+                      "doc_count": 278,
+                      "agg-process_id": {
+                        "doc_count_error_upper_bound": 0,
+                        "sum_other_doc_count": 0,
+                        "buckets": [
+                          {
+                            "key": "6465",
+                            "doc_count": 143
+                          },
+                          {
+                            "key": "7198",
+                            "doc_count": 128
+                          },
+                          {
+                            "key": "8620",
+                            "doc_count": 7
+                          }
+                        ]
+                      }
                     }
                   ]
                 }

@@ -25,15 +25,8 @@ type bgpLogsIndexHelper struct {
 	singleIndex bool
 }
 
-func (h bgpLogsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
-	q := elastic.NewBoolQuery()
-	if h.singleIndex {
-		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
-		if i.Tenant != "" {
-			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
-		}
-	}
-	return q
+func (h bgpLogsIndexHelper) BaseQuery(i bapi.ClusterInfo, params v1.Params) (*elastic.BoolQuery, error) {
+	return defaultBaseQuery(i, h.singleIndex, params)
 }
 
 func (h bgpLogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {

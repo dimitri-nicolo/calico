@@ -25,14 +25,15 @@ import (
 )
 
 var (
-	client      lmaelastic.Client
-	cache       bapi.IndexInitializer
-	rb          bapi.ReportsBackend
-	bb          bapi.BenchmarksBackend
-	sb          bapi.SnapshotsBackend
-	ctx         context.Context
-	cluster     string
-	clusterInfo bapi.ClusterInfo
+	client   lmaelastic.Client
+	cache    bapi.IndexInitializer
+	rb       bapi.ReportsBackend
+	bb       bapi.BenchmarksBackend
+	sb       bapi.SnapshotsBackend
+	ctx      context.Context
+	cluster1 string
+	cluster2 string
+	cluster3 string
 
 	// Report, benchmark, and snapshot indexes.
 	rIndexGetter bapi.Index
@@ -91,8 +92,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = backendutils.RandomClusterName()
-	clusterInfo = bapi.ClusterInfo{Cluster: cluster}
+	cluster1 = backendutils.RandomClusterName()
+	cluster2 = backendutils.RandomClusterName()
+	cluster3 = backendutils.RandomClusterName()
 
 	// Set a timeout for each test.
 	var cancel context.CancelFunc
@@ -104,9 +106,11 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous run.
-		for _, indexGetter := range []bapi.Index{rIndexGetter, bIndexGetter, sIndexGetter} {
-			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-			require.NoError(t, err)
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			for _, indexGetter := range []bapi.Index{rIndexGetter, bIndexGetter, sIndexGetter} {
+				err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+				require.NoError(t, err)
+			}
 		}
 
 		// Cancel logging
@@ -127,7 +131,7 @@ func TestReportDataBasic(t *testing.T) {
 		require.Error(t, err)
 
 		// Invalid tenant ID in cluster info.
-		badTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "one,two"}
+		badTenant := bapi.ClusterInfo{Cluster: cluster1, Tenant: "one,two"}
 		_, err = rb.Create(ctx, badTenant, []v1.ReportData{f})
 		require.Error(t, err)
 		_, err = rb.List(ctx, badTenant, &p)
@@ -138,8 +142,6 @@ func TestReportDataBasic(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve reports (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
-			clusterInfo.Tenant = tenant
-
 			// Create a dummy report.
 			report := apiv3.ReportData{
 				ReportName:     "test-report",
@@ -151,27 +153,60 @@ func TestReportDataBasic(t *testing.T) {
 			f := v1.ReportData{ReportData: &report}
 			f.ID = f.UID()
 
-			response, err := rb.Create(ctx, clusterInfo, []v1.ReportData{f})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), response.Errors)
-			require.Equal(t, 0, response.Failed)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
-			err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+				response, err := rb.Create(ctx, clusterInfo, []v1.ReportData{f})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
 
-			// Read it back and check it matches.
-			p := v1.ReportDataParams{}
-			resp, err := rb.List(ctx, clusterInfo, &p)
-			require.NoError(t, err)
-			require.Len(t, resp.Items, 1)
-			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-			require.NotEmpty(t, resp.Items[0].ID)
-			require.Equal(t, f, resp.Items[0])
+				err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
+
+			params := &v1.ReportDataParams{}
+
+			t.Run("should query single cluster", func(t *testing.T) {
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+
+				// Read it back and check it matches.
+				resp, err := rb.List(ctx, clusterInfo, params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 1)
+				backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				require.NotEmpty(t, resp.Items[0].ID)
+				require.Equal(t, f, resp.Items[0])
+			})
+
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				params.SetClusters(selectedClusters)
+
+				resp, err := rb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+				require.NoError(t, err)
+
+				require.Falsef(t, backendutils.MatchIn(resp.Items, backendutils.ReportDataClusterEquals(cluster1)), "cluster1 should not be in the results")
+				for _, cluster := range selectedClusters {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.ReportDataClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+				}
+			})
+
+			t.Run("should query all clusters", func(t *testing.T) {
+				params.SetAllClusters(true)
+				resp, err := rb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 3)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.ReportDataClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+				}
+			})
+
 		})
 
 		RunAllModes(t, "should ensure data does not overlap", func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
-			anotherClusterInfo := bapi.ClusterInfo{Cluster: backendutils.RandomClusterName(), Tenant: tenant}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			anotherClusterInfo := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
 
 			t1 := time.Unix(100, 0)
 
@@ -339,7 +374,7 @@ func TestReportDataFiltering(t *testing.T) {
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo.Tenant = tenant
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
 				r1 := v1.ReportData{
 					ID: "report-id-1",
@@ -393,7 +428,7 @@ func TestReportDataFiltering(t *testing.T) {
 
 func TestReportDataSorting(t *testing.T) {
 	RunAllModes(t, "should respect sorting", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		t1 := time.Unix(100, 0)
 		t2 := time.Unix(500, 0)

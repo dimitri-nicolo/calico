@@ -199,7 +199,10 @@ func (b *snapshotsBackend) getSearch(i bapi.ClusterInfo, opts *v1.SnapshotParams
 }
 
 func (b *snapshotsBackend) buildQuery(i api.ClusterInfo, p *v1.SnapshotParams) elastic.Query {
-	query := b.queryHelper.BaseQuery(i)
+	query, err := b.queryHelper.BaseQuery(i, p)
+	if err != nil {
+		return nil
+	}
 
 	if p.TimeRange != nil {
 		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange))

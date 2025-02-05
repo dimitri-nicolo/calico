@@ -37,7 +37,9 @@ var (
 	client          lmaelastic.Client
 	b               bapi.AuditBackend
 	ctx             context.Context
-	cluster         string
+	cluster1        string
+	cluster2        string
+	cluster3        string
 	kubeIndexGetter bapi.Index
 	eeIndexGetter   bapi.Index
 )
@@ -85,7 +87,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = backendutils.RandomClusterName()
+	cluster1 = backendutils.RandomClusterName()
+	cluster2 = backendutils.RandomClusterName()
+	cluster3 = backendutils.RandomClusterName()
 
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Minute)
@@ -98,8 +102,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 			getters = []bapi.Index{kubeIndexGetter}
 		}
 		for _, indexGetter := range getters {
-			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-			require.NoError(t, err)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+				require.NoError(t, err)
+			}
 		}
 
 		// Cancel the context
@@ -110,7 +116,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 func TestInvalidRequests(t *testing.T) {
 	RunAllModes(t, "no log type specified", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		_, err := b.Create(ctx, "", clusterInfo, []v1.AuditLog{})
 		require.Error(t, err)
 
@@ -119,7 +125,7 @@ func TestInvalidRequests(t *testing.T) {
 	})
 
 	RunAllModes(t, "unsupported log type specified", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		_, err := b.Create(ctx, "NotARealType", clusterInfo, []v1.AuditLog{})
 		require.Error(t, err)
 
@@ -131,7 +137,9 @@ func TestInvalidRequests(t *testing.T) {
 // TestCreateKubeAuditLog tests running a real elasticsearch query to create a kube audit log.
 func TestCreateKubeAuditLog(t *testing.T) {
 	RunAllModes(t, "TestCreateKubeAuditLog", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1}
+		cluster2Info := bapi.ClusterInfo{Cluster: cluster2}
+		cluster3Info := bapi.ClusterInfo{Cluster: cluster3}
 
 		// The DaemonSet that this audit log is for.
 		ds := apps.DaemonSet{
@@ -177,36 +185,68 @@ func TestCreateKubeAuditLog(t *testing.T) {
 			Name: testutils.StringPtr("any"),
 		}
 
-		// Create the event in ES.
-		resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{f})
-		require.NoError(t, err)
-		require.Empty(t, resp.Errors)
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			// Create the event in ES.
+			resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{f})
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
 
-		// Refresh the index.
-		err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
-		require.NoError(t, err)
+			// Refresh the index.
+			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
-		// List the event, assert that it matches the one we just wrote.
-		results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeKube})
-		require.NoError(t, err)
-		require.Equal(t, 1, len(results.Items))
+		params := &v1.AuditLogParams{Type: v1.AuditLogTypeKube}
 
-		// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
-		// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
-		// and so the resulting objects do not match.
-		f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
-		f.StageTimestamp = results.Items[0].StageTimestamp
-		f.Cluster = clusterInfo.Cluster // cluster is set by the backend.
+		t.Run("should query single cluster", func(t *testing.T) {
+			// List the event, assert that it matches the one we just wrote.
+			results, err := b.List(ctx, cluster1Info, params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(results.Items))
 
-		// require.Equal(t, string(f.RequestObject.Raw), string(results.Items[0].RequestObject.Raw))
-		require.Equal(t, f, results.Items[0])
+			// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
+			// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
+			// and so the resulting objects do not match.
+			f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
+			f.StageTimestamp = results.Items[0].StageTimestamp
+			f.Cluster = cluster1Info.Cluster // cluster is set by the backend.
+
+			// require.Equal(t, string(f.RequestObject.Raw), string(results.Items[0].RequestObject.Raw))
+			require.Equal(t, f, results.Items[0])
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+
+			params.SetClusters(selectedClusters)
+			// List the event, assert that it matches the one we just wrote.
+			results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+			require.NoError(t, err)
+			require.Equal(t, 2, len(results.Items))
+
+			require.Falsef(t, backendutils.MatchIn(results.Items, backendutils.AuditLogClusterEquals(cluster1)), "found unexpected cluster %s", cluster1)
+			for i, cluster := range selectedClusters {
+				require.Truef(t, backendutils.MatchIn(results.Items, backendutils.AuditLogClusterEquals(cluster)), "didn't cluster %d: %s", i, cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+			require.NoError(t, err)
+			for i, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, backendutils.MatchIn(results.Items, backendutils.AuditLogClusterEquals(cluster)), "didn't find cluster %d: %s", i, cluster)
+			}
+		})
 	})
 }
 
 // TestCreateEEAuditLog tests running a real elasticsearch query to create a EE audit log.
 func TestCreateEEAuditLog(t *testing.T) {
 	RunAllModes(t, "TestCreateEEAuditLog", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1}
+		cluster2Info := bapi.ClusterInfo{Cluster: cluster2}
+		cluster3Info := bapi.ClusterInfo{Cluster: cluster3}
 
 		// The NetworkSet that this audit log is for.
 		obj := v3.GlobalNetworkSet{
@@ -252,27 +292,55 @@ func TestCreateEEAuditLog(t *testing.T) {
 			Name: testutils.StringPtr("ee-any"),
 		}
 
-		// Create the event in ES.
-		resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{f})
-		require.NoError(t, err)
-		require.Equal(t, 0, len(resp.Errors))
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			// Create the event in ES.
+			resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{f})
+			require.NoError(t, err)
+			require.Equal(t, 0, len(resp.Errors))
 
-		// Refresh the index.
-		err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
-		require.NoError(t, err)
+			// Refresh the index.
+			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
-		// List the event, assert that it matches the one we just wrote.
-		results, err := b.List(ctx, clusterInfo, &v1.AuditLogParams{Type: v1.AuditLogTypeEE})
-		require.NoError(t, err)
-		require.Equal(t, 1, len(results.Items))
+		params := &v1.AuditLogParams{Type: v1.AuditLogTypeEE}
+		t.Run("should query single cluster", func(t *testing.T) {
+			clusterInfo := cluster1Info
+			// List the event, assert that it matches the one we just wrote.
+			results, err := b.List(ctx, clusterInfo, params)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(results.Items))
 
-		// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
-		// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
-		// and so the resulting objects do not match.
-		f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
-		f.StageTimestamp = results.Items[0].StageTimestamp
-		f.Cluster = clusterInfo.Cluster // cluster is set by the backend.
-		require.Equal(t, f, results.Items[0])
+			// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
+			// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
+			// and so the resulting objects do not match.
+			f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
+			f.StageTimestamp = results.Items[0].StageTimestamp
+			f.Cluster = clusterInfo.Cluster // cluster is set by the backend.
+			require.Equal(t, f, results.Items[0])
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+			results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+			require.NoError(t, err)
+			require.Len(t, results.Items, 2)
+
+			require.Falsef(t, backendutils.MatchIn(results.Items, backendutils.AuditLogClusterEquals(cluster1)), "found unexpected cluster %s", cluster1)
+			for i, cluster := range selectedClusters {
+				require.Truef(t, backendutils.MatchIn(results.Items, backendutils.AuditLogClusterEquals(cluster)), "didn't find cluster %d: %s", i, cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+			require.NoError(t, err)
+			for i, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, backendutils.MatchIn(results.Items, backendutils.AuditLogClusterEquals(cluster)), "didn't find cluster %d: %s", i, cluster)
+			}
+		})
 	})
 }
 
@@ -533,7 +601,9 @@ func TestAuditLogFiltering(t *testing.T) {
 			// to query one or more audit logs.
 			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+				cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+				cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+				cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 				// Time that the logs occur.
 				logTime := time.Unix(1, 0)
@@ -652,11 +722,6 @@ func TestAuditLogFiltering(t *testing.T) {
 					Name: testutils.StringPtr("ee-any"),
 				}
 
-				response, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{a1, a2})
-				require.NoError(t, err)
-				require.Equal(t, []v1.BulkError(nil), response.Errors)
-				require.Equal(t, 0, response.Failed)
-
 				// Also create a Kube audit log.
 				ds := apps.DaemonSet{
 					TypeMeta: metav1.TypeMeta{Kind: "DaemonSet", APIVersion: "apps/v1"},
@@ -707,49 +772,60 @@ func TestAuditLogFiltering(t *testing.T) {
 					Name: testutils.StringPtr("any"),
 				}
 
-				resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{a3})
-				require.NoError(t, err)
-				require.Equal(t, 0, len(resp.Errors))
+				for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+					response, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{a1, a2})
+					require.NoError(t, err)
+					require.Equal(t, []v1.BulkError(nil), response.Errors)
+					require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
-				require.NoError(t, err)
-				err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
-				require.NoError(t, err)
+					resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []v1.AuditLog{a3})
+					require.NoError(t, err)
+					require.Equal(t, 0, len(resp.Errors))
 
-				// Query for audit logs.
-				r, err := b.List(ctx, clusterInfo, &testcase.Params)
-				if testcase.ExpectError {
-					require.Error(t, err)
-					return
-				} else {
+					err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+					require.NoError(t, err)
+					err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
 					require.NoError(t, err)
 				}
-				require.Len(t, r.Items, numExpected(testcase))
-				require.Nil(t, r.AfterKey)
-				require.Empty(t, err)
-				for i := range r.Items {
-					backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				}
 
-				// Querying with another tenant ID should result in zero results.
-				r2, err := b.List(ctx, bapi.ClusterInfo{Cluster: cluster, Tenant: "bad-actor"}, &testcase.Params)
-				require.NoError(t, err)
-				require.Len(t, r2.Items, 0)
+				t.Run("should query single cluster", func(t *testing.T) {
+					clusterInfo := cluster1Info
 
-				if testcase.SkipComparison {
-					return
-				}
+					// Query for audit logs.
+					r, err := b.List(ctx, clusterInfo, &testcase.Params)
+					if testcase.ExpectError {
+						require.Error(t, err)
+						return
+					} else {
+						require.NoError(t, err)
+					}
+					require.Len(t, r.Items, numExpected(testcase))
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
+					for i := range r.Items {
+						backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+					}
 
-				// Assert that the correct logs are returned.
-				if testcase.ExpectLog1 {
-					require.Contains(t, r.Items, a1)
-				}
-				if testcase.ExpectLog2 {
-					require.Contains(t, r.Items, a2)
-				}
-				if testcase.ExpectKube {
-					require.Contains(t, r.Items, a3)
-				}
+					// Querying with another tenant ID should result in zero results.
+					r2, err := b.List(ctx, bapi.ClusterInfo{Cluster: clusterInfo.Cluster, Tenant: "bad-actor"}, &testcase.Params)
+					require.NoError(t, err)
+					require.Len(t, r2.Items, 0)
+
+					if testcase.SkipComparison {
+						return
+					}
+
+					// Assert that the correct logs are returned.
+					if testcase.ExpectLog1 {
+						require.Contains(t, r.Items, a1)
+					}
+					if testcase.ExpectLog2 {
+						require.Contains(t, r.Items, a2)
+					}
+					if testcase.ExpectKube {
+						require.Contains(t, r.Items, a3)
+					}
+				})
 			})
 		}
 	}
@@ -759,7 +835,9 @@ func TestAggregations(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		RunAllModes(t, fmt.Sprintf("should return time-series audit log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
 			numLogs := 5
@@ -807,58 +885,98 @@ func TestAggregations(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, logs)
-			require.NoError(t, err)
-			require.Empty(t, resp.Errors)
+			for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+				resp, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, logs)
+				require.NoError(t, err)
+				require.Empty(t, resp.Errors)
 
-			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
-			require.NoError(t, err)
-			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+				// Refresh.
+				err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+				err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
 
-			params := v1.AuditLogAggregationParams{}
-			params.Type = v1.AuditLogTypeEE
-			params.TimeRange = &lmav1.TimeRange{}
-			params.TimeRange.From = testStart
-			params.TimeRange.To = now
-			params.NumBuckets = 4
+			type testCase struct {
+				Name             string
+				XClusterID       string
+				ParamsCallback   func(params *v1.AuditLogAggregationParams)
+				ExpectedDocCount int
+			}
+			testcases := []testCase{
+				{
+					Name:             "single cluster",
+					XClusterID:       cluster1,
+					ExpectedDocCount: 1,
+				},
+				{
+					Name:       "multiple clusters",
+					XClusterID: v1.QueryMultipleClusters,
+					ParamsCallback: func(params *v1.AuditLogAggregationParams) {
+						params.SetClusters([]string{cluster1, cluster2})
+					},
+					ExpectedDocCount: 2,
+				},
+				{
+					Name:       "all clusters",
+					XClusterID: v1.QueryMultipleClusters,
+					ParamsCallback: func(params *v1.AuditLogAggregationParams) {
+						params.SetAllClusters(true)
+					},
+					ExpectedDocCount: 3,
+				},
+			}
 
-			// Add a simple aggregation to add up the total bytes_in from the logs.
-			userAgg := elastic.NewTermsAggregation().Field("user.username")
-			src, err := userAgg.Source()
-			require.NoError(t, err)
-			bytes, err := json.Marshal(src)
-			require.NoError(t, err)
-			params.Aggregations = map[string]gojson.RawMessage{"user": bytes}
+			for _, tc := range testcases {
+				t.Run(tc.Name, func(t *testing.T) {
+					clusterInfo := bapi.ClusterInfo{Cluster: tc.XClusterID, Tenant: tenant}
 
-			// Use the backend to perform a query.
-			aggs, err := b.Aggregations(ctx, clusterInfo, &params)
-			require.NoError(t, err)
-			require.NotNil(t, aggs)
+					params := v1.AuditLogAggregationParams{}
+					params.Type = v1.AuditLogTypeEE
+					params.TimeRange = &lmav1.TimeRange{}
+					params.TimeRange.From = testStart
+					params.TimeRange.To = now
+					params.NumBuckets = 4
+					if f := tc.ParamsCallback; f != nil {
+						f(&params)
+					}
 
-			ts, ok := aggs.AutoDateHistogram("tb")
-			require.True(t, ok)
+					// Add a simple aggregation to add up the total bytes_in from the logs.
+					userAgg := elastic.NewTermsAggregation().Field("user.username")
+					src, err := userAgg.Source()
+					require.NoError(t, err)
+					bytes, err := json.Marshal(src)
+					require.NoError(t, err)
+					params.Aggregations = map[string]gojson.RawMessage{"user": bytes}
 
-			// We asked for 4 buckets.
-			require.Len(t, ts.Buckets, 4)
+					// Use the backend to perform a query.
+					aggs, err := b.Aggregations(ctx, clusterInfo, &params)
+					require.NoError(t, err)
+					require.NotNil(t, aggs)
 
-			for i, b := range ts.Buckets {
-				require.Equal(t, int64(1), b.DocCount, fmt.Sprintf("Bucket %d", i))
+					ts, ok := aggs.AutoDateHistogram("tb")
+					require.True(t, ok)
 
-				// We asked for a user agg, which should include a single log
-				// in each bucket.
-				users, ok := b.ValueCount("user")
-				require.True(t, ok, "Bucket missing user agg")
-				require.NotNil(t, users.Aggregations)
-				buckets := string(users.Aggregations["buckets"])
-				require.Equal(t, `[{"key":"prince","doc_count":1}]`, buckets)
+					// We asked for 4 buckets.
+					require.Len(t, ts.Buckets, 4)
 
+					for i, b := range ts.Buckets {
+						require.Equal(t, int64(tc.ExpectedDocCount), b.DocCount, fmt.Sprintf("Bucket %d", i))
+
+						// We asked for a user agg, which should include a single log
+						// in each bucket.
+						users, ok := b.ValueCount("user")
+						require.True(t, ok, "Bucket missing user agg")
+						require.NotNil(t, users.Aggregations)
+						buckets := string(users.Aggregations["buckets"])
+						require.Equal(t, fmt.Sprintf(`[{"key":"prince","doc_count":%d}]`, tc.ExpectedDocCount), buckets)
+					}
+				})
 			}
 		})
 
 		RunAllModes(t, fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
 			numLogs := 5
@@ -947,7 +1065,7 @@ func TestAggregations(t *testing.T) {
 
 func TestSorting(t *testing.T) {
 	RunAllModes(t, "should respect sorting", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		t1 := time.Unix(100, 0)
 		t2 := time.Unix(500, 0)

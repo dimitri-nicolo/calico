@@ -154,6 +154,8 @@ type L3FlowKey struct {
 	// Source and destination information.
 	Source      Endpoint `json:"source"`
 	Destination Endpoint `json:"destination"`
+
+	Cluster string `json:"cluster"`
 }
 
 // L3Flow represents a summary of connection and traffic information between two

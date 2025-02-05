@@ -22,8 +22,9 @@ import (
 
 // Use a relative path to the client token in the calico-private/linseed/fv directory.
 const TokenPath = "./client-token"
+const TokenPathMultiCluster = "./client-token-multi-cluster"
 
-func NewLinseedClient(args *RunLinseedArgs) (client.Client, error) {
+func NewLinseedClient(args *RunLinseedArgs, tokenPath string) (client.Client, error) {
 	cfg := rest.Config{
 		CACertPath:     "cert/RootCA.crt",
 		URL:            fmt.Sprintf("https://localhost:%d/", args.Port),
@@ -33,7 +34,7 @@ func NewLinseedClient(args *RunLinseedArgs) (client.Client, error) {
 
 	// The token is created as part of FV setup in the Makefile, and mounted into the container that
 	// runs the FV binaries.
-	return client.NewClient(args.TenantID, cfg, rest.WithTokenPath(TokenPath))
+	return client.NewClient(args.TenantID, cfg, rest.WithTokenPath(tokenPath))
 }
 
 func DefaultLinseedArgs() *RunLinseedArgs {

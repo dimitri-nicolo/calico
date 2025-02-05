@@ -69,7 +69,7 @@ func TestFV_RuntimeReports(t *testing.T) {
 		}
 
 		// Perform a query.
-		runtimeReports, err := cli.RuntimeReports(cluster).List(ctx, &params)
+		runtimeReports, err := cli.RuntimeReports(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.RuntimeReport{}, runtimeReports.Items)
 	})
@@ -109,15 +109,17 @@ func TestFV_RuntimeReports(t *testing.T) {
 			},
 			FileAccess: v1.FileAccess{},
 		}
-		bulk, err := cli.RuntimeReports(cluster).Create(ctx, []v1.Report{report})
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create runtime reports did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.RuntimeReports(clusterInfo.Cluster).Create(ctx, []v1.Report{report})
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create runtime reports did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
-		require.NoError(t, err)
-		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(anotherClusterInfo))
-		require.NoError(t, err)
+			// Refresh elasticsearch so that results appear.
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(anotherClusterInfo))
+			require.NoError(t, err)
+		}
 
 		// Read it back.
 		params := v1.RuntimeReportParams{
@@ -128,16 +130,50 @@ func TestFV_RuntimeReports(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
-		require.NoError(t, err)
 
-		require.Len(t, resp.Items, 1)
-		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster, resp)
-		report.GeneratedTime = resp.Items[0].Report.GeneratedTime
-		require.Equal(t, []v1.RuntimeReport{{Tenant: "tenant-a", Cluster: cluster, Report: report}}, resp.Items)
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.RuntimeReports(cluster).List(ctx, &params)
+			require.NoError(t, err)
+
+			require.Len(t, resp.Items, 1)
+			testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, cluster, resp)
+			report.GeneratedTime = resp.Items[0].Report.GeneratedTime
+			require.Equal(t, []v1.RuntimeReport{{Tenant: "tenant-a", Cluster: cluster, Report: report}}, resp.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.RuntimeReports(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.RuntimeReports(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.RuntimeReportClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.RuntimeReports(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.RuntimeReports(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.RuntimeReportClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunRuntimeReportTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 runtime reports.
@@ -227,6 +263,8 @@ func TestFV_RuntimeReports(t *testing.T) {
 	})
 
 	RunRuntimeReportTest(t, "should support pagination for items >= 10000 for runtime reports", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K runtime reports.
 		referenceTime := time.Now().UTC()
@@ -274,6 +312,8 @@ func TestFV_RuntimeReports(t *testing.T) {
 	})
 
 	RunRuntimeReportTest(t, "should read data for multiple clusters", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		startTime := time.Unix(1, 0).UTC()
 		endTime := time.Unix(1, 0).UTC()
 
@@ -356,6 +396,8 @@ func TestFV_RuntimeReports(t *testing.T) {
 	})
 
 	RunRuntimeReportTest(t, "supports query with selector", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		startTime := time.Unix(1, 0).UTC()
 		endTime := time.Unix(1, 0).UTC()
 
@@ -441,7 +483,7 @@ func TestFV_RuntimeReportTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
 
 		// Create a basic entry. We expect this to fail, since we're using
@@ -477,7 +519,7 @@ func TestFV_RuntimeReportTenancy(t *testing.T) {
 			},
 			FileAccess: v1.FileAccess{},
 		}
-		bulk, err := tenantCLI.RuntimeReports(cluster).Create(ctx, []v1.Report{report})
+		bulk, err := tenantCLI.RuntimeReports(cluster1).Create(ctx, []v1.Report{report})
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, bulk)
 
@@ -490,7 +532,7 @@ func TestFV_RuntimeReportTenancy(t *testing.T) {
 				},
 			},
 		}
-		resp, err := tenantCLI.RuntimeReports(cluster).List(ctx, &params)
+		resp, err := tenantCLI.RuntimeReports(cluster1).List(ctx, &params)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
 	})

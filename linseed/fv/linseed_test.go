@@ -94,6 +94,7 @@ func TestFV_Linseed(t *testing.T) {
 	for _, tt := range tests {
 		RunFlowLogTest(t, tt.name, func(t *testing.T, idx bapi.Index) {
 			defer setupLinseedFV(t, idx)()
+			clusterInfo := cluster1Info
 
 			client := mTLSClient(t)
 			httpReqSpec := noBodyHTTPReqSpec(tt.method, fmt.Sprintf("https://%s%s", addr, tt.path), clusterInfo.Tenant, clusterInfo.Cluster, token)
@@ -115,6 +116,7 @@ func TestFV_Linseed(t *testing.T) {
 
 	RunFlowLogTest(t, "should deny any HTTP connection", func(t *testing.T, idx bapi.Index) {
 		defer setupLinseedFV(t, idx)()
+		clusterInfo := cluster1Info
 
 		client := &http.Client{}
 		res, resBody := doRequest(t, client, noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/", addr), clusterInfo.Tenant, clusterInfo.Cluster, nil))
@@ -155,6 +157,7 @@ func TestFV_Linseed(t *testing.T) {
 
 	RunFlowLogTest(t, "should be ready", func(t *testing.T, idx bapi.Index) {
 		defer setupLinseedFV(t, idx)()
+		clusterInfo := cluster1Info
 
 		client := mTLSClient(t)
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/readiness", healthAddr), clusterInfo.Tenant, clusterInfo.Cluster, token)
@@ -164,6 +167,7 @@ func TestFV_Linseed(t *testing.T) {
 
 	RunFlowLogTest(t, "should be live", func(t *testing.T, idx bapi.Index) {
 		defer setupLinseedFV(t, idx)()
+		clusterInfo := cluster1Info
 
 		client := mTLSClient(t)
 		httpReqSpec := noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/liveness", healthAddr), clusterInfo.Tenant, clusterInfo.Cluster, token)

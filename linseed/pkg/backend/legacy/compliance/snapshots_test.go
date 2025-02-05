@@ -82,8 +82,6 @@ func TestCreateSnapshots(t *testing.T) {
 		for _, tc := range testcases {
 			name := fmt.Sprintf("should write and read %s snapshots (tenant=%s)", tc.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo.Tenant = tenant
-
 				trl := list.TimestampedResourceList{
 					ResourceList:              tc.ResourceList,
 					RequestStartedTimestamp:   metav1.Time{Time: time.Unix(1, 0)},
@@ -93,15 +91,18 @@ func TestCreateSnapshots(t *testing.T) {
 					ResourceList: trl,
 				}
 
-				response, err := sb.Create(ctx, clusterInfo, []v1.Snapshot{f})
-				require.NoError(t, err)
-				require.Equal(t, []v1.BulkError(nil), response.Errors)
-				require.Equal(t, 0, response.Failed)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
-				err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(clusterInfo))
-				require.NoError(t, err)
+					response, err := sb.Create(ctx, clusterInfo, []v1.Snapshot{f})
+					require.NoError(t, err)
+					require.Equal(t, []v1.BulkError(nil), response.Errors)
+					require.Equal(t, 0, response.Failed)
 
-				// Read it back and check it matches.
+					err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(clusterInfo))
+					require.NoError(t, err)
+				}
+
 				gvk := tc.ResourceList.GetObjectKind().GroupVersionKind()
 				apiVersion := gvk.Version
 				if gvk.Group != "" && gvk.Version != "" {
@@ -119,15 +120,32 @@ func TestCreateSnapshots(t *testing.T) {
 						},
 					},
 				}
-				resp, err := sb.List(ctx, clusterInfo, &p)
-				require.NoError(t, err)
-				require.Len(t, resp.Items, 1)
-				backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-				require.Equal(t, trl, resp.Items[0].ResourceList)
+
+				t.Run("should query single cluster", func(t *testing.T) {
+					clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+
+					// Read it back and check it matches.
+					resp, err := sb.List(ctx, clusterInfo, &p)
+					require.NoError(t, err)
+					require.Len(t, resp.Items, 1)
+					backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+					require.Equal(t, trl, resp.Items[0].ResourceList)
+				})
+
+				t.Run("should query multiple clusters", func(t *testing.T) {
+					selectedClusters := []string{cluster2, cluster3}
+					p.SetClusters(selectedClusters)
+					resp, err := sb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &p)
+					require.NoError(t, err)
+					require.Len(t, resp.Items, 2)
+					for _, cluster := range selectedClusters {
+						require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.SnapshotClusterEquals(cluster)), "expected cluster %s in response", cluster)
+					}
+				})
 			})
 
 			RunAllModes(t, "should ensure data does not overlap", func(t *testing.T) {
-				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 				anotherClusterInfo := bapi.ClusterInfo{Cluster: backendutils.RandomClusterName(), Tenant: tenant}
 
 				trl := list.TimestampedResourceList{
@@ -192,7 +210,7 @@ func TestCreateSnapshots(t *testing.T) {
 		require.Error(t, err)
 
 		// Invalid tenant ID in cluster info.
-		badTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "one,two"}
+		badTenant := bapi.ClusterInfo{Cluster: cluster1, Tenant: "one,two"}
 		_, err = sb.Create(ctx, badTenant, []v1.Snapshot{f})
 		require.Error(t, err)
 		_, err = sb.List(ctx, badTenant, &p)
@@ -229,7 +247,7 @@ func TestSnapshotsFiltering(t *testing.T) {
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo.Tenant = tenant
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
 				s1 := v1.Snapshot{
 					ResourceList: list.TimestampedResourceList{

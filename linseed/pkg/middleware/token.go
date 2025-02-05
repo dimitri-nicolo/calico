@@ -54,11 +54,18 @@ func (t *KubernetesAuthzTracker) DisableWithoutPrefix(v, u string) {
 
 // Attributes returns the necessary RBAC permissions to check for the endpoint. It will return an error
 // if this endpoint is not registered properly.
-func (t *KubernetesAuthzTracker) Attributes(v, u string) (*authzv1.ResourceAttributes, bool, error) {
+func (t *KubernetesAuthzTracker) Attributes(v, u, clusterID string) (*authzv1.ResourceAttributes, bool, error) {
 	r := reqdata{Verb: v, BaseURL: u}
 	attrs, ok := t.authMap[r]
 	if !ok {
 		return nil, true, fmt.Errorf("No matching authz options for %s %s", v, u)
+	}
+
+	if attrs != nil && v1.IsQueryMultipleClusters(clusterID) {
+		// copy attrs and append "-multi-cluster" to the resource name
+		attrsCopy := *attrs
+		attrsCopy.Resource = fmt.Sprintf("%s-multi-cluster", attrs.Resource)
+		return &attrsCopy, true, nil
 	}
 
 	// Attributes, requires-rbac, and error
@@ -198,7 +205,7 @@ func (m TokenChecker) Do() func(next http.Handler) http.Handler {
 			}
 
 			// Find the required RBAC call for this URL.
-			resources, check, err := m.authz.Attributes(req.Method, req.URL.Path)
+			resources, check, err := m.authz.Attributes(req.Method, req.URL.Path, clusterID)
 			if err != nil {
 				log.WithError(err).Warn("Could not authorize token from request")
 				httputils.JSONError(w, &v1.HTTPError{

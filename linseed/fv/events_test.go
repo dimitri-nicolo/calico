@@ -54,7 +54,7 @@ func TestFV_Events(t *testing.T) {
 		}
 
 		// Perform a query.
-		events, err := cli.Events(cluster).List(ctx, &params)
+		events, err := cli.Events(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.Event{}, events.Items)
 	})
@@ -70,12 +70,14 @@ func TestFV_Events(t *testing.T) {
 				Type:        "TODO",
 			},
 		}
-		bulk, err := cli.Events(cluster).Create(ctx, events)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.Events(clusterInfo.Cluster).Create(ctx, events)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
 		// Read it back.
 		params := v1.EventParams{
@@ -86,14 +88,49 @@ func TestFV_Events(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.Events(cluster).List(ctx, &params)
-		require.NoError(t, err)
 
-		// The ID should be set, but random, so we can't assert on its value.
-		require.Equal(t, events, testutils.AssertEventsIDAndClusterAndReset(t, cluster, resp))
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.Events(cluster).List(ctx, &params)
+			require.NoError(t, err)
+
+			// The ID should be set, but random, so we can't assert on its value.
+			require.Equal(t, events, testutils.AssertEventsIDAndClusterAndReset(t, cluster, resp))
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.Events(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Events(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.EventClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.Events(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Events(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.EventClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunEventsTest(t, "should dismiss and delete events", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		// Create a basic event.
 		events := []v1.Event{
 			{
@@ -153,6 +190,8 @@ func TestFV_Events(t *testing.T) {
 	})
 
 	RunEventsTest(t, "should support events statistics", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		// Create some events
 		events := []v1.Event{
 			{
@@ -225,6 +264,8 @@ func TestFV_Events(t *testing.T) {
 	})
 
 	RunEventsTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 events.
@@ -305,6 +346,8 @@ func TestFV_Events(t *testing.T) {
 	})
 
 	RunEventsTest(t, "should support pagination for items >= 10000 for events", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K events.
 		logTime := time.Now().UTC()
@@ -354,6 +397,8 @@ func TestFV_Events(t *testing.T) {
 	})
 
 	RunEventsTest(t, "should support pagination for items >= 10000 for events with timestamps in different formats", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K events.
 		logTime := time.Now().UTC()
@@ -482,6 +527,8 @@ func TestFV_EventFiltering(t *testing.T) {
 	for _, tt := range tests {
 		name := fmt.Sprintf("filter events with selector: %s", tt.selector)
 		RunEventsTest(t, name, func(t *testing.T, idx bapi.Index) {
+			cluster := cluster1
+			clusterInfo := cluster1Info
 			// Create all events.
 			bulk, err := cli.Events(cluster).Create(ctx, events)
 			require.NoError(t, err)
@@ -510,8 +557,10 @@ func TestFV_EventsTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
+
+		cluster := cluster1
 
 		// Create a basic log. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.

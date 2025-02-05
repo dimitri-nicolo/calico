@@ -180,8 +180,11 @@ linseed-token-file: run-k8s-apiserver
 ## Create a token file for the FV clients to use which is authenticated by Linseed.
 fv-token-file:  run-k8s-apiserver
 	rm -f fv/client-token
+	rm -f fv/client-token-multi-cluster
 	docker exec $(APISERVER_NAME) kubectl create sa tigera-linseed-fv
 	docker exec $(APISERVER_NAME) kubectl create token tigera-linseed-fv --duration=24h > fv/client-token
+	docker exec $(APISERVER_NAME) kubectl create sa tigera-linseed-fv-multi-cluster
+	docker exec $(APISERVER_NAME) kubectl create token tigera-linseed-fv-multi-cluster --duration=24h > fv/client-token-multi-cluster
 
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.

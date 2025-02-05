@@ -4,7 +4,7 @@ package dns
 import (
 	"context"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -58,6 +58,7 @@ func NewSingleIndexDNSFlowBackend(c lmaelastic.Client, options ...index.Option) 
 func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Option) bapi.DNSFlowBackend {
 	// These are the keys which define a DNS flow in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
+		{Name: "cluster", Field: "cluster"},
 		{Name: "client_namespace", Field: "client_namespace"},
 		{Name: "client_name_aggr", Field: "client_name_aggr"},
 		{Name: "rcode", Field: "rcode"},
@@ -109,9 +110,14 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.
 	}
 
 	// Build the aggregation request.
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	query := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           b.index.Index(i),
-		Query:                   b.buildQuery(i, opts),
+		Query:                   q,
 		Name:                    "buckets",
 		AggCompositeSourceInfos: b.compositeSources,
 		AggSumInfos:             b.aggSums,
@@ -145,6 +151,7 @@ func (b *dnsFlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Com
 			Namespace:      b.ft.ValueString(key, "client_namespace"),
 		},
 		ResponseCode: b.ft.ValueString(key, "rcode"),
+		Cluster:      b.ft.ValueString(key, "cluster"),
 	}
 	flow.LatencyStats = &v1.DNSLatencyStats{
 		MeanRequestLatency: bucket.AggregatedMean[dnsAggMeanLatencyCount],
@@ -157,13 +164,16 @@ func (b *dnsFlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Com
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSFlowParams) elastic.Query {
-	query := b.queryHelper.BaseQuery(i)
+func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.DNSFlowParams) (elastic.Query, error) {
+	query, err := b.queryHelper.BaseQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse times from the request.
 	query.Filter(b.queryHelper.NewTimeRangeQuery(
 		logtools.WithDefaultLast5Minutes(opts.TimeRange),
 	))
 
-	return query
+	return query, nil
 }

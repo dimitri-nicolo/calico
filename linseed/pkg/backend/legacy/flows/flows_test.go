@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -35,7 +36,9 @@ var (
 	fb          bapi.FlowBackend
 	flb         bapi.FlowLogBackend
 	ctx         context.Context
-	cluster     string
+	cluster1    string
+	cluster2    string
+	cluster3    string
 	indexGetter bapi.Index
 )
 
@@ -81,7 +84,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = backendutils.RandomClusterName()
+	cluster1 = backendutils.RandomClusterName()
+	cluster2 = backendutils.RandomClusterName()
+	cluster3 = backendutils.RandomClusterName()
 
 	// Set a timeout for each test.
 	var cancel context.CancelFunc
@@ -93,7 +98,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous run.
-		err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+		}
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -104,7 +111,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 // TestListFlows tests running a real elasticsearch query to list flows.
 func TestListFlows(t *testing.T) {
 	RunAllModes(t, "TestListFlows", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1}
+		cluster2Info := bapi.ClusterInfo{Cluster: cluster2}
+		cluster3Info := bapi.ClusterInfo{Cluster: cluster3}
 
 		// Put some data into ES so we can query it.
 		bld := backendutils.NewFlowLogBuilder()
@@ -123,7 +132,9 @@ func TestListFlows(t *testing.T) {
 			WithSourceLabels("bread=rye", "cheese=brie", "wine=none").
 			WithPolicies("0|allow-tigera|tigera-system/allow-tigera.cnx-apiserver-access|allow|1").
 			WithProcessName("/usr/bin/curl")
-		expected := populateFlowData(t, ctx, bld, client, clusterInfo)
+		expected1 := populateFlowData(t, ctx, bld.Copy(), client, cluster1Info)
+		expected2 := populateFlowData(t, ctx, bld.Copy(), client, cluster2Info)
+		expected3 := populateFlowData(t, ctx, bld.Copy(), client, cluster3Info)
 
 		// Set time range so that we capture all of the populated flow logs.
 		opts := v1.L3FlowParams{}
@@ -131,14 +142,37 @@ func TestListFlows(t *testing.T) {
 		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
 		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
-		// Query for flows. There should be a single flow from the populated data.
-		r, err := fb.List(ctx, clusterInfo, &opts)
-		require.NoError(t, err)
-		require.Len(t, r.Items, 1)
-		require.Nil(t, r.AfterKey)
+		t.Run("should query single cluster", func(t *testing.T) {
+			// Query for flows. There should be a single flow from the populated data.
+			r, err := fb.List(ctx, cluster1Info, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
 
-		// Assert that the flow data is populated correctly.
-		require.Equal(t, expected, r.Items[0])
+			// Assert that the flow data is populated correctly.
+			require.Equal(t, expected1, r.Items[0])
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			opts.SetAllClusters(true)
+			r, err := fb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 3)
+			require.Nil(t, r.AfterKey)
+			require.Contains(t, r.Items, expected1)
+			require.Contains(t, r.Items, expected2)
+			require.Contains(t, r.Items, expected3)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			opts.SetClusters([]string{cluster2, cluster3})
+			r, err := fb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			require.Contains(t, r.Items, expected2)
+			require.Contains(t, r.Items, expected3)
+		})
 	})
 }
 
@@ -146,7 +180,7 @@ func TestListFlows(t *testing.T) {
 func TestMultipleFlows(t *testing.T) {
 	RunAllModes(t, "TestMultipleFlows", func(t *testing.T) {
 		// Both flows use the same cluster information.
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Template for flow #1.
 		bld := backendutils.NewFlowLogBuilder()
@@ -205,7 +239,7 @@ func TestMultipleFlows(t *testing.T) {
 func TestSourceIPAndDestIPFlows(t *testing.T) {
 	RunAllModes(t, "TestMultipleFlows", func(t *testing.T) {
 		// Both flows use the same cluster information.
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Flow logs batch #1.
 		bld := backendutils.NewFlowLogBuilder()
@@ -257,7 +291,7 @@ func TestSourceIPAndDestIPFlows(t *testing.T) {
 		_ = populateFlowData(t, ctx, bld, client, clusterInfo)
 
 		// Build a flow log based on the 3 batches
-		exp1 := bld.ExpectedFlow(t)
+		exp1 := bld.ExpectedFlow(t, clusterInfo)
 
 		// Template for flow logs batch #4.
 		bld2 := backendutils.NewFlowLogBuilder()
@@ -288,6 +322,10 @@ func TestSourceIPAndDestIPFlows(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		require.Nil(t, r.AfterKey)
 
+		fmt.Printf("exp1 item0: %t\n", reflect.DeepEqual(*exp1, r.Items[0]))
+		fmt.Printf("exp1 item1: %t\n", reflect.DeepEqual(*exp1, r.Items[1]))
+		fmt.Printf("exp2 item0: %t\n", reflect.DeepEqual(exp2, r.Items[0]))
+		fmt.Printf("exp2 item1: %t\n", reflect.DeepEqual(exp2, r.Items[1]))
 		// Assert that the flow data is populated correctly.
 		require.Equal(t, exp2, r.Items[0])
 		require.Equal(t, *exp1, r.Items[1])
@@ -298,7 +336,7 @@ func TestSourceIPAndDestIPFlows(t *testing.T) {
 // hits the default profile allow rule.
 func TestFlowMultiplePolicies(t *testing.T) {
 	RunAllModes(t, "TestFlowMultiplePolicies", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Put some data into ES so we can query it.
 		bld := backendutils.NewFlowLogBuilder()
@@ -1089,7 +1127,7 @@ func TestFlowFiltering(t *testing.T) {
 		// different filtering parameters provided in the L3FlowParams
 		// to query one or more flows.
 		RunAllModes(t, testcase.Name, func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 			// Set the time range for the test. We set this per-test
 			// so that the time range captures the windows that the logs
@@ -1203,7 +1241,7 @@ func TestFlowFiltering(t *testing.T) {
 func TestPagination(t *testing.T) {
 	RunAllModes(t, "TestPagination", func(t *testing.T) {
 		// Both flows use the same cluster information.
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Template for flow #1.
 		bld := backendutils.NewFlowLogBuilder()
@@ -1306,7 +1344,7 @@ func TestElasticResponses(t *testing.T) {
 		fb = flows.NewFlowBackend(client)
 
 		// Basic parameters for each test.
-		clusterInfo.Cluster = cluster
+		clusterInfo.Cluster = backendutils.RandomClusterName()
 		opts.TimeRange = &lmav1.TimeRange{}
 		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
 		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
@@ -1386,8 +1424,8 @@ func TestMultiTenancy(t *testing.T) {
 		// extra sneaky.
 		tenantA := "tenant-a"
 		tenantB := "tenant-b"
-		tenantAInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantA}
-		tenantBInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantB}
+		tenantAInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenantA}
+		tenantBInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenantB}
 
 		// Template for flow.
 		bld := backendutils.NewFlowLogBuilder()
@@ -1433,8 +1471,8 @@ func TestMultiTenancy(t *testing.T) {
 		// For this test, we use tenant IDs that are prefixes of each other.
 		tenantA := "shaz"
 		tenantB := "shazam"
-		tenantAInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantA}
-		tenantBInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenantB}
+		tenantAInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenantA}
+		tenantBInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenantB}
 
 		// Template for flow.
 		bld := backendutils.NewFlowLogBuilder()
@@ -1484,7 +1522,7 @@ func TestMultiTenancy(t *testing.T) {
 		// Query for the flow specifying a tenant with a wildcard in it - should get no results.
 		// It isn't actually possible for this codepath to be hit in a real system, since Linseed enforces
 		// an expected tenant ID on all requests. We test it here nonetheless.
-		wildcardTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "shaz*"}
+		wildcardTenant := bapi.ClusterInfo{Cluster: cluster1, Tenant: "shaz*"}
 		_, err = fb.List(ctx, wildcardTenant, &opts)
 		require.Error(t, err)
 	})
@@ -1536,7 +1574,7 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *backendutils.FlowLo
 	require.NoError(t, err)
 
 	// Return the expected flow based on the batch of flows we created above.
-	expected := b.ExpectedFlow(t)
+	expected := b.ExpectedFlow(t, info)
 	return *expected
 }
 

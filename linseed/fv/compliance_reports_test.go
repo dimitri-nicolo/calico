@@ -53,7 +53,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		}
 
 		// Perform a query.
-		reports, err := cli.Compliance(cluster).ReportData().List(ctx, &params)
+		reports, err := cli.Compliance(cluster1).ReportData().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.ReportData{}, reports.Items)
 	})
@@ -69,12 +69,14 @@ func TestFV_ComplianceReports(t *testing.T) {
 		}
 		report := v1.ReportData{ReportData: &v3r}
 		reports := []v1.ReportData{report}
-		bulk, err := cli.Compliance(cluster).ReportData().Create(ctx, reports)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.Compliance(clusterInfo.Cluster).ReportData().Create(ctx, reports)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
 		// Read it back.
 		params := v1.ReportDataParams{
@@ -85,16 +87,50 @@ func TestFV_ComplianceReports(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.Compliance(cluster).ReportData().List(ctx, &params)
-		require.NoError(t, err)
 
-		// The ID should be set.
-		require.Len(t, resp.Items, 1)
-		testutils.AssertReportDataIDAndClusterAndReset(t, report.UID(), cluster, &resp.Items[0])
-		require.Equal(t, reports, resp.Items)
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.Compliance(cluster).ReportData().List(ctx, &params)
+			require.NoError(t, err)
+
+			// The ID should be set.
+			require.Len(t, resp.Items, 1)
+			testutils.AssertReportDataIDAndClusterAndReset(t, report.UID(), cluster, &resp.Items[0])
+			require.Equal(t, reports, resp.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.Compliance(v1.QueryMultipleClusters).ReportData().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Compliance(v1.QueryMultipleClusters).ReportData().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.ReportDataClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.Compliance(v1.QueryMultipleClusters).ReportData().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Compliance(v1.QueryMultipleClusters).ReportData().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.ReportDataClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
 	})
 
 	RunComplianceReportTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 Snapshots.
@@ -192,6 +228,8 @@ func TestFV_ComplianceReports(t *testing.T) {
 	})
 
 	RunComplianceReportTest(t, "should support pagination for items >= 10000 for Reports", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K reports.
 		logTime := time.Unix(100, 0).UTC()
@@ -248,8 +286,10 @@ func TestFV_ComplianceReportsTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
+
+		cluster := cluster1
 
 		// Create a basic log. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.

@@ -52,7 +52,7 @@ func TestFV_WAF(t *testing.T) {
 		}
 
 		// Perform a query.
-		wafLogs, err := cli.WAFLogs(cluster).List(ctx, &params)
+		wafLogs, err := cli.WAFLogs(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.WAFLog{}, wafLogs.Items)
 	})
@@ -66,12 +66,14 @@ func TestFV_WAF(t *testing.T) {
 				Msg:       "any message",
 			},
 		}
-		bulk, err := cli.WAFLogs(cluster).Create(ctx, wafLogs)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create waf logs did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.WAFLogs(clusterInfo.Cluster).Create(ctx, wafLogs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create waf logs did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
 		// Read it back.
 		params := v1.WAFLogParams{
@@ -82,19 +84,54 @@ func TestFV_WAF(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.WAFLogs(cluster).List(ctx, &params)
-		require.NoError(t, err)
 
-		require.Len(t, resp.Items, 1)
-		// Reset the time as it microseconds to not match perfectly
-		require.NotEqual(t, "", resp.Items[0].Timestamp)
-		resp.Items[0].Timestamp = reqTime
-		testutils.AssertWAFLogClusterAndReset(t, cluster, &resp.Items[0])
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.WAFLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
 
-		require.Equal(t, wafLogs, resp.Items)
+			require.Len(t, resp.Items, 1)
+			// Reset the time as it microseconds to not match perfectly
+			require.NotEqual(t, "", resp.Items[0].Timestamp)
+			resp.Items[0].Timestamp = reqTime
+			testutils.AssertWAFLogClusterAndReset(t, cluster, &resp.Items[0])
+
+			require.Equal(t, wafLogs, resp.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.WAFLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.WAFLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.WAFLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.WAFLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.WAFLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.WAFLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunWAFTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		clusterInfo := cluster1Info
+		cluster := clusterInfo.Cluster
 		totalItems := 5
 
 		// Create 5 waf logs.
@@ -177,6 +214,8 @@ func TestFV_WAF(t *testing.T) {
 	})
 
 	RunWAFTest(t, "should support pagination for items >= 10000 for WAF logs", func(t *testing.T, idx bapi.Index) {
+		clusterInfo := cluster1Info
+		cluster := clusterInfo.Cluster
 		totalItems := 10001
 		// Create > 10K threat logs.
 		logTime := time.Unix(0, 0).UTC()

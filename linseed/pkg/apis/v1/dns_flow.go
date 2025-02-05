@@ -9,6 +9,7 @@ type DNSFlowParams struct {
 type DNSFlowKey struct {
 	Source       Endpoint `json:"source"`
 	ResponseCode string   `json:"response_code"`
+	Cluster      string   `json:"cluster"`
 }
 
 // DNSFlow represents an aggregation of DNS logs from a given source with a given response code.

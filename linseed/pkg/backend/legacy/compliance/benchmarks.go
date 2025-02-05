@@ -193,8 +193,10 @@ func (b *benchmarksBackend) getSearch(i bapi.ClusterInfo, opts *v1.BenchmarksPar
 }
 
 func (b *benchmarksBackend) buildQuery(i bapi.ClusterInfo, p *v1.BenchmarksParams) (elastic.Query, error) {
-	query := b.queryHelper.BaseQuery(i)
-
+	query, err := b.queryHelper.BaseQuery(i, p)
+	if err != nil {
+		return nil, err
+	}
 	if p.TimeRange != nil {
 		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange))
 	}

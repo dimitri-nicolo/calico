@@ -55,7 +55,7 @@ func TestFV_Snapshots(t *testing.T) {
 		}
 
 		// Perform a query.
-		snapshots, err := cli.Compliance(cluster).Snapshots().List(ctx, &params)
+		snapshots, err := cli.Compliance(cluster1).Snapshots().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.Snapshot{}, snapshots.Items)
 	})
@@ -80,40 +80,79 @@ func TestFV_Snapshots(t *testing.T) {
 				RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2, 0)},
 			},
 		}
-		bulk, err := cli.Compliance(cluster).Snapshots().Create(ctx, []v1.Snapshot{snapshots})
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.Compliance(clusterInfo.Cluster).Snapshots().Create(ctx, []v1.Snapshot{snapshots})
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
 		// Read it back.
 		params := v1.SnapshotParams{}
-		resp, err := cli.Compliance(cluster).Snapshots().List(ctx, &params)
-		require.NoError(t, err)
-		require.Len(t, resp.Items, 1)
-		testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-		require.Equal(t, snapshots, resp.Items[0])
 
-		// Read it back, using a time range
-		params = v1.SnapshotParams{
-			QueryParams: v1.QueryParams{
-				TimeRange: &lmav1.TimeRange{
-					From: time.Unix(0, 0),
-					To:   time.Unix(2, 0),
+		t.Run("should query single cluster", func(t *testing.T) {
+			clusterInfo := cluster1Info
+			cluster := clusterInfo.Cluster
+
+			resp, err := cli.Compliance(cluster).Snapshots().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 1)
+			testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+			require.Equal(t, snapshots, resp.Items[0])
+
+			// Read it back, using a time range
+			params = v1.SnapshotParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Unix(0, 0),
+						To:   time.Unix(2, 0),
+					},
 				},
-			},
-		}
-		resp, err = cli.Compliance(cluster).Snapshots().List(ctx, &params)
-		require.NoError(t, err)
+			}
+			resp, err = cli.Compliance(cluster).Snapshots().List(ctx, &params)
+			require.NoError(t, err)
 
-		// The ID should be set.
-		require.Len(t, resp.Items, 1)
-		testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-		require.Equal(t, snapshots, resp.Items[0])
+			// The ID should be set.
+			require.Len(t, resp.Items, 1)
+			testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+			require.Equal(t, snapshots, resp.Items[0])
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.Compliance(v1.QueryMultipleClusters).Snapshots().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Compliance(v1.QueryMultipleClusters).Snapshots().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.SnapshotClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.Compliance(v1.QueryMultipleClusters).Snapshots().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Compliance(v1.QueryMultipleClusters).Snapshots().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.SnapshotClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunComplianceSnapshotTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 Snapshots.
@@ -259,6 +298,8 @@ func TestFV_Snapshots(t *testing.T) {
 	})
 
 	RunComplianceSnapshotTest(t, "should support pagination for items >= 10000 for Snapshots", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K snapshots.
 		logTime := time.Unix(100, 0).UTC()
@@ -326,7 +367,7 @@ func TestFV_SnapshotsTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
 
 		// Create a basic entry. We expect this to fail, since we're using
@@ -350,13 +391,13 @@ func TestFV_SnapshotsTenancy(t *testing.T) {
 				RequestCompletedTimestamp: metav1.Time{Time: time.Unix(2, 0)},
 			},
 		}
-		bulk, err := tenantCLI.Compliance(cluster).Snapshots().Create(ctx, []v1.Snapshot{snapshots})
+		bulk, err := tenantCLI.Compliance(cluster1).Snapshots().Create(ctx, []v1.Snapshot{snapshots})
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, bulk)
 
 		// Try a read as well.
 		params := v1.SnapshotParams{}
-		resp, err := tenantCLI.Compliance(cluster).Snapshots().List(ctx, &params)
+		resp, err := tenantCLI.Compliance(cluster1).Snapshots().List(ctx, &params)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
 	})

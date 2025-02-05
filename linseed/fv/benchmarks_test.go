@@ -52,7 +52,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		}
 
 		// Perform a query.
-		benchmarks, err := cli.Compliance(cluster).Benchmarks().List(ctx, &params)
+		benchmarks, err := cli.Compliance(cluster1).Benchmarks().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.Benchmarks{}, benchmarks.Items)
 	})
@@ -77,42 +77,78 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 				},
 			},
 		}
-		bulk, err := cli.Compliance(cluster).Benchmarks().Create(ctx, []v1.Benchmarks{benchmarks})
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.Compliance(clusterInfo.Cluster).Benchmarks().Create(ctx, []v1.Benchmarks{benchmarks})
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
-
-		// Read it back, passing an ID query.
-		params := v1.BenchmarksParams{ID: benchmarks.UID()}
-		resp, err := cli.Compliance(cluster).Benchmarks().List(ctx, &params)
-		require.NoError(t, err)
-
-		// The ID should be set.
-		require.Len(t, resp.Items, 1)
-		testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
-		require.Equal(t, benchmarks, resp.Items[0])
-
-		// Read it back, using a time range
-		params = v1.BenchmarksParams{
-			QueryParams: v1.QueryParams{
-				TimeRange: &lmav1.TimeRange{
-					From: time.Unix(0, 0),
-					To:   time.Unix(2, 0),
-				},
-			},
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
 		}
-		resp, err = cli.Compliance(cluster).Benchmarks().List(ctx, &params)
-		require.NoError(t, err)
 
-		// The ID should be set.
-		require.Len(t, resp.Items, 1)
-		testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
-		require.Equal(t, benchmarks, resp.Items[0])
+		params := v1.BenchmarksParams{ID: benchmarks.UID()}
+
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			// Read it back, passing an ID query.
+			resp, err := cli.Compliance(cluster).Benchmarks().List(ctx, &params)
+			require.NoError(t, err)
+
+			// The ID should be set.
+			require.Len(t, resp.Items, 1)
+			testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
+			require.Equal(t, benchmarks, resp.Items[0])
+
+			// Read it back, using a time range
+			params = v1.BenchmarksParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: time.Unix(0, 0),
+						To:   time.Unix(2, 0),
+					},
+				},
+			}
+			resp, err = cli.Compliance(cluster).Benchmarks().List(ctx, &params)
+			require.NoError(t, err)
+
+			// The ID should be set.
+			require.Len(t, resp.Items, 1)
+			testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
+			require.Equal(t, benchmarks, resp.Items[0])
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.Compliance(v1.QueryMultipleClusters).Benchmarks().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Compliance(v1.QueryMultipleClusters).Benchmarks().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.BenchmarkClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.Compliance(v1.QueryMultipleClusters).Benchmarks().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.Compliance(v1.QueryMultipleClusters).Benchmarks().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.BenchmarkClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
 	})
 
 	RunComplianceBenchmarkTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 Benchmarks.
@@ -205,6 +241,8 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 	})
 
 	RunComplianceBenchmarkTest(t, "should support pagination for items >= 10000 for Benchmarks", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K benchmarks.
 		logTime := time.Unix(0, 0).UTC()
@@ -256,8 +294,10 @@ func TestFV_BenchmarksTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
+
+		cluster := cluster1
 
 		// Create a basic flow log. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.

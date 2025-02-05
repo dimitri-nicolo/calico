@@ -189,7 +189,10 @@ func (b *domainNameSetThreatFeedBackend) getSearch(i bapi.ClusterInfo, p *v1.Dom
 }
 
 func (b *domainNameSetThreatFeedBackend) buildQuery(i bapi.ClusterInfo, p *v1.DomainNameSetThreatFeedParams) (elastic.Query, error) {
-	query := b.queryHelper.BaseQuery(i)
+	query, err := b.queryHelper.BaseQuery(i, p)
+	if err != nil {
+		return nil, err
+	}
 
 	if p.TimeRange != nil {
 		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange))
@@ -282,7 +285,10 @@ func (b *domainNameSetThreatFeedBackend) checkTenancy(ctx context.Context, i bap
 	// Build a query which matches on:
 	// - The given cluster and tenant (from BaseQuery)
 	// - An OR combintation of the given IDs
-	q := b.queryHelper.BaseQuery(i)
+	q, err := b.queryHelper.BaseQuery(i, nil)
+	if err != nil {
+		return err
+	}
 	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
 	idsQuery := b.client.Search().
 		Size(len(ids)).

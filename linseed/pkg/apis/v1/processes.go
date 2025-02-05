@@ -25,4 +25,6 @@ type ProcessInfo struct {
 	// NOTE: The json tag is not consistent with others because it is
 	// using the format expected by the UI.
 	Count int `json:"instanceCount" validate:"required"`
+
+	Cluster string `json:"cluster" validate:"required"`
 }

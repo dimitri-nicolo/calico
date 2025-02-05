@@ -52,7 +52,7 @@ func TestDNS_DNSLogs(t *testing.T) {
 		}
 
 		// Perform a query.
-		logs, err := cli.DNSLogs(cluster).List(ctx, &params)
+		logs, err := cli.DNSLogs(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.DNSLog{}, logs.Items)
 	})
@@ -69,12 +69,14 @@ func TestDNS_DNSLogs(t *testing.T) {
 				RRSets:  v1.DNSRRSets{},
 			},
 		}
-		bulk, err := cli.DNSLogs(cluster).Create(ctx, logs)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create dns log did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.DNSLogs(clusterInfo.Cluster).Create(ctx, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create dns log did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
 		// Read it back.
 		params := v1.DNSLogParams{
@@ -85,15 +87,50 @@ func TestDNS_DNSLogs(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.DNSLogs(cluster).List(ctx, &params)
-		require.NoError(t, err)
-		for i := range resp.Items {
-			testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &resp.Items[i])
-		}
-		require.Equal(t, logs, resp.Items)
+
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.DNSLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			for i := range resp.Items {
+				testutils.AssertDNSLogIDAndClusterAndReset(t, cluster, &resp.Items[i])
+			}
+			require.Equal(t, logs, resp.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.DNSLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.DNSLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.DNSLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.DNSLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.DNSLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.DNSLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunDNSLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 dns logs.
@@ -183,6 +220,8 @@ func TestDNS_DNSLogs(t *testing.T) {
 	})
 
 	RunDNSLogTest(t, "should support pagination for items >= 10000 for dns", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K dns logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -233,8 +272,10 @@ func TestFV_DNSLogTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
+
+		cluster := cluster1
 
 		// Create a basic log. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.
