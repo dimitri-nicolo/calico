@@ -16,7 +16,7 @@ package utils
 
 const (
 	// ProductName is used in the release process to identify the product.
-	ProductName = CalicoProductName
+	ProductName = EnterpriseProductName
 
 	// Calico is the product name for projectcalico.
 	Calico = "calico"

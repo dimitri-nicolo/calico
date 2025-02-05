@@ -234,7 +234,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 			Name:            pinnedVersion.ReleaseName,
 			Hash:            pinnedVersion.Hash,
 			Note:            pinnedVersion.Note,
-			Product:         utils.EnterpriseProductName(),
+			Product:         utils.ProductName,
 			Stream:          version.DeterminePublishStream(productBranch, pinnedVersion.Title),
 			ProductVersion:  pinnedVersion.Title,
 			OperatorVersion: pinnedVersion.TigeraOperator.Version,

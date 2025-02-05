@@ -261,9 +261,7 @@ func enterprisePublishHashreleaseCommand(cfg *Config) *cli.Command {
 
 			// Send a slack message to notify that the hashrelease has been published.
 			if c.Bool(publishHashreleaseFlag.Name) {
-				if err := tasks.HashreleaseSlackMessage(slackConfig(c), &hashrel.Hashrelease, !c.Bool(skipImageScanFlag.Name), ciJobURL(c), cfg.TmpDir); err != nil {
-					return err
-				}
+				return tasks.AnnounceHashrelease(slackConfig(c), &hashrel.Hashrelease, ciJobURL(c))
 			}
 			return nil
 		},
