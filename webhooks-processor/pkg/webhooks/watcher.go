@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	WebhooksWatcherTimeout = 2 * time.Minute
+	WebhooksWatcherTimeout = 1 * time.Minute
 )
 
 type WebhookWatcherUpdater struct {
@@ -90,8 +90,13 @@ func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
 		logrus.WithError(err).Fatal("unable to watch for configmaps changes")
 		return
 	} else {
-		for event := range watcher.ResultChan() {
-			w.controller.K8sEventsChan() <- event
+		for ctx.Err() == nil {
+			select {
+			case event := <-watcher.ResultChan():
+				w.controller.K8sEventsChan() <- event
+			case <-ctx.Done():
+				return
+			}
 		}
 	}
 }
@@ -111,20 +116,27 @@ func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) {
 		logrus.WithError(err).Fatal("unable to watch for secrets changes")
 		return
 	} else {
-		for event := range watcher.ResultChan() {
-			w.controller.K8sEventsChan() <- event
+		for ctx.Err() == nil {
+			select {
+			case event := <-watcher.ResultChan():
+				w.controller.K8sEventsChan() <- event
+			case <-ctx.Done():
+				return
+			}
 		}
 	}
 }
 
 func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) {
-	select {
-	case webhook := <-w.webhookUpdatesChan:
-		if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
-			logrus.WithError(err).Error("unable to update webhook definition")
+	for ctx.Err() == nil {
+		select {
+		case webhook := <-w.webhookUpdatesChan:
+			if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
+				logrus.WithError(err).Error("unable to update webhook definition")
+			}
+		case <-ctx.Done():
+			return
 		}
-	case <-ctx.Done():
-		return
 	}
 }
 
@@ -147,8 +159,15 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) {
 		logrus.WithError(err).Fatal("unable to watch for webhook changes")
 		return
 	} else {
-		for event := range watcher.ResultChan() {
-			w.controller.WebhookEventsChan() <- event
+		for watcherCtx.Err() == nil {
+			select {
+			case event := <-watcher.ResultChan():
+				w.controller.WebhookEventsChan() <- event
+			case <-watcherCtx.Done():
+				return
+			case <-ctx.Done():
+				return
+			}
 		}
 	}
 }
