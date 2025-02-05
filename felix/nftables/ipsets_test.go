@@ -159,7 +159,7 @@ var _ = Describe("IPSets with empty data plane", func() {
 
 		// Trigger a resync.
 		s.QueueResync()
-		Expect(s.ApplyUpdates).NotTo(Panic())
+		Expect(func() { s.ApplyUpdates(nil) }).NotTo(Panic())
 	})
 
 	It("should handle unexpected sets with types that are not supported", func() {
