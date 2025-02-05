@@ -67,7 +67,7 @@ var remoteClusterVXLANWEPsBase = func() State {
 	state := empty.withName("remoteClusterVXLANWEPsBase")
 
 	state = StateWithPool(state, local, "11.0.0.0/16", true)
-	state = StateWithWEP(state, local, "11.0.0.5", true, proto.IPPoolType_VXLAN, "base-wep", localClusterHost2, localClusterHost2IPAddr)
+	state = StateWithWEP(state, local, "11.0.0.5", true, proto.IPPoolType_VXLAN, "base-wep", localClusterHost2, localClusterHost2IPAddr, false)
 	state = StateWithVTEP(state, local, "11.0.1.1", true, localClusterHost2MAC, localClusterHost2, localClusterHost2IPAddr)
 	state = StateWithNode(state, local, localClusterHost2, localClusterHost2IPAddr, "11.0.1.1")
 
@@ -126,7 +126,7 @@ var remoteClusterBlockEnclosesLocalWEP = func() State {
 	state := empty.withName("remoteClusterBlockEnclosesLocalWEP")
 
 	state = StateWithBlock(state, remoteA, "10.0.0.0/28", true, proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
-	state = StateWithWEP(state, local, "10.0.0.0", true, proto.IPPoolType_NONE, "wep", localHostname, localClusterHostIPAddr)
+	state = StateWithWEP(state, local, "10.0.0.0", true, proto.IPPoolType_NONE, "wep", localHostname, localClusterHostIPAddr, true)
 
 	state = StateWithNode(state, local, localHostname, localClusterHostIPAddr, "")
 	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
