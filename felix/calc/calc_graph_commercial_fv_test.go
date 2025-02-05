@@ -2144,7 +2144,9 @@ var (
 
 	createEndpointWithLocalEgressGateway = func(name string, gateway *WorkloadEndpoint, ipSetMemberStr string) State {
 		healthPort := uint16(0)
-		if strings.Contains(ipSetMemberStr, "8080") {
+		// The health port is one of the entries in the IP set member string. For example:
+		//    137.0.0.1/32,2025-02-03t16:27:58.366521782z,2025-02-03t16:28:58.366521782z,0,remotehostname
+		if strings.Split(ipSetMemberStr, ",")[3] == "8080" {
 			healthPort = 8080
 		}
 		return initialisedStore.withKVUpdates(

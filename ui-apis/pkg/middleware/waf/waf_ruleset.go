@@ -3,6 +3,7 @@ package waf
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -72,16 +73,27 @@ func (rs rulesets) GetRuleset(ctx context.Context, id string) (*v1.WAFRuleset, e
 		Name: rsInfo.displayName,
 	}
 	for fileName, data := range config.Data {
-		parsedData, err := parser.Parse(data)
-		if err != nil {
-			return &v1.WAFRuleset{}, err
+		if strings.HasSuffix(fileName, ".conf") {
+			parsedData, err := parser.Parse(data)
+			if err != nil {
+				return nil, err
+			}
+
+			convertedRules := convertToRules(parsedData)
+			if len(convertedRules) == 0 {
+				// file contains no rules with 'msg' field
+				continue
+			}
+
+			cat := v1.File{
+				ID:    fileName,
+				Name:  fileName,
+				Rules: convertedRules,
+			}
+
+			wrs.Files = append(wrs.Files, cat)
 		}
-		cat := v1.File{
-			ID:    fileName,
-			Name:  fileName,
-			Rules: convertToRules(parsedData),
-		}
-		wrs.Files = append(wrs.Files, cat)
+
 	}
 
 	return &wrs, nil
@@ -128,8 +140,8 @@ func convertToRules(parsedRules []parser.Rule) []v1.Rule {
 			}
 
 			rules = append(rules, rule)
-
 		}
 	}
+
 	return rules
 }

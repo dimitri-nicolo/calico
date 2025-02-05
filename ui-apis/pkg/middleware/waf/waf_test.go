@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	. "github.com/onsi/ginkgo"
@@ -61,7 +62,6 @@ var _ = Describe("WAF middleware tests", func() {
 			Expect(ruleset.ID).To(Equal("coreruleset-default"))
 			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
 			Expect(ruleset.Files).NotTo(BeEmpty())
-			Expect(ruleset.Files).To(HaveLen(len(crsMap)))
 		})
 
 		It("Test Get WAF Ruleset", func() {
@@ -75,7 +75,37 @@ var _ = Describe("WAF middleware tests", func() {
 			Expect(ruleset.ID).To(Equal("coreruleset-default"))
 			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
 			Expect(ruleset.Files).NotTo(BeEmpty())
-			Expect(ruleset.Files).To(HaveLen(len(crsMap)))
+
+			for _, file := range ruleset.Files {
+				if !strings.HasSuffix(file.Name, ".conf") {
+					Expect(file.Name).To(BeNil())
+				}
+			}
+		})
+
+		It("Test Filtering WAF Ruleset", func() {
+			rs := rulesets{
+				client: mockClientSet,
+			}
+			ctx := context.Background()
+			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
+			Expect(err).To(BeNil())
+
+			Expect(ruleset.ID).To(Equal("coreruleset-default"))
+			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
+			Expect(ruleset.Files).NotTo(BeEmpty())
+
+			for _, file := range ruleset.Files {
+				// check we don't send files with rules that don't contain a 'msg' field
+				// this file has no rules with a message field so it should not be present
+				Expect(file.Name).ToNot(Equal("REQUEST-905-COMMON-EXCEPTIONS.conf"))
+
+				// https://github.com/corazawaf/coraza-coreruleset/blob/main/rules/%40owasp_crs/REQUEST-911-METHOD-ENFORCEMENT.conf
+				// should only have 1 rule we are interested in
+				if file.Name == "REQUEST-911-METHOD-ENFORCEMENT.conf" {
+					Expect(len(file.Rules)).To(Equal(1))
+				}
+			}
 		})
 
 		It("Test Get WAF rule", func() {
