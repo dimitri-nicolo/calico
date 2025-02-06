@@ -1,8 +1,9 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2025 Tigera, Inc. All rights reserved.
 
 package apiserver
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -17,13 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	utilversion "k8s.io/apiserver/pkg/util/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/rest"
+	utilversion "k8s.io/component-base/version"
 
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	calicorest "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/rest"
@@ -191,7 +192,7 @@ type k8sRoleGetter struct {
 	roleLister rbacv1listers.RoleLister
 }
 
-func (r *k8sRoleGetter) GetRole(namespace, name string) (*rbacv1.Role, error) {
+func (r *k8sRoleGetter) GetRole(ctx context.Context, namespace, name string) (*rbacv1.Role, error) {
 	return r.roleLister.Roles(namespace).Get(name)
 }
 
@@ -200,7 +201,7 @@ type k8sRoleBindingLister struct {
 	roleBindingLister rbacv1listers.RoleBindingLister
 }
 
-func (r *k8sRoleBindingLister) ListRoleBindings(namespace string) ([]*rbacv1.RoleBinding, error) {
+func (r *k8sRoleBindingLister) ListRoleBindings(ctx context.Context, namespace string) ([]*rbacv1.RoleBinding, error) {
 	return r.roleBindingLister.RoleBindings(namespace).List(labels.Everything())
 }
 
@@ -209,7 +210,7 @@ type k8sClusterRoleGetter struct {
 	clusterRoleLister rbacv1listers.ClusterRoleLister
 }
 
-func (r *k8sClusterRoleGetter) GetClusterRole(name string) (*rbacv1.ClusterRole, error) {
+func (r *k8sClusterRoleGetter) GetClusterRole(ctx context.Context, name string) (*rbacv1.ClusterRole, error) {
 	return r.clusterRoleLister.Get(name)
 }
 
@@ -218,7 +219,7 @@ type k8sClusterRoleBindingLister struct {
 	clusterRoleBindingLister rbacv1listers.ClusterRoleBindingLister
 }
 
-func (r *k8sClusterRoleBindingLister) ListClusterRoleBindings() ([]*rbacv1.ClusterRoleBinding, error) {
+func (r *k8sClusterRoleBindingLister) ListClusterRoleBindings(ctx context.Context) ([]*rbacv1.ClusterRoleBinding, error) {
 	return r.clusterRoleBindingLister.List(labels.Everything())
 }
 

@@ -7,5 +7,3 @@ eval app=="frontend" -o yaml
     orchestrator: k8s
     workload: default/frontend-5gs43
 
-
-Plus 2 lines on stderr

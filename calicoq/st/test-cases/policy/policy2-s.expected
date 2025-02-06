@@ -15,5 +15,3 @@ Endpoints matching Policy "group2/abcdefghijklmnopqrstuvwxyz" rules:
   Workload endpoint host1/k8s/group2.g2w3/eth0
     inbound rule 1 source match
     outbound rule 1 destination match
-
-Plus 2 lines on stderr
