@@ -2663,6 +2663,82 @@
     {
       "id": {
         "source_node_id": "hosts/*",
+        "dest_node_id": "hosts/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 550,
+              "packet_out": 303,
+              "bytes_in": 92034,
+              "bytes_out": 229447
+            },
+            "connections": {
+              "total_per_sample_interval": 5,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ],
+            "dest": [
+              {
+                "name": "calico-node",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              },
+              {
+                "name": "kubelet",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_type = \"hep\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 9081,
+                "max_port": 9081
+              },
+              {
+                "min_port": 10250,
+                "max_port": 10250
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "hosts/*",
         "dest_node_id": "namespace/kube-system"
       },
       "stats": [

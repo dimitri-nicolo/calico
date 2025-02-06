@@ -69,15 +69,13 @@ func newTrackedGroup(hierarchy []*trackedNode) *trackedGroup {
 		vd = vd.Combine(parent.viewData)
 	}
 
-	tg := &trackedGroup{
+	return &trackedGroup{
 		node:     node,
 		parents:  parents,
 		ingress:  make(map[*trackedGroup]struct{}),
 		egress:   make(map[*trackedGroup]struct{}),
 		viewData: vd,
 	}
-
-	return tg
 }
 
 // addChild adds a child node to a tracked group. This updates the groups focus/following info from the child specific
@@ -94,6 +92,10 @@ type trackedNode struct {
 	parent    *trackedNode
 	selectors SelectorPairs
 	viewData  NodeViewData
+	// for certain graph node types like host endpoints, even though they are tracked under the same tracked group,
+	// we still want to show edges between them. This flag is used to retain edges when we convert raw flow into
+	// service graph nodes and edges.
+	retainEdges bool
 }
 
 func (t *trackedNode) id() v1.GraphNodeID {
@@ -176,7 +178,7 @@ type serviceGraphConstructionData struct {
 	viewSelectors v1.GraphSelectors
 }
 
-// newServiceGraphConstructor intializes a new serviceGraphConstructionData.
+// newServiceGraphConstructor initializes a new serviceGraphConstructionData.
 func newServiceGraphConstructor(sgd *ServiceGraphData, v *ParsedView) *serviceGraphConstructionData {
 	return &serviceGraphConstructionData{
 		groupsMap:    make(map[v1.GraphNodeID]*trackedGroup),
@@ -286,8 +288,10 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 		dstEpHierarchy[i].graphNode.IncludeStatsIngress(flow.Stats)
 	}
 
-	// If the source and dest group are the same then don't add an edge.
-	if srcGp == dstGp {
+	// If the source and dest group are the same and the retain edges flags are not set for the nodes,
+	// then don't add an edge.
+	retainEdges := srcGp.node.retainEdges && dstGp.node.retainEdges
+	if srcGp == dstGp && !retainEdges {
 		return nil
 	}
 
@@ -402,6 +406,14 @@ func (s *serviceGraphConstructionData) trackNodes(
 			return nil
 		}
 		return servicePortNodes[len(servicePortNodes)-1]
+	}
+	shouldRetainEdges := func(nodeType v1.GraphNodeType) bool {
+		switch nodeType {
+		case v1.GraphNodeTypeHosts, v1.GraphNodeTypeHost, v1.GraphNodeTypeHostEndpoint:
+			return true
+		default:
+			return false
+		}
 	}
 
 	// Determine if this endpoint is in a layer - most granular wins.
@@ -647,8 +659,9 @@ func (s *serviceGraphConstructionData) trackNodes(
 	// Combine the aggregated endpoint node - this should always be available for a flow.
 	var aggrEndpoint *trackedNode
 	if aggrEndpoint = s.nodesMap[aggrEndpointId]; aggrEndpoint == nil {
+		epType := idi.GetAggrEndpointType()
 		sel := s.selh.GetEndpointNodeSelectors(
-			idi.GetAggrEndpointType(),
+			epType,
 			endpoint.Namespace,
 			endpoint.Name,
 			endpoint.NameAggr,
@@ -658,9 +671,10 @@ func (s *serviceGraphConstructionData) trackNodes(
 		viewData := s.view.NodeViewData[aggrEndpointId]
 		parent := getEndpointParent()
 		expandable := nonAggrEndpointId != ""
+		retainEdges := shouldRetainEdges(epType)
 		aggrEndpoint = &trackedNode{
 			graphNode: v1.GraphNode{
-				Type:       idi.GetAggrEndpointType(),
+				Type:       epType,
 				ID:         aggrEndpointId,
 				ParentID:   parent.id(),
 				Namespace:  endpoint.Namespace,
@@ -668,9 +682,10 @@ func (s *serviceGraphConstructionData) trackNodes(
 				Expandable: expandable,
 				Expanded:   expandable && viewData.Expanded,
 			},
-			parent:    parent,
-			selectors: sel,
-			viewData:  viewData,
+			parent:      parent,
+			selectors:   sel,
+			viewData:    viewData,
+			retainEdges: retainEdges,
 		}
 		s.nodesMap[aggrEndpointId] = aggrEndpoint
 	}
@@ -1233,10 +1248,10 @@ func (s *serviceGraphConstructionData) getResponse() *v1.ServiceGraphResponse {
 	// Trace out the nodes and edges if the log level is debug.
 	if log.IsLevelEnabled(log.DebugLevel) {
 		for _, node := range sgr.Nodes {
-			log.Debugf("%s", node)
+			log.Debugf("%v", node)
 		}
 		for _, edge := range sgr.Edges {
-			log.Debugf("%s", edge)
+			log.Debugf("%v", edge)
 		}
 	}
 
