@@ -57,6 +57,8 @@
             "source": [
               {
                 "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -66,6 +68,8 @@
             "dest": [
               {
                 "name": "calico-node",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -73,6 +77,8 @@
               },
               {
                 "name": "kubelet",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -115,6 +121,8 @@
             "source": [
               {
                 "name": "prometheus",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -207,6 +215,8 @@
             "source": [
               {
                 "name": "chronyd",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -214,6 +224,8 @@
               },
               {
                 "name": "google_guest_ag",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -221,6 +233,8 @@
               },
               {
                 "name": "google_osconfig",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -228,6 +242,8 @@
               },
               {
                 "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -235,6 +251,8 @@
               },
               {
                 "name": "kubelet",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -244,6 +262,8 @@
             "dest": [
               {
                 "name": "apiserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -251,6 +271,8 @@
               },
               {
                 "name": "cnx-queryserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -315,6 +337,8 @@
             "source": [
               {
                 "name": "coredns",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -602,6 +626,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -609,6 +635,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -697,6 +725,8 @@
             "source": [
               {
                 "name": "elasticsearch_e",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -706,6 +736,8 @@
             "dest": [
               {
                 "name": "elasticsearch[t",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -748,6 +780,8 @@
             "source": [
               {
                 "name": "*",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 2,
                 "min_num_ids_per_flow": 2,
@@ -755,6 +789,8 @@
               },
               {
                 "name": "flush_thread_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -762,6 +798,8 @@
               },
               {
                 "name": "flush_thread_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -769,6 +807,8 @@
               },
               {
                 "name": "flush_thread_2",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -776,6 +816,8 @@
               },
               {
                 "name": "flush_thread_3",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -785,6 +827,8 @@
             "dest": [
               {
                 "name": "elasticsearch[t",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -885,6 +929,8 @@
             "source": [
               {
                 "name": "*",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 2,
                 "min_num_ids_per_flow": 2,
@@ -892,6 +938,8 @@
               },
               {
                 "name": "flush_thread_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -899,6 +947,8 @@
               },
               {
                 "name": "flush_thread_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -906,6 +956,8 @@
               },
               {
                 "name": "flush_thread_2",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -913,6 +965,8 @@
               },
               {
                 "name": "flush_thread_3",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -922,6 +976,8 @@
             "dest": [
               {
                 "name": "elasticsearch[t",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1006,6 +1062,8 @@
             "source": [
               {
                 "name": "ui-apis",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1013,6 +1071,8 @@
               },
               {
                 "name": "voltron",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1078,6 +1138,8 @@
             "source": [
               {
                 "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1087,6 +1149,8 @@
             "dest": [
               {
                 "name": "apiserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1094,6 +1158,8 @@
               },
               {
                 "name": "cnx-queryserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1179,6 +1245,8 @@
             "source": [
               {
                 "name": "chronyd",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1186,6 +1254,8 @@
               },
               {
                 "name": "coredns",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1193,6 +1263,8 @@
               },
               {
                 "name": "google_guest_ag",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1200,6 +1272,8 @@
               },
               {
                 "name": "google_osconfig",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1207,6 +1281,8 @@
               },
               {
                 "name": "kubelet",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1214,6 +1290,8 @@
               },
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1221,6 +1299,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1409,6 +1489,8 @@
             "source": [
               {
                 "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1418,6 +1500,8 @@
             "dest": [
               {
                 "name": "apiserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1425,6 +1509,8 @@
               },
               {
                 "name": "cnx-queryserver",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1489,6 +1575,8 @@
             "source": [
               {
                 "name": "chronyd",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1496,6 +1584,8 @@
               },
               {
                 "name": "google_guest_ag",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1503,6 +1593,8 @@
               },
               {
                 "name": "google_osconfig",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1510,6 +1602,8 @@
               },
               {
                 "name": "kubelet",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1574,6 +1668,8 @@
             "source": [
               {
                 "name": "coredns",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1690,6 +1786,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1697,6 +1795,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1868,6 +1968,8 @@
             "source": [
               {
                 "name": "*",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 2,
                 "min_num_ids_per_flow": 2,
@@ -1875,6 +1977,8 @@
               },
               {
                 "name": "flush_thread_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1882,6 +1986,8 @@
               },
               {
                 "name": "flush_thread_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1889,6 +1995,8 @@
               },
               {
                 "name": "flush_thread_2",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1896,6 +2004,8 @@
               },
               {
                 "name": "flush_thread_3",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1905,6 +2015,8 @@
             "dest": [
               {
                 "name": "elasticsearch[t",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
