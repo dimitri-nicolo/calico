@@ -285,7 +285,8 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) --pull \
 	--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 	--build-arg UBI8_IMAGE=$(UBI8_IMAGE) \
 	--build-arg UBI9_IMAGE=$(UBI9_IMAGE) \
-	--build-arg GIT_VERSION=$(GIT_VERSION)
+	--build-arg GIT_VERSION=$(GIT_VERSION) \
+	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
