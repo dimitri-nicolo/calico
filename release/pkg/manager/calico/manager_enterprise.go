@@ -325,6 +325,26 @@ type enterpriseMetadata struct {
 	CalicoVersion string `json:"calico_oss_version" yaml:"CalicoOSSVersion"`
 }
 
+func (m *EnterpriseManager) getRegistryFromManifests() (string, error) {
+	args := []string{"-Po", `image:\K(.*)`, "calicoctl.yaml"}
+	out, err := m.runner.RunInDir(filepath.Join(m.repoRoot, "manifests"), "grep", args, nil)
+	if err != nil {
+		return "", err
+	}
+	imgs := strings.Split(out, "\n")
+	for _, i := range imgs {
+		if strings.Contains(i, "operator") {
+			continue
+		} else if strings.Contains(i, "tigera/") {
+			splits := strings.SplitAfter(i, "/tigera/")
+			registry := strings.TrimSuffix(splits[0], "/")
+			logrus.WithField("registry", registry).Debugf("Using registry from image %s", i)
+			return registry, nil
+		}
+	}
+	return "", fmt.Errorf("failed to find registry from manifests")
+}
+
 func (m *EnterpriseManager) BuildMetadata(dir string) error {
 	if err := os.MkdirAll(dir, utils.DirPerms); err != nil {
 		logrus.WithError(err).Errorf("Failed to create metadata folder %s", dir)
