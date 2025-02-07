@@ -22,6 +22,7 @@ KIND_VERSION=v0.25.0
 PROTOC_VER=v0.1
 UBI8_VERSION=8.10
 UBI9_VERSION=9.4
+GITHUB_CLI_VERSION=2.65.0
 
 # The Semaphore calico-private ID, used when making calls to the Semaphore API.
 SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657

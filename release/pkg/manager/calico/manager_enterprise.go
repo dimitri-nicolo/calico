@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/release/internal/pinnedversion"
 	"github.com/projectcalico/calico/release/internal/registry"
 	"github.com/projectcalico/calico/release/internal/utils"
+	"github.com/projectcalico/calico/release/internal/version"
 )
 
 var (
@@ -26,6 +28,8 @@ var (
 	windowsGCSBucket = "tigera-windows"
 
 	docsURL = "https://docs.tigera.io"
+
+	s3Bucket = "s3://tigera-public/ee"
 
 	// images that should be expected for a release.
 	// This list needs to be kept up-to-date
@@ -140,12 +144,16 @@ type EnterpriseManager struct {
 	enterpriseHashrelease hashreleaseserver.EnterpriseHashrelease
 
 	// publishing options
+	dryRun                bool
 	publishWindowsArchive bool
 	publishCharts         bool
+	publishToS3           bool
 
 	rpm bool
 
 	helmRegistry string
+
+	awsProfile string
 }
 
 func (m *EnterpriseManager) helmChartVersion() string {
@@ -162,36 +170,43 @@ func (m *EnterpriseManager) resetCharts() {
 	}
 }
 
+func (m *EnterpriseManager) modifyHelmChartsValues() error {
+	if err := m.CalicoManager.modifyHelmChartsValues(); err != nil {
+		return err
+	}
+
+	// Modify the tigera-prometheus-operator values.yaml file to use the calico version.
+	prometheusValuesYAML := filepath.Join(m.repoRoot, "charts", "tigera-prometheus-operator", "values.yaml")
+	if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/tag: .*/tag: %s/g`, m.calicoVersion), prometheusValuesYAML}, nil); err != nil {
+		logrus.WithError(err).Error("Failed to update calicoctl version in values.yaml")
+		return err
+	}
+
+	// Update the registry in the tigera-operator & tigera-prometheus-operator values.yaml file.
+	var registry string
+	if len(m.imageRegistries) > 0 {
+		registry = m.imageRegistries[0]
+	}
+	manifestRegistry, err := m.getRegistryFromManifests()
+	if err != nil {
+		return err
+	}
+	for _, valuesYAML := range []string{filepath.Join(m.repoRoot, "charts", "tigera-operator", "values.yaml"), prometheusValuesYAML} {
+		if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s~%s~%s~g`, manifestRegistry, registry), valuesYAML}, nil); err != nil {
+			logrus.WithField("file", valuesYAML).WithError(err).Error("failed to update registry in values file")
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *EnterpriseManager) BuildHelm() error {
 	if m.isHashRelease {
 		// Reset the changes to the charts directory.
 		defer m.resetCharts()
 
-		if err := m.CalicoManager.modifyHelmChartsValues(); err != nil {
+		if err := m.modifyHelmChartsValues(); err != nil {
 			return err
-		}
-
-		// Modify the tigera-prometheus-operator values.yaml file to use the calico version.
-		prometheusValuesYAML := filepath.Join(m.repoRoot, "charts", "tigera-prometheus-operator", "values.yaml")
-		if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s/tag: .*/tag: %s/g`, m.calicoVersion), prometheusValuesYAML}, nil); err != nil {
-			logrus.WithError(err).Error("Failed to update calicoctl version in values.yaml")
-			return err
-		}
-
-		// Update the registry in the tigera-operator & tigera-prometheus-operator values.yaml file.
-		var registry string
-		if len(m.imageRegistries) > 0 {
-			registry = m.imageRegistries[0]
-		}
-		manifestRegistry, err := m.getRegistryFromManifests()
-		if err != nil {
-			return err
-		}
-		for _, valuesYAML := range []string{filepath.Join(m.repoRoot, "charts", "tigera-operator", "values.yaml"), prometheusValuesYAML} {
-			if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s~%s~%s~g`, manifestRegistry, registry), valuesYAML}, nil); err != nil {
-				logrus.WithField("file", valuesYAML).WithError(err).Error("failed to update registry in values file")
-				return err
-			}
 		}
 	}
 
@@ -207,9 +222,23 @@ func (m *EnterpriseManager) BuildHelm() error {
 	return nil
 }
 
-func (m *EnterpriseManager) PreBuildValidation() error {
-	if !m.isHashRelease {
-		return fmt.Errorf("only hash releases are supported for enterprise builds")
+func (m *EnterpriseManager) PreReleaseValidate(ver string) error {
+	// Cheeck that we are on a release branch
+	if m.validateBranch {
+		branch, err := utils.GitBranch(m.repoRoot)
+		if err != nil {
+			return fmt.Errorf("failed to determine branch: %s", err)
+		}
+		match := fmt.Sprintf(`^%s-v\d+\.\d+(?:-\d+)?$`, m.releaseBranchPrefix)
+		re := regexp.MustCompile(match)
+		if !re.MatchString(branch) {
+			return fmt.Errorf("current branch (%s) is not a release branch", branch)
+		}
+	}
+
+	// Check that code generation is up-to-date.
+	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "generate get-operator-crds check-dirty"); err != nil {
+		return fmt.Errorf("code generation error (try 'make generate' and/or 'make get-operator-crds' ?): %s", err)
 	}
 	if m.rpm {
 		createrepo := "createrepo_c"
@@ -221,7 +250,8 @@ func (m *EnterpriseManager) PreBuildValidation() error {
 			return fmt.Errorf("%s not found in PATH", createrepo)
 		}
 	}
-	return m.CalicoManager.PreBuildValidation()
+
+	return m.prepPrereqs()
 }
 
 func (m *EnterpriseManager) generateManifests() error {
@@ -524,8 +554,10 @@ func (m *EnterpriseManager) collectArtifacts() error {
 		return err
 	}
 
-	if err := m.fetchEnterpriseScripts(); err != nil {
-		return err
+	if m.isHashRelease {
+		if err := m.fetchEnterpriseScripts(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -574,6 +606,20 @@ func (m *EnterpriseManager) fetchEnterpriseScripts() error {
 	return nil
 }
 
+func (m *EnterpriseManager) publishPrereqs() error {
+	if !m.validate {
+		logrus.Warn("Skipping pre-publish validation")
+		return nil
+	}
+	if dirty, err := utils.GitIsDirty(m.repoRoot); dirty || err != nil {
+		return fmt.Errorf("there are uncommitted changes in the repository, please commit or stash them before publishing the release")
+	}
+	if m.isHashRelease {
+		return m.hashreleasePrereqs()
+	}
+	return m.prepPrereqs()
+}
+
 func (m *EnterpriseManager) PublishRelease() error {
 	// Check that the environment has the necessary prereqs.
 	if err := m.publishPrereqs(); err != nil {
@@ -583,16 +629,32 @@ func (m *EnterpriseManager) PublishRelease() error {
 	if err := m.publishWindowsArchiveToGCS(); err != nil {
 		return err
 	}
-
+	if err := m.publishHelmCharts(); err != nil {
+		return err
+	}
 	if m.isHashRelease {
-		if err := m.publishHelmCharts(); err != nil {
-			return err
-		}
-		if err := m.publishToHashreleaseServer(); err != nil {
-			return fmt.Errorf("failed to publish hashrelease: %s", err)
-		}
+		return m.publishToHashreleaseServer()
 	}
 
+	return m.publishReleaseArtifacts()
+}
+
+func (m *EnterpriseManager) publishReleaseArtifacts() error {
+	if !m.publishToS3 {
+		logrus.Info("Skipping publishing manifests, release archive and RPMs to S3")
+		return nil
+	}
+	if err := m.uploadToS3(filepath.Join(m.uploadDir(), "manifests")+"/", fmt.Sprintf("%s/%s/manifests/", s3Bucket, m.calicoVersion)); err != nil {
+		return fmt.Errorf("failed to publish manifests: %s", err)
+	}
+	if err := m.uploadToS3(filepath.Join(m.uploadDir(), fmt.Sprintf("release-%s-%s.tgz", m.calicoVersion, m.operatorVersion)), fmt.Sprintf("%s/archives/", s3Bucket)); err != nil {
+		return fmt.Errorf("failed to publish release archive: %s", err)
+	}
+	for _, rhelVer := range rhelVersions {
+		if err := m.uploadToS3(filepath.Join(m.uploadDir(), "non-cluster-host-rpms", fmt.Sprintf("rhel%s", rhelVer)), fmt.Sprintf("%s/rpms/%s/rhel%s", s3Bucket, m.calicoVersion, rhelVer)); err != nil {
+			return fmt.Errorf("failed to publish RHEL %s repo: %s", rhelVer, err)
+		}
+	}
 	return nil
 }
 
@@ -603,16 +665,23 @@ func (m *EnterpriseManager) publishWindowsArchiveToGCS() error {
 	}
 
 	bucket := windowsGCSBucket
+	publishSuffix := m.calicoVersion
 	if m.isHashRelease {
 		bucket += "/dev"
+		publishSuffix = m.enterpriseHashrelease.Name
 	}
 
-	// Publish the Windows archive.
-	if _, err := m.runner.RunInDir(m.tmpDir, "gsutil", []string{
+	cmd := "gsutil"
+	args := []string{
 		"cp",
 		fmt.Sprintf("tigera-calico-windows-%s.zip", m.calicoVersion),
-		fmt.Sprintf("gs://%s/tigera-calico-windows-%s.zip", bucket, m.enterpriseHashrelease.Name),
-	}, nil); err != nil {
+		fmt.Sprintf("gs://%s/tigera-calico-windows-%s.zip", bucket, publishSuffix),
+	}
+	if m.dryRun {
+		logrus.WithField("cmd", fmt.Sprintf("%s %s", cmd, strings.Join(args, " "))).Info("Dry-run: would publish windows archive")
+		return nil
+	}
+	if _, err := m.runner.RunInDir(m.tmpDir, cmd, args, nil); err != nil {
 		return err
 	}
 	return nil
@@ -628,9 +697,142 @@ func (m *EnterpriseManager) publishHelmCharts() error {
 		return fmt.Errorf("failed to list charts: %s", err)
 	}
 	for _, chart := range charts {
-		if _, err := m.runner.RunInDir(filepath.Join(m.repoRoot, utils.ReleaseFolderName), "bin/helm", []string{"push", chart, m.helmRegistry}, nil); err != nil {
-			return fmt.Errorf("failed to push chart %s: %s", chart, err)
+		if m.isHashRelease {
+			if _, err := m.runner.Run("helm", []string{"push", chart, m.helmRegistry}, nil); err != nil {
+				return err
+			}
+		} else {
+			if err := m.uploadToS3(chart, fmt.Sprintf("%s/charts/", s3Bucket)); err != nil {
+				return fmt.Errorf("failed to push chart %s: %s", chart, err)
+			}
 		}
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) prepPrereqs() error {
+	if !m.validate {
+		logrus.Info("Skipping release prep validation")
+		return nil
+	}
+
+	// Check that the git repo is clean.
+	if dirty, err := utils.GitIsDirty(m.repoRoot); dirty || err != nil {
+		return fmt.Errorf("there are uncommitted changes in the repository, please commit or stash them before publishing the release")
+	}
+
+	// Check that we're not on the master branch. We never prep releases from master.
+	branch := m.determineBranch()
+	if branch == "master" {
+		return fmt.Errorf("cannot cut release from branch: %s", branch)
+	}
+
+	// Check that the versions are release version.
+	versionRegex := regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+	if !versionRegex.MatchString(m.operatorVersion) {
+		return fmt.Errorf("operator version (%s) is not a release version", m.operatorVersion)
+	}
+	versionRegex = regexp.MustCompile(`^\d+\.\d+\.\d+(-\d+.\d+)?$`)
+	if !versionRegex.MatchString(m.calicoVersion) {
+		return fmt.Errorf("version (%s) is not a release version", m.calicoVersion)
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) PrepareRelease() error {
+	if err := m.prepPrereqs(); err != nil {
+		return err
+	}
+
+	// Checkout the repo at the git hash
+	if err := utils.CheckoutHashreleaseVersion(m.enterpriseHashrelease.ProductVersion, m.repoRoot); err != nil {
+		return err
+	}
+
+	// Modify calico/_data/versions.yml, helm charts and generate manifests.
+	if err := m.modifyVersionsFile(); err != nil {
+		return err
+	}
+	if err := m.modifyHelmChartsValues(); err != nil {
+		return fmt.Errorf("failed to modify helm charts values: %s", err)
+	}
+	if err := m.generateManifests(); err != nil {
+		return fmt.Errorf("failed to generate manifests: %s", err)
+	}
+
+	// Create a new branch for the release and commit the changes.
+	prepBranch := fmt.Sprintf("prep-%s", m.calicoVersion)
+	if _, err := m.git("checkout", "-b", prepBranch); err != nil {
+		return fmt.Errorf("failed to create branch %s: %s", prepBranch, err)
+	}
+	if _, err := m.git("add", filepath.Join(m.repoRoot, "calico"), filepath.Join(m.repoRoot, "charts"), filepath.Join(m.repoRoot, "manifests")); err != nil {
+		return fmt.Errorf("failed to add files to git: %s", err)
+	}
+	if _, err := m.git("commit", "-m", fmt.Sprintf("Updates for %s release", m.calicoVersion)); err != nil {
+		return fmt.Errorf("failed to commit changes: %s", err)
+	}
+
+	// Create a PR for the release preparation.
+	ver := version.New(m.calicoVersion)
+	out, err := m.git("config", "--get", "remote.origin.url")
+	if err != nil {
+		return fmt.Errorf("failed to get remote origin url: %s", err)
+	}
+	userRegex, err := regexp.Compile(fmt.Sprintf(`github.com/([^/]+)/%s.git$`, m.repo))
+	if err != nil {
+		return fmt.Errorf("failed to compile regex to extract GitHub user: %s", err)
+	}
+	matches := userRegex.FindStringSubmatch(out)
+	if len(matches) != 1 {
+		return fmt.Errorf("failed to extract GitHub user from remote origin url")
+	}
+	args := []string{
+		"pr", "create",
+		"--title", fmt.Sprintf("%s release", m.calicoVersion),
+		"--base", fmt.Sprintf("%s:%s-%s", utils.TigeraOrg, m.releaseBranchPrefix, ver.Stream()),
+		"--head", fmt.Sprintf("%s:%s", matches[1], prepBranch),
+		"--label", "merge-when-ready,delete-branch,release-note-not-required,docs-not-required",
+	}
+	pr, err := m.runner.RunInDir(m.repoRoot, "bin/gh", args, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create PR: %s", err)
+	}
+	logrus.WithField("PR", pr).Info("Created PR, please review and merge after release is published")
+	return nil
+}
+
+func (m *EnterpriseManager) modifyVersionsFile() error {
+	versionData := version.NewEnterpriseVersionData(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion, m.calicoVersion)
+	err := pinnedversion.UpdateVersionsFile(m.repoRoot, versionData)
+	if err != nil {
+		return fmt.Errorf("failed to update versions file: %s", err)
+	}
+	return nil
+}
+
+func (m *EnterpriseManager) uploadToS3(src, dest string) error {
+	args := []string{
+		"--profile", m.awsProfile,
+		"s3", "cp",
+		src, dest,
+		"--acl", "public-read",
+	}
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		args = append(args, "--recursive")
+	}
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		args = append(args, "--debug")
+	}
+	if m.dryRun {
+		args = append(args, "--dryrun")
+		logrus.WithField("cmd", fmt.Sprintf("aws %s", strings.Join(args, " "))).Info("Dry-run: upload to S3")
+	}
+	if _, err := m.runner.Run("aws", args, nil); err != nil {
+		return err
 	}
 	return nil
 }

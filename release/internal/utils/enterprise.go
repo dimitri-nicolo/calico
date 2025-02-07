@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"fmt"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -29,4 +31,13 @@ func DetermineCalicoVersion(repoRoot string) (string, error) {
 
 func EnterpriseProductName() string {
 	return cases.Title(language.English).String(CalicoEnterprise)
+}
+
+func CheckoutHashreleaseVersion(hashVersion string, repoRootDir string) error {
+	verParts := strings.Split(hashVersion, "-")
+	gitHash := strings.TrimPrefix(verParts[len(verParts)-1], "g")
+	if _, err := command.GitInDir(repoRootDir, "checkout", gitHash); err != nil {
+		return fmt.Errorf("failed to checkout %s repo at hash %s: %w", filepath.Base(repoRootDir), gitHash, err)
+	}
+	return nil
 }

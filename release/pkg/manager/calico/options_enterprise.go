@@ -34,6 +34,14 @@ func WithPublishCharts(publish bool) EnterpriseOption {
 	}
 }
 
+func WithPublishToS3(publish bool) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.publishCharts = publish
+		r.publishToS3 = publish
+		return nil
+	}
+}
+
 func WithHelmRegistry(registry string) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.helmRegistry = registry
@@ -44,6 +52,20 @@ func WithHelmRegistry(registry string) EnterpriseOption {
 func WithRPMs(rpm bool) EnterpriseOption {
 	return func(r *EnterpriseManager) error {
 		r.rpm = rpm
+		return nil
+	}
+}
+
+func WithAWSProfile(profile string) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.awsProfile = profile
+		return nil
+	}
+}
+
+func WithDryRun(dryRun bool) EnterpriseOption {
+	return func(r *EnterpriseManager) error {
+		r.dryRun = dryRun
 		return nil
 	}
 }

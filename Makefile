@@ -247,6 +247,17 @@ e2e-test-adminpolicy:
 release/bin/release: $(shell find ./release -type f -name '*.go')
 	$(MAKE) -C release
 
+# Install gh for interacting with GitHub.
+bin/gh:
+	curl -sSL -o bin/gh.tgz https://github.com/cli/cli/releases/download/v$(GITHUB_CLI_VERSION)/gh_$(GITHUB_CLI_VERSION)_linux_amd64.tar.gz
+	tar -zxvf bin/gh.tgz -C bin/ gh_$(GITHUB_CLI_VERSION)_linux_amd64/bin/gh --strip-components=2
+	chmod +x $@
+	rm bin/gh.tgz
+
+# Create updates for pre-release
+release-prep: release/bin/release bin/gh var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
+	@REGISTRIES=$(REGISTRY) release/bin/release release prep
+
 # Install ghr for publishing to github.
 bin/ghr:
 	$(DOCKER_RUN) -e GOBIN=/go/src/$(PACKAGE_NAME)/bin/ $(CALICO_BUILD) go install github.com/tcnksm/ghr@$(GHR_VERSION)
@@ -256,7 +267,7 @@ release: release/bin/release
 	@release/bin/release release build
 
 # Publish an already built release.
-release-publish: release/bin/release bin/ghr
+release-publish: release/bin/release bin/gh
 	@release/bin/release release publish
 
 # Create a release branch.
@@ -327,45 +338,6 @@ bin/ocp.tgz manifests/ocp.tgz: manifests/ocp/
 .PHONY: release-notes
 release-notes:
 	@$(MAKE) -C release release-notes
-
-# Create updates for pre-release
-release-prep: bin/yq var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-CALICO_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
-	@cd calico && \
-		../bin/yq ".[0].title = \"$(RELEASE_VERSION)\" | .[0].helmRelease = $(HELM_RELEASE)" -i _data/versions.yml && \
-		../bin/yq ".[0].tigera-operator.version = \"$(OPERATOR_VERSION)\" | .[0].calico.minor_version = \"$(shell echo "$(CALICO_VERSION)" | awk -F  "." '{print $$1"."$$2}')\"" -i _data/versions.yml && \
-		../bin/yq ".[0].components |= with_entries(select(.key | test(\"^(eck-|coreos-).*\") | not)) |= with(.[]; .version = \"$(RELEASE_VERSION)\")" -i _data/versions.yml
-	@cd charts && \
-		../bin/yq ".tigeraOperator.version = \"$(OPERATOR_VERSION)\" | .calicoctl.tag = \"$(RELEASE_VERSION)\"" -i tigera-operator/values.yaml && \
-		../bin/yq ". |= with_entries(select(.key | test(\"^prometheus.*\"))) |= with(.[]; .tag = \"$(RELEASE_VERSION)\")" -i tigera-prometheus-operator/values.yaml && \
-		sed -i "s/gcr.io.*\/tigera/quay.io\/tigera/g" tigera*-operator/values.yaml
-	$(MAKE) generate CALICO_VERSION=$(RELEASE_VERSION)
-	$(eval RELEASE_UPDATE_BRANCH = $(if $(SEMAPHORE),semaphore-,)auto-build-updates-$(RELEASE_VERSION))
-	GIT_PR_BRANCH_BASE=$(if $(SEMAPHORE),$(SEMAPHORE_GIT_BRANCH),) RELEASE_UPDATE_BRANCH=$(RELEASE_UPDATE_BRANCH) \
-	GIT_PR_BRANCH_HEAD=$(if $(GIT_FORK_USER),$(GIT_FORK_USER):$(RELEASE_UPDATE_BRANCH),$(RELEASE_UPDATE_BRANCH)) GIT_REPO_SLUG=$(if $(SEMAPHORE),$(SEMAPHORE_GIT_REPO_SLUG),) \
-	$(MAKE) release-prep/create-and-push-branch release-prep/create-pr release-prep/set-pr-labels
-
-
-ifneq ($(if $(GIT_REPO_SLUG),$(shell dirname $(GIT_REPO_SLUG)),), $(shell dirname `git config remote.$(GIT_REMOTE).url | cut -d: -f2`))
-GIT_FORK_USER:=$(shell dirname `git config remote.$(GIT_REMOTE).url | cut -d: -f2`)
-endif
-release-prep/create-and-push-branch:
-ifeq ($(shell git rev-parse --abbrev-ref HEAD),$(RELEASE_UPDATE_BRANCH))
-	$(error Current branch is pull request head, cannot set it up.)
-endif
-	-git branch -D $(RELEASE_UPDATE_BRANCH)
-	-$(GIT) push $(GIT_REMOTE) --delete $(RELEASE_UPDATE_BRANCH)
-	git checkout -b $(RELEASE_UPDATE_BRANCH)
-	$(GIT) add calico/_data/versions.yml charts/**/values.yaml manifests/*
-	$(GIT) commit -m "Automatic version updates for $(RELEASE_VERSION) release"
-	$(GIT) push $(GIT_REMOTE) $(RELEASE_UPDATE_BRANCH)
-
-release-prep/create-pr:
-	$(call github_pr_create,$(GIT_REPO_SLUG),[$(GIT_PR_BRANCH_BASE)] $(if $(SEMAPHORE),Semaphore ,)Auto Release Update for $(RELEASE_VERSION),$(GIT_PR_BRANCH_HEAD),$(GIT_PR_BRANCH_BASE))
-	echo 'Created release update pull request for $(RELEASE_VERSION): $(PR_NUMBER)'
-
-release-prep/set-pr-labels:
-	$(call github_pr_add_comment,$(GIT_REPO_SLUG),$(PR_NUMBER),/merge-when-ready delete-branch release-note-not-required docs-not-required)
-	echo "Added labels to pull request $(PR_NUMBER): merge-when-ready, release-note-not-required, docs-not-required & delete-branch"
 
 ## Update the AUTHORS.md file.
 update-authors:

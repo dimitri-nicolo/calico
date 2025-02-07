@@ -3,6 +3,8 @@ package pinnedversion
 import (
 	_ "embed"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +20,8 @@ import (
 	"github.com/projectcalico/calico/release/internal/utils"
 	"github.com/projectcalico/calico/release/internal/version"
 )
+
+const managerComponent = "cnx-manager"
 
 var (
 	operatorExcludedComponents = []string{
@@ -179,7 +183,7 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Data, error) {
 		return nil, err
 	}
 
-	managerVer := pinnedVersion.Components["cnx-manager"].Version
+	managerVer := pinnedVersion.Components[managerComponent].Version
 
 	return version.NewEnterpriseVersionData(version.New(pinnedVersion.Title), pinnedVersion.HelmRelease, pinnedVersion.TigeraOperator.Version, managerVer), nil
 }
@@ -229,6 +233,10 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to get pinned version")
 	}
+	hashreleaseSrc := ""
+	if hashreleaseSrcBaseDir != "" {
+		hashreleaseSrc = filepath.Join(hashreleaseSrcBaseDir, pinnedVersion.Hash)
+	}
 	return &hashreleaseserver.EnterpriseHashrelease{
 		Hashrelease: hashreleaseserver.Hashrelease{
 			Name:            pinnedVersion.ReleaseName,
@@ -238,11 +246,12 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 			Stream:          version.DeterminePublishStream(productBranch, pinnedVersion.Title),
 			ProductVersion:  pinnedVersion.Title,
 			OperatorVersion: pinnedVersion.TigeraOperator.Version,
-			Source:          filepath.Join(hashreleaseSrcBaseDir, pinnedVersion.Hash),
+			Source:          hashreleaseSrc,
 			Time:            time.Now(),
 			Latest:          latest,
 		},
-		ChartVersion: pinnedVersion.HelmRelease,
+		ChartVersion:   pinnedVersion.HelmRelease,
+		ManagerVersion: pinnedVersion.Components[managerComponent].Version,
 	}, nil
 }
 
@@ -271,4 +280,75 @@ func RetrieveEnterpriseImageComponents(outputDir, reg string) (map[string]regist
 		components[name] = component
 	}
 	return components, nil
+}
+
+func LoadEnterpriseHashreleaseFromRemote(hashreleaseName, outputDir, repoRootDir string) (*hashreleaseserver.EnterpriseHashrelease, error) {
+	hashreleaseURL := fmt.Sprintf("https://%s.%s/%s", hashreleaseName, hashreleaseserver.BaseDomain, pinnedVersionFileName)
+	pinnedVersionPath := PinnedVersionFilePath(outputDir)
+	file, err := os.Create(pinnedVersionPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create %s: %w", pinnedVersionPath, err)
+	}
+	defer file.Close()
+	resp, err := http.Get(hashreleaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get %s pinned_versions.yml from %s: %w", hashreleaseName, hashreleaseURL, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get %s pinned_versions.yml: %s", hashreleaseName, resp.Status)
+	}
+	if _, err := io.Copy(file, resp.Body); err != nil {
+		return nil, fmt.Errorf("failed to write %s pinned_versions.yml: %w", hashreleaseName, err)
+	}
+	return LoadEnterpriseHashrelease(repoRootDir, outputDir, "", false)
+}
+
+func LoadVersionsFile(repoRootDir string) (*EnterprisePinnedVersion, error) {
+	var pinnedVersionFile EnterprisePinnedVersion
+	if pinnedVersionData, err := os.ReadFile(versionsFilePath(repoRootDir)); err != nil {
+		return nil, err
+	} else if err := yaml.Unmarshal([]byte(pinnedVersionData), &pinnedVersionFile); err != nil {
+		return nil, err
+	}
+	return &pinnedVersionFile, nil
+}
+
+func versionsFilePath(repoRootDir string) string {
+	return filepath.Join(repoRootDir, "calico", "_data", "versions.yml")
+}
+
+func UpdateVersionsFile(repoRootDir string, updateVersions version.Data) error {
+	versions, err := LoadVersionsFile(repoRootDir)
+	if err != nil {
+		return fmt.Errorf("failed to load versions file: %w", err)
+	}
+	calicoVer, err := utils.DetermineCalicoVersion(repoRootDir)
+	if err != nil {
+		return fmt.Errorf("failed to determine calico version: %s", err)
+	}
+	update := updateVersions.(*version.EnterpriseVersionData)
+	versions.Title = update.ProductVersion()
+	versions.HelmRelease = update.ChartVersion()
+	versions.TigeraOperator.Version = update.OperatorVersion()
+	versions.Calico.MinorVersion = calicoVer
+	prevVersion := versions.Title
+	for n, c := range versions.Components {
+		if c.Version == prevVersion {
+			c.Version = update.ProductVersion()
+			versions.Components[n] = c
+		} else if strings.HasPrefix(n, managerComponent) {
+			c.Version = update.ManagerVersion()
+			versions.Components[n] = c
+		}
+	}
+
+	data, err := yaml.Marshal([]*EnterprisePinnedVersion{versions})
+	if err != nil {
+		return fmt.Errorf("failed to marshal versions file: %s", err)
+	}
+	if err := os.WriteFile(versionsFilePath(repoRootDir), data, 0o644); err != nil {
+		return fmt.Errorf("failed to write versions file: %s", err)
+	}
+	return nil
 }

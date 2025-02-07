@@ -19,6 +19,10 @@ type EnterpriseVersionData struct {
 	manager      string
 }
 
+func (v *EnterpriseVersionData) ChartVersion() string {
+	return v.chartVersion
+}
+
 func (v *EnterpriseVersionData) HelmChartVersion() string {
 	if v.chartVersion == "" {
 		return v.calico.FormattedString()
