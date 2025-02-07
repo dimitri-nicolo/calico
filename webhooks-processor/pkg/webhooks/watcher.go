@@ -60,19 +60,19 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer logrus.Info("Webhook updater/watcher is terminating")
 
 	watchGroup := sync.WaitGroup{}
-	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.watchWebhooks)
-	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.watchCMs)
-	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.watchSecrets)
-	go w.executeUntilContextIsAlive(ctx, &watchGroup, w.updateWebhooks)
+	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.watchWebhooks)
+	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.watchCMs)
+	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.watchSecrets)
+	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.updateWebhooks)
 	watchGroup.Wait()
 }
 
-func (w *WebhookWatcherUpdater) executeUntilContextIsAlive(ctx context.Context, wg *sync.WaitGroup, f func(context.Context)) {
+func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, wg *sync.WaitGroup, f func(context.Context)) {
 	wg.Add(1)
+	defer wg.Done()
 	for ctx.Err() == nil {
 		f(ctx)
 	}
-	wg.Done()
 }
 
 func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
