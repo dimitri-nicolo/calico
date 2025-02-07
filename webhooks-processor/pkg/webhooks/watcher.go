@@ -104,7 +104,7 @@ func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) error {
 			case event := <-watcher.ResultChan():
 				w.controller.K8sEventsChan() <- event
 			case <-ctx.Done():
-				break
+				return nil
 			}
 		}
 		return nil
@@ -131,7 +131,7 @@ func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) error {
 			case event := <-watcher.ResultChan():
 				w.controller.K8sEventsChan() <- event
 			case <-ctx.Done():
-				break
+				return nil
 			}
 		}
 		return nil
@@ -144,9 +144,10 @@ func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) error {
 		case webhook := <-w.webhookUpdatesChan:
 			if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
 				logrus.WithError(err).Error("unable to update webhook definition")
+				return err
 			}
 		case <-ctx.Done():
-			break
+			return nil
 		}
 	}
 	return nil
@@ -176,9 +177,9 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 			case event := <-watcher.ResultChan():
 				w.controller.WebhookEventsChan() <- event
 			case <-watcherCtx.Done():
-				break
+				return nil
 			case <-ctx.Done():
-				break
+				return nil
 			}
 		}
 		return nil
