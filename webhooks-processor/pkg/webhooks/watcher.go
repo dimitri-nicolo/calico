@@ -19,7 +19,9 @@ import (
 )
 
 const (
-	WebhooksWatcherTimeout = 1 * time.Minute
+	WebhooksWatcherTimeout        = 1 * time.Minute
+	RetryOnErrorDelay             = 1 * time.Second
+	MaxRetryTimesBeforeBailingOut = 10
 )
 
 type WebhookWatcherUpdater struct {
@@ -67,19 +69,26 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	watchGroup.Wait()
 }
 
-func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, wg *sync.WaitGroup, f func(context.Context)) {
+func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, wg *sync.WaitGroup, f func(context.Context) error) {
 	wg.Add(1)
 	defer wg.Done()
+	var errorCounter int
 	for ctx.Err() == nil {
-		f(ctx)
+		if err := f(ctx); err == nil {
+			errorCounter = 0
+		} else if errorCounter++; errorCounter >= MaxRetryTimesBeforeBailingOut {
+			logrus.Fatal("terminating due to reoccuring errors")
+		} else {
+			<-time.After(RetryOnErrorDelay * time.Duration(errorCounter))
+		}
 	}
 }
 
-func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
+func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) error {
 	var watchRevision string
 	if cms, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
 		logrus.WithError(err).Error("unable to list configmaps")
-		return
+		return err
 	} else {
 		watchRevision = cms.ResourceVersion
 		for _, secret := range cms.Items {
@@ -88,24 +97,25 @@ func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
 	}
 	if watcher, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
 		logrus.WithError(err).Error("unable to watch for configmaps changes")
-		return
+		return err
 	} else {
 		for ctx.Err() == nil {
 			select {
 			case event := <-watcher.ResultChan():
 				w.controller.K8sEventsChan() <- event
 			case <-ctx.Done():
-				return
+				break
 			}
 		}
+		return nil
 	}
 }
 
-func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) {
+func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) error {
 	var watchRevision string
 	if secrets, err := w.client.CoreV1().Secrets(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
 		logrus.WithError(err).Error("unable to list secrets")
-		return
+		return err
 	} else {
 		watchRevision = secrets.ResourceVersion
 		for _, secret := range secrets.Items {
@@ -114,20 +124,21 @@ func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) {
 	}
 	if watcher, err := w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
 		logrus.WithError(err).Error("unable to watch for secrets changes")
-		return
+		return err
 	} else {
 		for ctx.Err() == nil {
 			select {
 			case event := <-watcher.ResultChan():
 				w.controller.K8sEventsChan() <- event
 			case <-ctx.Done():
-				return
+				break
 			}
 		}
+		return nil
 	}
 }
 
-func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) {
+func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) error {
 	for ctx.Err() == nil {
 		select {
 		case webhook := <-w.webhookUpdatesChan:
@@ -135,16 +146,17 @@ func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) {
 				logrus.WithError(err).Error("unable to update webhook definition")
 			}
 		case <-ctx.Done():
-			return
+			break
 		}
 	}
+	return nil
 }
 
-func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) {
+func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 	var watchRevision string
 	if webhooks, err := w.whClient.List(ctx, options.ListOptions{}); err != nil {
 		logrus.WithError(err).Error("unable to list webhooks")
-		return
+		return err
 	} else {
 		watchRevision = webhooks.ResourceVersion
 		for _, webhook := range webhooks.Items {
@@ -157,17 +169,18 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) {
 
 	if watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{ResourceVersion: watchRevision}); err != nil {
 		logrus.WithError(err).Error("unable to watch for webhook changes")
-		return
+		return err
 	} else {
 		for watcherCtx.Err() == nil {
 			select {
 			case event := <-watcher.ResultChan():
 				w.controller.WebhookEventsChan() <- event
 			case <-watcherCtx.Done():
-				return
+				break
 			case <-ctx.Done():
-				return
+				break
 			}
 		}
+		return nil
 	}
 }
