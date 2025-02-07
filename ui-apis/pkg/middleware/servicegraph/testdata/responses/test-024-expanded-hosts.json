@@ -1972,6 +1972,69 @@
     {
       "id": {
         "source_node_id": "host/rob-bz-lc19-kadm-ms/*",
+        "dest_node_id": "host/rob-bz-lc19-kadm-infra-0/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 48,
+              "packet_out": 52,
+              "bytes_in": 4435,
+              "bytes_out": 5028
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "kube-apiserver",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ],
+            "dest": [
+              {
+                "name": "kubelet",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-ms\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 10250,
+                "max_port": 10250
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "host/rob-bz-lc19-kadm-ms/*",
         "dest_node_id": "namespace/tigera-system"
       },
       "stats": [
@@ -2249,6 +2312,214 @@
               {
                 "min_port": 123,
                 "max_port": 123
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*",
+        "dest_node_id": "host/rob-bz-lc19-kadm-infra-0/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 124,
+              "packet_out": 62,
+              "bytes_in": 21638,
+              "bytes_out": 63139
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "calico-node",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-infra-0\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 9081,
+                "max_port": 9081
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*",
+        "dest_node_id": "host/rob-bz-lc19-kadm-ms/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 130,
+              "packet_out": 65,
+              "bytes_in": 22685,
+              "bytes_out": 47372
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "calico-node",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-ms\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 9081,
+                "max_port": 9081
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*",
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-0/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 124,
+              "packet_out": 62,
+              "bytes_in": 21638,
+              "bytes_out": 56872
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "calico-node",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-0\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 9081,
+                "max_port": 9081
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "host/rob-bz-lc19-kadm-node-1/*",
+        "dest_node_id": "host/rob-bz-lc19-kadm-node-2/*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 124,
+              "packet_out": 62,
+              "bytes_in": 21638,
+              "bytes_out": 57036
+            },
+            "connections": {
+              "total_per_sample_interval": 1,
+              "started": 0,
+              "completed": 0
+            }
+          },
+          "processes": {
+            "dest": [
+              {
+                "name": "calico-node",
+                "source": "",
+                "destination": "",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"rob-bz-lc19-kadm-node-2\" AND dest_type = \"hep\" AND source_name_aggr = \"rob-bz-lc19-kadm-node-1\" AND source_type = \"hep\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 9081,
+                "max_port": 9081
               }
             ]
           }
