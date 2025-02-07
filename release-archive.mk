@@ -60,7 +60,7 @@ bin/ocp.tgz:
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/private-registry.md $(RELEASE_DIR)/README.md bin/ocp.tgz
 	$(info *** Building release archive for Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), chart release $(CHART_RELEASE))
-	$(foreach var,$(IGNORED_MANIFESTS), @find $(RELEASE_DIR) -name $(var) -delete;)
+	$(foreach var,$(IGNORED_MANIFESTS), $(shell find $(RELEASE_DIR) -name $(var) -delete))
 	@tar -czf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 
 $(RELEASE_DIR)/README.md:

@@ -319,6 +319,8 @@ bin/ocp.tgz manifests/ocp.tgz: manifests/ocp/
 	tar czvf $@ -C manifests/ \
 		--exclude=tigera-enterprise-resources.yaml \
 		--exclude=tigera-prometheus-operator.yaml \
+		--exclude=00-namespace-calico-apiserver.yaml \
+		--exclude=00-namespace-calico-system.yaml \
 		ocp
 
 ## Generates release notes for the given version.
