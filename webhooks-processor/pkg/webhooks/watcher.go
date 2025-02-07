@@ -78,7 +78,7 @@ func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, 
 func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
 	var watchRevision string
 	if cms, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
-		logrus.WithError(err).Fatal("unable to list configmaps")
+		logrus.WithError(err).Error("unable to list configmaps")
 		return
 	} else {
 		watchRevision = cms.ResourceVersion
@@ -87,7 +87,7 @@ func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
 		}
 	}
 	if watcher, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
-		logrus.WithError(err).Fatal("unable to watch for configmaps changes")
+		logrus.WithError(err).Error("unable to watch for configmaps changes")
 		return
 	} else {
 		for ctx.Err() == nil {
@@ -104,7 +104,7 @@ func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) {
 func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) {
 	var watchRevision string
 	if secrets, err := w.client.CoreV1().Secrets(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
-		logrus.WithError(err).Fatal("unable to list secrets")
+		logrus.WithError(err).Error("unable to list secrets")
 		return
 	} else {
 		watchRevision = secrets.ResourceVersion
@@ -113,7 +113,7 @@ func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) {
 		}
 	}
 	if watcher, err := w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
-		logrus.WithError(err).Fatal("unable to watch for secrets changes")
+		logrus.WithError(err).Error("unable to watch for secrets changes")
 		return
 	} else {
 		for ctx.Err() == nil {
@@ -143,7 +143,7 @@ func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) {
 func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) {
 	var watchRevision string
 	if webhooks, err := w.whClient.List(ctx, options.ListOptions{}); err != nil {
-		logrus.WithError(err).Fatal("unable to list webhooks")
+		logrus.WithError(err).Error("unable to list webhooks")
 		return
 	} else {
 		watchRevision = webhooks.ResourceVersion
@@ -156,7 +156,7 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) {
 	defer watcherCtxCancel()
 
 	if watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{ResourceVersion: watchRevision}); err != nil {
-		logrus.WithError(err).Fatal("unable to watch for webhook changes")
+		logrus.WithError(err).Error("unable to watch for webhook changes")
 		return
 	} else {
 		for watcherCtx.Err() == nil {
