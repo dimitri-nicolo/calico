@@ -102,7 +102,7 @@ var releaseVersionFlag = &cli.StringFlag{
 
 var confirmFlag = &cli.BoolFlag{
 	Name:    "confirm",
-	Usage:   "Run the release. If not set, the release will be a dry-run",
+	Usage:   "Perform all the steps. If not set, it will be a dry-run",
 	EnvVars: []string{"CONFIRM"},
 	Value:   false,
 }

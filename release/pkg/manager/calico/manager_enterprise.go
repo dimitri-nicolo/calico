@@ -260,7 +260,9 @@ func (m *EnterpriseManager) generateManifests() error {
 	env = append(env, fmt.Sprintf("OPERATOR_VERSION=%s", m.operatorVersion))
 	env = append(env, fmt.Sprintf("OPERATOR_REGISTRY=%s", m.operatorRegistry))
 	env = append(env, fmt.Sprintf("REGISTRY=%s", m.imageRegistries[0]))
-	env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
+	if m.isHashRelease {
+		env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
+	}
 	if err := m.makeInDirectoryIgnoreOutput(m.repoRoot, "gen-manifests", env...); err != nil {
 		logrus.WithError(err).Error("Failed to make manifests")
 		return err
@@ -752,7 +754,7 @@ func (m *EnterpriseManager) prepPrereqs() error {
 	if !versionRegex.MatchString(m.operatorVersion) {
 		return fmt.Errorf("operator version (%s) is not a release version", m.operatorVersion)
 	}
-	versionRegex = regexp.MustCompile(`^\d+\.\d+\.\d+(-\d+.\d+)?$`)
+	versionRegex = regexp.MustCompile(`^v\d+\.\d+\.\d+(-\d+.\d+)?$`)
 	if !versionRegex.MatchString(m.calicoVersion) {
 		return fmt.Errorf("version (%s) is not a release version", m.calicoVersion)
 	}
@@ -764,6 +766,14 @@ func (m *EnterpriseManager) PrepareRelease() error {
 		return err
 	}
 
+	ver := version.New(m.calicoVersion)
+	releaseBranch := fmt.Sprintf("%s-%s", m.releaseBranchPrefix, ver.Stream())
+	defer func() {
+		if _, err := m.git("switch", "-f", releaseBranch); err != nil {
+			logrus.WithError(err).Errorf("Failed to reset to %q branch", releaseBranch)
+		}
+	}()
+
 	// Checkout the repo at the git hash
 	if err := utils.CheckoutHashreleaseVersion(m.enterpriseHashrelease.ProductVersion, m.repoRoot); err != nil {
 		return err
@@ -772,9 +782,6 @@ func (m *EnterpriseManager) PrepareRelease() error {
 	// Modify calico/_data/versions.yml, helm charts and generate manifests.
 	if err := m.modifyVersionsFile(); err != nil {
 		return err
-	}
-	if err := m.modifyHelmChartsValues(); err != nil {
-		return fmt.Errorf("failed to modify helm charts values: %s", err)
 	}
 	if err := m.generateManifests(); err != nil {
 		return fmt.Errorf("failed to generate manifests: %s", err)
@@ -791,38 +798,44 @@ func (m *EnterpriseManager) PrepareRelease() error {
 	if _, err := m.git("commit", "-m", fmt.Sprintf("Updates for %s release", m.calicoVersion)); err != nil {
 		return fmt.Errorf("failed to commit changes: %s", err)
 	}
+	if m.dryRun {
+		logrus.WithField("branch", prepBranch).Info("Dry-run: skipping push of branch")
+	} else {
+		if _, err := m.git("push", "-f", m.remote, prepBranch); err != nil {
+			return fmt.Errorf("failed to push %q branch: %s", prepBranch, err)
+		}
+	}
 
 	// Create a PR for the release preparation.
-	ver := version.New(m.calicoVersion)
 	out, err := m.git("config", "--get", "remote.origin.url")
 	if err != nil {
 		return fmt.Errorf("failed to get remote origin url: %s", err)
 	}
-	userRegex, err := regexp.Compile(fmt.Sprintf(`github.com/([^/]+)/%s.git$`, m.repo))
-	if err != nil {
-		return fmt.Errorf("failed to compile regex to extract GitHub user: %s", err)
-	}
-	matches := userRegex.FindStringSubmatch(out)
-	if len(matches) != 1 {
-		return fmt.Errorf("failed to extract GitHub user from remote origin url")
-	}
+	owner := strings.Split(out[strings.Index(out, "git@github.com:")+len("git@github.com:"):strings.LastIndex(out, ".git")], "/")[0]
 	args := []string{
-		"pr", "create",
-		"--title", fmt.Sprintf("%s release", m.calicoVersion),
-		"--base", fmt.Sprintf("%s:%s-%s", utils.TigeraOrg, m.releaseBranchPrefix, ver.Stream()),
-		"--head", fmt.Sprintf("%s:%s", matches[1], prepBranch),
+		"pr", "create", "--fill",
+		"--repo", fmt.Sprintf("%s/%s", utils.TigeraOrg, utils.CalicoPrivateRepo),
+		"--base", releaseBranch,
+		"--head", fmt.Sprintf("%s:%s", owner, prepBranch),
+		"--reviewer", fmt.Sprintf("%s/release-team", utils.TigeraOrg),
 		"--label", "merge-when-ready,delete-branch,release-note-not-required,docs-not-required",
 	}
-	pr, err := m.runner.RunInDir(m.repoRoot, "bin/gh", args, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create PR: %s", err)
+	logrus.WithField("args", strings.Join(args, " ")).Debug("Creating PR for release preparation")
+	if m.dryRun {
+		logrus.WithField("cmd", fmt.Sprintf("gh %s", strings.Join(args, " "))).Info("Dry-run: create PR for release preparation")
+	} else {
+		pr, err := m.runner.RunInDir(m.repoRoot, "bin/gh", args, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create PR: %s", err)
+		}
+		logrus.WithField("PR", pr).Info("Created PR, please review and merge after release is published")
 	}
-	logrus.WithField("PR", pr).Info("Created PR, please review and merge after release is published")
 	return nil
 }
 
 func (m *EnterpriseManager) modifyVersionsFile() error {
-	versionData := version.NewEnterpriseVersionData(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion, m.calicoVersion)
+	versionData := version.NewEnterpriseVersionData(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion, m.calicoVersion).(*version.EnterpriseVersionData)
+	versionData = versionData.ForRelease()
 	err := pinnedversion.UpdateVersionsFile(m.repoRoot, versionData)
 	if err != nil {
 		return fmt.Errorf("failed to update versions file: %s", err)

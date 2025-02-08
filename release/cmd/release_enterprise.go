@@ -39,6 +39,7 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 			operatorVersionFlag,
 			chartVersionFlag,
 			registryFlag,
+			confirmFlag,
 			skipReleaseVersionCheckFlag,
 			skipValidationFlag,
 			githubTokenFlag,
@@ -70,12 +71,13 @@ func enterpriseReleasePrepCommand(cfg *Config) *cli.Command {
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
 				calico.WithTmpDir(cfg.TmpDir),
 			}
-			if reg := c.String(registryFlag.Name); reg != "" {
-				calicoOpts = append(calicoOpts, calico.WithImageRegistries([]string{reg}))
+			if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
+				calicoOpts = append(calicoOpts, calico.WithImageRegistries(reg))
 			}
 			enterpriseOpts := []calico.EnterpriseOption{
 				calico.WithChartVersion(c.String(chartVersionFlag.Name)),
 				calico.WithEnterpriseHashrelease(*hashrel, hashreleaseserver.Config{}),
+				calico.WithDryRun(!c.Bool(confirmFlag.Name)),
 			}
 
 			m := calico.NewEnterpriseManager(calicoOpts, enterpriseOpts...)
@@ -122,7 +124,7 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
 			}
 			entOpts := []calico.EnterpriseOption{
-				calico.WithChartVersion(versions.HelmRelease),
+				calico.WithChartVersion(fmt.Sprintf("%d", versions.HelmRelease)),
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 			return m.Build()

@@ -17,6 +17,7 @@ type EnterpriseVersionData struct {
 	CalicoVersionData
 	chartVersion string
 	manager      string
+	release      bool
 }
 
 func (v *EnterpriseVersionData) ChartVersion() string {
@@ -31,6 +32,9 @@ func (v *EnterpriseVersionData) HelmChartVersion() string {
 }
 
 func (v *EnterpriseVersionData) OperatorVersion() string {
+	if v.release {
+		return v.operator
+	}
 	return fmt.Sprintf("%s-%s", v.operator, v.calico.FormattedString())
 }
 
@@ -40,4 +44,9 @@ func (v *EnterpriseVersionData) Hash() string {
 
 func (v *EnterpriseVersionData) ManagerVersion() string {
 	return v.manager
+}
+
+func (v *EnterpriseVersionData) ForRelease() *EnterpriseVersionData {
+	v.release = true
+	return v
 }
