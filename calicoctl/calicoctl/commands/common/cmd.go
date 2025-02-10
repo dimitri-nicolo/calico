@@ -40,8 +40,6 @@ func (k *kubectlCmd) Execute(cmdStr string) (string, error) {
 
 // ExecCmd is a convenience function that wraps exec.Command.
 func ExecCmd(cmdStr string) (*bytes.Buffer, error) {
-	var result bytes.Buffer
-
 	parts := strings.Fields(cmdStr)
 	log.Debugf("cmd tokens: [%+v]", parts)
 
@@ -49,13 +47,26 @@ func ExecCmd(cmdStr string) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("no command to execute")
 	}
 
-	cmd := exec.Command(parts[0], parts[1:]...)
+	return Exec(parts)
+}
+
+// Exec is a convenience function that wraps exec.Command.
+// Accepts pre-separated cmd strings.
+func Exec(cmdParts []string) (*bytes.Buffer, error) {
+	var result bytes.Buffer
+
+	if len(cmdParts) == 0 {
+		return nil, fmt.Errorf("no command to execute")
+	}
+
+	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
 	cmd.Stdout = &result
 
-	log.Debugf("Executing command: %+v ... ", cmd)
+	log.Debugf("Executing command: %+v ...", cmd)
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("command execution failed: %s", err)
 	}
+
 	log.Debugln("Completed successfully.")
 	return &result, nil
 }
