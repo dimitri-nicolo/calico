@@ -124,7 +124,7 @@ func enterpriseReleaseBuildCommand(cfg *Config) *cli.Command {
 				calico.WithValidate(!c.Bool(skipValidationFlag.Name)),
 			}
 			entOpts := []calico.EnterpriseOption{
-				calico.WithChartVersion(fmt.Sprintf("%d", versions.HelmRelease)),
+				calico.WithChartVersion(versions.HelmRelease),
 			}
 			m := calico.NewEnterpriseManager(opts, entOpts...)
 			return m.Build()

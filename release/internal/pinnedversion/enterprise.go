@@ -65,7 +65,14 @@ type CalicoComponent struct {
 
 type EnterprisePinnedVersion struct {
 	PinnedVersion `yaml:",inline"`
-	HelmRelease   int             `yaml:"helmRelease,omitempty"`
+	HelmRelease   string          `yaml:"helmRelease,omitempty"`
+	Calico        CalicoComponent `yaml:"calico"`
+}
+
+// EnterpriseVersions represents the versions file in calico/_data/versions.yml.
+type EnterpriseVersions struct {
+	PinnedVersion `yaml:",inline"`
+	HelmRelease   int             `yaml:"helmRelease"`
 	Calico        CalicoComponent `yaml:"calico"`
 }
 
@@ -186,7 +193,7 @@ func RetrieveEnterpriseVersions(outputDir string) (version.Data, error) {
 
 	managerVer := pinnedVersion.Components[managerComponent].Version
 
-	return version.NewEnterpriseVersionData(version.New(pinnedVersion.Title), fmt.Sprintf("%d", pinnedVersion.HelmRelease), pinnedVersion.TigeraOperator.Version, managerVer), nil
+	return version.NewEnterpriseVersionData(version.New(pinnedVersion.Title), pinnedVersion.HelmRelease, pinnedVersion.TigeraOperator.Version, managerVer), nil
 }
 
 // GenerateEnterpriseOperatorComponents generates the pinned_components.yaml for operator.
@@ -251,7 +258,7 @@ func LoadEnterpriseHashrelease(repoRootDir, outputDir, hashreleaseSrcBaseDir str
 			Time:            time.Now(),
 			Latest:          latest,
 		},
-		ChartVersion:   fmt.Sprintf("%d", pinnedVersion.HelmRelease),
+		ChartVersion:   pinnedVersion.HelmRelease,
 		ManagerVersion: pinnedVersion.Components[managerComponent].Version,
 	}, nil
 }
@@ -331,13 +338,26 @@ func UpdateVersionsFile(repoRootDir string, update *version.EnterpriseVersionDat
 	if err != nil {
 		return fmt.Errorf("failed to determine calico version: %s", err)
 	}
-	prevVersion := versions.Title
-	versions.Title = update.ProductVersion()
-	versions.HelmRelease, _ = strconv.Atoi(update.ChartVersion())
-	versions.TigeraOperator.Version = update.OperatorVersion()
-	versions.Calico.MinorVersion = calicoVer
-	for n, c := range versions.Components {
-		if c.Version == prevVersion {
+	newVersions := &EnterpriseVersions{
+		PinnedVersion: PinnedVersion{
+			Title: update.ProductVersion(),
+			TigeraOperator: registry.Component{
+				Version:  update.OperatorVersion(),
+				Image:    versions.TigeraOperator.Image,
+				Registry: versions.TigeraOperator.Registry,
+			},
+			Components: versions.Components,
+		},
+		Calico: CalicoComponent{
+			MinorVersion: calicoVer,
+			ArchivePath:  versions.Calico.ArchivePath,
+		},
+	}
+	if update.ChartVersion() != "" {
+		newVersions.HelmRelease, _ = strconv.Atoi(update.ChartVersion())
+	}
+	for n, c := range newVersions.Components {
+		if c.Version == versions.Title {
 			c.Version = update.ProductVersion()
 			versions.Components[n] = c
 		} else if strings.HasPrefix(n, managerComponent) {
@@ -346,7 +366,7 @@ func UpdateVersionsFile(repoRootDir string, update *version.EnterpriseVersionDat
 		}
 	}
 
-	data, err := yaml.Marshal([]*EnterprisePinnedVersion{versions})
+	data, err := yaml.Marshal([]*EnterpriseVersions{newVersions})
 	if err != nil {
 		return fmt.Errorf("failed to marshal versions file: %s", err)
 	}
