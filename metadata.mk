@@ -89,6 +89,9 @@ else
     THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci
 endif
 
+# The bpftool image to use; this is the output of the https://github.com/projectcalico/bpftool repo.
+BPFTOOL_IMAGE=calico/bpftool:v7.5.0
+
 # Default branch prefix for release branches
 RELEASE_BRANCH_PREFIX ?= release-calient
 # The operator branch corresponding to this branch.

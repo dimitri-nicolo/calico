@@ -199,18 +199,20 @@ def function_name(f):
 def run(command, logerr=True, allow_fail=False, allow_codes=[], returnerr=False):
     out = ""
     _log.info("[%s] %s", datetime.datetime.now(), command)
-    try:
-        out = subprocess.check_output(command,
-                                      shell=True,
-                                      stderr=subprocess.STDOUT)
-        _log.info("Output:\n%s", out)
-    except subprocess.CalledProcessError as e:
+
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = process.communicate()
+    _log.info("Out:\n%s", out)
+    _log.info("Err:\n%s", err)
+
+    retcode = process.poll()
+    if retcode:
         if logerr:
-            _log.info("Failure output:\n%s", e.output)
-        if not (allow_fail or e.returncode in allow_codes):
-            raise
+            _log.info("Failure output:\n%s\nerr:\n%s", out, err)
+        if not (allow_fail or retcode in allow_codes):
+            raise subprocess.CalledProcessError(retcode, command, output="stdout: " + out + " stderr: " + err)
         if returnerr:
-            return e.output
+            return err
     return out
 
 

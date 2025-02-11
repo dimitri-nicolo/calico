@@ -722,6 +722,7 @@ message RouteUpdate {
   bool nat_outgoing = 8;
   bool local_workload = 9;
   TunnelType tunnel_type = 10;
+  bool borrowed = 11;
 
   // Enterprise additions; use IDs after 100.
   string aws_subnet_id = 101;

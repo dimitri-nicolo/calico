@@ -311,6 +311,7 @@ $(FELIX_IMAGE)-$(ARCH): $(FELIX_CONTAINER_CREATED)
 $(FELIX_CONTAINER_CREATED): docker-image/calico-felix-wrapper \
                             docker-image/felix.cfg \
                             docker-image/Dockerfile \
+                            ../metadata.mk \
                             $(shell test "$(FELIX_IMAGE_ID)" || echo force-rebuild)
 	$(DOCKER_BUILD) --network=host -t $(FELIX_IMAGE_WITH_TAG) -f docker-image/Dockerfile docker-image
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest

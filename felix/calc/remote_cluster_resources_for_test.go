@@ -197,7 +197,7 @@ func StateWithNode(state State, cluster string, host string, hostIP string, vxla
 }
 
 // StateWithWEP is a convenience function to help compose remote cluster testing states.
-func StateWithWEP(state State, cluster string, ip string, flush bool, poolType proto.IPPoolType, name string, host string, hostIP string) State {
+func StateWithWEP(state State, cluster string, ip string, flush bool, poolType proto.IPPoolType, name string, host string, hostIP string, borrowed bool) State {
 	hostKeyName := host
 	if cluster != "" {
 		hostKeyName = cluster + "/" + host
@@ -227,6 +227,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 		Dst:         ip + "/32",
 		DstNodeName: hostKeyName,
 		DstNodeIp:   hostIP,
+		Borrowed:    borrowed,
 	}
 	if host == localHostname {
 		routeUpdate.Type = proto.RouteType_LOCAL_WORKLOAD
@@ -317,7 +318,7 @@ func StateWithVXLANBlockForRemoteB(state State, shouldFlush bool) State {
 // Used for remote cluster testing. Adds complete VXLAN WEP configuration for "pool 2" to the local cluster.
 func StateWithVXLANWEPForLocal(state State, shouldFlush bool) State {
 	state = StateWithPool(state, local, "10.0.0.0/16", shouldFlush)
-	state = StateWithWEP(state, local, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", localClusterHost, localClusterHostIPAddr)
+	state = StateWithWEP(state, local, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", localClusterHost, localClusterHostIPAddr, false)
 	state = StateWithVTEP(state, local, "10.0.1.1", shouldFlush, localClusterHostMAC, localClusterHost, localClusterHostIPAddr)
 	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1")
 	return state
@@ -326,7 +327,7 @@ func StateWithVXLANWEPForLocal(state State, shouldFlush bool) State {
 // Used for remote cluster testing. Adds complete VXLAN WEP configuration for "pool 2" to the remote A cluster.
 func StateWithVXLANWEPForRemoteA(state State, shouldFlush bool) State {
 	state = StateWithPool(state, remoteA, "10.0.0.0/16", shouldFlush)
-	state = StateWithWEP(state, remoteA, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithWEP(state, remoteA, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", remoteClusterAHost, remoteClusterAHostIPAddr, false)
 	state = StateWithVTEP(state, remoteA, "10.0.1.1", shouldFlush, remoteClusterAHostMAC, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.1")
 	return state
@@ -335,7 +336,7 @@ func StateWithVXLANWEPForRemoteA(state State, shouldFlush bool) State {
 // Used for remote cluster testing. Adds complete VXLAN WEP configuration for "pool 2" to the remote B cluster.
 func StateWithVXLANWEPForRemoteB(state State, shouldFlush bool) State {
 	state = StateWithPool(state, remoteB, "10.0.0.0/16", shouldFlush)
-	state = StateWithWEP(state, remoteB, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", remoteClusterBHost, remoteClusterBHostIPAddr)
+	state = StateWithWEP(state, remoteB, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", remoteClusterBHost, remoteClusterBHostIPAddr, false)
 	state = StateWithVTEP(state, remoteB, "10.0.1.1", shouldFlush, remoteClusterBHostMAC, remoteClusterBHost, remoteClusterBHostIPAddr)
 	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "10.0.1.1")
 	return state

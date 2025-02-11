@@ -829,6 +829,8 @@ func (c *L3RouteResolver) flush() {
 		}
 		var governingPoolCluster *string
 		poolAllowsCrossSubnet := false
+		var blockSeen bool
+		var blockNodeName string
 		for i, entry := range buf {
 			unfilteredRI := entry.Data.(RouteInfo)
 			ri, cluster := unfilteredRI.FilterToSingleCluster()
@@ -879,8 +881,16 @@ func (c *L3RouteResolver) flush() {
 				rt.Type = proto.RouteType_CIDR_INFO
 				rt.DstNodeName = ""
 			}
+			borrowed := false
 			if len(ri.Blocks) > 0 {
 				// We expect the Blocks array to be sorted by Cluster, which will place local cluster blocks first if present.
+				if blockSeen && blockNodeName != ri.Blocks[0].NodeName {
+					logCxt.Debug("Borrowed block IP")
+					borrowed = true
+				} else {
+					blockSeen = true
+					blockNodeName = ri.Blocks[0].NodeName
+				}
 				rt.DstNodeName = ri.Blocks[0].NodeName
 				if rt.DstNodeName == c.myNodeName {
 					logCxt.Debug("Local workload route.")
@@ -909,6 +919,10 @@ func (c *L3RouteResolver) flush() {
 				// multiple workload, or workload and tunnel, or multiple node Refs with the same IP. Since this will be
 				// transient, we can always just use the first entry (and related tunnel entries)
 				rt.DstNodeName = ri.Refs[0].NodeName
+				if blockSeen && blockNodeName != rt.DstNodeName || borrowed {
+					logCxt.Debug("Borrowed ref IP")
+					borrowed = true
+				}
 				if ri.Refs[0].RefType == RefTypeWEP {
 					// This is not a tunnel ref, so must be a workload.
 					if ri.Refs[0].NodeName == c.myNodeName {
@@ -943,6 +957,13 @@ func (c *L3RouteResolver) flush() {
 						}
 					}
 				}
+			}
+
+			if borrowed && entry.CIDR.IsSingleAddress() {
+				// Only individual IPs can be borrowed, we don't want to set
+				// the flag on overlapping blocks (as can happen with VXLAN
+				// federation misconfiguration).
+				rt.Borrowed = true
 			}
 		}
 
