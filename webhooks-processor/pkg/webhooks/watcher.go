@@ -10,9 +10,12 @@ import (
 	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -20,8 +23,9 @@ import (
 
 const (
 	WebhooksWatcherTimeout        = 1 * time.Minute
+	InformerResyncTime            = 1 * time.Minute
 	RetryOnErrorDelay             = 1 * time.Second
-	MaxRetryTimesBeforeBailingOut = 10
+	MaxRetryTimesBeforeBailingOut = 5
 )
 
 type WebhookWatcherUpdater struct {
@@ -61,10 +65,14 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer logrus.Info("Webhook updater/watcher is terminating")
 
+	if stopInformers, err := w.startInformers(); err != nil {
+		logrus.WithError(err).Error("unable to start informers")
+	} else {
+		defer stopInformers()
+	}
+
 	watchGroup := sync.WaitGroup{}
 	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.watchWebhooks)
-	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.watchCMs)
-	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.watchSecrets)
 	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.updateWebhooks)
 	watchGroup.Wait()
 }
@@ -84,62 +92,63 @@ func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, 
 	}
 }
 
-func (w *WebhookWatcherUpdater) watchCMs(ctx context.Context) error {
-	var watchRevision string
-	if cms, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
-		logrus.WithError(err).Error("unable to list configmaps")
-		return err
-	} else {
-		watchRevision = cms.ResourceVersion
-		for _, secret := range cms.Items {
-			w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
-		}
-	}
-	if watcher, err := w.client.CoreV1().ConfigMaps(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
-		logrus.WithError(err).Error("unable to watch for configmaps changes")
-		return err
-	} else {
-		for ctx.Err() == nil {
-			select {
-			case event := <-watcher.ResultChan():
-				w.controller.K8sEventsChan() <- event
-			case <-ctx.Done():
-				return nil
-			}
-		}
-		return nil
-	}
-}
+func (w *WebhookWatcherUpdater) startInformers() (func(), error) {
+	informerFactory := informers.NewFilteredSharedInformerFactory(
+		w.client, InformerResyncTime, ConfigVarNamespace, func(lo *metav1.ListOptions) {})
 
-func (w *WebhookWatcherUpdater) watchSecrets(ctx context.Context) error {
-	var watchRevision string
-	if secrets, err := w.client.CoreV1().Secrets(ConfigVarNamespace).List(ctx, metav1.ListOptions{}); err != nil {
-		logrus.WithError(err).Error("unable to list secrets")
-		return err
-	} else {
-		watchRevision = secrets.ResourceVersion
-		for _, secret := range secrets.Items {
-			w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
-		}
-	}
-	if watcher, err := w.client.CoreV1().Secrets(ConfigVarNamespace).Watch(ctx, metav1.ListOptions{ResourceVersion: watchRevision}); err != nil {
-		logrus.WithError(err).Error("unable to watch for secrets changes")
-		return err
-	} else {
-		for ctx.Err() == nil {
-			select {
-			case event := <-watcher.ResultChan():
-				w.controller.K8sEventsChan() <- event
-			case <-ctx.Done():
-				return nil
+	cmInformer := informerFactory.Core().V1().ConfigMaps().Informer()
+	if _, err := cmInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if cm, ok := obj.(v1.ConfigMap); ok {
+				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &cm}
 			}
-		}
-		return nil
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			if cm, ok := newObj.(v1.ConfigMap); ok {
+				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &cm}
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			if cm, ok := obj.(v1.ConfigMap); ok {
+				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &cm}
+			}
+		},
+	}); err != nil {
+		return nil, err
 	}
+
+	secretInformer := informerFactory.Core().V1().Secrets().Informer()
+	if _, err := secretInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if secret, ok := obj.(v1.Secret); ok {
+				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			if secret, ok := newObj.(v1.Secret); ok {
+				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &secret}
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			if secret, ok := obj.(v1.Secret); ok {
+				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &secret}
+			}
+		},
+	}); err != nil {
+		return nil, err
+	}
+
+	stopCh := make(chan struct{})
+	informerFactory.Start(stopCh)
+	informerFactory.WaitForCacheSync(stopCh)
+
+	return func() {
+		stopCh <- struct{}{}
+	}, nil
 }
 
 func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) error {
-	for ctx.Err() == nil {
+	for {
 		select {
 		case webhook := <-w.webhookUpdatesChan:
 			if _, err := w.whClient.Update(ctx, webhook, options.SetOptions{}); err != nil {
@@ -150,7 +159,6 @@ func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) error {
 			return nil
 		}
 	}
-	return nil
 }
 
 func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
@@ -172,15 +180,8 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 		logrus.WithError(err).Error("unable to watch for webhook changes")
 		return err
 	} else {
-		for watcherCtx.Err() == nil {
-			select {
-			case event := <-watcher.ResultChan():
-				w.controller.WebhookEventsChan() <- event
-			case <-watcherCtx.Done():
-				return nil
-			case <-ctx.Done():
-				return nil
-			}
+		for event := range watcher.ResultChan() {
+			w.controller.WebhookEventsChan() <- event
 		}
 		return nil
 	}
