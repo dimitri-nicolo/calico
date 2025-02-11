@@ -27,8 +27,8 @@ import (
 	"github.com/projectcalico/calico/release/internal/utils"
 )
 
-// Versions is the interface that provides version data for a hashrelease or release.
-type Versions interface {
+// Data is the interface that provides version data for a release.
+type Data interface {
 	Hash() string
 	ProductVersion() string
 	OperatorVersion() string
@@ -36,36 +36,36 @@ type Versions interface {
 	ReleaseBranch(releaseBranchPrefix string) string
 }
 
-func NewHashreleaseVersions(calico Version, operator string) Versions {
-	return &HashreleaseVersions{
+func NewVersionData(calico Version, operator string) Data {
+	return &CalicoVersionData{
 		calico:   calico,
 		operator: operator,
 	}
 }
 
-// HashreleaseVersions implements the Versions interface for a hashrelease.
-type HashreleaseVersions struct {
+// CalicoVersionData provides version data for a Calico release.
+type CalicoVersionData struct {
 	calico   Version
 	operator string
 }
 
-func (v *HashreleaseVersions) ProductVersion() string {
+func (v *CalicoVersionData) ProductVersion() string {
 	return v.calico.FormattedString()
 }
 
-func (v *HashreleaseVersions) OperatorVersion() string {
+func (v *CalicoVersionData) OperatorVersion() string {
 	return fmt.Sprintf("%s-%s", v.operator, v.ProductVersion())
 }
 
-func (v *HashreleaseVersions) HelmChartVersion() string {
+func (v *CalicoVersionData) HelmChartVersion() string {
 	return v.calico.FormattedString()
 }
 
-func (v *HashreleaseVersions) Hash() string {
+func (v *CalicoVersionData) Hash() string {
 	return fmt.Sprintf("%s-%s", v.calico.FormattedString(), v.operator)
 }
 
-func (v *HashreleaseVersions) ReleaseBranch(releaseBranchPrefix string) string {
+func (v *CalicoVersionData) ReleaseBranch(releaseBranchPrefix string) string {
 	return fmt.Sprintf("%s-%s", releaseBranchPrefix, v.calico.Stream())
 }
 
