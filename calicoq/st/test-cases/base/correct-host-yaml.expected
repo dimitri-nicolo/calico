@@ -9,5 +9,3 @@ host rack1-host1 -o yaml
     - name: profile1
     workload: default/frontend-5gs43
 
-
-Plus 2 lines on stderr

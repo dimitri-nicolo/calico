@@ -5,6 +5,8 @@ package api
 import (
 	"fmt"
 	"strings"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // ClusterInfo defines the user who made the request.
@@ -32,4 +34,8 @@ func (c *ClusterInfo) Valid() error {
 		return fmt.Errorf("no cluster ID provided on request")
 	}
 	return nil
+}
+
+func (c *ClusterInfo) IsQueryMultipleClusters() bool {
+	return v1.IsQueryMultipleClusters(c.Cluster)
 }

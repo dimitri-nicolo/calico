@@ -42,6 +42,12 @@ func AssertFlowLogIDAndClusterAndReset(t *testing.T, expectedCluster string, ite
 	item.Cluster = ""
 }
 
+func AssertFlowClusterAndReset(t *testing.T, expectedCluster string, item *v1.L3Flow) {
+	require.NotNil(t, item)
+	require.Equal(t, expectedCluster, item.Key.Cluster)
+	item.Key.Cluster = ""
+}
+
 func AssertEventIDAndClusterAndReset(t *testing.T, expectedCluster string, item v1.Event) v1.Event {
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
@@ -361,4 +367,110 @@ func CheckSingleIndexTemplateBootstrapping(t *testing.T, ctx context.Context, cl
 	require.EqualValues(t, settings["number_of_replicas"], replicas)
 	require.Contains(t, settings, "number_of_shards")
 	require.EqualValues(t, settings["number_of_shards"], shards)
+}
+
+// MatchIn returns true if the given predicate returns true for any element in the slice
+func MatchIn[T any](slice []T, predicate func(T) bool) bool {
+	for _, e := range slice {
+		if predicate(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func FlowLogClusterEquals(expectedCluster string) func(v1.FlowLog) bool {
+	return func(log v1.FlowLog) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func AuditLogClusterEquals(expectedCluster string) func(log v1.AuditLog) bool {
+	return func(log v1.AuditLog) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func BGPLogClusterEquals(expectedCluster string) func(log v1.BGPLog) bool {
+	return func(log v1.BGPLog) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func ReportDataClusterEquals(expectedCluster string) func(log v1.ReportData) bool {
+	return func(log v1.ReportData) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func BenchmarkClusterEquals(expectedCluster string) func(log v1.Benchmarks) bool {
+	return func(log v1.Benchmarks) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func SnapshotClusterEquals(expectedCluster string) func(log v1.Snapshot) bool {
+	return func(log v1.Snapshot) bool {
+		return log.ResourceList.Cluster == expectedCluster
+	}
+}
+
+func DNSLogClusterEquals(expectedCluster string) func(log v1.DNSLog) bool {
+	return func(log v1.DNSLog) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func DNSFlowClusterEquals(expectedCluster string) func(log v1.DNSFlow) bool {
+	return func(log v1.DNSFlow) bool {
+		return log.Key.Cluster == expectedCluster
+	}
+}
+
+func EventClusterEquals(expectedCluster string) func(log v1.Event) bool {
+	return func(log v1.Event) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func L7LogClusterEquals(expectedCluster string) func(log v1.L7Log) bool {
+	return func(log v1.L7Log) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func L7FlowClusterEquals(expectedCluster string) func(log v1.L7Flow) bool {
+	return func(log v1.L7Flow) bool {
+		return log.Key.Cluster == expectedCluster
+	}
+}
+
+func ProcessInfoClusterEquals(expectedCluster string) func(log v1.ProcessInfo) bool {
+	return func(log v1.ProcessInfo) bool {
+		return log.Cluster == expectedCluster
+	}
+}
+
+func RuntimeReportClusterEquals(expectedCluster string) func(log v1.RuntimeReport) bool {
+	return func(log v1.RuntimeReport) bool {
+		return log.Report.Cluster == expectedCluster
+	}
+}
+
+func DomainNameSetThreatFeedClusterEquals(expectedCluster string) func(log v1.DomainNameSetThreatFeed) bool {
+	return func(log v1.DomainNameSetThreatFeed) bool {
+		return log.Data.Cluster == expectedCluster
+	}
+}
+
+func IPSetThreatFeedClusterEquals(expectedCluster string) func(log v1.IPSetThreatFeed) bool {
+	return func(log v1.IPSetThreatFeed) bool {
+		return log.Data.Cluster == expectedCluster
+	}
+}
+
+func WAFLogClusterEquals(expectedCluster string) func(log v1.WAFLog) bool {
+	return func(log v1.WAFLog) bool {
+		return log.Cluster == expectedCluster
+	}
 }

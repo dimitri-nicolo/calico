@@ -37,5 +37,3 @@ Workload endpoint k8s/group2.g2w3/eth0
     Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
   Profiles:
     Profile "group2"
-
-Plus 2 lines on stderr

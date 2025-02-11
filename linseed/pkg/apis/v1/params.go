@@ -26,6 +26,10 @@ type Params interface {
 	SetTimeout(*v1.Duration)
 	SetTimeRange(*lmav1.TimeRange)
 	GetTimeRange() *lmav1.TimeRange
+	IsAllClusters() bool
+	SetAllClusters(bool)
+	GetClusters() []string
+	SetClusters([]string)
 }
 
 type LogParams interface {
@@ -59,6 +63,16 @@ type QueryParams struct {
 	// This is generally passed straight through to the datastore, and its type cannot be
 	// guaranteed.
 	AfterKey map[string]interface{} `json:"after_key"`
+
+	// AllClusters when true, no cluster filtering is performed
+	//
+	// For this value to be considered, the x-cluster-id header must be set to `v1.QueryMultipleClusters` : "_MULTI_"
+	AllClusters bool `json:"all_clusters,omitempty"`
+
+	// Clusters filters results to only include data from the given clusters.
+	//
+	// For this value to be considered, the x-cluster-id header must be set to `v1.QueryMultipleClusters` : "_MULTI_"
+	Clusters []string `json:"clusters,omitempty"`
 }
 
 func (p *QueryParams) SetMaxPageSize(i int) {
@@ -90,6 +104,26 @@ func (p *QueryParams) SetTimeRange(t *lmav1.TimeRange) {
 
 func (p *QueryParams) GetTimeRange() *lmav1.TimeRange {
 	return p.TimeRange
+}
+
+func (p *QueryParams) IsAllClusters() bool {
+	return p.AllClusters
+}
+
+func (p *QueryParams) SetAllClusters(b bool) {
+	p.AllClusters = b
+	if b {
+		p.Clusters = nil
+	}
+}
+
+func (p *QueryParams) GetClusters() []string {
+	return p.Clusters
+}
+
+func (p *QueryParams) SetClusters(c []string) {
+	p.AllClusters = false
+	p.Clusters = c
 }
 
 // LogSelectionParams are common for all log APIs.

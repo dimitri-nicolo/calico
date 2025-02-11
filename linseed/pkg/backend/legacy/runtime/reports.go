@@ -212,7 +212,10 @@ func (b *runtimeReportBackend) List(ctx context.Context, i api.ClusterInfo, opts
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *runtimeReportBackend) buildQuery(i bapi.ClusterInfo, opts *v1.RuntimeReportParams) (elastic.Query, error) {
-	query := b.queryHelper.BaseQuery(i)
+	query, err := b.queryHelper.BaseQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
 
 	tr := logtools.WithDefaultUntilNow(opts.GetTimeRange())
 	queryTimeRange := elastic.NewBoolQuery().Must(elastic.NewRangeQuery("generated_time").From(tr.From))

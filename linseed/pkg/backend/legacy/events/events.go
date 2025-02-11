@@ -318,7 +318,7 @@ func (b *eventsBackend) getEventIndexValues(ctx context.Context, i api.ClusterIn
 		ids = append(ids, event.ID)
 	}
 
-	q := b.queryHelper.BaseQuery(i)
+	q, _ := b.queryHelper.BaseQuery(i, nil)
 	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
 
 	// Build the query.
@@ -361,7 +361,11 @@ func (b *eventsBackend) checkTenancy(ctx context.Context, i api.ClusterInfo, eve
 	// Build a query which matches on:
 	// - The given cluster and tenant (from BaseQuery)
 	// - An OR combintation of the given IDs
-	q := b.queryHelper.BaseQuery(i)
+	q, err := b.queryHelper.BaseQuery(i, nil)
+	if err != nil {
+		return err
+	}
+
 	q = q.Must(elastic.NewIdsQuery().Ids(ids...))
 	idsQuery := b.client.Search().
 		Size(len(ids)).

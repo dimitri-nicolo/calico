@@ -53,7 +53,7 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		}
 
 		// Perform a query.
-		feeds, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+		feeds, err := cli.ThreatFeeds(cluster1).DomainNameSet().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.DomainNameSetThreatFeed{}, feeds.Items)
 	})
@@ -66,33 +66,73 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 				Domains:   []string{"a.b.c.d"},
 			},
 		}
-		bulk, err := cli.ThreatFeeds(cluster).DomainNameSet().Create(ctx, []v1.DomainNameSetThreatFeed{feed})
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.ThreatFeeds(clusterInfo.Cluster).DomainNameSet().Create(ctx, []v1.DomainNameSetThreatFeed{feed})
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
-		// Read it back, passing an ID query.
-		params := v1.DomainNameSetThreatFeedParams{ID: "feed-a"}
-		resp, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
-		require.NoError(t, err)
+		t.Run("should query single cluster", func(t *testing.T) {
+			// Read it back, passing an ID query.
+			clusterInfo := cluster1Info
+			cluster := clusterInfo.Cluster
+			params := v1.DomainNameSetThreatFeedParams{ID: feed.ID}
+			resp, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+			require.NoError(t, err)
 
-		// The ID should be set.
-		require.Len(t, resp.Items, 1)
-		require.Equal(t, feed.ID, resp.Items[0].ID)
-		testutils.AssertDomainNameSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-		require.Equal(t, feed, resp.Items[0])
+			// The ID should be set.
+			require.Len(t, resp.Items, 1)
+			require.Equal(t, feed.ID, resp.Items[0].ID)
+			testutils.AssertDomainNameSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+			require.Equal(t, feed, resp.Items[0])
+		})
 
-		// Delete the feed
-		bulkDelete, err := cli.ThreatFeeds(cluster).DomainNameSet().Delete(ctx, []v1.DomainNameSetThreatFeed{feed})
-		require.NoError(t, err)
-		require.Equal(t, bulkDelete.Succeeded, 1, "delete did not succeed")
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params := v1.DomainNameSetThreatFeedParams{QueryParams: v1.QueryParams{
+				Clusters: selectedClusters,
+			}}
 
-		// Read after delete
-		afterDelete, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
-		require.NoError(t, err)
-		require.Empty(t, afterDelete.Items)
+			_, err := cli.ThreatFeeds(v1.QueryMultipleClusters).DomainNameSet().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.ThreatFeeds(v1.QueryMultipleClusters).DomainNameSet().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.DomainNameSetThreatFeedClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params := v1.DomainNameSetThreatFeedParams{}
+			params.SetAllClusters(true)
+			_, err := cli.ThreatFeeds(v1.QueryMultipleClusters).DomainNameSet().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.ThreatFeeds(v1.QueryMultipleClusters).DomainNameSet().List(ctx, &params)
+			require.NoError(t, err)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.DomainNameSetThreatFeedClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("delete", func(t *testing.T) {
+			cluster := cluster1
+			// Delete the feed
+			bulkDelete, err := cli.ThreatFeeds(cluster).DomainNameSet().Delete(ctx, []v1.DomainNameSetThreatFeed{feed})
+			require.NoError(t, err)
+			require.Equal(t, bulkDelete.Succeeded, 1, "delete did not succeed")
+
+			// Read after delete
+			params := v1.DomainNameSetThreatFeedParams{ID: feed.ID}
+			afterDelete, err := cli.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+			require.NoError(t, err)
+			require.Empty(t, afterDelete.Items)
+		})
 	})
 
 	RunThreatfeedsDomainTest(t, "should create and list threat feeds, from 2 separate managed clusters", func(t *testing.T, idx bapi.Index) {
@@ -105,9 +145,9 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 		}
 		// Let's imagine that we have 2 managed clusters in the same tenant
 		clusterA := testutils.RandomClusterName()
-		clusterAInfo := bapi.ClusterInfo{Cluster: clusterA, Tenant: clusterInfo.Tenant}
+		clusterAInfo := bapi.ClusterInfo{Cluster: clusterA, Tenant: cluster1Info.Tenant}
 		clusterB := testutils.RandomClusterName()
-		clusterBInfo := bapi.ClusterInfo{Cluster: clusterB, Tenant: clusterInfo.Tenant}
+		clusterBInfo := bapi.ClusterInfo{Cluster: clusterB, Tenant: cluster1Info.Tenant}
 
 		// clusterA and clusterB both use the same feed (like the built-in alienvault feed in CC)
 		bulk, err := cli.ThreatFeeds(clusterA).DomainNameSet().Create(ctx, []v1.DomainNameSetThreatFeed{feed})
@@ -144,6 +184,8 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 	})
 
 	RunThreatfeedsDomainTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		clusterInfo := cluster1Info
+		cluster := clusterInfo.Cluster
 		totalItems := 5
 
 		// Create 5 Feeds.
@@ -232,6 +274,8 @@ func TestFV_ThreatFeedsDomainSet(t *testing.T) {
 	})
 
 	RunThreatfeedsDomainTest(t, "should support pagination for items >= 10000 for threat feeds", func(t *testing.T, idx bapi.Index) {
+		clusterInfo := cluster1Info
+		cluster := clusterInfo.Cluster
 		totalItems := 10001
 		// Create > 10K threat feeds.
 		createdAtTime := time.Unix(0, 0).UTC()
@@ -284,7 +328,7 @@ func TestFV_DomainNameSetTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
 
 		// Create a basic feed. We expect this to fail, since we're using
@@ -296,13 +340,13 @@ func TestFV_DomainNameSetTenancy(t *testing.T) {
 				Domains:   []string{"a.b.c.d"},
 			},
 		}
-		bulk, err := tenantCLI.ThreatFeeds(cluster).DomainNameSet().Create(ctx, []v1.DomainNameSetThreatFeed{feed})
+		bulk, err := tenantCLI.ThreatFeeds(cluster1).DomainNameSet().Create(ctx, []v1.DomainNameSetThreatFeed{feed})
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, bulk)
 
 		// Try a read as well.
 		params := v1.DomainNameSetThreatFeedParams{ID: "feed-a"}
-		resp, err := tenantCLI.ThreatFeeds(cluster).DomainNameSet().List(ctx, &params)
+		resp, err := tenantCLI.ThreatFeeds(cluster1).DomainNameSet().List(ctx, &params)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
 	})

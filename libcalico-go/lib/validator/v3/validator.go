@@ -557,7 +557,8 @@ func ValidateWildName(fl validator.FieldLevel) bool {
 	// than this - e.g. g*.com and *.thing.* - but allowing those through would make it harder
 	// to optimize the Felix code in future, if we needed to for performance.
 	if strings.HasSuffix(s, ".*") {
-		s = s[:len(s)-2] + ".example"
+		log.WithField("name", s).Debugf("Invalid name has suffixed wildcard")
+		return false
 	} else if strings.HasPrefix(s, "*.") {
 		s = "example." + s[2:]
 	} else if p := strings.Index(s, ".*."); p >= 0 {

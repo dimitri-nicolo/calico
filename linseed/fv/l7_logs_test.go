@@ -55,7 +55,7 @@ func TestL7_L7Logs(t *testing.T) {
 		}
 
 		// Perform a query.
-		logs, err := cli.L7Logs(cluster).List(ctx, &params)
+		logs, err := cli.L7Logs(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.L7Log{}, logs.Items)
 	})
@@ -68,12 +68,14 @@ func TestL7_L7Logs(t *testing.T) {
 				ResponseCode: "200",
 			},
 		}
-		bulk, err := cli.L7Logs(cluster).Create(ctx, logs)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create l7 log did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.L7Logs(clusterInfo.Cluster).Create(ctx, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create l7 log did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
 		// Read it back.
 		params := v1.L7LogParams{
@@ -84,15 +86,49 @@ func TestL7_L7Logs(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.L7Logs(cluster).List(ctx, &params)
-		require.NoError(t, err)
-		for i := range resp.Items {
-			testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[i])
-		}
-		require.Equal(t, logs, resp.Items)
+
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.L7Logs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			for i := range resp.Items {
+				testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[i])
+			}
+			require.Equal(t, logs, resp.Items)
+		})
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.L7Logs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.L7Logs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.L7LogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.L7Logs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.L7Logs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.L7LogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunL7LogTest(t, "should return an empty aggregations if there are no l7 logs", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		params := v1.L7AggregationParams{
 			L7LogParams: v1.L7LogParams{
 				QueryParams: v1.QueryParams{
@@ -118,6 +154,8 @@ func TestL7_L7Logs(t *testing.T) {
 	})
 
 	RunL7LogTest(t, "should return aggregations if there are l7 logs", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		// Create 5 logs.
 		logTime := time.Now().UTC().Unix()
 		totalItems := 10
@@ -129,6 +167,7 @@ func TestL7_L7Logs(t *testing.T) {
 					Host:      fmt.Sprintf("%d", i),
 				},
 			}
+
 			bulk, err := cli.L7Logs(cluster).Create(ctx, logs)
 			require.NoError(t, err)
 			require.Equal(t, bulk.Succeeded, 1, "create L7 log did not succeed")
@@ -162,6 +201,8 @@ func TestL7_L7Logs(t *testing.T) {
 	})
 
 	RunL7LogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 logs.
@@ -247,6 +288,8 @@ func TestL7_L7Logs(t *testing.T) {
 	})
 
 	RunL7LogTest(t, "should support pagination for items >= 10000 for l7 logs", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K logs.
 		logTime := time.Now().UTC().Unix()
@@ -298,7 +341,7 @@ func TestFV_L7LogsTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
 
 		// Create a basic log. We expect this to fail, since we're using
@@ -309,7 +352,7 @@ func TestFV_L7LogsTenancy(t *testing.T) {
 				ResponseCode: "200",
 			},
 		}
-		bulk, err := tenantCLI.L7Logs(cluster).Create(ctx, logs)
+		bulk, err := tenantCLI.L7Logs(cluster1).Create(ctx, logs)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, bulk)
 
@@ -322,7 +365,7 @@ func TestFV_L7LogsTenancy(t *testing.T) {
 				},
 			},
 		}
-		resp, err := tenantCLI.L7Logs(cluster).List(ctx, &params)
+		resp, err := tenantCLI.L7Logs(cluster1).List(ctx, &params)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
 	})

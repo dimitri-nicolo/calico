@@ -53,7 +53,7 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		}
 
 		// Perform a query.
-		feeds, err := cli.ThreatFeeds(cluster).IPSet().List(ctx, &params)
+		feeds, err := cli.ThreatFeeds(cluster1).IPSet().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.IPSetThreatFeed{}, feeds.Items)
 	})
@@ -66,33 +66,75 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 				IPs:       []string{"1.2.3.4/32"},
 			},
 		}
-		bulk, err := cli.ThreatFeeds(cluster).IPSet().Create(ctx, []v1.IPSetThreatFeed{feed})
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.ThreatFeeds(clusterInfo.Cluster).IPSet().Create(ctx, []v1.IPSetThreatFeed{feed})
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
-		// Read it back, passing an ID query.
-		params := v1.IPSetThreatFeedParams{ID: "feed-a"}
-		resp, err := cli.ThreatFeeds(cluster).IPSet().List(ctx, &params)
-		require.NoError(t, err)
+		t.Run("should query single cluster", func(t *testing.T) {
+			// Read it back, passing an ID query.
+			cluster := cluster1Info.Cluster
 
-		// The ID should be set.
-		require.Len(t, resp.Items, 1)
-		require.Equal(t, feed.ID, resp.Items[0].ID)
-		testutils.AssertIPSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-		require.Equal(t, feed, resp.Items[0])
+			params := v1.IPSetThreatFeedParams{ID: feed.ID}
+			resp, err := cli.ThreatFeeds(cluster).IPSet().List(ctx, &params)
+			require.NoError(t, err)
 
-		// Delete the feed
-		bulkDelete, err := cli.ThreatFeeds(cluster).IPSet().Delete(ctx, []v1.IPSetThreatFeed{feed})
-		require.NoError(t, err)
-		require.Equal(t, bulkDelete.Succeeded, 1, "delete did not succeed")
+			// The ID should be set.
+			require.Len(t, resp.Items, 1)
+			require.Equal(t, feed.ID, resp.Items[0].ID)
+			testutils.AssertIPSetThreatFeedClusterAndReset(t, cluster, &resp.Items[0])
+			require.Equal(t, feed, resp.Items[0])
+		})
 
-		// Read after delete
-		afterDelete, err := cli.ThreatFeeds(cluster).IPSet().List(ctx, &params)
-		require.NoError(t, err)
-		require.Empty(t, afterDelete.Items)
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params := v1.IPSetThreatFeedParams{QueryParams: v1.QueryParams{Clusters: selectedClusters}}
+
+			_, err := cli.ThreatFeeds(v1.QueryMultipleClusters).IPSet().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.ThreatFeeds(v1.QueryMultipleClusters).IPSet().List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.IPSetThreatFeedClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params := v1.IPSetThreatFeedParams{}
+			params.SetAllClusters(true)
+
+			_, err := cli.ThreatFeeds(v1.QueryMultipleClusters).IPSet().List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.ThreatFeeds(v1.QueryMultipleClusters).IPSet().List(ctx, &params)
+			require.NoError(t, err)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.IPSetThreatFeedClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("delete", func(t *testing.T) {
+			cluster := cluster1
+
+			// Delete the feed
+			bulkDelete, err := cli.ThreatFeeds(cluster).IPSet().Delete(ctx, []v1.IPSetThreatFeed{feed})
+			require.NoError(t, err)
+			require.Equal(t, bulkDelete.Succeeded, 1, "delete did not succeed")
+
+			// Read after delete
+			params := v1.IPSetThreatFeedParams{ID: feed.ID}
+			afterDelete, err := cli.ThreatFeeds(cluster).IPSet().List(ctx, &params)
+			require.NoError(t, err)
+			require.Empty(t, afterDelete.Items)
+
+		})
 	})
 
 	RunThreatfeedsIPSetTest(t, "should create and list threat feeds, from 2 separate managed clusters", func(t *testing.T, idx bapi.Index) {
@@ -105,9 +147,9 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		}
 		// Let's imagine that we have 2 managed clusters in the same tenant
 		clusterA := testutils.RandomClusterName()
-		clusterAInfo := bapi.ClusterInfo{Cluster: clusterA, Tenant: clusterInfo.Tenant}
+		clusterAInfo := bapi.ClusterInfo{Cluster: clusterA, Tenant: cluster1Info.Tenant}
 		clusterB := testutils.RandomClusterName()
-		clusterBInfo := bapi.ClusterInfo{Cluster: clusterB, Tenant: clusterInfo.Tenant}
+		clusterBInfo := bapi.ClusterInfo{Cluster: clusterB, Tenant: cluster1Info.Tenant}
 
 		// clusterA and clusterB both use the same feed (like the built-in alienvault feed in CC)
 		bulk, err := cli.ThreatFeeds(clusterA).IPSet().Create(ctx, []v1.IPSetThreatFeed{feed})
@@ -144,6 +186,8 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 	})
 
 	RunThreatfeedsIPSetTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		clusterInfo := cluster1Info
+		cluster := clusterInfo.Cluster
 		totalItems := 5
 
 		// Create 5 Feeds.
@@ -232,6 +276,8 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 	})
 
 	RunThreatfeedsIPSetTest(t, "should support pagination for items >= 10000 for threat feeds", func(t *testing.T, idx bapi.Index) {
+		clusterInfo := cluster1Info
+		cluster := clusterInfo.Cluster
 		totalItems := 10001
 		// Create > 10K threat feeds.
 		createdAtTime := time.Unix(0, 0).UTC()
@@ -284,7 +330,7 @@ func TestFV_IPSetTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
 
 		// Create a basic feed. We expect this to fail, since we're using
@@ -296,13 +342,13 @@ func TestFV_IPSetTenancy(t *testing.T) {
 				IPs:       []string{"1.2.3.4/32"},
 			},
 		}
-		bulk, err := tenantCLI.ThreatFeeds(cluster).IPSet().Create(ctx, []v1.IPSetThreatFeed{feed})
+		bulk, err := tenantCLI.ThreatFeeds(cluster1).IPSet().Create(ctx, []v1.IPSetThreatFeed{feed})
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, bulk)
 
 		// Try a read as well.
 		params := v1.IPSetThreatFeedParams{ID: "feed-a"}
-		resp, err := tenantCLI.ThreatFeeds(cluster).IPSet().List(ctx, &params)
+		resp, err := tenantCLI.ThreatFeeds(cluster1).IPSet().List(ctx, &params)
 		require.ErrorContains(t, err, "Bad tenant identifier")
 		require.Nil(t, resp)
 	})

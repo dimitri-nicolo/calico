@@ -24,7 +24,9 @@ import (
 // TestCreateDNSLog tests running a real elasticsearch query to create a DNS log.
 func TestCreateDNSLog(t *testing.T) {
 	RunAllModes(t, "TestCreateDNSLog", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1}
+		cluster2Info := bapi.ClusterInfo{Cluster: cluster2}
+		cluster3Info := bapi.ClusterInfo{Cluster: cluster3}
 
 		ip := net.ParseIP("10.0.1.1")
 
@@ -69,13 +71,14 @@ func TestCreateDNSLog(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		resp, err := lb.Create(ctx, clusterInfo, []v1.DNSLog{f})
-		require.NoError(t, err)
-		require.Empty(t, resp.Errors)
-
-		// Refresh.
-		err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
-		require.NoError(t, err)
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			resp, err := lb.Create(ctx, clusterInfo, []v1.DNSLog{f})
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
 		// List out the log we just created.
 		params := v1.DNSLogParams{}
@@ -83,42 +86,67 @@ func TestCreateDNSLog(t *testing.T) {
 		params.TimeRange.From = reqTime.Add(-20 * time.Minute)
 		params.TimeRange.To = reqTime.Add(1 * time.Minute)
 
-		listResp, err := lb.List(ctx, clusterInfo, &params)
-		require.NoError(t, err)
-		require.Len(t, listResp.Items, 1)
+		t.Run("should query single cluster", func(t *testing.T) {
+			clusterInfo := cluster1Info
 
-		// Compare the result. Timestamps don't serialize well,
-		// so ignore them in the comparison.
-		actual := listResp.Items[0]
-		require.NotEqual(t, time.Time{}, actual.StartTime)
-		require.NotEqual(t, time.Time{}, actual.EndTime)
-		actual.StartTime = f.StartTime
-		actual.EndTime = f.EndTime
-		backendutils.AssertDNSLogIDAndClusterAndReset(t, clusterInfo.Cluster, &actual)
-		require.Equal(t, f, actual)
+			listResp, err := lb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, listResp.Items, 1)
 
-		// If we update the query params to specify matching against the "generated_time"
-		// field, we should get no results, because the time right now (>=2023) is years
-		// later than reqTime (1970).
-		params.TimeRange.Field = lmav1.FieldGeneratedTime
-		listResp, err = lb.List(ctx, clusterInfo, &params)
-		require.NoError(t, err)
-		require.Len(t, listResp.Items, 0)
+			// Compare the result. Timestamps don't serialize well,
+			// so ignore them in the comparison.
+			actual := listResp.Items[0]
+			require.NotEqual(t, time.Time{}, actual.StartTime)
+			require.NotEqual(t, time.Time{}, actual.EndTime)
+			actual.StartTime = f.StartTime
+			actual.EndTime = f.EndTime
+			backendutils.AssertDNSLogIDAndClusterAndReset(t, clusterInfo.Cluster, &actual)
+			require.Equal(t, f, actual)
 
-		// Now if we keep using "generated_time" and change the time range to cover the time
-		// period when this test has been running, we should get back that log again.
-		params.TimeRange.To = time.Now().Add(10 * time.Second)
-		params.TimeRange.From = params.TimeRange.To.Add(-5 * time.Minute)
-		listResp, err = lb.List(ctx, clusterInfo, &params)
-		require.NoError(t, err)
-		require.Len(t, listResp.Items, 1)
+			// If we update the query params to specify matching against the "generated_time"
+			// field, we should get no results, because the time right now (>=2023) is years
+			// later than reqTime (1970).
+			params.TimeRange.Field = lmav1.FieldGeneratedTime
+			listResp, err = lb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, listResp.Items, 0)
+
+			// Now if we keep using "generated_time" and change the time range to cover the time
+			// period when this test has been running, we should get back that log again.
+			params.TimeRange.To = time.Now().Add(10 * time.Second)
+			params.TimeRange.From = params.TimeRange.To.Add(-5 * time.Minute)
+			listResp, err = lb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, listResp.Items, 1)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+			listResp, err := lb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &params)
+			require.NoError(t, err)
+			require.Len(t, listResp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, backendutils.MatchIn(listResp.Items, backendutils.DNSLogClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			listResp, err := lb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &params)
+			require.NoError(t, err)
+			require.Len(t, listResp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, backendutils.MatchIn(listResp.Items, backendutils.DNSLogClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+			}
+		})
 	})
 }
 
 // TestAggregations tests running a real elasticsearch query to get aggregations.
 func TestAggregations(t *testing.T) {
 	RunAllModes(t, "should return time-series DNS aggregation results", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		ip := net.ParseIP("10.0.1.1")
 
 		// Start the test numLogs minutes in the past.
@@ -230,7 +258,7 @@ func TestAggregations(t *testing.T) {
 	})
 
 	RunAllModes(t, "should return aggregate DNS stats", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		ip := net.ParseIP("10.0.1.1")
 
 		// Start the test numLogs minutes in the past.

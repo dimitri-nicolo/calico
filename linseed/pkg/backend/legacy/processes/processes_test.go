@@ -35,7 +35,9 @@ var (
 	pb          bapi.ProcessBackend
 	flb         bapi.FlowLogBackend
 	ctx         context.Context
-	cluster     string
+	cluster1    string
+	cluster2    string
+	cluster3    string
 	indexGetter bapi.Index
 )
 
@@ -82,7 +84,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster1 = testutils.RandomClusterName()
+	cluster2 = testutils.RandomClusterName()
+	cluster3 = testutils.RandomClusterName()
 
 	// Set a timeout for each test.
 	var cancel context.CancelFunc
@@ -94,8 +98,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 		cancel()
 
 		// Clean up data from the test.
-		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-		require.NoError(t, err)
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		// Cancel logging
 		logCancel()
@@ -107,7 +113,9 @@ func TestListProcesses(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestListProcesses (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 			// Put some data into ES so we can query it.
 			// Build the same flow, reported by the source and the dest.
@@ -132,16 +140,21 @@ func TestListProcesses(t *testing.T) {
 			// Since go test runs packages in parallel, we need to retry a few times to avoid flakiness.
 			// We could avoid this by creating a new ES instance per-test or per-package, but that would
 			// slow down the test and use more resources. This is a reasonable compromise, and what clients will need to do anyway.
-			attempts := 0
-			response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{*srcLog, *dstLog})
-			for err != nil && attempts < 5 {
-				logrus.WithError(err).Info("[TEST] Retrying flow log creation due to error")
-				attempts++
-				response, err = flb.Create(ctx, clusterInfo, []v1.FlowLog{*srcLog, *dstLog})
+			for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+				attempts := 0
+				response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{*srcLog, *dstLog})
+				for err != nil && attempts < 5 {
+					logrus.WithError(err).Info("[TEST] Retrying flow log creation due to error")
+					attempts++
+					response, err = flb.Create(ctx, clusterInfo, []v1.FlowLog{*srcLog, *dstLog})
+				}
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
+
+				err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+				require.NoError(t, err)
 			}
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), response.Errors)
-			require.Equal(t, 0, response.Failed)
 
 			// Set time range so that we capture all of the populated logs.
 			opts := v1.ProcessParams{}
@@ -149,39 +162,60 @@ func TestListProcesses(t *testing.T) {
 			opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
 			opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
-			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
-			require.NoError(t, err)
-
-			// Query for process info. There should be a single entry from the populated data.
-			r, err := pb.List(ctx, clusterInfo, &opts)
-			require.NoError(t, err)
-			require.Len(t, r.Items, 1)
-			require.Nil(t, r.AfterKey)
-			require.Empty(t, err)
-
-			// Assert that the process data is populated correctly.
-			expected := v1.ProcessInfo{
-				Name:     "/bin/curl",
-				Endpoint: "my-deployment-*",
-				Count:    1,
-			}
-			require.Equal(t, expected, r.Items[0])
-
-			// Query for process info using a different tenant ID. There should be no results.
-			otherInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "other-tenant"}
-			r, err = pb.List(ctx, otherInfo, &opts)
-
-			// The actual behavior here varies slightly between the single-index and multi-index due to
-			// the way ES handles these requests. This is because for multi-index, the ES request targets
-			// an index that doesn't exist. In single-index, the request targets an index that does exist but doesn't
-			// match any documents.
-			if indexGetter.IsSingleIndex() {
+			t.Run("should query single cluster", func(t *testing.T) {
+				clusterInfo := cluster1Info
+				// Query for process info. There should be a single entry from the populated data.
+				r, err := pb.List(ctx, clusterInfo, &opts)
 				require.NoError(t, err)
-				require.Len(t, r.Items, 0)
-			} else {
-				require.Error(t, err)
-				require.Nil(t, r)
-			}
+				require.Len(t, r.Items, 1)
+				require.Nil(t, r.AfterKey)
+				require.Empty(t, err)
+
+				// Assert that the process data is populated correctly.
+				expected := v1.ProcessInfo{
+					Cluster:  clusterInfo.Cluster,
+					Name:     "/bin/curl",
+					Endpoint: "my-deployment-*",
+					Count:    1,
+				}
+				require.Equal(t, expected, r.Items[0])
+
+				// Query for process info using a different tenant ID. There should be no results.
+				otherInfo := bapi.ClusterInfo{Cluster: clusterInfo.Cluster, Tenant: "other-tenant"}
+				r, err = pb.List(ctx, otherInfo, &opts)
+
+				// The actual behavior here varies slightly between the single-index and multi-index due to
+				// the way ES handles these requests. This is because for multi-index, the ES request targets
+				// an index that doesn't exist. In single-index, the request targets an index that does exist but doesn't
+				// match any documents.
+				if indexGetter.IsSingleIndex() {
+					require.NoError(t, err)
+					require.Len(t, r.Items, 0)
+				} else {
+					require.Error(t, err)
+					require.Nil(t, r)
+				}
+			})
+
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				opts.SetClusters(selectedClusters)
+				r, err := pb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
+				require.NoError(t, err)
+				require.Len(t, r.Items, 2)
+				for _, cluster := range selectedClusters {
+					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.ProcessInfoClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+				}
+			})
+
+			t.Run("should query all clusters", func(t *testing.T) {
+				opts.SetAllClusters(true)
+				r, err := pb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
+				require.NoError(t, err)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.ProcessInfoClusterEquals(cluster)), "cluster %s should be in the results", cluster)
+				}
+			})
 		})
 	}
 }
@@ -205,30 +239,39 @@ func TestParseESResponse(t *testing.T) {
 		return procs[i].Name < procs[j].Name
 	})
 
+	require.Equal(t, procs[0].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[0].Name, "/app/cartservice")
 	require.Equal(t, procs[0].Endpoint, "cartservice-74f56fd4b-*")
 	require.Equal(t, procs[0].Count, 3)
+	require.Equal(t, procs[1].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[1].Name, "/src/checkoutservice")
 	require.Equal(t, procs[1].Endpoint, "checkoutservice-69c8ff664b-*")
 	require.Equal(t, procs[1].Count, 4)
+	require.Equal(t, procs[2].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[2].Name, "/src/server")
 	require.Equal(t, procs[2].Endpoint, "frontend-99684f7f8-*")
 	require.Equal(t, procs[2].Count, 3)
+	require.Equal(t, procs[3].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[3].Name, "/usr/local/bin/locust")
 	require.Equal(t, procs[3].Endpoint, "loadgenerator-555fbdc87d-*")
 	require.Equal(t, procs[3].Count, 1)
+	require.Equal(t, procs[4].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[4].Name, "/usr/local/bin/python")
 	require.Equal(t, procs[4].Endpoint, "loadgenerator-555fbdc87d-*")
 	require.Equal(t, procs[4].Count, 2)
+	require.Equal(t, procs[5].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[5].Name, "/usr/local/bin/python")
 	require.Equal(t, procs[5].Endpoint, "recommendationservice-5f8c456796-*")
 	require.Equal(t, procs[5].Count, 2)
+	require.Equal(t, procs[6].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[6].Name, "/usr/local/openjdk-8/bin/java")
 	require.Equal(t, procs[6].Endpoint, "adservice-77d5cd745d-*")
 	require.Equal(t, procs[6].Count, 3)
+	require.Equal(t, procs[7].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[7].Name, "python")
 	require.Equal(t, procs[7].Endpoint, "recommendationservice-5f8c456796-*")
 	require.Equal(t, procs[7].Count, 2)
+	require.Equal(t, procs[8].Cluster, "cluster-ushdjisc")
 	require.Equal(t, procs[8].Name, "wget")
 	require.Equal(t, procs[8].Endpoint, "loadgenerator-555fbdc87d-*")
 	require.Equal(t, procs[8].Count, 1)

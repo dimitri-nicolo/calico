@@ -1,5 +1,3 @@
 eval app=="rubbish"
 
 Endpoints matching selector app=="rubbish":
-
-Plus 2 lines on stderr

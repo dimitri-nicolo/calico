@@ -24,7 +24,7 @@ import (
 func TestFlowLogBasic(t *testing.T) {
 	RunAllModes(t, "should create and retrieve a flow log", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{
-			Cluster: cluster,
+			Cluster: cluster1,
 			Tenant:  backendutils.RandomTenantName(),
 		}
 
@@ -70,7 +70,7 @@ func TestFlowLogBasic(t *testing.T) {
 		require.Equal(t, f, resp.Items[0])
 
 		// Attempt to read it back with a different tenant ID - it should return nothing.
-		resp, err = flb.List(ctx, bapi.ClusterInfo{Tenant: "dummy", Cluster: cluster}, &opts)
+		resp, err = flb.List(ctx, bapi.ClusterInfo{Tenant: "dummy", Cluster: cluster1}, &opts)
 		require.NoError(t, err)
 		require.Len(t, resp.Items, 0)
 	})
@@ -88,7 +88,7 @@ func TestFlowLogBasic(t *testing.T) {
 	})
 
 	RunAllModes(t, "bad startFrom on request", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		params := &v1.FlowLogParams{
 			QueryParams: v1.QueryParams{
 				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
@@ -101,7 +101,7 @@ func TestFlowLogBasic(t *testing.T) {
 
 	RunAllModes(t, "filter flow logs by generated times", func(t *testing.T) {
 		clusterInfo := bapi.ClusterInfo{
-			Cluster: cluster,
+			Cluster: cluster1,
 			Tenant:  backendutils.RandomTenantName(),
 		}
 
@@ -201,7 +201,7 @@ func TestFlowLogBasic(t *testing.T) {
 
 func TestFlowSorting(t *testing.T) {
 	RunAllModes(t, "should respect sorting", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		t1 := time.Unix(100, 0)
 		t2 := time.Unix(500, 0)
@@ -540,7 +540,9 @@ func TestFlowLogFiltering(t *testing.T) {
 			// to query one or more flow logs.
 			name := fmt.Sprintf("%s (tenant=%s)", testcase.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+				clusterInfo1 := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+				clusterInfo2 := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+				clusterInfo3 := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 				// Set the time range for the test. We set this per-test
 				// so that the time range captures the windows that the logs
@@ -548,7 +550,8 @@ func TestFlowLogFiltering(t *testing.T) {
 				tr := &lmav1.TimeRange{}
 				tr.From = time.Now().Add(-5 * time.Minute)
 				tr.To = time.Now().Add(5 * time.Minute)
-				testcase.Params.QueryParams.TimeRange = tr
+				params := testcase.Params
+				params.QueryParams.TimeRange = tr
 
 				// Template for flow #1.
 				bld := backendutils.NewFlowLogBuilder()
@@ -593,40 +596,75 @@ func TestFlowLogFiltering(t *testing.T) {
 				fl2, err := bld2.Build()
 				require.NoError(t, err)
 
-				response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{*fl1, *fl2})
-				require.NoError(t, err)
-				require.Equal(t, []v1.BulkError(nil), response.Errors)
-				require.Equal(t, 0, response.Failed)
+				for _, clusterInfo := range []bapi.ClusterInfo{clusterInfo1, clusterInfo2, clusterInfo3} {
+					response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{*fl1, *fl2})
+					require.NoError(t, err)
+					require.Equal(t, []v1.BulkError(nil), response.Errors)
+					require.Equal(t, 0, response.Failed)
 
-				err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
-				require.NoError(t, err)
-
-				// Query for flow logs.
-				r, err := flb.List(ctx, clusterInfo, &testcase.Params)
-				require.NoError(t, err)
-				require.Len(t, r.Items, numExpected(testcase))
-				require.Nil(t, r.AfterKey)
-				require.Empty(t, err)
-
-				// Try querying with a different tenant ID and make sure we don't
-				// get any flows back.
-				r2, err := flb.List(ctx, bapi.ClusterInfo{Cluster: cluster, Tenant: "dummy-tenant"}, &testcase.Params)
-				require.NoError(t, err)
-				require.Len(t, r2.Items, 0)
-
-				if testcase.SkipComparison {
-					return
+					err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+					require.NoError(t, err)
 				}
 
-				copyOfLogs := backendutils.AssertFlowLogsIDAndClusterAndReset(t, clusterInfo.Cluster, r)
+				t.Run("should query single cluster", func(t *testing.T) {
+					// Query for flow logs.
+					r, err := flb.List(ctx, clusterInfo1, &params)
+					require.NoError(t, err)
+					require.Len(t, r.Items, numExpected(testcase))
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
 
-				// Assert that the correct logs are returned.
-				if testcase.ExpectLog1 {
-					require.Contains(t, copyOfLogs, *fl1)
-				}
-				if testcase.ExpectLog2 {
-					require.Contains(t, copyOfLogs, *fl2)
-				}
+					// Try querying with a different tenant ID and make sure we don't
+					// get any flows back.
+					r2, err := flb.List(ctx, bapi.ClusterInfo{Cluster: cluster1, Tenant: "dummy-tenant"}, &params)
+					require.NoError(t, err)
+					require.Len(t, r2.Items, 0)
+
+					if !testcase.SkipComparison {
+						copyOfLogs := backendutils.AssertFlowLogsIDAndClusterAndReset(t, clusterInfo1.Cluster, r)
+
+						// Assert that the correct logs are returned.
+						if testcase.ExpectLog1 {
+							require.Contains(t, copyOfLogs, *fl1)
+						}
+						if testcase.ExpectLog2 {
+							require.Contains(t, copyOfLogs, *fl2)
+						}
+					}
+				})
+
+				t.Run("should query multiple clusters", func(t *testing.T) {
+					selectedClusters := []string{cluster2, cluster3}
+					params.SetClusters(selectedClusters)
+					r, err := flb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+					require.NoError(t, err)
+					require.Len(t, r.Items, numExpected(testcase)*2) // 2 clusters so double the expected number of logs.
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
+
+					if numExpected(testcase) > 0 {
+						require.Falsef(t, backendutils.MatchIn(r.Items, backendutils.FlowLogClusterEquals(cluster1)), "found unexpected cluster %s", cluster1)
+						for i, cluster := range selectedClusters {
+							require.Truef(t, backendutils.MatchIn(r.Items, backendutils.FlowLogClusterEquals(cluster)), "didn't cluster %d: %s", i, cluster)
+						}
+					}
+				})
+
+				t.Run("should query all clusters", func(t *testing.T) {
+					params.SetAllClusters(true)
+					r, err := flb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+					require.NoError(t, err)
+					require.Len(t, r.Items, numExpected(testcase)*3) // all 3 clusters so triple the expected number of logs.
+					require.Nil(t, r.AfterKey)
+					require.Empty(t, err)
+
+					if numExpected(testcase) > 0 {
+						allClusters := []string{cluster1, cluster2, cluster3}
+						for _, item := range r.Items {
+							require.Contains(t, allClusters, item.Cluster)
+						}
+					}
+				})
 			})
 		}
 	}
@@ -637,7 +675,9 @@ func TestAggregations(t *testing.T) {
 	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		RunAllModes(t, fmt.Sprintf("should return time-series flow log aggregation results (tenant=%s)", tenant), func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
 			numLogs := 5
@@ -661,59 +701,101 @@ func TestAggregations(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			resp, err := flb.Create(ctx, clusterInfo, logs)
-			require.NoError(t, err)
-			require.Empty(t, resp.Errors)
+			for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+				resp, err := flb.Create(ctx, clusterInfo, logs)
+				require.NoError(t, err)
+				require.Empty(t, resp.Errors)
 
-			// Refresh.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+				// Refresh.
+				err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
 
-			params := v1.FlowLogAggregationParams{}
-			params.TimeRange = &lmav1.TimeRange{}
-			params.TimeRange.From = testStart
-			params.TimeRange.To = now
-			params.NumBuckets = 4
+			type testCase struct {
+				Name           string
+				XClusterID     string
+				ParamsCallback func(params *v1.FlowLogAggregationParams)
+				ExpectedCount  int
+			}
 
-			// Add a simple aggregation to add up the total bytes_in from the logs.
-			sumAgg := elastic.NewSumAggregation().Field("bytes_in")
-			src, err := sumAgg.Source()
-			require.NoError(t, err)
-			bytes, err := json.Marshal(src)
-			require.NoError(t, err)
-			params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
+			testcases := []testCase{
+				{
+					Name:          "single cluster",
+					XClusterID:    cluster1,
+					ExpectedCount: 1,
+				},
+				{
+					Name:       "multiple clusters",
+					XClusterID: v1.QueryMultipleClusters,
+					ParamsCallback: func(params *v1.FlowLogAggregationParams) {
+						params.SetClusters([]string{cluster2, cluster3})
+					},
+					ExpectedCount: 2,
+				},
+				{
+					Name:       "all clusters",
+					XClusterID: v1.QueryMultipleClusters,
+					ParamsCallback: func(params *v1.FlowLogAggregationParams) {
+						params.SetAllClusters(true)
+					},
+					ExpectedCount: 3,
+				},
+			}
 
-			// Use the backend to perform a query.
-			aggs, err := flb.Aggregations(ctx, clusterInfo, &params)
-			require.NoError(t, err)
-			require.NotNil(t, aggs)
+			for _, tc := range testcases {
+				t.Run(tc.Name, func(t *testing.T) {
+					clusterInfo := bapi.ClusterInfo{Cluster: tc.XClusterID, Tenant: tenant}
 
-			ts, ok := aggs.AutoDateHistogram("tb")
-			require.True(t, ok)
+					params := v1.FlowLogAggregationParams{}
+					params.TimeRange = &lmav1.TimeRange{}
+					params.TimeRange.From = testStart
+					params.TimeRange.To = now
+					params.NumBuckets = 4
+					if f := tc.ParamsCallback; f != nil {
+						f(&params)
+					}
 
-			// We asked for 4 buckets.
-			require.Len(t, ts.Buckets, 4)
+					// Add a simple aggregation to add up the total bytes_in from the logs.
+					sumAgg := elastic.NewSumAggregation().Field("bytes_in")
+					src, err := sumAgg.Source()
+					require.NoError(t, err)
+					bytes, err := json.Marshal(src)
+					require.NoError(t, err)
+					params.Aggregations = map[string]gojson.RawMessage{"count": bytes}
 
-			times := []string{"11", "12", "13", "14"}
+					// Use the backend to perform a query.
+					aggs, err := flb.Aggregations(ctx, clusterInfo, &params)
+					require.NoError(t, err)
+					require.NotNil(t, aggs)
 
-			for i, b := range ts.Buckets {
-				require.Equal(t, int64(1), b.DocCount, fmt.Sprintf("Bucket %d", i))
+					ts, ok := aggs.AutoDateHistogram("tb")
+					require.True(t, ok)
 
-				// We asked for a count agg, which should include a single log
-				// in each bucket.
-				count, ok := b.Sum("count")
-				require.True(t, ok, "Bucket missing count agg")
-				require.NotNil(t, count.Value)
-				require.Equal(t, float64(1), *count.Value)
+					// We asked for 4 buckets.
+					require.Len(t, ts.Buckets, 4)
 
-				// The key should be the timestamp for the bucket.
-				require.NotNil(t, b.KeyAsString)
-				require.Equal(t, times[i], *b.KeyAsString)
+					times := []string{"11", "12", "13", "14"}
+
+					for i, b := range ts.Buckets {
+						require.Equal(t, int64(tc.ExpectedCount), b.DocCount, fmt.Sprintf("Bucket %d", i))
+
+						// We asked for a count agg, which should include a single log
+						// in each bucket.
+						count, ok := b.Sum("count")
+						require.True(t, ok, "Bucket missing count agg")
+						require.NotNil(t, count.Value)
+						require.Equal(t, float64(tc.ExpectedCount), *count.Value)
+
+						// The key should be the timestamp for the bucket.
+						require.NotNil(t, b.KeyAsString)
+						require.Equal(t, times[i], *b.KeyAsString)
+					}
+				})
 			}
 		})
 
 		RunAllModes(t, fmt.Sprintf("should return aggregate stats (tenant=%s)", tenant), func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
 			// Start the test numLogs minutes in the past.
 			numLogs := 5

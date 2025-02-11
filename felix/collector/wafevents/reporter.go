@@ -199,7 +199,7 @@ func (b *buffer) getUpdates() (updates []*v1.WAFLog) {
 			RequestId:   r.TxId,
 			Source:      r.Src,
 			Destination: r.Dst,
-			Msg:         fmt.Sprintf("WAF detected %d violations [ %s ]", len(r.Rules), r.Action),
+			Msg:         fmt.Sprintf("WAF detected %d violations [%s]", len(r.Rules), r.Action),
 			Path:        r.Request.Path,
 			Method:      r.Request.Method,
 			Protocol:    fmt.Sprintf("HTTP/%s", r.Request.Version),

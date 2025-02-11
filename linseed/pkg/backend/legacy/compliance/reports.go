@@ -165,7 +165,10 @@ func (b *reportsBackend) getSearch(i bapi.ClusterInfo, opts *v1.ReportDataParams
 		return nil, 0, err
 	}
 
-	q := b.buildQuery(i, opts)
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Build the query, sorting by time.
 	query := b.client.Search().
@@ -174,7 +177,6 @@ func (b *reportsBackend) getSearch(i bapi.ClusterInfo, opts *v1.ReportDataParams
 
 	// Configure pagination options
 	var startFrom int
-	var err error
 	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, 0, err
@@ -191,8 +193,12 @@ func (b *reportsBackend) getSearch(i bapi.ClusterInfo, opts *v1.ReportDataParams
 	return query, startFrom, nil
 }
 
-func (b *reportsBackend) buildQuery(i bapi.ClusterInfo, p *v1.ReportDataParams) elastic.Query {
-	query := b.queryHelper.BaseQuery(i)
+func (b *reportsBackend) buildQuery(i bapi.ClusterInfo, p *v1.ReportDataParams) (elastic.Query, error) {
+	query, err := b.queryHelper.BaseQuery(i, p)
+	if err != nil {
+		return nil, err
+	}
+
 	if p.TimeRange != nil {
 		query.Must(b.queryHelper.NewTimeRangeQuery(p.TimeRange))
 	}
@@ -220,5 +226,5 @@ func (b *reportsBackend) buildQuery(i bapi.ClusterInfo, p *v1.ReportDataParams) 
 		}
 	}
 
-	return query
+	return query, nil
 }

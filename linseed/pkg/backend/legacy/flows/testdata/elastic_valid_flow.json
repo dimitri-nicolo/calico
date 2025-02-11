@@ -9,6 +9,7 @@
   "aggregations": {
     "buckets": {
       "after_key": {
+        "cluster": "cluster1",
         "dest_type": "wep",
         "dest_namespace": "kube-system",
         "dest_name_aggr": "kube-dns-*",
@@ -28,6 +29,7 @@
       "buckets": [
         {
           "key": {
+            "cluster": "cluster1",
             "dest_type": "wep",
             "dest_namespace": "kube-system",
             "dest_name_aggr": "kube-dns-*",

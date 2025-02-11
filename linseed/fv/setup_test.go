@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
@@ -30,12 +30,17 @@ import (
 )
 
 var (
-	cli         client.Client
-	ctx         context.Context
-	lmaClient   lmaelastic.Client
-	cluster     string
-	clusterInfo bapi.ClusterInfo
-	esClient    *elastic.Client
+	cli                     client.Client
+	multiClusterQueryClient client.Client
+	ctx                     context.Context
+	lmaClient               lmaelastic.Client
+	cluster1                string
+	cluster2                string
+	cluster3                string
+	cluster1Info            bapi.ClusterInfo
+	cluster2Info            bapi.ClusterInfo
+	cluster3Info            bapi.ClusterInfo
+	esClient                *elastic.Client
 )
 
 // setupAndTeardown provides common setup and teardown logic for all FV tests to use.
@@ -97,12 +102,20 @@ func setupAndTeardown(t *testing.T, args *RunLinseedArgs, confArgs *RunConfigure
 	lmaClient = lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a Linseed client.
-	cli, err = NewLinseedClient(args)
+	cli, err = NewLinseedClient(args, TokenPath)
+	require.NoError(t, err)
+
+	// Instantiate a Linseed client with a token permitted to perform multi-cluster queries.
+	multiClusterQueryClient, err = NewLinseedClient(args, TokenPathMultiCluster)
 	require.NoError(t, err)
 
 	// Create a random cluster name for each test to make sure we don't interfere between tests.
-	cluster = testutils.RandomClusterName()
-	clusterInfo = bapi.ClusterInfo{Cluster: cluster, Tenant: args.TenantID}
+	cluster1 = testutils.RandomClusterName()
+	cluster2 = testutils.RandomClusterName()
+	cluster3 = testutils.RandomClusterName()
+	cluster1Info = bapi.ClusterInfo{Cluster: cluster1, Tenant: args.TenantID}
+	cluster2Info = bapi.ClusterInfo{Cluster: cluster2, Tenant: args.TenantID}
+	cluster3Info = bapi.ClusterInfo{Cluster: cluster3, Tenant: args.TenantID}
 
 	// Set up context with a timeout.
 	var cancel context.CancelFunc
@@ -110,7 +123,10 @@ func setupAndTeardown(t *testing.T, args *RunLinseedArgs, confArgs *RunConfigure
 
 	return func() {
 		linseed.Stop()
-		testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, clusterInfo)
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			err := testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, clusterInfo)
+			require.NoError(t, err)
+		}
 		logCancel()
 		cancel()
 	}

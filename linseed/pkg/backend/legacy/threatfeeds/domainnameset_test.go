@@ -28,7 +28,7 @@ func TestDomainSetBasic(t *testing.T) {
 		require.Error(t, err)
 
 		// Invalid tenant ID in cluster info.
-		badTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "one,two"}
+		badTenant := bapi.ClusterInfo{Cluster: cluster1, Tenant: "one,two"}
 		_, err = db.Create(ctx, badTenant, []v1.DomainNameSetThreatFeed{f})
 		require.Error(t, err)
 		_, err = db.List(ctx, badTenant, &p)
@@ -39,52 +39,85 @@ func TestDomainSetBasic(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve reports (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
-			clusterInfo.Tenant = tenant
+			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 			// Create a dummy threat feed.
 			feed := v1.DomainNameSetThreatFeedData{
 				CreatedAt: time.Unix(0, 0).UTC(),
 				Domains:   []string{"a.b.c.d."},
 			}
+			feedCopy := feed
 			f := v1.DomainNameSetThreatFeed{
 				ID:   "my-threat-feed",
-				Data: &feed,
+				Data: &feedCopy, // don't use the original feed, as it will be modified on the backend
 			}
 
-			response, err := db.Create(ctx, clusterInfo, []v1.DomainNameSetThreatFeed{f})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), response.Errors)
-			require.Equal(t, 0, response.Failed)
+			for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+				response, err := db.Create(ctx, clusterInfo, []v1.DomainNameSetThreatFeed{f})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+				err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
 
 			// Read it back and check it matches.
-			p := v1.DomainNameSetThreatFeedParams{}
-			resp, err := db.List(ctx, clusterInfo, &p)
-			require.NoError(t, err)
-			require.Len(t, resp.Items, 1)
-			require.Equal(t, "my-threat-feed", resp.Items[0].ID)
-			require.Equal(t, feed, *resp.Items[0].Data)
+			params := v1.DomainNameSetThreatFeedParams{}
 
-			// Attempt to delete it with an invalid tenant ID. It should fail.
-			badClusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "bad-tenant"}
-			bulkResp, err := db.Delete(ctx, badClusterInfo, []v1.DomainNameSetThreatFeed{resp.Items[0]})
-			require.NoError(t, err)
-			if ipsetIndexGetter.IsSingleIndex() {
-				require.Len(t, bulkResp.Errors, 1)
-				require.Equal(t, bulkResp.Failed, 1)
-			}
+			t.Run("should query single cluster", func(t *testing.T) {
+				clusterInfo := cluster1Info
+				resp, err := db.List(ctx, clusterInfo, &params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 1)
+				require.Equal(t, "my-threat-feed", resp.Items[0].ID)
+				backendutils.AssertDomainNameSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				require.Equal(t, feed, *resp.Items[0].Data)
 
-			// Delete it with the correct tenant ID and cluster.
-			delResp, err := db.Delete(ctx, clusterInfo, []v1.DomainNameSetThreatFeed{f})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), delResp.Errors)
-			require.Equal(t, 0, delResp.Failed)
+				// Attempt to delete it with an invalid tenant ID. It should fail.
+				badClusterInfo := bapi.ClusterInfo{Cluster: clusterInfo.Cluster, Tenant: "bad-tenant"}
+				bulkResp, err := db.Delete(ctx, badClusterInfo, []v1.DomainNameSetThreatFeed{resp.Items[0]})
+				require.NoError(t, err)
+				if ipsetIndexGetter.IsSingleIndex() {
+					require.Len(t, bulkResp.Errors, 1)
+					require.Equal(t, bulkResp.Failed, 1)
+				}
+			})
 
-			afterDelete, err := db.List(ctx, clusterInfo, &p)
-			require.NoError(t, err)
-			require.Len(t, afterDelete.Items, 0)
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				params.SetClusters(selectedClusters)
+				resp, err := db.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 2)
+				for _, cluster := range selectedClusters {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.DomainNameSetThreatFeedClusterEquals(cluster)), "cluster %s not found", cluster)
+				}
+			})
+
+			t.Run("should query all clusters", func(t *testing.T) {
+				params.SetAllClusters(true)
+				resp, err := db.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+				require.NoError(t, err)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.DomainNameSetThreatFeedClusterEquals(cluster)), "cluster %s not found", cluster)
+				}
+			})
+
+			t.Run("delete", func(t *testing.T) {
+				clusterInfo := cluster1Info
+				// Delete it with the correct tenant ID and cluster.
+				delResp, err := db.Delete(ctx, clusterInfo, []v1.DomainNameSetThreatFeed{f})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), delResp.Errors)
+				require.Equal(t, 0, delResp.Failed)
+
+				afterDelete, err := db.List(ctx, clusterInfo, &params)
+				require.NoError(t, err)
+				require.Len(t, afterDelete.Items, 0)
+			})
 		})
 	}
 }
@@ -150,7 +183,7 @@ func TestDomainSetFiltering(t *testing.T) {
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo.Tenant = tenant
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 				require.NotEmpty(t, clusterInfo.Cluster)
 
 				f1 := v1.DomainNameSetThreatFeed{

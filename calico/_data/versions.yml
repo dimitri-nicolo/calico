@@ -49,12 +49,16 @@
     dex:
       image: tigera/dex
       version: master
+    coreos-dex:
+      version: v2.41.1
     fluentd:
       image: tigera/fluentd
       version: master
     fluentd-windows:
       image: tigera/fluentd-windows
       version: master
+    coreos-fluentd:
+      version: 1.17.1
     ui-apis:
       image: tigera/ui-apis
       version: master

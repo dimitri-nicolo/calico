@@ -116,7 +116,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		dnsMode       string
 	)
 
-	msWildcards := []string{"microsoft.*", "*.microsoft.com"}
+	msWildcards := []string{"microsoft.*.com", "*.microsoft.com"}
 	if zeroLatency {
 		msWildcards = []string{"*.microsoft.com"}
 		dnsMode = string(api.BPFDNSPolicyModeInline)

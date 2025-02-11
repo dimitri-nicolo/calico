@@ -178,10 +178,10 @@ var _ = describe("statusUpdater", func(clusterNamespace string) {
 			clusterName := "non-existent-cluster"
 			statusUpdater.SetStatus(clusterName, v3.ManagedClusterStatusValueFalse)
 
-			// Check that we end up in a state where we do not track the cluster and do not seg fault.
-			Consistently(func() *managedClusterStatusState {
-				return statusUpdater.(*statusUpdaterImpl).connectionStatuses[clusterName]
-			}).WithPolling(250 * time.Millisecond).WithTimeout(3 * time.Second).Should(BeNil())
+			// This test is checking to see if the goroutines that process this update create a seg-fault.
+			// We could check the internal state of the status updater, but we risk concurrent map read/write flakes.
+			// Sleeping gives a sufficient window for the seg-fault to trigger and crash the suite.
+			time.Sleep(3 * time.Second)
 		})
 	})
 })

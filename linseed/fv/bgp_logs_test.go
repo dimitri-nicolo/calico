@@ -51,7 +51,7 @@ func TestFV_BGP(t *testing.T) {
 		}
 
 		// Perform a query.
-		bgpLogs, err := cli.BGPLogs(cluster).List(ctx, &params)
+		bgpLogs, err := cli.BGPLogs(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.BGPLog{}, bgpLogs.Items)
 	})
@@ -64,12 +64,14 @@ func TestFV_BGP(t *testing.T) {
 				LogTime: reqTime.Format(v1.BGPLogTimeFormat),
 			},
 		}
-		bulk, err := cli.BGPLogs(cluster).Create(ctx, bgpLogs)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create bgp logs did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.BGPLogs(clusterInfo.Cluster).Create(ctx, bgpLogs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create bgp log did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			// Refresh elasticsearch so that results appear.
+			testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		}
 
 		// Read it back.
 		params := v1.BGPLogParams{
@@ -80,15 +82,50 @@ func TestFV_BGP(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.BGPLogs(cluster).List(ctx, &params)
-		require.NoError(t, err)
 
-		require.Len(t, resp.Items, 1)
-		testutils.AssertBGPLogClusterAndReset(t, cluster, &resp.Items[0])
-		require.Equal(t, bgpLogs, resp.Items)
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.BGPLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+
+			require.Len(t, resp.Items, 1)
+			testutils.AssertBGPLogClusterAndReset(t, cluster, &resp.Items[0])
+			require.Equal(t, bgpLogs, resp.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.BGPLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.BGPLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.BGPLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.BGPLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.BGPLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.BGPLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunBGPLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 BGP logs.
@@ -171,6 +208,8 @@ func TestFV_BGP(t *testing.T) {
 	})
 
 	RunBGPLogTest(t, "should support pagination for items >= 10000 for BGP logs", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K bgp logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -221,8 +260,10 @@ func TestFV_BGPTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
+
+		cluster := cluster1
 
 		// Create a basic log. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.

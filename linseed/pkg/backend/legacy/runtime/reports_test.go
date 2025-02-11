@@ -27,7 +27,9 @@ var (
 	client        lmaelastic.Client
 	b             bapi.RuntimeBackend
 	ctx           context.Context
-	cluster       string
+	cluster1      string
+	cluster2      string
+	cluster3      string
 	tenant        string
 	anotherTenant string
 	indexGetter   bapi.Index
@@ -75,7 +77,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster1 = testutils.RandomClusterName()
+	cluster2 = testutils.RandomClusterName()
+	cluster3 = testutils.RandomClusterName()
 	tenant = testutils.RandomTenantName()
 	anotherTenant = testutils.RandomTenantName()
 
@@ -85,8 +89,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-		require.NoError(t, err)
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		// Cancel the context
 		cancel()
@@ -97,7 +103,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 // TestCreateRuntimeReport tests running a real elasticsearch query to create a runtime report.
 func TestCreateRuntimeReport(t *testing.T) {
 	RunAllModes(t, "TestCreateRuntimeReport", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1}
+		cluster2Info := bapi.ClusterInfo{Cluster: cluster2}
+		cluster3Info := bapi.ClusterInfo{Cluster: cluster3}
 
 		startTime := time.Unix(1, 0).UTC()
 		endTime := time.Unix(2, 0).UTC()
@@ -132,16 +140,18 @@ func TestCreateRuntimeReport(t *testing.T) {
 		}
 
 		// Create the runtime report in ES.
-		resp, err := b.Create(ctx, clusterInfo, []v1.Report{f})
-		require.NoError(t, err)
-		require.Equal(t, []v1.BulkError(nil), resp.Errors)
-		require.Equal(t, 1, resp.Total)
-		require.Equal(t, 0, resp.Failed)
-		require.Equal(t, 1, resp.Succeeded)
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			resp, err := b.Create(ctx, clusterInfo, []v1.Report{f})
+			require.NoError(t, err)
+			require.Equal(t, []v1.BulkError(nil), resp.Errors)
+			require.Equal(t, 1, resp.Total)
+			require.Equal(t, 0, resp.Failed)
+			require.Equal(t, 1, resp.Succeeded)
 
-		// Refresh the index.
-		err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
-		require.NoError(t, err)
+			// Refresh the index.
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
 		// Query using normal time range.
 		opts := &v1.RuntimeReportParams{
@@ -152,11 +162,35 @@ func TestCreateRuntimeReport(t *testing.T) {
 				},
 			},
 		}
-		results, err := b.List(ctx, clusterInfo, opts)
-		require.NoError(t, err)
-		require.Equal(t, 1, len(results.Items))
-		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, clusterInfo.Cluster, results)
-		require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: cluster, Report: f}}, results.Items)
+
+		t.Run("should query single cluster", func(t *testing.T) {
+			clusterInfo := cluster1Info
+			results, err := b.List(ctx, clusterInfo, opts)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(results.Items))
+			testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, clusterInfo.Cluster, results)
+			require.Equal(t, []v1.RuntimeReport{{Tenant: "", Cluster: clusterInfo.Cluster, Report: f}}, results.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			opts.SetClusters(selectedClusters)
+			results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, opts)
+			require.NoError(t, err)
+			require.Equal(t, 2, len(results.Items))
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(results.Items, backendutils.RuntimeReportClusterEquals(cluster)), "Cluster %s not found in results", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			opts.SetAllClusters(true)
+			results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, opts)
+			require.NoError(t, err)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(results.Items, backendutils.RuntimeReportClusterEquals(cluster)), "Cluster %s not found in results", cluster)
+			}
+		})
 	})
 }
 
@@ -196,7 +230,7 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 		}
 
 		// Create the runtime report in ES.
-		clusterInfoA := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+		clusterInfoA := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 		resp, err := b.Create(ctx, clusterInfoA, []v1.Report{f})
 		require.NoError(t, err)
 		require.Equal(t, []v1.BulkError(nil), resp.Errors)
@@ -204,7 +238,7 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 		require.Equal(t, 0, resp.Failed)
 		require.Equal(t, 1, resp.Succeeded)
 
-		clusterInfoB := bapi.ClusterInfo{Cluster: cluster, Tenant: anotherTenant}
+		clusterInfoB := bapi.ClusterInfo{Cluster: cluster1, Tenant: anotherTenant}
 		resp, err = b.Create(ctx, clusterInfoB, []v1.Report{f})
 		require.NoError(t, err)
 		require.Equal(t, []v1.BulkError(nil), resp.Errors)
@@ -230,7 +264,7 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results.Items))
 		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, clusterInfoA.Cluster, results)
-		require.Equal(t, []v1.RuntimeReport{{Tenant: tenant, Cluster: cluster, Report: f}}, results.Items)
+		require.Equal(t, []v1.RuntimeReport{{Tenant: tenant, Cluster: cluster1, Report: f}}, results.Items)
 
 		// Read data and verify for tenant B
 		results, err = b.List(ctx, clusterInfoB, &v1.RuntimeReportParams{
@@ -244,7 +278,7 @@ func TestCreateRuntimeReportForMultipleTenants(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results.Items))
 		testutils.AssertRuntimeReportsIDAndGeneratedTimeAndClusterAndReset(t, clusterInfoB.Cluster, results)
-		require.Equal(t, []v1.RuntimeReport{{Tenant: anotherTenant, Cluster: cluster, Report: f}}, results.Items)
+		require.Equal(t, []v1.RuntimeReport{{Tenant: anotherTenant, Cluster: cluster1, Report: f}}, results.Items)
 	})
 }
 
@@ -330,7 +364,7 @@ func TestRuntimeSelection(t *testing.T) {
 	}
 
 	testSelection := func(t *testing.T, selector string, expectedReports []v1.Report) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Create the event in ES.
 		resp, err := b.Create(ctx, clusterInfo, reports)
@@ -351,7 +385,7 @@ func TestRuntimeSelection(t *testing.T) {
 		require.Equal(t, len(expectedReports), len(r.Items))
 		for i := range expectedReports {
 			item := r.Items[i]
-			backendutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster, &item)
+			backendutils.AssertRuntimeReportIDAndGeneratedTimeAndClusterAndReset(t, cluster1, &item)
 			require.Equal(t, expectedReports[i], item.Report)
 		}
 	}

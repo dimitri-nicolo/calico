@@ -36,7 +36,7 @@ func restSetupAndTeardown(t *testing.T) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster1 = testutils.RandomClusterName()
 
 	// Set tenant to the value expected in the FVs.
 	tenant = "tenant-a"
@@ -81,7 +81,7 @@ func TestFV_RESTClient(t *testing.T) {
 		flows := v1.List[v1.L3Flow]{}
 		err = badClient.Post().
 			Path("/flows").
-			Cluster(cluster).
+			Cluster(cluster1).
 			Params(&params).
 			Do(context.TODO()).
 			Into(&flows)
@@ -105,7 +105,7 @@ func TestFV_RESTClient(t *testing.T) {
 
 		err := rc.Post().
 			Path("/flows").
-			Cluster(cluster).
+			Cluster(cluster1).
 			Params(&params).
 			Do(context.TODO()).
 			Into(&flows)
@@ -128,7 +128,7 @@ func TestFV_RESTClient(t *testing.T) {
 
 		err := rc.Post().
 			Path("/bad/url").
-			Cluster(cluster).
+			Cluster(cluster1).
 			Params(&params).
 			Do(context.TODO()).
 			Into(&flows)
