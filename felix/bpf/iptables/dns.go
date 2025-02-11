@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
@@ -65,9 +67,21 @@ func LoadDNSParserBPFProgram(bpfLogLevel string, dnsMapsToPin []string) error {
 		return fmt.Errorf("error creating dns obj directory %w", err)
 	}
 
-	obj, err := bpf.LoadObject(preCompiledBinary, nil, dnsMapsToPin...)
-	if err != nil {
-		return fmt.Errorf("error loading bpf dns parser program for iptables %w", err)
+	var obj *libbpf.Obj
+
+	if log.GetLevel() < log.DebugLevel {
+		// We allocate and pass the buffer but we ignore it to suppress libbpf output
+		// as on some older system it is perfectly ok for the oad to fail. In that
+		// case DNS policy mode falls back from Inline to DelayDenied.
+		obj, err = bpf.LoadObjectWithLogBuffer(preCompiledBinary, nil, make([]byte, 1<<20), dnsMapsToPin...)
+		if err != nil {
+			return fmt.Errorf("error loading bpf dns parser program for iptables %w", err)
+		}
+	} else {
+		obj, err = bpf.LoadObject(preCompiledBinary, nil, dnsMapsToPin...)
+		if err != nil {
+			return fmt.Errorf("error loading bpf dns parser program for iptables %w", err)
+		}
 	}
 	defer obj.Close()
 	err = obj.PinPrograms(pinPath)

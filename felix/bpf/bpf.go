@@ -2359,6 +2359,19 @@ func LoadObject(file string, data libbpf.GlobalData, mapsToBePinned ...string) (
 		return nil, err
 	}
 
+	return loadObject(obj, data, mapsToBePinned...)
+}
+
+func LoadObjectWithLogBuffer(file string, data libbpf.GlobalData, logBuf []byte, mapsToBePinned ...string) (*libbpf.Obj, error) {
+	obj, err := libbpf.OpenObjectWithLogBuffer(file, logBuf)
+	if err != nil {
+		return nil, err
+	}
+
+	return loadObject(obj, data, mapsToBePinned...)
+}
+
+func loadObject(obj *libbpf.Obj, data libbpf.GlobalData, mapsToBePinned ...string) (*libbpf.Obj, error) {
 	success := false
 	defer func() {
 		if !success {
@@ -2381,7 +2394,7 @@ func LoadObject(file string, data libbpf.GlobalData, mapsToBePinned ...string) (
 
 			if data != nil {
 				if err := data.Set(m); err != nil {
-					return nil, fmt.Errorf("failed to configure %s: %w", file, err)
+					return nil, fmt.Errorf("failed to configure %s: %w", obj.Filename(), err)
 				}
 			}
 			continue
