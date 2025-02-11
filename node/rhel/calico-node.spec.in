@@ -8,6 +8,7 @@ License: Proprietary
 URL: https://tigera.io/
 Source0: calico-node.tar.gz
 
+Requires: bpftool
 Requires: conntrack-tools
 Requires: iproute
 Requires: iproute-tc
