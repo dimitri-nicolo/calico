@@ -1416,9 +1416,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(dp.externalNetworkManager)
 	}
 
-	var nftMaps nftables.MapsDataplane
+	var filterMaps, rawMaps nftables.MapsDataplane
 	if config.RulesConfig.NFTables {
-		nftMaps = nftablesV4RootTable
+		filterMaps = filterTableV4.(nftables.MapsDataplane)
+		rawMaps = rawTableV4.(nftables.MapsDataplane)
 	}
 
 	epManager := newEndpointManager(
@@ -1433,7 +1434,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config.RulesConfig.WorkloadIfacePrefixes,
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 		string(defaultRPFilter),
-		nftMaps,
+		filterMaps,
+		rawMaps,
 		config.BPFEnabled,
 		bpfEndpointManager,
 		callbacks,
@@ -1603,9 +1605,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.RegisterManager(newRawEgressPolicyManager(rawTableV6, ruleRenderer, 6, ipSetsV6.SetFilter, config.RulesConfig.NFTables))
 		}
 
-		var nftMapsV6 nftables.MapsDataplane
+		var filterMapsV6, rawMapsV6 nftables.MapsDataplane
 		if config.RulesConfig.NFTables {
-			nftMapsV6 = nftablesV6RootTable
+			filterMapsV6 = filterTableV6.(nftables.MapsDataplane)
+			rawMapsV6 = rawTableV6.(nftables.MapsDataplane)
 		}
 
 		dp.RegisterManager(newEndpointManager(
@@ -1620,7 +1623,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.RulesConfig.WorkloadIfacePrefixes,
 			dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 			"",
-			nftMapsV6,
+			filterMapsV6,
+			rawMapsV6,
 			config.BPFEnabled,
 			nil,
 			callbacks,
@@ -3526,8 +3530,8 @@ func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
 	ipSetsMgr *dpsets.IPSetsManager,
 	ruleRenderer rules.RuleRenderer,
 	dp *InternalDataplane,
-	ipsetsMap, dnsMpx, dnsSets maps.Map) {
-
+	ipsetsMap, dnsMpx, dnsSets maps.Map,
+) {
 	ipSetIDAllocator := idalloc.New()
 	ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
 

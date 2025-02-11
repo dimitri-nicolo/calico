@@ -500,7 +500,7 @@ func describeNamedPortTests(testSourcePorts bool, protocol string) {
 
 			cc.CheckConnectivity(dumpResource(policy), connectivity.CheckWithBeforeRetry(cleanConntrack))
 		}
-		It("should have expected connectivity", expectBaselineConnectivity)
+		It("FOCUS should have expected connectivity", expectBaselineConnectivity)
 
 		Describe("with a negative "+sameDir+" selector, removing w[2]", func() {
 			BeforeEach(func() {
