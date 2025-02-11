@@ -122,6 +122,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
+		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		if networkSetIPsSupported {
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLENETWORKSETS"] = "true"
@@ -1007,6 +1008,7 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
+		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		tc, client = infrastructure.StartSingleNodeTopology(opts, infra)
 
@@ -1097,6 +1099,7 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 		opts.ExtraEnvVars["FELIX_DefaultEndpointToHostAction"] = "RETURN"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
+		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		tc, client = infrastructure.StartNNodeTopology(2, opts, infra)
 
