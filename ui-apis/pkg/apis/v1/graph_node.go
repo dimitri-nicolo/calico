@@ -121,7 +121,7 @@ func (n *GraphNode) IncludeServicePort(s ServicePort) {
 	n.ServicePorts[s] = struct{}{}
 }
 
-func (n GraphNode) String() string {
+func (n *GraphNode) String() string {
 	if n.ParentID == "" {
 		return fmt.Sprintf("Node(%s; expandable=%v)", n.ID, n.Expandable)
 	}

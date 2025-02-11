@@ -210,7 +210,7 @@ var _ = Describe("Service graph data tests", func() {
 			})
 			formatted, err := json.MarshalIndent(actualData, "", "  ")
 			Expect(err).NotTo(HaveOccurred())
-			err = os.WriteFile(actualDataFilename, formatted, os.ModePerm)
+			err = os.WriteFile(actualDataFilename, formatted, 0o644)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = GinkgoWriter.Write([]byte(fmt.Sprintf(`

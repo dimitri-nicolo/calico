@@ -2,5 +2,6 @@ package hashreleaseserver
 
 type EnterpriseHashrelease struct {
 	Hashrelease
-	ChartVersion string
+	ChartVersion   string
+	ManagerVersion string
 }

@@ -29,7 +29,7 @@ func TestBenchmarksBasic(t *testing.T) {
 		require.Error(t, err)
 
 		// Invalid tenant ID in cluster info.
-		badTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "one,two"}
+		badTenant := bapi.ClusterInfo{Cluster: cluster1, Tenant: "one,two"}
 		_, err = bb.Create(ctx, badTenant, []v1.Benchmarks{f})
 		require.Error(t, err)
 		_, err = bb.List(ctx, badTenant, &p)
@@ -40,7 +40,6 @@ func TestBenchmarksBasic(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve benchmarks (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
-			clusterInfo.Tenant = tenant
 
 			f := v1.Benchmarks{
 				Version:           "v1",
@@ -63,26 +62,56 @@ func TestBenchmarksBasic(t *testing.T) {
 			}
 			f.ID = f.UID()
 
-			response, err := bb.Create(ctx, clusterInfo, []v1.Benchmarks{f})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), response.Errors)
-			require.Equal(t, 0, response.Failed)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
 
-			err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+				response, err := bb.Create(ctx, clusterInfo, []v1.Benchmarks{f})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
 
-			// Read it back and check it matches.
-			p := v1.BenchmarksParams{}
-			resp, err := bb.List(ctx, clusterInfo, &p)
-			require.NoError(t, err)
-			require.Len(t, resp.Items, 1)
-			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-			require.Equal(t, f, resp.Items[0])
+				err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
+
+			params := v1.BenchmarksParams{}
+
+			t.Run("should query single cluster", func(t *testing.T) {
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+				// Read it back and check it matches.
+				resp, err := bb.List(ctx, clusterInfo, &params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 1)
+				backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				require.Equal(t, f, resp.Items[0])
+			})
+
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				params.SetClusters(selectedClusters)
+
+				resp, err := bb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 2)
+				for _, cluster := range selectedClusters {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.BenchmarkClusterEquals(cluster)), "expected cluster %s in results", cluster)
+				}
+			})
+
+			t.Run("should query all clusters", func(t *testing.T) {
+				params.SetAllClusters(true)
+				resp, err := bb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 3)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.BenchmarkClusterEquals(cluster)), "expected cluster %s in results", cluster)
+				}
+			})
 		})
 
 		RunAllModes(t, "should ensure data does not overlap", func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
-			anotherClusterInfo := bapi.ClusterInfo{Cluster: backendutils.RandomClusterName(), Tenant: tenant}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			anotherClusterInfo := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
 
 			b1 := v1.Benchmarks{
 				Version:           "v1",
@@ -242,7 +271,7 @@ func TestBenchmarksFiltering(t *testing.T) {
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo.Tenant = tenant
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
 				bm1 := v1.Benchmarks{
 					ID:                "bm1",
@@ -329,7 +358,7 @@ func TestBenchmarksFiltering(t *testing.T) {
 
 func TestBenchmarkSorting(t *testing.T) {
 	RunAllModes(t, "should respect sorting", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		t1 := time.Unix(100, 0)
 		t2 := time.Unix(500, 0)

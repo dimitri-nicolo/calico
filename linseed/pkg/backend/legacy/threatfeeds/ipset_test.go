@@ -28,8 +28,9 @@ var (
 	ib                 bapi.IPSetBackend
 	db                 bapi.DomainNameSetBackend
 	ctx                context.Context
-	cluster            string
-	clusterInfo        bapi.ClusterInfo
+	cluster1           string
+	cluster2           string
+	cluster3           string
 	ipsetIndexGetter   bapi.Index
 	domainsIndexGetter bapi.Index
 )
@@ -80,8 +81,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = backendutils.RandomClusterName()
-	clusterInfo = bapi.ClusterInfo{Cluster: cluster}
+	cluster1 = backendutils.RandomClusterName()
+	cluster2 = backendutils.RandomClusterName()
+	cluster3 = backendutils.RandomClusterName()
 
 	// Set a timeout for each test.
 	var cancel context.CancelFunc
@@ -93,9 +95,11 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 		cancel()
 
 		// Clean up data from the test.
-		for _, indexGetter := range []bapi.Index{ipsetIndexGetter, domainsIndexGetter} {
-			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-			require.NoError(t, err)
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			for _, indexGetter := range []bapi.Index{ipsetIndexGetter, domainsIndexGetter} {
+				err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+				require.NoError(t, err)
+			}
 		}
 
 		// Cancel logging
@@ -116,7 +120,7 @@ func TestIPSetBasic(t *testing.T) {
 		require.Error(t, err)
 
 		// Invalid tenant ID in cluster info.
-		badTenant := bapi.ClusterInfo{Cluster: cluster, Tenant: "one,two"}
+		badTenant := bapi.ClusterInfo{Cluster: cluster1, Tenant: "one,two"}
 		_, err = ib.Create(ctx, badTenant, []v1.IPSetThreatFeed{f})
 		require.Error(t, err)
 		_, err = ib.List(ctx, badTenant, &p)
@@ -127,52 +131,85 @@ func TestIPSetBasic(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("create and retrieve reports (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
-			clusterInfo.Tenant = tenant
+			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 			// Create a dummy threat feed.
 			feed := v1.IPSetThreatFeedData{
 				CreatedAt: time.Unix(0, 0).UTC(),
 				IPs:       []string{"1.2.3.4/32"},
 			}
+			feedCopy := feed
 			f := v1.IPSetThreatFeed{
 				ID:   "my-threat-feed",
-				Data: &feed,
+				Data: &feedCopy, // don't use the original feed, as it will be modified on the backend
 			}
 
-			response, err := ib.Create(ctx, clusterInfo, []v1.IPSetThreatFeed{f})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), response.Errors)
-			require.Equal(t, 0, response.Failed)
+			for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+				response, err := ib.Create(ctx, clusterInfo, []v1.IPSetThreatFeed{f})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), response.Errors)
+				require.Equal(t, 0, response.Failed)
 
-			err = backendutils.RefreshIndex(ctx, client, ipsetIndexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+				err = backendutils.RefreshIndex(ctx, client, ipsetIndexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
+
+			params := v1.IPSetThreatFeedParams{}
 
 			// Read it back and check it matches.
-			p := v1.IPSetThreatFeedParams{}
-			resp, err := ib.List(ctx, clusterInfo, &p)
-			require.NoError(t, err)
-			require.Len(t, resp.Items, 1)
-			require.Equal(t, "my-threat-feed", resp.Items[0].ID)
-			require.Equal(t, feed, *resp.Items[0].Data)
+			t.Run("should query single cluster", func(t *testing.T) {
+				clusterInfo := cluster1Info
+				resp, err := ib.List(ctx, clusterInfo, &params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 1)
+				require.Equal(t, "my-threat-feed", resp.Items[0].ID)
+				backendutils.AssertIPSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				require.Equal(t, feed, *resp.Items[0].Data)
 
-			// Attempt to delete it with an invalid tenant ID. It should fail.
-			badClusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "bad-tenant"}
-			bulkResp, err := ib.Delete(ctx, badClusterInfo, []v1.IPSetThreatFeed{resp.Items[0]})
-			require.NoError(t, err)
-			if ipsetIndexGetter.IsSingleIndex() {
-				require.Len(t, bulkResp.Errors, 1)
-				require.Equal(t, bulkResp.Failed, 1)
-			}
+				// Attempt to delete it with an invalid tenant ID. It should fail.
+				badClusterInfo := bapi.ClusterInfo{Cluster: clusterInfo.Cluster, Tenant: "bad-tenant"}
+				bulkResp, err := ib.Delete(ctx, badClusterInfo, []v1.IPSetThreatFeed{resp.Items[0]})
+				require.NoError(t, err)
+				if ipsetIndexGetter.IsSingleIndex() {
+					require.Len(t, bulkResp.Errors, 1)
+					require.Equal(t, bulkResp.Failed, 1)
+				}
+			})
 
-			// Delete it with the correct tenant ID and cluster.
-			delResp, err := ib.Delete(ctx, clusterInfo, []v1.IPSetThreatFeed{f})
-			require.NoError(t, err)
-			require.Equal(t, []v1.BulkError(nil), delResp.Errors)
-			require.Equal(t, 0, delResp.Failed)
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				params.SetClusters(selectedClusters)
+				resp, err := ib.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+				require.NoError(t, err)
+				require.Len(t, resp.Items, 2)
+				for _, cluster := range selectedClusters {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.IPSetThreatFeedClusterEquals(cluster)), "expected cluster %s", cluster)
+				}
+			})
 
-			afterDelete, err := ib.List(ctx, clusterInfo, &p)
-			require.NoError(t, err)
-			require.Len(t, afterDelete.Items, 0)
+			t.Run("should query all clusters", func(t *testing.T) {
+				params.SetAllClusters(true)
+				resp, err := ib.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
+				require.NoError(t, err)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.IPSetThreatFeedClusterEquals(cluster)), "expected cluster %s", cluster)
+				}
+			})
+
+			t.Run("delete", func(t *testing.T) {
+				clusterInfo := cluster1Info
+				// Delete it with the correct tenant ID and cluster.
+				delResp, err := ib.Delete(ctx, clusterInfo, []v1.IPSetThreatFeed{f})
+				require.NoError(t, err)
+				require.Equal(t, []v1.BulkError(nil), delResp.Errors)
+				require.Equal(t, 0, delResp.Failed)
+
+				afterDelete, err := ib.List(ctx, clusterInfo, &params)
+				require.NoError(t, err)
+				require.Len(t, afterDelete.Items, 0)
+			})
 		})
 	}
 }
@@ -238,7 +275,7 @@ func TestIPSetFiltering(t *testing.T) {
 		for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 			name := fmt.Sprintf("%s (tenant=%s)", tc.Name, tenant)
 			RunAllModes(t, name, func(t *testing.T) {
-				clusterInfo.Tenant = tenant
+				clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
 
 				f1 := v1.IPSetThreatFeed{
 					ID: "feed-id-1",

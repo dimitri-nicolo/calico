@@ -33,7 +33,7 @@ OPERATOR_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].tigera-op
 RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
 RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
-IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml
+IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml 00-namespace-calico-apiserver.yaml 00-namespace-calico-system.yaml
 
 
 # The default registry we're pushing to
@@ -60,7 +60,7 @@ bin/ocp.tgz:
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/private-registry.md $(RELEASE_DIR)/README.md bin/ocp.tgz
 	$(info *** Building release archive for Calico Enterprise $(CALICO_VER), Operator $(OPERATOR_VER), chart release $(CHART_RELEASE))
-	$(foreach var,$(IGNORED_MANIFESTS), @find $(RELEASE_DIR) -name $(var) -delete;)
+	$(foreach var,$(IGNORED_MANIFESTS), $(shell find $(RELEASE_DIR) -name $(var) -delete))
 	@tar -czf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 
 $(RELEASE_DIR)/README.md:

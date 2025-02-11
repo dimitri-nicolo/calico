@@ -53,7 +53,7 @@ func TestFV_FlowLogs(t *testing.T) {
 		}
 
 		// Perform a query.
-		logs, err := cli.FlowLogs(cluster).List(ctx, &params)
+		logs, err := cli.FlowLogs(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.FlowLog{}, logs.Items)
 	})
@@ -65,13 +65,15 @@ func TestFV_FlowLogs(t *testing.T) {
 				EndTime: time.Now().Unix(), // TODO- more fields.
 			},
 		}
-		bulk, err := cli.FlowLogs(cluster).Create(ctx, logs)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.FlowLogs(clusterInfo.Cluster).Create(ctx, logs)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create flow log did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
-		require.NoError(t, err)
+			// Refresh elasticsearch so that results appear.
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
 		// Read it back.
 		params := v1.FlowLogParams{
@@ -82,12 +84,47 @@ func TestFV_FlowLogs(t *testing.T) {
 				},
 			},
 		}
-		resp, err := cli.FlowLogs(cluster).List(ctx, &params)
-		require.NoError(t, err)
-		require.Equal(t, logs, testutils.AssertFlowLogsIDAndClusterAndReset(t, cluster, resp))
+
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
+			resp, err := cli.FlowLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			require.Equal(t, logs, testutils.AssertFlowLogsIDAndClusterAndReset(t, cluster, resp))
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.FlowLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.FlowLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.FlowLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.FlowLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.FlowLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.FlowLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
 	})
 
 	RunFlowLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 flow logs.
@@ -172,6 +209,8 @@ func TestFV_FlowLogs(t *testing.T) {
 	})
 
 	RunFlowLogTest(t, "should support pagination for items >= 10000 for flows", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K logs.
 		logTime := time.Now().UTC().Unix()
@@ -238,7 +277,7 @@ func TestFV_FlowLogs(t *testing.T) {
 				},
 			},
 		}
-		_, err := cli.FlowLogs(cluster).List(ctx, &params)
+		_, err := cli.FlowLogs(cluster1).List(ctx, &params)
 		require.ErrorContains(t, err, "error with the following fields")
 		require.ErrorContains(t, err, "Type = 'wrong_type' (Reason: failed to validate Field: Type because of Tag: oneof )")
 		require.ErrorContains(t, err, "Tier = 'wrong.tier' (Reason: failed to validate Field: Tier because of Tag: excludesall )")
@@ -252,9 +291,10 @@ func TestFV_FlowLogsTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
 
+		cluster := cluster1
 		// Create a basic flow log. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.
 		logs := []v1.FlowLog{
@@ -283,6 +323,8 @@ func TestFV_FlowLogsTenancy(t *testing.T) {
 	RunFlowLogTest(t, "should enforce tenancy boundaries with multiple linseed instances", func(t *testing.T, idx bapi.Index) {
 		// In this test, we run a second instance of linseed configured with the tenant ID "tenant-b",
 		// and then make sure that each instance only returns data for the tenant it is configured for.
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// Create tenant-b Linseed instance, running on a different port.
 		tenantBArgs := DefaultLinseedArgs()
@@ -294,12 +336,12 @@ func TestFV_FlowLogsTenancy(t *testing.T) {
 		defer lb.Stop()
 
 		// Create a valid client for tenant-b.
-		tenantBCLI, err := NewLinseedClient(tenantBArgs)
+		tenantBCLI, err := NewLinseedClient(tenantBArgs, TokenPath)
 		require.NoError(t, err)
 
 		// Create a client that uses tenant-b, but is configured to talk to tenant-a's Linseed instance.
 		tenantBArgs.Port = DefaultLinseedArgs().Port
-		tenantBWrongCLI, err := NewLinseedClient(tenantBArgs)
+		tenantBWrongCLI, err := NewLinseedClient(tenantBArgs, TokenPath)
 		require.NoError(t, err)
 
 		// Create a flow log in tenant-a.
@@ -503,6 +545,9 @@ func TestFV_FlowLogsRBAC(t *testing.T) {
 
 	for _, testcase := range testcases {
 		RunFlowLogTest(t, testcase.name, func(t *testing.T, idx bapi.Index) {
+			clusterInfo := cluster1Info
+			cluster := clusterInfo.Cluster
+
 			// Create a flow log with the given parameters.
 			logs := []v1.FlowLog{
 				{

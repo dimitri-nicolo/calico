@@ -48,6 +48,8 @@ func TestMetrics(t *testing.T) {
 
 	RunDNSLogTest(t, "should create metrics based on the requests made", func(t *testing.T, idx bapi.Index) {
 		defer metricsSetupAndTeardown(t)()
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// Create a basic dns log.
 		logs := []v1.DNSLog{

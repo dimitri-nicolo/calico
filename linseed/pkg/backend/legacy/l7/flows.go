@@ -4,7 +4,7 @@ package l7
 import (
 	"context"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/apimachinery/pkg/types"
 
@@ -60,6 +60,7 @@ func NewSingleIndexL7FlowBackend(c lmaelastic.Client, options ...index.Option) b
 func newBackend(c lmaelastic.Client, singleIndex bool, options ...index.Option) bapi.L7FlowBackend {
 	// These are the keys which define an L7 in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
+		{Name: "cluster", Field: "cluster"},
 		{Name: "dest_type", Field: "dest_type"},
 		{Name: "dest_namespace", Field: "dest_namespace"},
 		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
@@ -121,9 +122,14 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.L
 	}
 
 	// Build the aggregation request.
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	query := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           b.index.Index(i),
-		Query:                   b.buildQuery(i, opts),
+		Query:                   q,
 		Name:                    "flows",
 		AggCompositeSourceInfos: b.compositeSources,
 		AggSumInfos:             b.aggSums,
@@ -148,6 +154,7 @@ func (b *l7FlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Comp
 
 	f := v1.L7Flow{Key: v1.L7FlowKey{}}
 	f.Key.Protocol = "tcp" // We only support TCP for now.
+	f.Key.Cluster = b.ft.ValueString(key, "cluster")
 	f.Key.Source = v1.Endpoint{
 		Type:           v1.EndpointType(b.ft.ValueString(key, "src_type")),
 		AggregatedName: b.ft.ValueString(key, "src_name_aggr"),
@@ -192,10 +199,14 @@ func (b *l7FlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Comp
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L7FlowParams) elastic.Query {
-	query := b.queryHelper.BaseQuery(i)
+func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L7FlowParams) (elastic.Query, error) {
+	query, err := b.queryHelper.BaseQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	query.Must(b.queryHelper.NewTimeRangeQuery(
 		logtools.WithDefaultUntilNow(opts.TimeRange),
 	))
-	return query
+	return query, nil
 }

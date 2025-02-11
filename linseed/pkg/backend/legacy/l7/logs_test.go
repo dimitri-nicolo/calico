@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
@@ -25,10 +25,9 @@ func TestL7Logs(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestCreateL7Log (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{
-				Cluster: cluster,
-				Tenant:  tenant,
-			}
+			clusterInfo1 := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			clusterInfo2 := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			clusterInfo3 := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 			f := v1.L7Log{
 				StartTime:            time.Now().Unix(),
@@ -43,54 +42,77 @@ func TestL7Logs(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			response, err := lb.Create(ctx, clusterInfo, []v1.L7Log{f})
-			require.NoError(t, err)
-			require.Equal(t, response.Failed, 0)
-			require.Equal(t, response.Succeeded, 1)
-			require.Len(t, response.Errors, 0)
+			for _, clusterInfo := range []bapi.ClusterInfo{clusterInfo1, clusterInfo2, clusterInfo3} {
+				response, err := lb.Create(ctx, clusterInfo, []v1.L7Log{f})
+				require.NoError(t, err)
+				require.Equal(t, response.Failed, 0)
+				require.Equal(t, response.Succeeded, 1)
+				require.Len(t, response.Errors, 0)
 
-			// Read it back and make sure it matches.
-			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+				// Read it back and make sure it matches.
+				err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
+
+			params := &v1.L7LogParams{}
+
+			t.Run("should query single cluster", func(t *testing.T) {
+				clusterInfo := clusterInfo1
+				results, err := lb.List(ctx, clusterInfo, params)
+				require.NoError(t, err)
+				require.Len(t, results.Items, 1)
+				backendutils.AssertL7LogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+				require.Equal(t, f, results.Items[0])
+			})
+
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				params.SetClusters(selectedClusters)
+				results, err := lb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+				require.NoError(t, err)
+				require.Len(t, results.Items, 2)
+			})
+
+			t.Run("should query all clusters", func(t *testing.T) {
+				params.SetAllClusters(true)
+				results, err := lb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+				require.NoError(t, err)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					require.Truef(t, backendutils.MatchIn(results.Items, backendutils.L7LogClusterEquals(cluster)), "Cluster %s not found", cluster)
+				}
+			})
+		})
+
+		RunAllModes(t, "no cluster name given on request", func(t *testing.T) {
+			// It should reject requests with no cluster name given.
+			clusterInfo := bapi.ClusterInfo{}
+			_, err := lb.Create(ctx, clusterInfo, []v1.L7Log{})
+			require.Error(t, err)
 
 			params := &v1.L7LogParams{}
 			results, err := lb.List(ctx, clusterInfo, params)
-			require.NoError(t, err)
-			require.Len(t, results.Items, 1)
-			backendutils.AssertL7LogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
-			require.Equal(t, f, results.Items[0])
+			require.Error(t, err)
+			require.Nil(t, results)
+		})
+
+		RunAllModes(t, "bad startFrom on request", func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
+			params := &v1.L7LogParams{
+				QueryParams: v1.QueryParams{
+					AfterKey: map[string]interface{}{"startFrom": "badvalue"},
+				},
+			}
+			results, err := lb.List(ctx, clusterInfo, params)
+			require.Error(t, err)
+			require.Nil(t, results)
 		})
 	}
-
-	RunAllModes(t, "no cluster name given on request", func(t *testing.T) {
-		// It should reject requests with no cluster name given.
-		clusterInfo := bapi.ClusterInfo{}
-		_, err := lb.Create(ctx, clusterInfo, []v1.L7Log{})
-		require.Error(t, err)
-
-		params := &v1.L7LogParams{}
-		results, err := lb.List(ctx, clusterInfo, params)
-		require.Error(t, err)
-		require.Nil(t, results)
-	})
-
-	RunAllModes(t, "bad startFrom on request", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
-		params := &v1.L7LogParams{
-			QueryParams: v1.QueryParams{
-				AfterKey: map[string]interface{}{"startFrom": "badvalue"},
-			},
-		}
-		results, err := lb.List(ctx, clusterInfo, params)
-		require.Error(t, err)
-		require.Nil(t, results)
-	})
 }
 
 // TestAggregations tests running a real elasticsearch query to get aggregations.
 func TestAggregations(t *testing.T) {
 	RunAllModes(t, "should return time-series L7 log aggregation results", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Start the test numLogs minutes in the past.
 		numLogs := 5
@@ -173,7 +195,7 @@ func TestAggregations(t *testing.T) {
 	})
 
 	RunAllModes(t, "should return aggregate stats", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Start the test numLogs minutes in the past.
 		numLogs := 5

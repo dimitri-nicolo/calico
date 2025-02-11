@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -104,6 +104,7 @@ func NewSingleIndexFlowBackend(c lmaelastic.Client, options ...index.Option) bap
 func newFlowBackend(c lmaelastic.Client, singleIndex bool, options ...index.Option) bapi.FlowBackend {
 	// These are the keys which define a flow in ES, and will be used to create buckets in the ES result.
 	compositeSources := []lmaelastic.AggCompositeSourceInfo{
+		{Name: "cluster", Field: "cluster"},
 		{Name: "dest_type", Field: "dest_type"},
 		{Name: "dest_namespace", Field: "dest_namespace"},
 		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
@@ -285,6 +286,7 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 		Namespace:      b.ft.ValueString(key, "dest_namespace"),
 		Port:           b.ft.ValueInt64(key, "dest_port"),
 	}
+	flow.Key.Cluster = b.ft.ValueString(key, "cluster")
 
 	// Build the flow.
 	flow.LogStats = &v1.LogStats{
@@ -363,7 +365,10 @@ func (b *flowBackend) ConvertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts *v1.L3FlowParams) (elastic.Query, error) {
-	query := b.queryHelper.BaseQuery(i)
+	query, err := b.queryHelper.BaseQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
 
 	// Every request has at least a time-range limitation.
 	query.Filter(b.queryHelper.NewTimeRangeQuery(

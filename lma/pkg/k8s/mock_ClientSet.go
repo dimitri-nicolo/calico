@@ -28,7 +28,7 @@ import (
 	certificatesv1alpha1 "k8s.io/client-go/kubernetes/typed/certificates/v1alpha1"
 	certificatesv1beta1 "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
 	coordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
-	coordinationv1alpha1 "k8s.io/client-go/kubernetes/typed/coordination/v1alpha1"
+	v1alpha2 "k8s.io/client-go/kubernetes/typed/coordination/v1alpha2"
 	coordinationv1beta1 "k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	discoveryv1 "k8s.io/client-go/kubernetes/typed/discovery/v1"
@@ -52,6 +52,7 @@ import (
 	rbacv1alpha1 "k8s.io/client-go/kubernetes/typed/rbac/v1alpha1"
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	v1alpha3 "k8s.io/client-go/kubernetes/typed/resource/v1alpha3"
+	resourcev1beta1 "k8s.io/client-go/kubernetes/typed/resource/v1beta1"
 	schedulingv1 "k8s.io/client-go/kubernetes/typed/scheduling/v1"
 	schedulingv1alpha1 "k8s.io/client-go/kubernetes/typed/scheduling/v1alpha1"
 	schedulingv1beta1 "k8s.io/client-go/kubernetes/typed/scheduling/v1beta1"
@@ -486,20 +487,20 @@ func (_m *MockClientSet) CoordinationV1() coordinationv1.CoordinationV1Interface
 	return r0
 }
 
-// CoordinationV1alpha1 provides a mock function with given fields:
-func (_m *MockClientSet) CoordinationV1alpha1() coordinationv1alpha1.CoordinationV1alpha1Interface {
+// CoordinationV1alpha2 provides a mock function with given fields:
+func (_m *MockClientSet) CoordinationV1alpha2() v1alpha2.CoordinationV1alpha2Interface {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for CoordinationV1alpha1")
+		panic("no return value specified for CoordinationV1alpha2")
 	}
 
-	var r0 coordinationv1alpha1.CoordinationV1alpha1Interface
-	if rf, ok := ret.Get(0).(func() coordinationv1alpha1.CoordinationV1alpha1Interface); ok {
+	var r0 v1alpha2.CoordinationV1alpha2Interface
+	if rf, ok := ret.Get(0).(func() v1alpha2.CoordinationV1alpha2Interface); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(coordinationv1alpha1.CoordinationV1alpha1Interface)
+			r0 = ret.Get(0).(v1alpha2.CoordinationV1alpha2Interface)
 		}
 	}
 
@@ -1020,6 +1021,26 @@ func (_m *MockClientSet) ResourceV1alpha3() v1alpha3.ResourceV1alpha3Interface {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(v1alpha3.ResourceV1alpha3Interface)
+		}
+	}
+
+	return r0
+}
+
+// ResourceV1beta1 provides a mock function with given fields:
+func (_m *MockClientSet) ResourceV1beta1() resourcev1beta1.ResourceV1beta1Interface {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResourceV1beta1")
+	}
+
+	var r0 resourcev1beta1.ResourceV1beta1Interface
+	if rf, ok := ret.Get(0).(func() resourcev1beta1.ResourceV1beta1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(resourcev1beta1.ResourceV1beta1Interface)
 		}
 	}
 

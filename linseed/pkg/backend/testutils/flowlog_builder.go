@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 	lmaapi "github.com/projectcalico/calico/lma/pkg/api"
@@ -79,12 +80,13 @@ func (b *FlowLogBuilder) Build() (*v1.FlowLog, error) {
 // Note that some fields on a Flow are aggregated, and so will need to be calculated based
 // on the sum total of flow logs used to build the flow.
 // Our aggregation logic within the builder is fairly limited.
-func (b *FlowLogBuilder) ExpectedFlow(t *testing.T) *v1.L3Flow {
+func (b *FlowLogBuilder) ExpectedFlow(t *testing.T, info bapi.ClusterInfo) *v1.L3Flow {
 	// Initialize the flow with identifying information. For now, we
 	// don't support multiple flows from a single builder, so we assume
 	// all of the logs have the same Key fields.
 	f := &v1.L3Flow{
 		Key: v1.L3FlowKey{
+			Cluster:  info.Cluster,
 			Action:   v1.FlowAction(b.activeLog.Action),
 			Reporter: v1.FlowReporter(b.activeLog.Reporter),
 			Protocol: b.activeLog.Protocol,

@@ -133,6 +133,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -140,6 +142,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -207,6 +211,8 @@
             "source": [
               {
                 "name": "coredns",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -537,6 +543,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -544,6 +552,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -630,6 +640,8 @@
             "source": [
               {
                 "name": "chronyd",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -637,6 +649,8 @@
               },
               {
                 "name": "coredns",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -644,6 +658,8 @@
               },
               {
                 "name": "google_guest_ag",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -651,6 +667,8 @@
               },
               {
                 "name": "google_osconfig",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -658,6 +676,8 @@
               },
               {
                 "name": "kubelet",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -665,6 +685,8 @@
               },
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -672,6 +694,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -932,6 +956,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -939,6 +965,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1107,6 +1135,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1114,6 +1144,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1173,6 +1205,8 @@
             "source": [
               {
                 "name": "coredns",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1289,6 +1323,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1296,6 +1332,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1610,6 +1648,8 @@
             "source": [
               {
                 "name": "wrk:worker_0",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -1617,6 +1657,8 @@
               },
               {
                 "name": "wrk:worker_1",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,

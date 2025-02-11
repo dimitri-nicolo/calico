@@ -74,7 +74,7 @@ func TestFV_AuditEE(t *testing.T) {
 		}
 
 		// Perform a query.
-		audits, err := cli.AuditLogs(cluster).List(ctx, &params)
+		audits, err := cli.AuditLogs(cluster1).List(ctx, &params)
 
 		require.NoError(t, err)
 		require.Equal(t, []v1.AuditLog{}, audits.Items)
@@ -87,13 +87,15 @@ func TestFV_AuditEE(t *testing.T) {
 			AuditID:                  "any-ee-id",
 			RequestReceivedTimestamp: metav1.NewMicroTime(reqTime),
 		}}}
-		bulk, err := cli.AuditLogs(cluster).Create(ctx, v1.AuditLogTypeEE, audits)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create audit did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.AuditLogs(clusterInfo.Cluster).Create(ctx, v1.AuditLogTypeEE, audits)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create audit did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
-		require.NoError(t, err)
+			// Refresh elasticsearch so that results appear.
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
 		// Read it back.
 		params := v1.AuditLogParams{
@@ -105,16 +107,50 @@ func TestFV_AuditEE(t *testing.T) {
 			},
 			Type: v1.AuditLogTypeEE,
 		}
-		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
-		require.NoError(t, err)
-		require.Len(t, resp.Items, 1)
 
-		// Reset the time as it microseconds to not match perfectly
-		require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
-		resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
-		testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
 
-		require.Equal(t, audits, resp.Items)
+			resp, err := cli.AuditLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 1)
+
+			// Reset the time as it microseconds to not match perfectly
+			require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
+			resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
+			testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
+
+			require.Equal(t, audits, resp.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.AuditLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.AuditLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
 	})
 
 	RunAuditKubeTest(t, "should return an empty list if there are no Kube audits", func(t *testing.T, idx bapi.Index) {
@@ -129,7 +165,7 @@ func TestFV_AuditEE(t *testing.T) {
 		}
 
 		// Perform a query.
-		audits, err := cli.AuditLogs(cluster).List(ctx, &params)
+		audits, err := cli.AuditLogs(cluster1).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, []v1.AuditLog{}, audits.Items)
 	})
@@ -141,13 +177,15 @@ func TestFV_AuditEE(t *testing.T) {
 			AuditID:                  "any-kube-id",
 			RequestReceivedTimestamp: metav1.NewMicroTime(reqTime),
 		}}}
-		bulk, err := cli.AuditLogs(cluster).Create(ctx, v1.AuditLogTypeKube, audits)
-		require.NoError(t, err)
-		require.Equal(t, bulk.Succeeded, 1, "create audit did not succeed")
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			bulk, err := cli.AuditLogs(clusterInfo.Cluster).Create(ctx, v1.AuditLogTypeKube, audits)
+			require.NoError(t, err)
+			require.Equal(t, bulk.Succeeded, 1, "create audit did not succeed")
 
-		// Refresh elasticsearch so that results appear.
-		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
-		require.NoError(t, err)
+			// Refresh elasticsearch so that results appear.
+			err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+			require.NoError(t, err)
+		}
 
 		// Read it back.
 		params := v1.AuditLogParams{
@@ -159,19 +197,55 @@ func TestFV_AuditEE(t *testing.T) {
 			},
 			Type: v1.AuditLogTypeKube,
 		}
-		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
-		require.NoError(t, err)
 
-		require.Len(t, resp.Items, 1)
-		// Reset the time as it microseconds to not match perfectly
-		require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
-		resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
-		testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
+		t.Run("should query single cluster", func(t *testing.T) {
+			cluster := cluster1
 
-		require.Equal(t, audits, resp.Items)
+			resp, err := cli.AuditLogs(cluster).List(ctx, &params)
+			require.NoError(t, err)
+
+			require.Len(t, resp.Items, 1)
+			// Reset the time as it microseconds to not match perfectly
+			require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
+			resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
+			testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
+
+			require.Equal(t, audits, resp.Items)
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			params.SetClusters(selectedClusters)
+
+			_, err := cli.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+
+			require.Len(t, resp.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.AuditLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			params.SetAllClusters(true)
+			_, err := cli.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.ErrorContains(t, err, "Unauthorized")
+
+			resp, err := multiClusterQueryClient.AuditLogs(v1.QueryMultipleClusters).List(ctx, &params)
+			require.NoError(t, err)
+			require.Len(t, resp.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, testutils.MatchIn(resp.Items, testutils.AuditLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
+			}
+		})
 	})
 
 	RunAuditEETest(t, "should support pagination for items >= 10000 for EE Audit", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K audit logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -221,6 +295,8 @@ func TestFV_AuditEE(t *testing.T) {
 	})
 
 	RunAuditKubeTest(t, "should support pagination for items >= 10000 for Kube Audit", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 10001
 		// Create > 10K audit logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -270,6 +346,8 @@ func TestFV_AuditEE(t *testing.T) {
 	})
 
 	RunAuditEETest(t, "should support pagination for EE Audit", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 		// Create 5 audit logs.
 		logTime := time.Unix(100, 0).UTC()
@@ -360,6 +438,8 @@ func TestFV_AuditEE(t *testing.T) {
 	})
 
 	RunAuditKubeTest(t, "should support pagination for Kube Audit", func(t *testing.T, idx bapi.Index) {
+		cluster := cluster1
+		clusterInfo := cluster1Info
 		totalItems := 5
 
 		// Create 5 audit logs.
@@ -455,8 +535,11 @@ func TestFV_AuditLogsTenancy(t *testing.T) {
 		// Instantiate a client for an unexpected tenant.
 		args := DefaultLinseedArgs()
 		args.TenantID = "bad-tenant"
-		tenantCLI, err := NewLinseedClient(args)
+		tenantCLI, err := NewLinseedClient(args, TokenPath)
 		require.NoError(t, err)
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// Create a basic log. We expect this to fail, since we're using
 		// an unexpected tenant ID on the request.

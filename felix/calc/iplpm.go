@@ -17,7 +17,7 @@ package calc
 import (
 	"strings"
 
-	"gopkg.in/tchap/go-patricia.v2/patricia"
+	"github.com/tchap/go-patricia/v2/patricia"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

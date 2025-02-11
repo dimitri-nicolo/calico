@@ -29,7 +29,9 @@ var (
 	b           bapi.L7FlowBackend
 	lb          bapi.L7LogBackend
 	ctx         context.Context
-	cluster     string
+	cluster1    string
+	cluster2    string
+	cluster3    string
 	indexGetter bapi.Index
 )
 
@@ -77,7 +79,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster1 = testutils.RandomClusterName()
+	cluster2 = testutils.RandomClusterName()
+	cluster3 = testutils.RandomClusterName()
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
@@ -89,8 +93,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 		cancel()
 
 		// Clean up data from the test.
-		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-		require.NoError(t, err)
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		// Cancel logging
 		logCancel()
@@ -103,10 +109,14 @@ func TestL7FlowsMainline(t *testing.T) {
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		name := fmt.Sprintf("TestListL7Flows (tenant=%s)", tenant)
 		RunAllModes(t, name, func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
+			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
 			// Put some data into ES so we can query it.
-			expected := populateL7FlowData(t, ctx, client, clusterInfo, expectedL7Flow, l7Log)
+			expected1 := populateL7FlowData(t, ctx, client, cluster1Info, expectedL7Flow, l7Log)
+			populateL7FlowData(t, ctx, client, cluster2Info, expectedL7Flow, l7Log)
+			populateL7FlowData(t, ctx, client, cluster3Info, expectedL7Flow, l7Log)
 
 			// Set time range so that we capture all of the populated flow logs.
 			opts := v1.L7FlowParams{}
@@ -114,33 +124,59 @@ func TestL7FlowsMainline(t *testing.T) {
 			opts.TimeRange.From = time.Now().Add(-5 * time.Second)
 			opts.TimeRange.To = time.Now().Add(5 * time.Second)
 
-			// Query for flows. There should be a single flow from the populated data.
-			r, err := b.List(ctx, clusterInfo, &opts)
-			require.NoError(t, err)
-			require.Len(t, r.Items, 1)
+			t.Run("should query single cluster", func(t *testing.T) {
+				// Query for flows. There should be a single flow from the populated data.
+				r, err := b.List(ctx, cluster1Info, &opts)
+				require.NoError(t, err)
+				require.Len(t, r.Items, 1)
 
-			// Assert that the flow data is populated correctly.
-			require.Equal(t, expected, r.Items[0])
+				// Assert that the flow data is populated correctly.
+				require.Equal(t, expected1, r.Items[0])
+			})
 
-			// Create some data for a different tenant.
-			otherTenantInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: "suspicious-tenant"}
-			otherL7Log := func(i int) v1.L7Log {
-				// Modify the base log to make it unique so we can distinguish between the two logs and
-				// thus check that the right data is returned for each call.
-				l := l7Log(i)
-				l.SourceType = "sus"
-				return l
-			}
-			expected2 := populateL7FlowData(t, ctx, client, otherTenantInfo, expectedL7Flow, otherL7Log)
-			expected2.Key.Source.Type = "sus"
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				opts.SetClusters(selectedClusters)
+				r, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &opts)
+				require.NoError(t, err)
+				require.Len(t, r.Items, 2)
 
-			// Attempt to access using another tenant but with the same options as above. This should return that tenant's flow,
-			// but other tenant's flow - even though the options otherwise match the data we inserted for the first tenant.
-			r, err = b.List(ctx, otherTenantInfo, &opts)
-			require.NoError(t, err)
-			require.Len(t, r.Items, 1)
-			require.Equal(t, expected2, r.Items[0])
-			require.NotEqual(t, expected, r.Items[0])
+				for _, cluster := range selectedClusters {
+					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.L7FlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+				}
+			})
+
+			t.Run("should query all clusters", func(t *testing.T) {
+				opts.SetAllClusters(true)
+				r, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &opts)
+				require.NoError(t, err)
+				require.Len(t, r.Items, 3)
+				for _, cluster := range []string{cluster1, cluster2, cluster3} {
+					require.Truef(t, backendutils.MatchIn(r.Items, backendutils.L7FlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+				}
+			})
+
+			t.Run("other tenant", func(t *testing.T) {
+				// Create some data for a different tenant.
+				otherTenantInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: "suspicious-tenant"}
+				otherL7Log := func(i int) v1.L7Log {
+					// Modify the base log to make it unique so we can distinguish between the two logs and
+					// thus check that the right data is returned for each call.
+					l := l7Log(i)
+					l.SourceType = "sus"
+					return l
+				}
+				otherTenantExpected2 := populateL7FlowData(t, ctx, client, otherTenantInfo, expectedL7Flow, otherL7Log)
+				otherTenantExpected2.Key.Source.Type = "sus"
+
+				// Attempt to access using another tenant but with the same options as above. This should return that tenant's flow,
+				// but other tenant's flow - even though the options otherwise match the data we inserted for the first tenant.
+				r, err := b.List(ctx, otherTenantInfo, &opts)
+				require.NoError(t, err)
+				require.Len(t, r.Items, 1)
+				require.Equal(t, otherTenantExpected2, r.Items[0])
+				require.NotEqual(t, expected1, r.Items[0])
+			})
 		})
 	}
 
@@ -154,7 +190,7 @@ func TestL7FlowsMainline(t *testing.T) {
 	})
 
 	RunAllModes(t, "empty response code stored", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Put some data into ES so we can query it.
 		expected := populateL7FlowData(t, ctx, client, clusterInfo, expectedL7FlowNoResponseCode, l7LogEmptyResponseCode)
@@ -185,6 +221,7 @@ type (
 func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, clusterInfo bapi.ClusterInfo, flowGenerator l7FlowGenerator, generator l7LogGenerator) v1.L7Flow {
 	// The expected flow log - we'll populate fields as we go.
 	expected := flowGenerator()
+	expected.Key.Cluster = clusterInfo.Cluster
 
 	// Used to track the total DurationMean across all L7 logs we create.
 	var durationMeanTotal int64 = 0

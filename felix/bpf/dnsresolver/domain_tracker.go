@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/tchap/go-patricia.v2/patricia"
+	"github.com/tchap/go-patricia/v2/patricia"
 
 	"github.com/projectcalico/calico/felix/bpf/maps"
 	"github.com/projectcalico/calico/felix/cachingmap"

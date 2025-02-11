@@ -142,8 +142,6 @@ for expected in $(ls *.expected); do
     mv ${stderr}.sub ${stderr}
 
     if diff -u ${expected} ${actual}; then
-        # workaround kubernetes v1.31 regression https://github.com/kubernetes/kubernetes/issues/126951
-        sed -i '/failed to initialize nfacct client/d' ${stderr}
         if diff -u expected.stderr.common ${stderr}; then
             echo TEST: ${c}/${expected}: PASSED
             let 'passed++'

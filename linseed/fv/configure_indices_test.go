@@ -82,7 +82,9 @@ func configureIndicesSetupAndTeardown(t *testing.T, idx bapi.Index) func() {
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	return func() {
-		_ = testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, clusterInfo)
+		for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+			_ = testutils.CleanupIndices(context.Background(), esClient, idx.IsSingleIndex(), idx, clusterInfo)
+		}
 		logCancel()
 		cancel()
 	}

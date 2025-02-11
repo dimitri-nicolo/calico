@@ -292,36 +292,40 @@ func collectDiagsForSelectedPods(dir, linkDir string, opts *diagOpts, kubeClient
 }
 
 func collectCalicoResource(dir string) {
+	log.Info("Auditing calico resource definitions")
+	buf, err := common.Exec([]string{"kubectl", "get", "customresourcedefinition", "-o", "go-template", "--template", "{{range .items}}{{.metadata.name}} {{end}}"})
+	if err != nil {
+		fmt.Printf("Couldn't list CRDs: %s\n", err)
+		if buf != nil {
+			fmt.Printf("\tcmd output:\n\t\t%s", buf.String())
+		}
+		return
+	}
+
+	rawStr := buf.String()
+	crds := strings.Fields(rawStr)
 	commands := []common.Cmd{}
-	for _, resource := range []string{
-		"bgpconfigurations",
-		"bgppeers",
-		"blockaffinities",
-		"clusterinformations",
-		"felixconfigurations",
-		"globalnetworkpolicies",
-		"globalnetworksets",
-		"hostendpoints",
-		"ipamblocks",
-		"ipamhandles",
-		"ippools",
-		"licensekeys",
-		"networkpolicies",
-		"networksets",
-		"tiers",
-		"egressgatewaypolicies",
-	} {
+	for _, resource := range crds {
+		if !strings.Contains(resource, "projectcalico") && !strings.Contains(resource, "tigera") {
+			continue
+		}
+
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect Calico %v (yaml)", resource),
-			CmdStr:   fmt.Sprintf("kubectl get %v -o yaml", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v -Ao yaml", resource),
 			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
 		}, common.Cmd{
 			Info:     fmt.Sprintf("Collect Calico %v (wide text)", resource),
-			CmdStr:   fmt.Sprintf("kubectl get %v -o wide", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v -Ao wide", resource),
 			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
 		})
 	}
 
+	common.ExecAllCmdsWriteToFile(commands)
+}
+
+func collectCalicoSystemNamespace(dir string) {
+	commands := []common.Cmd{}
 	commands = append(commands, common.Cmd{
 		Info:     fmt.Sprintf("Collect all in %s (yaml)", common.CalicoNamespace),
 		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o yaml", common.CalicoNamespace),
@@ -334,37 +338,8 @@ func collectCalicoResource(dir string) {
 	common.ExecAllCmdsWriteToFile(commands)
 }
 
-func collectTigeraOperator(dir string) {
+func collectTigeraOperatorNamespace(dir string) {
 	commands := []common.Cmd{}
-	for _, resource := range []string{
-		"apiservers",
-		"applicationlayers",
-		"authentications.operator.tigera.io",
-		"compliances",
-		"egressgateways",
-		"gatewayapis",
-		"installations",
-		"intrusiondetections",
-		"logcollectors",
-		"logstorages",
-		"managementclusterconnections",
-		"managers",
-		"monitors",
-		"packetcaptureapis",
-		"policyrecommendations",
-		"tigerastatuses",
-	} {
-		commands = append(commands, common.Cmd{
-			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
-			CmdStr:   fmt.Sprintf("kubectl get %v -o yaml", resource),
-			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
-		}, common.Cmd{
-			Info:     fmt.Sprintf("Collect %v (wide text)", resource),
-			CmdStr:   fmt.Sprintf("kubectl get %v -o wide", resource),
-			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
-		})
-	}
-
 	commands = append(commands, common.Cmd{
 		Info:     fmt.Sprintf("Collect all in %s (yaml)", common.TigeraOperatorNamespace),
 		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o yaml", common.TigeraOperatorNamespace),
@@ -433,6 +408,30 @@ func collectKubernetesResource(dir string) {
 		Info:     "Collect namespaces (wide text)",
 		CmdStr:   "kubectl get namespaces -o yaml",
 		FilePath: fmt.Sprintf("%s/namespaces.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect k8s networkpolicies (yaml)",
+		CmdStr:   "kubectl get networkpolicies.networking.k8s.io -Ao yaml",
+		FilePath: fmt.Sprintf("%s/networkpolicies.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect k8s networkpolicies (text)",
+		CmdStr:   "kubectl get networkpolicies.networking.k8s.io -Ao wide",
+		FilePath: fmt.Sprintf("%s/networkpolicies.txt", dir),
+	}, common.Cmd{
+		Info:     "Collect k8s adminnetworkpolicies (yaml)",
+		CmdStr:   "kubectl get adminnetworkpolicies.policy.networking.k8s.io -Ao yaml",
+		FilePath: fmt.Sprintf("%s/adminnetworkpolicies.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect k8s adminnetworkpolicies (text)",
+		CmdStr:   "kubectl get adminnetworkpolicies.policy.networking.k8s.io -Ao wide",
+		FilePath: fmt.Sprintf("%s/adminnetworkpolicies.txt", dir),
+	}, common.Cmd{
+		Info:     "Collect k8s baselineadminnetworkpolicies (yaml)",
+		CmdStr:   "kubectl get baselineadminnetworkpolicies.policy.networking.k8s.io -Ao yaml",
+		FilePath: fmt.Sprintf("%s/baselineadminnetworkpolicies.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect k8s baselineadminnetworkpolicies (text)",
+		CmdStr:   "kubectl get baselineadminnetworkpolicies.policy.networking.k8s.io -Ao wide",
+		FilePath: fmt.Sprintf("%s/baselineadminnetworkpolicies.txt", dir),
 	})
 	common.ExecAllCmdsWriteToFile(commands)
 }
@@ -470,8 +469,9 @@ func collectGlobalClusterInformation(dir string) {
 		},
 	})
 
-	collectCalicoResource(dir + "/calico")
-	collectTigeraOperator(dir + "/tigera")
+	collectCalicoResource(dir + "/crd")
+	collectTigeraOperatorNamespace(dir + "/tigera-operator")
+	collectCalicoSystemNamespace(dir + "/calico-system")
 	collectKubernetesResource(dir + "/kubernetes")
 	collectThirdPartyResource(dir + "/third-party")
 }

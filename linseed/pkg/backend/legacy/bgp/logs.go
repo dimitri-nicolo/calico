@@ -129,13 +129,17 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 	}
 
 	// Build the query.
+	q, err := b.buildQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
+
 	query := b.client.Search().
 		Size(opts.QueryParams.GetMaxPageSize()).
-		Query(b.buildQuery(i, opts))
+		Query(q)
 
 	// Configure pagination options
 	var startFrom int
-	var err error
 	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
 	if err != nil {
 		return nil, err
@@ -174,14 +178,17 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 }
 
 // buildQuery builds an elastic query using the given parameters.
-func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.BGPLogParams) elastic.Query {
+func (b *bgpLogBackend) buildQuery(i bapi.ClusterInfo, opts *v1.BGPLogParams) (elastic.Query, error) {
 	// Start with the base query for this index.
-	query := b.queryHelper.BaseQuery(i)
+	query, err := b.queryHelper.BaseQuery(i, opts)
+	if err != nil {
+		return nil, err
+	}
 
 	// Add the time range to the query.
 	query.Filter(b.queryHelper.NewTimeRangeQuery(
 		logtools.WithDefaultLast5Minutes(opts.QueryParams.TimeRange),
 	))
 
-	return query
+	return query, nil
 }

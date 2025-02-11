@@ -32,7 +32,9 @@ var (
 	b           bapi.EventsBackend
 	ctx         context.Context
 	cache       bapi.IndexInitializer
-	cluster     string
+	cluster1    string
+	cluster2    string
+	cluster3    string
 	indexGetter bapi.Index
 )
 
@@ -78,7 +80,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = backendutils.RandomClusterName()
+	cluster1 = backendutils.RandomClusterName()
+	cluster2 = backendutils.RandomClusterName()
+	cluster3 = backendutils.RandomClusterName()
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
@@ -86,8 +90,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Function contains teardown logic.
 	return func() {
-		err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-		require.NoError(t, err)
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			err = backendutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		cancel()
 		logCancel()
@@ -118,40 +124,62 @@ func TestCreateEvent(t *testing.T) {
 
 	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
 		RunAllModes(t, "Create Event with all valid params", func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster, Tenant: tenant}
-			// Create the event in ES.
-			resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
-			require.NoError(t, err)
-			require.Equal(t, 0, len(resp.Errors))
-			require.Equal(t, 1, resp.Total)
-			require.Equal(t, 0, resp.Failed)
-			require.Equal(t, 1, resp.Succeeded)
+			cluster1Info := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+			cluster2Info := bapi.ClusterInfo{Cluster: cluster2, Tenant: tenant}
+			cluster3Info := bapi.ClusterInfo{Cluster: cluster3, Tenant: tenant}
 
-			// Refresh the index.
-			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
-			require.NoError(t, err)
+			// Create the event in ES.
+			for _, clusterInfo := range []bapi.ClusterInfo{cluster1Info, cluster2Info, cluster3Info} {
+				resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
+				require.NoError(t, err)
+				require.Equal(t, 0, len(resp.Errors))
+				require.Equal(t, 1, resp.Total)
+				require.Equal(t, 0, resp.Failed)
+				require.Equal(t, 1, resp.Succeeded)
+
+				// Refresh the index.
+				err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+				require.NoError(t, err)
+			}
 
 			// List the events and make sure the one we created is present.
-			results, err := b.List(ctx, clusterInfo, &v1.EventParams{
+			params := &v1.EventParams{
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
 						From: time.Now().Add(-1 * time.Minute),
 						To:   time.Now().Add(1 * time.Minute),
 					},
 				},
-			})
-			require.NoError(t, err)
-			require.NotNil(t, 1, results)
-			require.Equal(t, 1, len(results.Items))
+			}
 
-			// We expect the ID to be present, but it's a random value so we
-			// can't assert on the exact value.
-			require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
+			t.Run("should query single cluster", func(t *testing.T) {
+				clusterInfo := cluster1Info
+				results, err := b.List(ctx, clusterInfo, params)
+				require.NoError(t, err)
+				require.NotNil(t, 1, results)
+				require.Equal(t, 1, len(results.Items))
+
+				// We expect the ID to be present, but it's a random value so we
+				// can't assert on the exact value.
+				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
+			})
+
+			t.Run("should query multiple clusters", func(t *testing.T) {
+				selectedClusters := []string{cluster2, cluster3}
+				params.SetClusters(selectedClusters)
+				results, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, params)
+				require.NoError(t, err)
+				require.NotNil(t, 1, results)
+				require.Equal(t, 2, len(results.Items))
+				for _, cluster := range selectedClusters {
+					require.Truef(t, backendutils.MatchIn(results.Items, backendutils.EventClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+				}
+			})
 		})
 	}
 
 	RunAllModes(t, "Create Event with given event id", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		event.ID = "SOMERANDOMID"
 		// Create the event in ES.
 		resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
@@ -204,7 +232,7 @@ func TestCreateEvent(t *testing.T) {
 	})
 
 	RunAllModes(t, "Invalid start from", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		results, err := b.List(ctx, clusterInfo, &v1.EventParams{
 			QueryParams: v1.QueryParams{
@@ -235,7 +263,7 @@ func TestEventSelector(t *testing.T) {
 	// When valid, the number of results we get can change depending
 	// on what events the selector matches.
 	testSelector := func(t *testing.T, selector string, numResults int, shouldSucceed bool) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// The event to create
 		event := v1.Event{
@@ -389,7 +417,7 @@ func TestSecurityEvents(t *testing.T) {
 	}
 
 	testEventsFiltering := func(t *testing.T, selector string, expectedEvents []v1.Event) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Create the event in ES.
 		resp, err := b.Create(ctx, clusterInfo, events)
@@ -485,7 +513,7 @@ func TestSelectorMaxLength(t *testing.T) {
 	}
 
 	testEventsFiltering := func(t *testing.T, numExceptions int, expectedError bool) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Create the event in ES.
 		resp, err := b.Create(ctx, clusterInfo, events)
@@ -618,7 +646,7 @@ func TestEventsStatistics(t *testing.T) {
 	}
 
 	RunAllModes(t, "Test distinct values count", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		createEvents(t, clusterInfo)
 
 		params := &v1.EventStatisticsParams{
@@ -750,7 +778,7 @@ func TestEventsStatistics(t *testing.T) {
 
 	for _, tt := range tests {
 		RunAllModes(t, fmt.Sprintf("Test statistics errors/validation: %s", tt.name), func(t *testing.T) {
-			clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 			createEvents(t, clusterInfo)
 
 			r, e := b.Statistics(ctx, clusterInfo, tt.params)
@@ -769,7 +797,7 @@ func TestEventsStatistics(t *testing.T) {
 	}
 
 	RunAllModes(t, "Test Terms Aggregation (with sub-aggregation)", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		createEvents(t, clusterInfo)
 
 		params := &v1.EventStatisticsParams{}
@@ -799,7 +827,7 @@ func TestEventsStatistics(t *testing.T) {
 	})
 
 	RunAllModes(t, "Test Statistics with no events", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// No event added yet, index is most likely not created yet
 
@@ -826,7 +854,7 @@ func TestEventsStatistics(t *testing.T) {
 	})
 
 	RunAllModes(t, "Test Date Histogram Aggregation (1 per day)", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		createEvents(t, clusterInfo)
 
 		params := &v1.EventStatisticsParams{}
@@ -858,7 +886,7 @@ func TestEventsStatistics(t *testing.T) {
 	})
 
 	RunAllModes(t, "Test Statistics with stacked severity date histograms and event values by severity", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 		createEvents(t, clusterInfo)
 
 		params := &v1.EventStatisticsParams{}
@@ -921,7 +949,7 @@ func TestEventsStatistics(t *testing.T) {
 	})
 
 	RunAllModes(t, "Test with no events", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Not creating any event (index won't exist in single tenant mode)
 
@@ -989,7 +1017,7 @@ func TestPagination(t *testing.T) {
 	}
 
 	testSelector := func(t *testing.T, maxPageSize int, numResults int, afterkey map[string]interface{}, shouldSucceed bool, errmsg string) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Create the events in ES.
 		resp, err := b.Create(ctx, clusterInfo, events)
@@ -1053,7 +1081,7 @@ func TestSorting(t *testing.T) {
 
 	// sortingSetup performs additional setup for sorting tests.
 	sortingSetup := func(t *testing.T) {
-		clusterInfo = bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo = bapi.ClusterInfo{Cluster: cluster1}
 		createTime := []time.Time{time.Unix(100, 0), time.Unix(500, 0)}
 
 		// Create array of events.
@@ -1181,7 +1209,7 @@ func TestDismissEvent(t *testing.T) {
 			SourcePort:      testutils.Int64Ptr(48127),
 		}
 
-		clusterInfo = bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo = bapi.ClusterInfo{Cluster: cluster1}
 
 		// Create the event in ES.
 		resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
@@ -1429,13 +1457,13 @@ func TestMultiTenantDismissal(t *testing.T) {
 			SourceNamespace: "michigan",
 			SourcePort:      testutils.Int64Ptr(48127),
 		}
-		clusterInfoA := bapi.ClusterInfo{Cluster: cluster, Tenant: "tenanta"}
+		clusterInfoA := bapi.ClusterInfo{Cluster: cluster1, Tenant: "tenanta"}
 		_, err := b.Create(ctx, clusterInfoA, []v1.Event{event})
 		require.NoError(t, err)
 
 		// Create an event for tenantB.
 		event.Description = "Tenant B event"
-		clusterInfoB := bapi.ClusterInfo{Cluster: cluster, Tenant: "tenantb"}
+		clusterInfoB := bapi.ClusterInfo{Cluster: cluster1, Tenant: "tenantb"}
 		_, err = b.Create(ctx, clusterInfoB, []v1.Event{event})
 		require.NoError(t, err)
 
@@ -1574,13 +1602,13 @@ func TestMultiTenantDeletion(t *testing.T) {
 			SourceNamespace: "michigan",
 			SourcePort:      testutils.Int64Ptr(48127),
 		}
-		clusterInfoA := bapi.ClusterInfo{Cluster: cluster, Tenant: "tenanta"}
+		clusterInfoA := bapi.ClusterInfo{Cluster: cluster1, Tenant: "tenanta"}
 		_, err := b.Create(ctx, clusterInfoA, []v1.Event{event})
 		require.NoError(t, err)
 
 		// Create an event for tenantB.
 		event.Description = "Tenant B event"
-		clusterInfoB := bapi.ClusterInfo{Cluster: cluster, Tenant: "tenantb"}
+		clusterInfoB := bapi.ClusterInfo{Cluster: cluster1, Tenant: "tenantb"}
 		_, err = b.Create(ctx, clusterInfoB, []v1.Event{event})
 		require.NoError(t, err)
 
@@ -1670,7 +1698,7 @@ func TestDeleteEvent(t *testing.T) {
 			SourcePort:      testutils.Int64Ptr(48127),
 		}
 
-		clusterInfo = bapi.ClusterInfo{Cluster: cluster}
+		clusterInfo = bapi.ClusterInfo{Cluster: cluster1}
 		// Create the event in ES.
 		resp, err := b.Create(ctx, clusterInfo, []v1.Event{event})
 		require.NoError(t, err)

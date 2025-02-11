@@ -57,6 +57,8 @@
             "source": [
               {
                 "name": "ui-apis",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -64,6 +66,8 @@
               },
               {
                 "name": "voltron",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -124,6 +128,8 @@
             "source": [
               {
                 "name": "ui-apis",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -131,6 +137,8 @@
               },
               {
                 "name": "voltron",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -215,6 +223,8 @@
             "source": [
               {
                 "name": "ui-apis",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -222,6 +232,8 @@
               },
               {
                 "name": "voltron",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -310,6 +322,8 @@
             "source": [
               {
                 "name": "ui-apis",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -317,6 +331,8 @@
               },
               {
                 "name": "voltron",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -374,6 +390,8 @@
             "source": [
               {
                 "name": "ui-apis",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -381,6 +399,8 @@
               },
               {
                 "name": "voltron",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -455,6 +475,8 @@
             "source": [
               {
                 "name": "ui-apis",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,
@@ -462,6 +484,8 @@
               },
               {
                 "name": "voltron",
+                "source": "",
+                "destination": "",
                 "min_num_names_per_flow": 1,
                 "max_num_names_per_flow": 1,
                 "min_num_ids_per_flow": 1,

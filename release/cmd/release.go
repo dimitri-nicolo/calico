@@ -37,10 +37,11 @@ func releaseCommand(cfg *Config) *cli.Command {
 		Name:        "release",
 		Aliases:     []string{"rel"},
 		Usage:       "Build and publish official releases.",
-		Subcommands: releaseSubCommands(cfg),
+		Subcommands: enterpriseReleaseSubCommand(cfg),
 	}
 }
 
+//lint:ignore U1000 This is used in OSS and needs to be kept to avoid conflicts.
 func releaseSubCommands(cfg *Config) []*cli.Command {
 	return []*cli.Command{
 		// Build release notes prior to a release.

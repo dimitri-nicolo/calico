@@ -11,6 +11,7 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -36,15 +37,8 @@ func NewL7LogsConverter() converter {
 	return converter{basicAtomToElastic}
 }
 
-func (h l7LogsIndexHelper) BaseQuery(i bapi.ClusterInfo) *elastic.BoolQuery {
-	q := elastic.NewBoolQuery()
-	if h.singleIndex {
-		q.Must(elastic.NewTermQuery("cluster", i.Cluster))
-		if i.Tenant != "" {
-			q.Must(elastic.NewTermQuery("tenant", i.Tenant))
-		}
-	}
-	return q
+func (h l7LogsIndexHelper) BaseQuery(i bapi.ClusterInfo, params v1.Params) (*elastic.BoolQuery, error) {
+	return defaultBaseQuery(i, h.singleIndex, params)
 }
 
 func (h l7LogsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, error) {

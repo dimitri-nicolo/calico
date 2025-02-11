@@ -31,7 +31,9 @@ var (
 	b           bapi.DNSFlowBackend
 	lb          bapi.DNSLogBackend
 	ctx         context.Context
-	cluster     string
+	cluster1    string
+	cluster2    string
+	cluster3    string
 	indexGetter bapi.Index
 )
 
@@ -81,7 +83,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create a random cluster name for each test to make sure we don't
 	// interfere between tests.
-	cluster = testutils.RandomClusterName()
+	cluster1 = testutils.RandomClusterName()
+	cluster2 = testutils.RandomClusterName()
+	cluster3 = testutils.RandomClusterName()
 
 	// Each test should take less than 60 seconds.
 	var cancel context.CancelFunc
@@ -93,8 +97,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 		cancel()
 
 		// Clean up data from the test.
-		err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
-		require.NoError(t, err)
+		for _, cluster := range []string{cluster1, cluster2, cluster3} {
+			err = testutils.CleanupIndices(context.Background(), esClient, singleIndex, indexGetter, bapi.ClusterInfo{Cluster: cluster})
+			require.NoError(t, err)
+		}
 
 		// Cancel logging
 		logCancel()
@@ -104,10 +110,12 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 // TestListDNSFlows tests running a real elasticsearch query to list DNS flows.
 func TestListDNSFlows(t *testing.T) {
 	RunAllModes(t, "TestListDNSFlows", func(t *testing.T) {
-		clusterInfo := bapi.ClusterInfo{Cluster: cluster}
+		cluster1Info := bapi.ClusterInfo{Cluster: cluster1}
 
 		// Put some data into ES so we can query it.
-		expected, reqTime := populateDNSLogData(t, ctx, client, clusterInfo.Cluster)
+		expected, reqTime := populateDNSLogData(t, ctx, client, cluster1Info.Cluster)
+		populateDNSLogData(t, ctx, client, cluster2)
+		populateDNSLogData(t, ctx, client, cluster3)
 
 		// Set time range so that we capture all of the populated flow logs.
 		opts := v1.DNSFlowParams{}
@@ -115,13 +123,36 @@ func TestListDNSFlows(t *testing.T) {
 		opts.TimeRange.From = reqTime.Add(-5 * time.Second)
 		opts.TimeRange.To = reqTime.Add(5 * time.Second)
 
-		// Query for flows. There should be a single flow from the populated data.
-		r, err := b.List(ctx, clusterInfo, &opts)
-		require.NoError(t, err)
-		require.Len(t, r.Items, 1)
+		t.Run("should query single cluster", func(t *testing.T) {
+			// Query for flows. There should be a single flow from the populated data.
+			r, err := b.List(ctx, cluster1Info, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
 
-		// Assert that the flow data is populated correctly.
-		require.Equal(t, expected, r.Items[0])
+			// Assert that the flow data is populated correctly.
+			require.Equal(t, expected, r.Items[0])
+		})
+
+		t.Run("should query multiple clusters", func(t *testing.T) {
+			selectedClusters := []string{cluster2, cluster3}
+			opts.SetClusters(selectedClusters)
+			r, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			for _, cluster := range selectedClusters {
+				require.Truef(t, backendutils.MatchIn(r.Items, backendutils.DNSFlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+			}
+		})
+
+		t.Run("should query all clusters", func(t *testing.T) {
+			opts.SetAllClusters(true)
+			r, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 3)
+			for _, cluster := range []string{cluster1, cluster2, cluster3} {
+				require.Truef(t, backendutils.MatchIn(r.Items, backendutils.DNSFlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
+			}
+		})
 	})
 }
 
@@ -138,6 +169,7 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 			AggregatedName: "my-deployment",
 		},
 		ResponseCode: "NOERROR",
+		Cluster:      cluster,
 	}
 	expected.Count = 10
 	expected.LatencyStats = &v1.DNSLatencyStats{

@@ -204,13 +204,16 @@ func (kds *K8sDatastoreInfra) PerTestSetup(index K8sInfraIndex) {
 }
 
 func (kds *K8sDatastoreInfra) RunBPFLog() {
-	arch := utils.GetSysArch()
-	kds.bpfLog = containers.Run("bpf-log",
+	kds.bpfLog = RunBPFLog()
+}
+
+func RunBPFLog() *containers.Container {
+	return containers.Run("bpf-log",
 		containers.RunOpts{
 			AutoRemove:       true,
 			IgnoreEmptyLines: true,
 		}, "--privileged",
-		"calico/bpftool:v5.3-"+arch, "/bpftool", "prog", "tracelog")
+		utils.Config.FelixImage, "/usr/bin/bpftool", "prog", "tracelog")
 }
 
 func (kds *K8sDatastoreInfra) runK8sApiserver() {

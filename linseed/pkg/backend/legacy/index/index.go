@@ -309,6 +309,16 @@ func (i multiIndex) BootstrapIndexName(info bapi.ClusterInfo) string {
 }
 
 func (i multiIndex) Index(info bapi.ClusterInfo) string {
+	if info.IsQueryMultipleClusters() {
+		// drop the cluster suffix, cluster filtering is handled at the query level
+		if info.Tenant != "" {
+			// If a tenant is provided, then we must include it in the index.
+			return fmt.Sprintf("%s.%s.*", i.baseName, info.Tenant)
+		} else {
+			return fmt.Sprintf("%s.*", i.baseName)
+		}
+	}
+
 	if info.Tenant != "" {
 		// If a tenant is provided, then we must include it in the index.
 		return fmt.Sprintf("%s.%s.%s.*", i.baseName, info.Tenant, info.Cluster)

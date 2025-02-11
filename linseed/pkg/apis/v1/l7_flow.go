@@ -17,6 +17,7 @@ type ServicePort struct {
 }
 
 type L7FlowKey struct {
+	Cluster            string      `json:"cluster"`
 	Source             Endpoint    `json:"source"`
 	Destination        Endpoint    `json:"destination"`
 	DestinationService ServicePort `json:"destination_service"`

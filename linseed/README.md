@@ -161,6 +161,16 @@ All clients certificate are provisioned by tigera-operator as secrets in the nam
 client. Operator will also configure tigera-ca-bundle in the namespace of the component to contain the CA used to
 generate Linseed server certificate.
 
+### Multi Cluster Queries
+By default, all requests are made for a single cluster, which is specified in the `X-Cluster-Id` header.
+
+Some components, e.g. the (e.g. `cc-dashboard-query-api`) need to query and aggregate data from multiple clusters.
+
+To do this, the `X-Cluster-Id` header should be set to `v1.QueryMultipleClusters` (`"_MULTI_"`) and in the request body, 
+either `all_clusters` should be set to `true` or the `clusters` field should be set to a list of required clusters.
+
+See below for the additional RBAC requirements for querying multiple clusters.
+
 ### Tokens
 
 Client needs to present a JWT token on all request for authentication and authorizations.
@@ -235,6 +245,32 @@ The following RBAC can be specified:
 | `threatfeeds_domainnameset` | GET/CREATE/DELETE         |
 | `threatfeeds_ipset`         | GET/CREATE/DELETE         |
 | `waflogs`                   | GET/CREATE                |
+
+#### Multi Cluster RBAC
+
+The ability to query across multiple clusters requires additional RBAC permissions. 
+For each resource used in a multi-cluster query, the following permissions are required:
+
+| RESOURCE                                  | VERB |
+|-------------------------------------------|------|
+| `auditlogs-multi-cluster`                 | GET  |
+| `benchmarks-multi-cluster`                | GET  |
+| `bgplogs-multi-cluster`                   | GET  |
+| `compliancereports-multi-cluster`         | GET  |
+| `dnsflows-multi-cluster`                  | GET  |
+| `dnslogs-multi-cluster`                   | GET  |
+| `events-multi-cluster`                    | GET  |
+| `flows-multi-cluster`                     | GET  |
+| `flowlogs-multi-cluster`                  | GET  |
+| `l7flows-multi-cluster`                   | GET  |
+| `l7logs-multi-cluster`                    | GET  |
+| `processes-multi-cluster`                 | GET  |
+| `runtimereports-multi-cluster`            | GET  |
+| `snapshots-multi-cluster`                 | GET  |
+| `threatfeeds_domainnameset-multi-cluster` | GET  |
+| `threatfeeds_ipset-multi-cluster`         | GET  |
+| `waflogs-multi-cluster`                   | GET  |
+
 
 ### Environment variables
 

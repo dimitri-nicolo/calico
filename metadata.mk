@@ -9,7 +9,7 @@ ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
 
 # Version of Kubernetes to use for tests, bitnami/kubectl, and kubectl binary release in
 # compliance benchmarker, confd, and kube-controllers.
-K8S_VERSION=v1.31.4
+K8S_VERSION=v1.32.1
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
@@ -22,6 +22,7 @@ KIND_VERSION=v0.25.0
 PROTOC_VER=v0.1
 UBI8_VERSION=8.10
 UBI9_VERSION=9.4
+GITHUB_CLI_VERSION=2.65.0
 
 # The Semaphore calico-private ID, used when making calls to the Semaphore API.
 SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657
@@ -87,6 +88,9 @@ else ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 else
     THIRD_PARTY_REGISTRY=gcr.io/tigera-dev/third-party-ci
 endif
+
+# The bpftool image to use; this is the output of the https://github.com/projectcalico/bpftool repo.
+BPFTOOL_IMAGE=calico/bpftool:v7.5.0
 
 # Default branch prefix for release branches
 RELEASE_BRANCH_PREFIX ?= release-calient
