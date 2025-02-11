@@ -85,7 +85,7 @@ func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, 
 		if err := f(ctx); err == nil {
 			errorCounter = 0
 		} else if errorCounter++; errorCounter >= MaxRetryTimesBeforeBailingOut {
-			logrus.Fatal("terminating due to reoccuring errors")
+			logrus.Fatal("terminating due to recurring errors")
 		} else {
 			<-time.After(RetryOnErrorDelay * time.Duration(errorCounter))
 		}
