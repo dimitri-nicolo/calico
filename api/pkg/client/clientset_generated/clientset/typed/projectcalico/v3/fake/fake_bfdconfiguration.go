@@ -26,20 +26,22 @@ var bfdconfigurationsKind = v3.SchemeGroupVersion.WithKind("BFDConfiguration")
 
 // Get takes name of the bFDConfiguration, and returns the corresponding bFDConfiguration object, and an error if there is any.
 func (c *FakeBFDConfigurations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.BFDConfiguration, err error) {
+	emptyResult := &v3.BFDConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(bfdconfigurationsResource, name), &v3.BFDConfiguration{})
+		Invokes(testing.NewRootGetActionWithOptions(bfdconfigurationsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.BFDConfiguration), err
 }
 
 // List takes label and field selectors, and returns the list of BFDConfigurations that match those selectors.
 func (c *FakeBFDConfigurations) List(ctx context.Context, opts v1.ListOptions) (result *v3.BFDConfigurationList, err error) {
+	emptyResult := &v3.BFDConfigurationList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(bfdconfigurationsResource, bfdconfigurationsKind, opts), &v3.BFDConfigurationList{})
+		Invokes(testing.NewRootListActionWithOptions(bfdconfigurationsResource, bfdconfigurationsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -58,25 +60,27 @@ func (c *FakeBFDConfigurations) List(ctx context.Context, opts v1.ListOptions) (
 // Watch returns a watch.Interface that watches the requested bFDConfigurations.
 func (c *FakeBFDConfigurations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(bfdconfigurationsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(bfdconfigurationsResource, opts))
 }
 
 // Create takes the representation of a bFDConfiguration and creates it.  Returns the server's representation of the bFDConfiguration, and an error, if there is any.
 func (c *FakeBFDConfigurations) Create(ctx context.Context, bFDConfiguration *v3.BFDConfiguration, opts v1.CreateOptions) (result *v3.BFDConfiguration, err error) {
+	emptyResult := &v3.BFDConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(bfdconfigurationsResource, bFDConfiguration), &v3.BFDConfiguration{})
+		Invokes(testing.NewRootCreateActionWithOptions(bfdconfigurationsResource, bFDConfiguration, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.BFDConfiguration), err
 }
 
 // Update takes the representation of a bFDConfiguration and updates it. Returns the server's representation of the bFDConfiguration, and an error, if there is any.
 func (c *FakeBFDConfigurations) Update(ctx context.Context, bFDConfiguration *v3.BFDConfiguration, opts v1.UpdateOptions) (result *v3.BFDConfiguration, err error) {
+	emptyResult := &v3.BFDConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(bfdconfigurationsResource, bFDConfiguration), &v3.BFDConfiguration{})
+		Invokes(testing.NewRootUpdateActionWithOptions(bfdconfigurationsResource, bFDConfiguration, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.BFDConfiguration), err
 }
@@ -90,7 +94,7 @@ func (c *FakeBFDConfigurations) Delete(ctx context.Context, name string, opts v1
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeBFDConfigurations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(bfdconfigurationsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(bfdconfigurationsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v3.BFDConfigurationList{})
 	return err
@@ -98,10 +102,11 @@ func (c *FakeBFDConfigurations) DeleteCollection(ctx context.Context, opts v1.De
 
 // Patch applies the patch and returns the patched bFDConfiguration.
 func (c *FakeBFDConfigurations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.BFDConfiguration, err error) {
+	emptyResult := &v3.BFDConfiguration{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(bfdconfigurationsResource, name, pt, data, subresources...), &v3.BFDConfiguration{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(bfdconfigurationsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.BFDConfiguration), err
 }

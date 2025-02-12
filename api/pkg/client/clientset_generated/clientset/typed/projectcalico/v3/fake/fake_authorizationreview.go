@@ -26,20 +26,22 @@ var authorizationreviewsKind = v3.SchemeGroupVersion.WithKind("AuthorizationRevi
 
 // Get takes name of the authorizationReview, and returns the corresponding authorizationReview object, and an error if there is any.
 func (c *FakeAuthorizationReviews) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.AuthorizationReview, err error) {
+	emptyResult := &v3.AuthorizationReview{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(authorizationreviewsResource, name), &v3.AuthorizationReview{})
+		Invokes(testing.NewRootGetActionWithOptions(authorizationreviewsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AuthorizationReview), err
 }
 
 // List takes label and field selectors, and returns the list of AuthorizationReviews that match those selectors.
 func (c *FakeAuthorizationReviews) List(ctx context.Context, opts v1.ListOptions) (result *v3.AuthorizationReviewList, err error) {
+	emptyResult := &v3.AuthorizationReviewList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(authorizationreviewsResource, authorizationreviewsKind, opts), &v3.AuthorizationReviewList{})
+		Invokes(testing.NewRootListActionWithOptions(authorizationreviewsResource, authorizationreviewsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -58,36 +60,39 @@ func (c *FakeAuthorizationReviews) List(ctx context.Context, opts v1.ListOptions
 // Watch returns a watch.Interface that watches the requested authorizationReviews.
 func (c *FakeAuthorizationReviews) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(authorizationreviewsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(authorizationreviewsResource, opts))
 }
 
 // Create takes the representation of a authorizationReview and creates it.  Returns the server's representation of the authorizationReview, and an error, if there is any.
 func (c *FakeAuthorizationReviews) Create(ctx context.Context, authorizationReview *v3.AuthorizationReview, opts v1.CreateOptions) (result *v3.AuthorizationReview, err error) {
+	emptyResult := &v3.AuthorizationReview{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(authorizationreviewsResource, authorizationReview), &v3.AuthorizationReview{})
+		Invokes(testing.NewRootCreateActionWithOptions(authorizationreviewsResource, authorizationReview, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AuthorizationReview), err
 }
 
 // Update takes the representation of a authorizationReview and updates it. Returns the server's representation of the authorizationReview, and an error, if there is any.
 func (c *FakeAuthorizationReviews) Update(ctx context.Context, authorizationReview *v3.AuthorizationReview, opts v1.UpdateOptions) (result *v3.AuthorizationReview, err error) {
+	emptyResult := &v3.AuthorizationReview{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(authorizationreviewsResource, authorizationReview), &v3.AuthorizationReview{})
+		Invokes(testing.NewRootUpdateActionWithOptions(authorizationreviewsResource, authorizationReview, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AuthorizationReview), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeAuthorizationReviews) UpdateStatus(ctx context.Context, authorizationReview *v3.AuthorizationReview, opts v1.UpdateOptions) (*v3.AuthorizationReview, error) {
+func (c *FakeAuthorizationReviews) UpdateStatus(ctx context.Context, authorizationReview *v3.AuthorizationReview, opts v1.UpdateOptions) (result *v3.AuthorizationReview, err error) {
+	emptyResult := &v3.AuthorizationReview{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(authorizationreviewsResource, "status", authorizationReview), &v3.AuthorizationReview{})
+		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(authorizationreviewsResource, "status", authorizationReview, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AuthorizationReview), err
 }
@@ -101,7 +106,7 @@ func (c *FakeAuthorizationReviews) Delete(ctx context.Context, name string, opts
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeAuthorizationReviews) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(authorizationreviewsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(authorizationreviewsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v3.AuthorizationReviewList{})
 	return err
@@ -109,10 +114,11 @@ func (c *FakeAuthorizationReviews) DeleteCollection(ctx context.Context, opts v1
 
 // Patch applies the patch and returns the patched authorizationReview.
 func (c *FakeAuthorizationReviews) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.AuthorizationReview, err error) {
+	emptyResult := &v3.AuthorizationReview{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(authorizationreviewsResource, name, pt, data, subresources...), &v3.AuthorizationReview{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(authorizationreviewsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AuthorizationReview), err
 }

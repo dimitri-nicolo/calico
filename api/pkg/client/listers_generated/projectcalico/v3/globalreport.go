@@ -6,8 +6,8 @@ package v3
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -25,30 +25,10 @@ type GlobalReportLister interface {
 
 // globalReportLister implements the GlobalReportLister interface.
 type globalReportLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v3.GlobalReport]
 }
 
 // NewGlobalReportLister returns a new GlobalReportLister.
 func NewGlobalReportLister(indexer cache.Indexer) GlobalReportLister {
-	return &globalReportLister{indexer: indexer}
-}
-
-// List lists all GlobalReports in the indexer.
-func (s *globalReportLister) List(selector labels.Selector) (ret []*v3.GlobalReport, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.GlobalReport))
-	})
-	return ret, err
-}
-
-// Get retrieves the GlobalReport from the index for a given name.
-func (s *globalReportLister) Get(name string) (*v3.GlobalReport, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("globalreport"), name)
-	}
-	return obj.(*v3.GlobalReport), nil
+	return &globalReportLister{listers.New[*v3.GlobalReport](indexer, v3.Resource("globalreport"))}
 }

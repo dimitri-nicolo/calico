@@ -6,8 +6,8 @@ package v3
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -25,30 +25,10 @@ type UISettingsLister interface {
 
 // uISettingsLister implements the UISettingsLister interface.
 type uISettingsLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v3.UISettings]
 }
 
 // NewUISettingsLister returns a new UISettingsLister.
 func NewUISettingsLister(indexer cache.Indexer) UISettingsLister {
-	return &uISettingsLister{indexer: indexer}
-}
-
-// List lists all UISettings in the indexer.
-func (s *uISettingsLister) List(selector labels.Selector) (ret []*v3.UISettings, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.UISettings))
-	})
-	return ret, err
-}
-
-// Get retrieves the UISettings from the index for a given name.
-func (s *uISettingsLister) Get(name string) (*v3.UISettings, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("uisettings"), name)
-	}
-	return obj.(*v3.UISettings), nil
+	return &uISettingsLister{listers.New[*v3.UISettings](indexer, v3.Resource("uisettings"))}
 }

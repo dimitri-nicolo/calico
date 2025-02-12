@@ -6,8 +6,8 @@ package v3
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -25,30 +25,10 @@ type AuthorizationReviewLister interface {
 
 // authorizationReviewLister implements the AuthorizationReviewLister interface.
 type authorizationReviewLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v3.AuthorizationReview]
 }
 
 // NewAuthorizationReviewLister returns a new AuthorizationReviewLister.
 func NewAuthorizationReviewLister(indexer cache.Indexer) AuthorizationReviewLister {
-	return &authorizationReviewLister{indexer: indexer}
-}
-
-// List lists all AuthorizationReviews in the indexer.
-func (s *authorizationReviewLister) List(selector labels.Selector) (ret []*v3.AuthorizationReview, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.AuthorizationReview))
-	})
-	return ret, err
-}
-
-// Get retrieves the AuthorizationReview from the index for a given name.
-func (s *authorizationReviewLister) Get(name string) (*v3.AuthorizationReview, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("authorizationreview"), name)
-	}
-	return obj.(*v3.AuthorizationReview), nil
+	return &authorizationReviewLister{listers.New[*v3.AuthorizationReview](indexer, v3.Resource("authorizationreview"))}
 }
