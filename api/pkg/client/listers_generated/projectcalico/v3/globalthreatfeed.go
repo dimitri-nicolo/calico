@@ -6,8 +6,8 @@ package v3
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -25,30 +25,10 @@ type GlobalThreatFeedLister interface {
 
 // globalThreatFeedLister implements the GlobalThreatFeedLister interface.
 type globalThreatFeedLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v3.GlobalThreatFeed]
 }
 
 // NewGlobalThreatFeedLister returns a new GlobalThreatFeedLister.
 func NewGlobalThreatFeedLister(indexer cache.Indexer) GlobalThreatFeedLister {
-	return &globalThreatFeedLister{indexer: indexer}
-}
-
-// List lists all GlobalThreatFeeds in the indexer.
-func (s *globalThreatFeedLister) List(selector labels.Selector) (ret []*v3.GlobalThreatFeed, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.GlobalThreatFeed))
-	})
-	return ret, err
-}
-
-// Get retrieves the GlobalThreatFeed from the index for a given name.
-func (s *globalThreatFeedLister) Get(name string) (*v3.GlobalThreatFeed, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("globalthreatfeed"), name)
-	}
-	return obj.(*v3.GlobalThreatFeed), nil
+	return &globalThreatFeedLister{listers.New[*v3.GlobalThreatFeed](indexer, v3.Resource("globalthreatfeed"))}
 }

@@ -26,20 +26,22 @@ var globalthreatfeedsKind = v3.SchemeGroupVersion.WithKind("GlobalThreatFeed")
 
 // Get takes name of the globalThreatFeed, and returns the corresponding globalThreatFeed object, and an error if there is any.
 func (c *FakeGlobalThreatFeeds) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.GlobalThreatFeed, err error) {
+	emptyResult := &v3.GlobalThreatFeed{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(globalthreatfeedsResource, name), &v3.GlobalThreatFeed{})
+		Invokes(testing.NewRootGetActionWithOptions(globalthreatfeedsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalThreatFeed), err
 }
 
 // List takes label and field selectors, and returns the list of GlobalThreatFeeds that match those selectors.
 func (c *FakeGlobalThreatFeeds) List(ctx context.Context, opts v1.ListOptions) (result *v3.GlobalThreatFeedList, err error) {
+	emptyResult := &v3.GlobalThreatFeedList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(globalthreatfeedsResource, globalthreatfeedsKind, opts), &v3.GlobalThreatFeedList{})
+		Invokes(testing.NewRootListActionWithOptions(globalthreatfeedsResource, globalthreatfeedsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -58,36 +60,39 @@ func (c *FakeGlobalThreatFeeds) List(ctx context.Context, opts v1.ListOptions) (
 // Watch returns a watch.Interface that watches the requested globalThreatFeeds.
 func (c *FakeGlobalThreatFeeds) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(globalthreatfeedsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(globalthreatfeedsResource, opts))
 }
 
 // Create takes the representation of a globalThreatFeed and creates it.  Returns the server's representation of the globalThreatFeed, and an error, if there is any.
 func (c *FakeGlobalThreatFeeds) Create(ctx context.Context, globalThreatFeed *v3.GlobalThreatFeed, opts v1.CreateOptions) (result *v3.GlobalThreatFeed, err error) {
+	emptyResult := &v3.GlobalThreatFeed{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(globalthreatfeedsResource, globalThreatFeed), &v3.GlobalThreatFeed{})
+		Invokes(testing.NewRootCreateActionWithOptions(globalthreatfeedsResource, globalThreatFeed, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalThreatFeed), err
 }
 
 // Update takes the representation of a globalThreatFeed and updates it. Returns the server's representation of the globalThreatFeed, and an error, if there is any.
 func (c *FakeGlobalThreatFeeds) Update(ctx context.Context, globalThreatFeed *v3.GlobalThreatFeed, opts v1.UpdateOptions) (result *v3.GlobalThreatFeed, err error) {
+	emptyResult := &v3.GlobalThreatFeed{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(globalthreatfeedsResource, globalThreatFeed), &v3.GlobalThreatFeed{})
+		Invokes(testing.NewRootUpdateActionWithOptions(globalthreatfeedsResource, globalThreatFeed, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalThreatFeed), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeGlobalThreatFeeds) UpdateStatus(ctx context.Context, globalThreatFeed *v3.GlobalThreatFeed, opts v1.UpdateOptions) (*v3.GlobalThreatFeed, error) {
+func (c *FakeGlobalThreatFeeds) UpdateStatus(ctx context.Context, globalThreatFeed *v3.GlobalThreatFeed, opts v1.UpdateOptions) (result *v3.GlobalThreatFeed, err error) {
+	emptyResult := &v3.GlobalThreatFeed{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(globalthreatfeedsResource, "status", globalThreatFeed), &v3.GlobalThreatFeed{})
+		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(globalthreatfeedsResource, "status", globalThreatFeed, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalThreatFeed), err
 }
@@ -101,7 +106,7 @@ func (c *FakeGlobalThreatFeeds) Delete(ctx context.Context, name string, opts v1
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeGlobalThreatFeeds) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(globalthreatfeedsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(globalthreatfeedsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v3.GlobalThreatFeedList{})
 	return err
@@ -109,10 +114,11 @@ func (c *FakeGlobalThreatFeeds) DeleteCollection(ctx context.Context, opts v1.De
 
 // Patch applies the patch and returns the patched globalThreatFeed.
 func (c *FakeGlobalThreatFeeds) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.GlobalThreatFeed, err error) {
+	emptyResult := &v3.GlobalThreatFeed{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(globalthreatfeedsResource, name, pt, data, subresources...), &v3.GlobalThreatFeed{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(globalthreatfeedsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalThreatFeed), err
 }

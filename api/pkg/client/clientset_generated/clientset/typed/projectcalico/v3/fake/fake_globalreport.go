@@ -26,20 +26,22 @@ var globalreportsKind = v3.SchemeGroupVersion.WithKind("GlobalReport")
 
 // Get takes name of the globalReport, and returns the corresponding globalReport object, and an error if there is any.
 func (c *FakeGlobalReports) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.GlobalReport, err error) {
+	emptyResult := &v3.GlobalReport{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(globalreportsResource, name), &v3.GlobalReport{})
+		Invokes(testing.NewRootGetActionWithOptions(globalreportsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalReport), err
 }
 
 // List takes label and field selectors, and returns the list of GlobalReports that match those selectors.
 func (c *FakeGlobalReports) List(ctx context.Context, opts v1.ListOptions) (result *v3.GlobalReportList, err error) {
+	emptyResult := &v3.GlobalReportList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(globalreportsResource, globalreportsKind, opts), &v3.GlobalReportList{})
+		Invokes(testing.NewRootListActionWithOptions(globalreportsResource, globalreportsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -58,36 +60,39 @@ func (c *FakeGlobalReports) List(ctx context.Context, opts v1.ListOptions) (resu
 // Watch returns a watch.Interface that watches the requested globalReports.
 func (c *FakeGlobalReports) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(globalreportsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(globalreportsResource, opts))
 }
 
 // Create takes the representation of a globalReport and creates it.  Returns the server's representation of the globalReport, and an error, if there is any.
 func (c *FakeGlobalReports) Create(ctx context.Context, globalReport *v3.GlobalReport, opts v1.CreateOptions) (result *v3.GlobalReport, err error) {
+	emptyResult := &v3.GlobalReport{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(globalreportsResource, globalReport), &v3.GlobalReport{})
+		Invokes(testing.NewRootCreateActionWithOptions(globalreportsResource, globalReport, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalReport), err
 }
 
 // Update takes the representation of a globalReport and updates it. Returns the server's representation of the globalReport, and an error, if there is any.
 func (c *FakeGlobalReports) Update(ctx context.Context, globalReport *v3.GlobalReport, opts v1.UpdateOptions) (result *v3.GlobalReport, err error) {
+	emptyResult := &v3.GlobalReport{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(globalreportsResource, globalReport), &v3.GlobalReport{})
+		Invokes(testing.NewRootUpdateActionWithOptions(globalreportsResource, globalReport, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalReport), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeGlobalReports) UpdateStatus(ctx context.Context, globalReport *v3.GlobalReport, opts v1.UpdateOptions) (*v3.GlobalReport, error) {
+func (c *FakeGlobalReports) UpdateStatus(ctx context.Context, globalReport *v3.GlobalReport, opts v1.UpdateOptions) (result *v3.GlobalReport, err error) {
+	emptyResult := &v3.GlobalReport{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(globalreportsResource, "status", globalReport), &v3.GlobalReport{})
+		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(globalreportsResource, "status", globalReport, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalReport), err
 }
@@ -101,7 +106,7 @@ func (c *FakeGlobalReports) Delete(ctx context.Context, name string, opts v1.Del
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeGlobalReports) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(globalreportsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(globalreportsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v3.GlobalReportList{})
 	return err
@@ -109,10 +114,11 @@ func (c *FakeGlobalReports) DeleteCollection(ctx context.Context, opts v1.Delete
 
 // Patch applies the patch and returns the patched globalReport.
 func (c *FakeGlobalReports) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.GlobalReport, err error) {
+	emptyResult := &v3.GlobalReport{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(globalreportsResource, name, pt, data, subresources...), &v3.GlobalReport{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(globalreportsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.GlobalReport), err
 }

@@ -6,14 +6,13 @@ package v3
 
 import (
 	"context"
-	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // EgressGatewayPoliciesGetter has a method to return a EgressGatewayPolicyInterface.
@@ -37,118 +36,18 @@ type EgressGatewayPolicyInterface interface {
 
 // egressGatewayPolicies implements EgressGatewayPolicyInterface
 type egressGatewayPolicies struct {
-	client rest.Interface
+	*gentype.ClientWithList[*v3.EgressGatewayPolicy, *v3.EgressGatewayPolicyList]
 }
 
 // newEgressGatewayPolicies returns a EgressGatewayPolicies
 func newEgressGatewayPolicies(c *ProjectcalicoV3Client) *egressGatewayPolicies {
 	return &egressGatewayPolicies{
-		client: c.RESTClient(),
+		gentype.NewClientWithList[*v3.EgressGatewayPolicy, *v3.EgressGatewayPolicyList](
+			"egressgatewaypolicies",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			"",
+			func() *v3.EgressGatewayPolicy { return &v3.EgressGatewayPolicy{} },
+			func() *v3.EgressGatewayPolicyList { return &v3.EgressGatewayPolicyList{} }),
 	}
-}
-
-// Get takes name of the egressGatewayPolicy, and returns the corresponding egressGatewayPolicy object, and an error if there is any.
-func (c *egressGatewayPolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.EgressGatewayPolicy, err error) {
-	result = &v3.EgressGatewayPolicy{}
-	err = c.client.Get().
-		Resource("egressgatewaypolicies").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of EgressGatewayPolicies that match those selectors.
-func (c *egressGatewayPolicies) List(ctx context.Context, opts v1.ListOptions) (result *v3.EgressGatewayPolicyList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v3.EgressGatewayPolicyList{}
-	err = c.client.Get().
-		Resource("egressgatewaypolicies").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested egressGatewayPolicies.
-func (c *egressGatewayPolicies) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Resource("egressgatewaypolicies").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a egressGatewayPolicy and creates it.  Returns the server's representation of the egressGatewayPolicy, and an error, if there is any.
-func (c *egressGatewayPolicies) Create(ctx context.Context, egressGatewayPolicy *v3.EgressGatewayPolicy, opts v1.CreateOptions) (result *v3.EgressGatewayPolicy, err error) {
-	result = &v3.EgressGatewayPolicy{}
-	err = c.client.Post().
-		Resource("egressgatewaypolicies").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(egressGatewayPolicy).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a egressGatewayPolicy and updates it. Returns the server's representation of the egressGatewayPolicy, and an error, if there is any.
-func (c *egressGatewayPolicies) Update(ctx context.Context, egressGatewayPolicy *v3.EgressGatewayPolicy, opts v1.UpdateOptions) (result *v3.EgressGatewayPolicy, err error) {
-	result = &v3.EgressGatewayPolicy{}
-	err = c.client.Put().
-		Resource("egressgatewaypolicies").
-		Name(egressGatewayPolicy.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(egressGatewayPolicy).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the egressGatewayPolicy and deletes it. Returns an error if one occurs.
-func (c *egressGatewayPolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Resource("egressgatewaypolicies").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *egressGatewayPolicies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Resource("egressgatewaypolicies").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched egressGatewayPolicy.
-func (c *egressGatewayPolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.EgressGatewayPolicy, err error) {
-	result = &v3.EgressGatewayPolicy{}
-	err = c.client.Patch(pt).
-		Resource("egressgatewaypolicies").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

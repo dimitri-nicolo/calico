@@ -46,7 +46,7 @@ func (rs rulesets) GetRulesets(ctx context.Context) ([]*v1.WAFRuleset, error) {
 
 	var rulesets []*v1.WAFRuleset
 
-	for id, _ := range builtinRulesets {
+	for id := range builtinRulesets {
 		ruleset, err := rs.GetRuleset(ctx, id)
 		if err != nil {
 			return nil, err

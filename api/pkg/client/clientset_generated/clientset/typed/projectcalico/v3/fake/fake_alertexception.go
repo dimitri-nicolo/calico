@@ -26,20 +26,22 @@ var alertexceptionsKind = v3.SchemeGroupVersion.WithKind("AlertException")
 
 // Get takes name of the alertException, and returns the corresponding alertException object, and an error if there is any.
 func (c *FakeAlertExceptions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v3.AlertException, err error) {
+	emptyResult := &v3.AlertException{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(alertexceptionsResource, name), &v3.AlertException{})
+		Invokes(testing.NewRootGetActionWithOptions(alertexceptionsResource, name, options), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AlertException), err
 }
 
 // List takes label and field selectors, and returns the list of AlertExceptions that match those selectors.
 func (c *FakeAlertExceptions) List(ctx context.Context, opts v1.ListOptions) (result *v3.AlertExceptionList, err error) {
+	emptyResult := &v3.AlertExceptionList{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(alertexceptionsResource, alertexceptionsKind, opts), &v3.AlertExceptionList{})
+		Invokes(testing.NewRootListActionWithOptions(alertexceptionsResource, alertexceptionsKind, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 
 	label, _, _ := testing.ExtractFromListOptions(opts)
@@ -58,36 +60,39 @@ func (c *FakeAlertExceptions) List(ctx context.Context, opts v1.ListOptions) (re
 // Watch returns a watch.Interface that watches the requested alertExceptions.
 func (c *FakeAlertExceptions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(alertexceptionsResource, opts))
+		InvokesWatch(testing.NewRootWatchActionWithOptions(alertexceptionsResource, opts))
 }
 
 // Create takes the representation of a alertException and creates it.  Returns the server's representation of the alertException, and an error, if there is any.
 func (c *FakeAlertExceptions) Create(ctx context.Context, alertException *v3.AlertException, opts v1.CreateOptions) (result *v3.AlertException, err error) {
+	emptyResult := &v3.AlertException{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(alertexceptionsResource, alertException), &v3.AlertException{})
+		Invokes(testing.NewRootCreateActionWithOptions(alertexceptionsResource, alertException, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AlertException), err
 }
 
 // Update takes the representation of a alertException and updates it. Returns the server's representation of the alertException, and an error, if there is any.
 func (c *FakeAlertExceptions) Update(ctx context.Context, alertException *v3.AlertException, opts v1.UpdateOptions) (result *v3.AlertException, err error) {
+	emptyResult := &v3.AlertException{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(alertexceptionsResource, alertException), &v3.AlertException{})
+		Invokes(testing.NewRootUpdateActionWithOptions(alertexceptionsResource, alertException, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AlertException), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeAlertExceptions) UpdateStatus(ctx context.Context, alertException *v3.AlertException, opts v1.UpdateOptions) (*v3.AlertException, error) {
+func (c *FakeAlertExceptions) UpdateStatus(ctx context.Context, alertException *v3.AlertException, opts v1.UpdateOptions) (result *v3.AlertException, err error) {
+	emptyResult := &v3.AlertException{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(alertexceptionsResource, "status", alertException), &v3.AlertException{})
+		Invokes(testing.NewRootUpdateSubresourceActionWithOptions(alertexceptionsResource, "status", alertException, opts), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AlertException), err
 }
@@ -101,7 +106,7 @@ func (c *FakeAlertExceptions) Delete(ctx context.Context, name string, opts v1.D
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeAlertExceptions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(alertexceptionsResource, listOpts)
+	action := testing.NewRootDeleteCollectionActionWithOptions(alertexceptionsResource, opts, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v3.AlertExceptionList{})
 	return err
@@ -109,10 +114,11 @@ func (c *FakeAlertExceptions) DeleteCollection(ctx context.Context, opts v1.Dele
 
 // Patch applies the patch and returns the patched alertException.
 func (c *FakeAlertExceptions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v3.AlertException, err error) {
+	emptyResult := &v3.AlertException{}
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(alertexceptionsResource, name, pt, data, subresources...), &v3.AlertException{})
+		Invokes(testing.NewRootPatchSubresourceActionWithOptions(alertexceptionsResource, name, pt, data, opts, subresources...), emptyResult)
 	if obj == nil {
-		return nil, err
+		return emptyResult, err
 	}
 	return obj.(*v3.AlertException), err
 }

@@ -6,8 +6,8 @@ package v3
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -25,30 +25,10 @@ type GlobalReportTypeLister interface {
 
 // globalReportTypeLister implements the GlobalReportTypeLister interface.
 type globalReportTypeLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v3.GlobalReportType]
 }
 
 // NewGlobalReportTypeLister returns a new GlobalReportTypeLister.
 func NewGlobalReportTypeLister(indexer cache.Indexer) GlobalReportTypeLister {
-	return &globalReportTypeLister{indexer: indexer}
-}
-
-// List lists all GlobalReportTypes in the indexer.
-func (s *globalReportTypeLister) List(selector labels.Selector) (ret []*v3.GlobalReportType, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.GlobalReportType))
-	})
-	return ret, err
-}
-
-// Get retrieves the GlobalReportType from the index for a given name.
-func (s *globalReportTypeLister) Get(name string) (*v3.GlobalReportType, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("globalreporttype"), name)
-	}
-	return obj.(*v3.GlobalReportType), nil
+	return &globalReportTypeLister{listers.New[*v3.GlobalReportType](indexer, v3.Resource("globalreporttype"))}
 }

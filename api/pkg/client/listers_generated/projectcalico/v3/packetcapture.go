@@ -6,8 +6,8 @@ package v3
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -24,25 +24,17 @@ type PacketCaptureLister interface {
 
 // packetCaptureLister implements the PacketCaptureLister interface.
 type packetCaptureLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v3.PacketCapture]
 }
 
 // NewPacketCaptureLister returns a new PacketCaptureLister.
 func NewPacketCaptureLister(indexer cache.Indexer) PacketCaptureLister {
-	return &packetCaptureLister{indexer: indexer}
-}
-
-// List lists all PacketCaptures in the indexer.
-func (s *packetCaptureLister) List(selector labels.Selector) (ret []*v3.PacketCapture, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.PacketCapture))
-	})
-	return ret, err
+	return &packetCaptureLister{listers.New[*v3.PacketCapture](indexer, v3.Resource("packetcapture"))}
 }
 
 // PacketCaptures returns an object that can list and get PacketCaptures.
 func (s *packetCaptureLister) PacketCaptures(namespace string) PacketCaptureNamespaceLister {
-	return packetCaptureNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return packetCaptureNamespaceLister{listers.NewNamespaced[*v3.PacketCapture](s.ResourceIndexer, namespace)}
 }
 
 // PacketCaptureNamespaceLister helps list and get PacketCaptures.
@@ -60,26 +52,5 @@ type PacketCaptureNamespaceLister interface {
 // packetCaptureNamespaceLister implements the PacketCaptureNamespaceLister
 // interface.
 type packetCaptureNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all PacketCaptures in the indexer for a given namespace.
-func (s packetCaptureNamespaceLister) List(selector labels.Selector) (ret []*v3.PacketCapture, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v3.PacketCapture))
-	})
-	return ret, err
-}
-
-// Get retrieves the PacketCapture from the indexer for a given namespace and name.
-func (s packetCaptureNamespaceLister) Get(name string) (*v3.PacketCapture, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v3.Resource("packetcapture"), name)
-	}
-	return obj.(*v3.PacketCapture), nil
+	listers.ResourceIndexer[*v3.PacketCapture]
 }
