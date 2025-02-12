@@ -996,6 +996,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				mockProcSys.stat,
 				"1",
 				nil,
+				nil,
 				false,
 				hepListener,
 				common.NewCallbacks(),
