@@ -26,14 +26,18 @@ const managerComponent = "cnx-manager"
 
 var (
 	operatorExcludedComponents = []string{
-		"coreos-prometheus-operator",
 		"coreos-config-reloader",
+		"coreos-dex",
+		"coreos-fluentd",
+		"coreos-prometheus-operator",
 	}
 	noEntepriseImageComponents = []string{
 		"calico-private",
 		"cnx-manager-proxy",
 		"coreos-alertmanager",
 		"coreos-config-reloader",
+		"coreos-dex",
+		"coreos-fluentd",
 		"coreos-prometheus",
 		"coreos-prometheus-operator",
 		"eck-elasticsearch",
