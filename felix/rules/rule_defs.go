@@ -292,6 +292,7 @@ type RuleRenderer interface {
 	StaticRawPreroutingChain(ipVersion uint8, nodelocaldnsBroadcastedIPs []config.ServerPort) *generictables.Chain
 
 	DispatchMappings(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint) (map[string][]string, map[string][]string)
+	WorkloadRPFDispatchMappings(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint) (map[string][]string, map[string][]string)
 	WorkloadDispatchChains(map[types.WorkloadEndpointID]*proto.WorkloadEndpoint) []*generictables.Chain
 	WorkloadRPFDispatchChains(ipVersion uint8, gatewayInterfaceNames []string) []*generictables.Chain
 	WorkloadEndpointToIptablesChains(
