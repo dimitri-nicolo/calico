@@ -926,7 +926,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 
 			if m.rawMaps != nil {
 				// Update dispatch verdict maps if needed.
-				fromMappings, _ := m.ruleRenderer.DispatchMappings(gatewayWEPs)
+				fromMappings, _ := m.ruleRenderer.WorkloadRPFDispatchMappings(gatewayWEPs)
 				m.rawMaps.AddOrReplaceMap(nftables.MapMetadata{Name: rules.NftablesFromWorkloadDispatchMap, Type: nftables.MapTypeInterfaceMatch}, fromMappings)
 			}
 			newRPFDispatchChains := m.ruleRenderer.WorkloadRPFDispatchChains(m.ipVersion, gatewayInterfaceNames)

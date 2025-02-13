@@ -37,6 +37,14 @@ func (r *DefaultRuleRenderer) DispatchMappings(endpoints map[types.WorkloadEndpo
 	return fromMappings, toMappings
 }
 
+func (r *DefaultRuleRenderer) WorkloadRPFDispatchMappings(endpoints map[types.WorkloadEndpointID]*proto.WorkloadEndpoint) (map[string][]string, map[string][]string) {
+	fromMappings := map[string][]string{}
+	for _, endpoint := range endpoints {
+		fromMappings[endpoint.Name] = []string{"return"}
+	}
+	return fromMappings, nil
+}
+
 func (r *DefaultRuleRenderer) gotoEndpointChain(pfx, name string) generictables.Action {
 	return r.GoTo(EndpointChainName(pfx, name, r.maxNameLength))
 }
