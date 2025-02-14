@@ -112,7 +112,7 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 	BeforeEach(func() {
 		var err error
 
-		fakeK8s = k8sfake.NewSimpleClientset()
+		fakeK8s = k8sfake.NewClientset()
 		k8sAPI = &k8sClient{
 			Interface:                fakeK8s,
 			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),

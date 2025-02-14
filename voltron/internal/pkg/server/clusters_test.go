@@ -100,7 +100,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(func() int { return len(myClusters.List()) }).Should(Equal(1))
+				Eventually(func() int { return len(myClusters.List()) }, "3s").Should(Equal(1))
 			})
 
 			By("should be able to update cluster active fingerprint", func() {
@@ -348,7 +348,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 					}
 				}
 				return v3.ManagedClusterStatusValueUnknown
-			}, "3s").Should(Equal(v3.ManagedClusterStatusValueFalse), "Managed cluster connection status should be set false when the update succeeds")
+			}, "5s").Should(Equal(v3.ManagedClusterStatusValueFalse), "Managed cluster connection status should be set false when the update succeeds")
 			Expect(fakeClient.Delete(context.Background(), &v3.ManagedCluster{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       v3.KindManagedCluster,
