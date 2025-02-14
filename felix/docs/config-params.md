@@ -1681,6 +1681,28 @@ to clean up expired BPF conntrack entries.
 | Default value (YAML) | `Off` |
 | Notes | Required. | 
 
+### `BPFConntrackTimeouts` (config file) / `bpfConntrackTimeouts` (YAML)
+
+BPFConntrackTimers overrides the default values for the specified conntrack timer if
+set. Each value can be either a duration or `Auto` to pick the value from
+a Linux conntrack timeout.
+
+Configurable timers are: CreationGracePeriod, TCPSynSent,
+TCPEstablished, TCPFinsSeen, TCPResetSeen, UDPTimeout, GenericTimeout,
+ICMPTimeout.
+
+Unset values are replaced by the default values with a warning log for
+incorrect values.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_BPFConntrackTimeouts` |
+| Encoding (env var/config file) | Comma-delimited list of key=value pairs |
+| Default value (above encoding) | `CreationGracePeriod=10s,TCPPreEstablished=20s,TCPEstablished=1h,TCPFinsSeen=Auto,TCPResetSeen=40s,UDPLastSeen=60s,GenericIPLastSeen=10m,ICMPLastSeen=5s` |
+| `FelixConfiguration` field | `bpfConntrackTimeouts` (YAML) `BPFConntrackTimeouts` (Go API) |
+| `FelixConfiguration` schema | `object` |
+| Default value (YAML) | none |
+
 ### `BPFDNSPolicyMode` (config file) / `bpfDNSPolicyMode` (YAML)
 
 Specifies how DNS policy programming will be handled.
@@ -2714,7 +2736,12 @@ Controls the priority value to use for the Wireguard routing rule.
 
 ### `WireguardThreadingEnabled` (config file) / `wireguardThreadingEnabled` (YAML)
 
-Controls whether Wireguard has NAPI threading enabled.
+Controls whether Wireguard has Threaded NAPI enabled. 
+This increases the maximum number of packets a Wireguard interface can process.
+Consider threaded NAPI only if you have high packets per second workloads that are causing dropping packets due to a saturated `softirq` CPU core.
+There is a [known issue](https://lore.kernel.org/netdev/CALrw=nEoT2emQ0OAYCjM1d_6Xe_kNLSZ6dhjb5FxrLFYh4kozA@mail.gmail.com/T/) with this setting
+that may cause NAPI to get stuck holding the global `rtnl_mutex` when a peer is removed.
+Workaround: Make sure your Linux kernel [includes this patch](https://github.com/torvalds/linux/commit/56364c910691f6d10ba88c964c9041b9ab777bd6) to unwedge NAPI.
 
 | Detail |   |
 | --- | --- |

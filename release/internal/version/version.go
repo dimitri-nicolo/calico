@@ -54,7 +54,7 @@ func (v *CalicoVersionData) ProductVersion() string {
 }
 
 func (v *CalicoVersionData) OperatorVersion() string {
-	return v.operator
+	return fmt.Sprintf("%s-%s", v.operator, v.ProductVersion())
 }
 
 func (v *CalicoVersionData) HelmChartVersion() string {
@@ -97,7 +97,7 @@ func (v *Version) FormattedString() string {
 // Milestone returns the GitHub milestone name which corresponds with this version.
 func (v *Version) Milestone(prefix string) string {
 	if prefix == "" {
-		prefix = utils.CalicoProductName()
+		prefix = utils.ProductName
 	}
 	ver := semver.MustParse(string(*v))
 	return fmt.Sprintf("%s v%d.%d.%d", prefix, ver.Major(), ver.Minor(), ver.Patch())

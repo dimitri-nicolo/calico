@@ -140,6 +140,8 @@ type endpointManager struct {
 	epMarkMapper rules.EndpointMarkMapper
 	newMatch     func() generictables.MatchCriteria
 	actions      generictables.ActionFactory
+	filterMaps   nftables.MapsDataplane
+	rawMaps      nftables.MapsDataplane
 
 	// Pending updates, cleared in CompleteDeferredWork as the data is copied to the activeXYZ
 	// fields.
@@ -236,6 +238,8 @@ func newEndpointManager(
 	wlInterfacePrefixes []string,
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
 	defaultRPFilter string,
+	filterMaps nftables.MapsDataplane,
+	rawMaps nftables.MapsDataplane,
 	bpfEnabled bool,
 	bpfEndpointManager hepListener,
 	callbacks *common.Callbacks,
@@ -260,6 +264,8 @@ func newEndpointManager(
 		writeProcSys,
 		os.Stat,
 		defaultRPFilter,
+		filterMaps,
+		rawMaps,
 		bpfEnabled,
 		bpfEndpointManager,
 		callbacks,
@@ -285,6 +291,8 @@ func newEndpointManagerWithShims(
 	procSysWriter procSysWriter,
 	osStat func(name string) (os.FileInfo, error),
 	defaultRPFilter string,
+	filterMaps nftables.MapsDataplane,
+	rawMaps nftables.MapsDataplane,
 	bpfEnabled bool,
 	bpfEndpointManager hepListener,
 	callbacks *common.Callbacks,
@@ -309,6 +317,8 @@ func newEndpointManagerWithShims(
 		wlIfacesRegexp:         wlIfacesRegexp,
 		kubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
 		bpfEnabled:             bpfEnabled,
+		filterMaps:             filterMaps,
+		rawMaps:                rawMaps,
 		bpfEndpointManager:     bpfEndpointManager,
 		floatingIPsEnabled:     floatingIPsEnabled,
 
@@ -890,6 +900,13 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 	}
 
 	if !m.bpfEnabled && m.needToCheckDispatchChains {
+		if m.filterMaps != nil {
+			// Update dispatch verdict maps if needed.
+			fromMappings, toMappings := m.ruleRenderer.DispatchMappings(m.activeWlEndpoints)
+			m.filterMaps.AddOrReplaceMap(nftables.MapMetadata{Name: rules.NftablesFromWorkloadDispatchMap, Type: nftables.MapTypeInterfaceMatch}, fromMappings)
+			m.filterMaps.AddOrReplaceMap(nftables.MapMetadata{Name: rules.NftablesToWorkloadDispatchMap, Type: nftables.MapTypeInterfaceMatch}, toMappings)
+		}
+
 		// Rewrite the dispatch chains if they've changed.
 		newDispatchChains := m.ruleRenderer.WorkloadDispatchChains(m.activeWlEndpoints)
 		m.updateDispatchChains(m.activeWlDispatchChains, newDispatchChains, m.filterTable)
@@ -899,10 +916,18 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 			// Collect the workload interface names that are allowed to bypass RPF
 			// because they are egress gateways.
 			gatewayInterfaceNames := make([]string, 0, len(m.activeWlEndpoints))
-			for _, endpoint := range m.activeWlEndpoints {
+			gatewayWEPs := map[types.WorkloadEndpointID]*proto.WorkloadEndpoint{}
+			for k, endpoint := range m.activeWlEndpoints {
 				if endpoint.IsEgressGateway {
 					gatewayInterfaceNames = append(gatewayInterfaceNames, endpoint.Name)
+					gatewayWEPs[k] = endpoint
 				}
+			}
+
+			if m.rawMaps != nil {
+				// Update dispatch verdict maps if needed.
+				fromMappings, _ := m.ruleRenderer.WorkloadRPFDispatchMappings(gatewayWEPs)
+				m.rawMaps.AddOrReplaceMap(nftables.MapMetadata{Name: rules.NftablesFromWorkloadDispatchMap, Type: nftables.MapTypeInterfaceMatch}, fromMappings)
 			}
 			newRPFDispatchChains := m.ruleRenderer.WorkloadRPFDispatchChains(m.ipVersion, gatewayInterfaceNames)
 			m.updateDispatchChains(m.activeWlRPFDispatchChains, newRPFDispatchChains, m.rawTable)

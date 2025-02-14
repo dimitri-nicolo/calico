@@ -105,6 +105,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(nameservers, ",")
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "false"
 		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
+		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		// Start felix instances.
 		tc, client = infrastructure.StartNNodeTopology(1, opts, infra)
@@ -455,6 +456,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSDESTDOMAINSBYCLIENT"] = "true"
 		opts.ExtraEnvVars["FELIX_DNSEXTRATTL"] = "300"
+		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
 
 		// Start felix instances.
 		tc, _ = infrastructure.StartNNodeTopology(2, opts, infra)

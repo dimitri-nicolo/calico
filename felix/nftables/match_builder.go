@@ -50,6 +50,11 @@ const (
 type NFTMatchCriteria interface {
 	generictables.MatchCriteria
 
+	// SetLayer sets the layer name for the match criteria. e.g., filter vs. raw.
+	// This is used to distinguish between objects with the same name in different table layers.
+	// For now, this is only needed for verdict maps.
+	SetLayer(s string) generictables.MatchCriteria
+
 	IPVersion(version uint8) generictables.MatchCriteria
 
 	ConntrackStatus(statusNames string) generictables.MatchCriteria
@@ -99,6 +104,7 @@ func Combine(m1, m2 generictables.MatchCriteria) generictables.MatchCriteria {
 type nftMatch struct {
 	clauses []string
 
+	layerName string
 	ipVersion uint8
 
 	proto    string
@@ -159,9 +165,22 @@ func insertIPVersion(s string, ipVersion uint8) string {
 	return strings.ReplaceAll(s, "<IPV>", "ip")
 }
 
+// replaceLayer replaces generic layer placeholders with the actual layer name
+// to distinguish between objects with the same name in different
+// table layers (e.g., filter- vs. raw-).
+func replaceLayer(s, layer string) string {
+	return strings.ReplaceAll(s, "<LAYER>", layer)
+}
+
+func (m nftMatch) SetLayer(s string) generictables.MatchCriteria {
+	m.layerName = s
+	return m
+}
+
 func (m nftMatch) Render() string {
 	joined := strings.Join(m.clauses, " ")
 	joined = insertIPVersion(joined, m.ipVersion)
+	joined = replaceLayer(joined, m.layerName)
 	return joined
 }
 
@@ -547,6 +566,16 @@ func (m nftMatch) ICMPV6TypeAndCode(t, c uint8) generictables.MatchCriteria {
 
 func (m nftMatch) NotICMPV6TypeAndCode(t, c uint8) generictables.MatchCriteria {
 	m.clauses = append(m.clauses, fmt.Sprintf("icmpv6 type != %d code != %d", t, c))
+	return m
+}
+
+func (m nftMatch) InInterfaceVMAP(name string) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("iifname vmap @<LAYER>-%s", LegalizeSetName(name)))
+	return m
+}
+
+func (m nftMatch) OutInterfaceVMAP(name string) generictables.MatchCriteria {
+	m.clauses = append(m.clauses, fmt.Sprintf("oifname vmap @<LAYER>-%s", LegalizeSetName(name)))
 	return m
 }
 

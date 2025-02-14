@@ -691,7 +691,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
-	var nftablesV4RootTable generictables.Table
+	var nftablesV4RootTable *nftables.NftablesTable
 	var mangleTableV4, natTableV4, rawTableV4, filterTableV4 generictables.Table
 	var ipSetsV4 dpsets.IPSetsDataplane
 
@@ -712,7 +712,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		filterTableV4 = nftables.NewTableLayer("filter", nftablesV4RootTable)
 
 		// We use the root table for IP sets as well.
-		ipSetsV4 = nftablesV4RootTable.(dpsets.IPSetsDataplane)
+		ipSetsV4 = nftablesV4RootTable
 	} else {
 		// iptables mode
 		mangleTableV4 = iptables.NewTable(
@@ -988,7 +988,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	ipsetsManager := dpsets.NewIPSetsManager("ipv4", ipSetsV4, config.MaxIPSetSize, domainInfoStore)
 	ipsetsManagerV6 := dpsets.NewIPSetsManager("ipv6", nil, config.MaxIPSetSize, domainInfoStore)
 	var mangleTableV6, natTableV6, rawTableV6, filterTableV6 generictables.Table
-	var nftablesV6RootTable generictables.Table
+	var nftablesV6RootTable *nftables.NftablesTable
 
 	if config.RulesConfig.NFTables {
 		nftablesV6RootTable = nftables.NewTable(
@@ -1298,7 +1298,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 			// Activate the connect-time load balancer.
 			err = bpfnat.InstallConnectTimeLoadBalancer(true, config.BPFIpv6Enabled,
-				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPLastSeen, excludeUDP)
+				config.BPFCgroupV2, logLevel, config.BPFConntrackTimeouts.UDPTimeout, excludeUDP)
 			if err != nil {
 				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
@@ -1416,6 +1416,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(dp.externalNetworkManager)
 	}
 
+	var filterMaps, rawMaps nftables.MapsDataplane
+	if config.RulesConfig.NFTables {
+		filterMaps = filterTableV4.(nftables.MapsDataplane)
+		rawMaps = rawTableV4.(nftables.MapsDataplane)
+	}
+
 	epManager := newEndpointManager(
 		rawTableV4,
 		mangleTableV4,
@@ -1428,6 +1434,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config.RulesConfig.WorkloadIfacePrefixes,
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 		string(defaultRPFilter),
+		filterMaps,
+		rawMaps,
 		config.BPFEnabled,
 		bpfEndpointManager,
 		callbacks,
@@ -1527,7 +1535,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			natTableV6 = nftables.NewTableLayer("nat", nftablesV6RootTable)
 			rawTableV6 = nftables.NewTableLayer("raw", nftablesV6RootTable)
 
-			ipSetsV6 = nftablesV6RootTable.(dpsets.IPSetsDataplane)
+			ipSetsV6 = nftablesV6RootTable
 		} else {
 			mangleTableV6 = iptables.NewTable(
 				"mangle",
@@ -1597,6 +1605,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			dp.RegisterManager(newRawEgressPolicyManager(rawTableV6, ruleRenderer, 6, ipSetsV6.SetFilter, config.RulesConfig.NFTables))
 		}
 
+		var filterMapsV6, rawMapsV6 nftables.MapsDataplane
+		if config.RulesConfig.NFTables {
+			filterMapsV6 = filterTableV6.(nftables.MapsDataplane)
+			rawMapsV6 = rawTableV6.(nftables.MapsDataplane)
+		}
+
 		dp.RegisterManager(newEndpointManager(
 			rawTableV6,
 			mangleTableV6,
@@ -1609,6 +1623,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.RulesConfig.WorkloadIfacePrefixes,
 			dp.endpointStatusCombiner.OnEndpointStatusUpdate,
 			"",
+			filterMapsV6,
+			rawMapsV6,
 			config.BPFEnabled,
 			nil,
 			callbacks,
@@ -3514,8 +3530,8 @@ func setupIPSetsAndDomainTracker(ipFamily proto.IPVersion,
 	ipSetsMgr *dpsets.IPSetsManager,
 	ruleRenderer rules.RuleRenderer,
 	dp *InternalDataplane,
-	ipsetsMap, dnsMpx, dnsSets maps.Map) {
-
+	ipsetsMap, dnsMpx, dnsSets maps.Map,
+) {
 	ipSetIDAllocator := idalloc.New()
 	ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
 

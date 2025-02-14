@@ -683,6 +683,19 @@ type FelixConfigurationSpec struct {
 	// [Default: Auto]
 	BPFConntrackCleanupMode *BPFConntrackMode `json:"bpfConntrackMode,omitempty" validate:"omitempty,oneof=Auto Userspace BPFProgram"`
 
+	// BPFConntrackTimers overrides the default values for the specified conntrack timer if
+	// set. Each value can be either a duration or `Auto` to pick the value from
+	// a Linux conntrack timeout.
+	//
+	// Configurable timers are: CreationGracePeriod, TCPSynSent,
+	// TCPEstablished, TCPFinsSeen, TCPResetSeen, UDPTimeout, GenericTimeout,
+	// ICMPTimeout.
+	//
+	// Unset values are replaced by the default values with a warning log for
+	// incorrect values.
+	// +optional
+	BPFConntrackTimeouts *BPFConntrackTimeouts `json:"bpfConntrackTimeouts,omitempty" validate:"omitempty"`
+
 	// BPFLogFilters is a map of key=values where the value is
 	// a pcap filter expression and the key is an interface name with 'all'
 	// denoting all interfaces, 'weps' all workload endpoints and 'heps' all host
@@ -1287,7 +1300,12 @@ type FelixConfigurationSpec struct {
 
 	// WireguardEnabledV6 controls whether Wireguard is enabled for IPv6 (encapsulating IPv6 traffic over an IPv6 underlay network). [Default: false]
 	WireguardEnabledV6 *bool `json:"wireguardEnabledV6,omitempty"`
-	// WireguardThreadingEnabled controls whether Wireguard has NAPI threading enabled. [Default: false]
+	// WireguardThreadingEnabled controls whether Wireguard has Threaded NAPI enabled. [Default: false]
+	// This increases the maximum number of packets a Wireguard interface can process.
+	// Consider threaded NAPI only if you have high packets per second workloads that are causing dropping packets due to a saturated `softirq` CPU core.
+	// There is a [known issue](https://lore.kernel.org/netdev/CALrw=nEoT2emQ0OAYCjM1d_6Xe_kNLSZ6dhjb5FxrLFYh4kozA@mail.gmail.com/T/) with this setting
+	// that may cause NAPI to get stuck holding the global `rtnl_mutex` when a peer is removed.
+	// Workaround: Make sure your Linux kernel [includes this patch](https://github.com/torvalds/linux/commit/56364c910691f6d10ba88c964c9041b9ab777bd6) to unwedge NAPI.
 	WireguardThreadingEnabled *bool `json:"wireguardThreadingEnabled,omitempty"`
 	// WireguardListeningPort controls the listening port used by IPv4 Wireguard. [Default: 51820]
 	WireguardListeningPort *int `json:"wireguardListeningPort,omitempty" validate:"omitempty,gt=0,lte=65535"`
@@ -1463,6 +1481,56 @@ type ProtoPort struct {
 	Port     uint16 `json:"port"`
 	// +optional
 	Net string `json:"net,omitempty"`
+}
+
+// +kubebuilder:validation:Pattern=`^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$`
+type BPFConntrackTimeout string
+
+type BPFConntrackTimeouts struct {
+	//  CreationGracePeriod gives a generic grace period to new connection
+	//  before they are considered for cleanup [Default: 10s].
+	// +optional
+	CreationGracePeriod *BPFConntrackTimeout `json:"creationGracePeriod,omitempty"`
+	// TCPSynSent controls how long it takes before considering this entry for
+	// cleanup after the last SYN without a response. If set to 'Auto', the
+	// value from nf_conntrack_tcp_timeout_syn_sent is used. If nil, Calico uses
+	// its own default value. [Default: 20s].
+	// +optional
+	TCPSynSent *BPFConntrackTimeout `json:"tcpSynSent,omitempty"`
+	// TCPEstablished controls how long it takes before considering this entry for
+	// cleanup after the connection became idle. If set to 'Auto', the
+	// value from nf_conntrack_tcp_timeout_established is used. If nil, Calico uses
+	// its own default value. [Default: 1h].
+	// +optional
+	TCPEstablished *BPFConntrackTimeout `json:"tcpEstablished,omitempty"`
+	// TCPFinsSeen controls how long it takes before considering this entry for
+	// cleanup after the connection was closed gracefully. If set to 'Auto', the
+	// value from nf_conntrack_tcp_timeout_time_wait is used. If nil, Calico uses
+	// its own default value. [Default: Auto].
+	// +optional
+	TCPFinsSeen *BPFConntrackTimeout `json:"tcpFinsSeen,omitempty"`
+	// TCPFinsSeen controls how long it takes before considering this entry for
+	// cleanup after the connection was aborted. If nil, Calico uses its own
+	// default value. [Default: 40s].
+	// +optional
+	TCPResetSeen *BPFConntrackTimeout `json:"tcpResetSeen,omitempty"`
+	// UDPTimeout controls how long it takes before considering this entry for
+	// cleanup after the connection became idle. If nil, Calico uses its own
+	// default value. [Default: 60s].
+	// +optional
+	UDPTimeout *BPFConntrackTimeout `json:"udpTimeout,omitempty"`
+	// GenericTimeout controls how long it takes before considering this
+	// entry for cleanup after the connection became idle. If set to 'Auto', the
+	// value from nf_conntrack_generic_timeout is used. If nil, Calico uses its
+	// own default value. [Default: 10m].
+	// +optional
+	GenericTimeout *BPFConntrackTimeout `json:"genericTimeout,omitempty"`
+	// ICMPTimeout controls how long it takes before considering this
+	// entry for cleanup after the connection became idle. If set to 'Auto', the
+	// value from nf_conntrack_icmp_timeout is used. If nil, Calico uses its
+	// own default value. [Default: 5s].
+	// +optional
+	ICMPTimeout *BPFConntrackTimeout `json:"icmpTimeout,omitempty"`
 }
 
 // New FelixConfiguration creates a new (zeroed) FelixConfiguration struct with the TypeMetadata

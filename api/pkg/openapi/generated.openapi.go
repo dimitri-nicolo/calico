@@ -56,6 +56,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPPeer":                                  schema_pkg_apis_projectcalico_v3_BGPPeer(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPPeerList":                              schema_pkg_apis_projectcalico_v3_BGPPeerList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPPeerSpec":                              schema_pkg_apis_projectcalico_v3_BGPPeerSpec(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.BPFConntrackTimeouts":                     schema_pkg_apis_projectcalico_v3_BPFConntrackTimeouts(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BlockAffinity":                            schema_pkg_apis_projectcalico_v3_BlockAffinity(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BlockAffinityList":                        schema_pkg_apis_projectcalico_v3_BlockAffinityList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.BlockAffinitySpec":                        schema_pkg_apis_projectcalico_v3_BlockAffinitySpec(ref),
@@ -2433,6 +2434,74 @@ func schema_pkg_apis_projectcalico_v3_BGPPeerSpec(ref common.ReferenceCallback) 
 		},
 		Dependencies: []string{
 			"github.com/tigera/api/pkg/apis/projectcalico/v3.BGPPassword", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_BPFConntrackTimeouts(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"creationGracePeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CreationGracePeriod gives a generic grace period to new connection\n before they are considered for cleanup [Default: 10s].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tcpSynSent": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TCPSynSent controls how long it takes before considering this entry for cleanup after the last SYN without a response. If set to 'Auto', the value from nf_conntrack_tcp_timeout_syn_sent is used. If nil, Calico uses its own default value. [Default: 20s].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tcpEstablished": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TCPEstablished controls how long it takes before considering this entry for cleanup after the connection became idle. If set to 'Auto', the value from nf_conntrack_tcp_timeout_established is used. If nil, Calico uses its own default value. [Default: 1h].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tcpFinsSeen": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TCPFinsSeen controls how long it takes before considering this entry for cleanup after the connection was closed gracefully. If set to 'Auto', the value from nf_conntrack_tcp_timeout_time_wait is used. If nil, Calico uses its own default value. [Default: Auto].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tcpResetSeen": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TCPFinsSeen controls how long it takes before considering this entry for cleanup after the connection was aborted. If nil, Calico uses its own default value. [Default: 40s].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"udpTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UDPTimeout controls how long it takes before considering this entry for cleanup after the connection became idle. If nil, Calico uses its own default value. [Default: 60s].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"genericTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GenericTimeout controls how long it takes before considering this entry for cleanup after the connection became idle. If set to 'Auto', the value from nf_conntrack_generic_timeout is used. If nil, Calico uses its own default value. [Default: 10m].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"icmpTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ICMPTimeout controls how long it takes before considering this entry for cleanup after the connection became idle. If set to 'Auto', the value from nf_conntrack_icmp_timeout is used. If nil, Calico uses its own default value. [Default: 5s].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -5992,6 +6061,12 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"bpfConntrackTimeouts": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFConntrackTimers overrides the default values for the specified conntrack timer if set. Each value can be either a duration or `Auto` to pick the value from a Linux conntrack timeout.\n\nConfigurable timers are: CreationGracePeriod, TCPSynSent, TCPEstablished, TCPFinsSeen, TCPResetSeen, UDPTimeout, GenericTimeout, ICMPTimeout.\n\nUnset values are replaced by the default values with a warning log for incorrect values.",
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.BPFConntrackTimeouts"),
+						},
+					},
 					"bpfLogFilters": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BPFLogFilters is a map of key=values where the value is a pcap filter expression and the key is an interface name with 'all' denoting all interfaces, 'weps' all workload endpoints and 'heps' all host endpoints.\n\nWhen specified as an env var, it accepts a comma-separated list of key=values. [Default: unset - means all debug logs are emitted]",
@@ -6939,7 +7014,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"wireguardThreadingEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "WireguardThreadingEnabled controls whether Wireguard has NAPI threading enabled. [Default: false]",
+							Description: "WireguardThreadingEnabled controls whether Wireguard has Threaded NAPI enabled. [Default: false] This increases the maximum number of packets a Wireguard interface can process. Consider threaded NAPI only if you have high packets per second workloads that are causing dropping packets due to a saturated `softirq` CPU core. There is a [known issue](https://lore.kernel.org/netdev/CALrw=nEoT2emQ0OAYCjM1d_6Xe_kNLSZ6dhjb5FxrLFYh4kozA@mail.gmail.com/T/) with this setting that may cause NAPI to get stuck holding the global `rtnl_mutex` when a peer is removed. Workaround: Make sure your Linux kernel [includes this patch](https://github.com/torvalds/linux/commit/56364c910691f6d10ba88c964c9041b9ab777bd6) to unwedge NAPI.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -7142,7 +7217,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.HealthTimeoutOverride", "github.com/tigera/api/pkg/apis/projectcalico/v3.ProtoPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableIDRange", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange", "github.com/tigera/api/pkg/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.BPFConntrackTimeouts", "github.com/tigera/api/pkg/apis/projectcalico/v3.HealthTimeoutOverride", "github.com/tigera/api/pkg/apis/projectcalico/v3.ProtoPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableIDRange", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange", "github.com/tigera/api/pkg/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

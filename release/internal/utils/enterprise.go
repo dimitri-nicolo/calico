@@ -5,14 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
 	"github.com/projectcalico/calico/release/internal/command"
 )
 
 const (
 	CalicoEnterprise = "calico enterprise"
+
+	EnterpriseProductName = "Calico Enterprise"
 
 	TigeraManager = "manager"
 
@@ -27,10 +26,6 @@ func DetermineCalicoVersion(repoRoot string) (string, error) {
 		return "", err
 	}
 	return out, nil
-}
-
-func EnterpriseProductName() string {
-	return cases.Title(language.English).String(CalicoEnterprise)
 }
 
 func CheckoutHashreleaseVersion(hashVersion string, repoRootDir string) error {
