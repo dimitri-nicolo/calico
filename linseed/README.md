@@ -83,7 +83,7 @@ make test
 In order to run locally, start an elastic server on localhost and k8s server using:
 
 ```
-make run-elastic k8s-setup
+make run-elastic k8s-setup copy-es-cacert
 ```
 
 Start Linseed with the following environment variables:
@@ -101,6 +101,8 @@ Or simply use the following command:
 ```
 make run-image
 ```
+
+Starting with ES 8, we need to create a user and password to connect to Elasticsearch. Credentials will be stored under `/calico-private/.elasticsearch.created.` as part of make run-elasticsearch.
 
 ## Clients
 

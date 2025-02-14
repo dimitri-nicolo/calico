@@ -1473,6 +1473,8 @@ $(REPO_ROOT)/.elasticsearch.created:
 	curl -k -XPUT -H "Content-Type: application/json" https://localhost:9200/_cluster/settings -u "${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}" -d '{"transient": {"cluster.routing.allocation.disk.threshold_enabled": false }}'
 	curl -k -XPUT -H "Content-Type: application/json" https://localhost:9200/_all/_settings -u "${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}" -d '{"index.blocks.read_only_allow_delete": null}'
 
+	echo "Elastic Credentials: ${ELASTIC_USERNAME} ${ELASTIC_PASSWORD}" >> $(REPO_ROOT)/.elasticsearch.created
+
 ## Stop elasticsearch with name tigera-elastic
 .PHONY: stop-elastic
 stop-elastic:
