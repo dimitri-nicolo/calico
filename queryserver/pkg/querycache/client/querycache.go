@@ -1025,6 +1025,10 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 			Converter: cq.gnpConverter,
 		},
 		{
+			Kind:      model.KindKubernetesBaselineAdminNetworkPolicy,
+			Converter: cq.gnpConverter,
+		},
+		{
 			// Convert the KubernetesNetworkPolicy to NP.
 			Kind:      model.KindKubernetesNetworkPolicy,
 			Converter: cq.npConverter,

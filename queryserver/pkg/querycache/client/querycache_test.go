@@ -21,6 +21,7 @@ var (
 	expectedDispatchKinds = []string{
 		apiv3.KindGlobalNetworkPolicy,
 		model.KindKubernetesAdminNetworkPolicy,
+		model.KindKubernetesBaselineAdminNetworkPolicy,
 		model.KindKubernetesNetworkPolicy,
 		apiv3.KindNetworkPolicy,
 		apiv3.KindStagedGlobalNetworkPolicy,

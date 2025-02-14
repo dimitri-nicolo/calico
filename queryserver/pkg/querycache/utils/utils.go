@@ -31,7 +31,7 @@ func BuildSubstringRegexMatcher(list []string) (*regexp.Regexp, error) {
 }
 
 // GetActualResourceAndTierFromCachedPolicyForRBAC returns the proper resource version/kind and tier for non-tiered
-// policies. Kubernetes, StageKubernetes, and AdminNetwork policies are technically non-tiered specially when it comes
+// policies. Kubernetes, StageKubernetes, Admin, and BaselineAdmin network policies are technically non-tiered specially when it comes
 // to checking RBAC against them. Before checking authorization to these policies we need to get the correct tier and
 // resource type values.
 func GetActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource, string) {
@@ -62,6 +62,13 @@ func GetActualResourceAndTierFromCachedPolicyForRBAC(p api.Policy) (api.Resource
 			},
 		}
 		tier = ""
+	} else if strings.HasPrefix(resourceName, names.K8sBaselineAdminNetworkPolicyNamePrefix) {
+		resource = &v1alpha1.AdminNetworkPolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "BaselineAdminNetworkPolicy",
+				APIVersion: "policy.networking.k8s.io/v1alpha1",
+			},
+		}
 	}
 
 	return resource, tier

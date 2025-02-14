@@ -32,6 +32,8 @@ const (
 	ResourceGlobalNetworkPolicies           = "globalnetworkpolicies"
 	ResourceAdminNetworkPolicy              = "adminnetworkpolicy"
 	ResourceAdminNetworkPolicies            = "adminnetworkpolicies"
+	ResourceBaselineAdminNetworkPolicy      = "baselineadminnetworkpolicy"
+	ResourceBaselineAdminNetworkPolicies    = "baselineadminnetworkpolicies"
 	ResourceStageNetworkPolicy              = "stagednetworkpolicy"
 	ResourceStageNetworkPolicies            = "stagednetworkpolicies"
 	ResourceStagedGlobalNetworkPolicy       = "stagedglobalnetworkpolicy"
@@ -133,6 +135,8 @@ func convertV1KindToResourceType(kind string, name string) string {
 		return ResourceNetworkPolicies
 	case ResourceAdminNetworkPolicy, ResourceAdminNetworkPolicies:
 		return ResourceAdminNetworkPolicies
+	case ResourceBaselineAdminNetworkPolicy, ResourceBaselineAdminNetworkPolicies:
+		return ResourceBaselineAdminNetworkPolicies
 	case ResourceGlobalNetworkSet, ResourceGlobalNetworkSets:
 		return ResourceGlobalNetworkSets
 	case ResourceNetworkSet, ResourceNetworkSets:
@@ -252,6 +256,11 @@ var PolicyAuthReviewAttrList = []v3.AuthorizationReviewResourceAttributes{
 	{
 		APIGroup:  ApiGroupK8sPolicyNetworking,
 		Resources: []string{ResourceAdminNetworkPolicies},
+		Verbs:     []string{string(rbac.VerbWatch), string(rbac.VerbGet), string(rbac.VerbList)},
+	},
+	{
+		APIGroup:  ApiGroupK8sPolicyNetworking,
+		Resources: []string{ResourceBaselineAdminNetworkPolicies},
 		Verbs:     []string{string(rbac.VerbWatch), string(rbac.VerbGet), string(rbac.VerbList)},
 	},
 }
