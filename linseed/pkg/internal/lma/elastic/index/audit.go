@@ -4,9 +4,10 @@ package index
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"net/http"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
