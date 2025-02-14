@@ -20,7 +20,8 @@ type TimestampedResourceList struct {
 	RequestCompletedTimestamp metav1.Time `json:"requestCompletedTimestamp"`
 
 	// Cluster is populated by linseed from the request context.
-	Cluster string `json:"cluster"`
+	Cluster       string     `json:"cluster"`
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 func (l *TimestampedResourceList) String() string {
@@ -40,6 +41,7 @@ func (l *TimestampedResourceList) UnmarshalJSON(b []byte) error {
 		RequestStartedTimestamp   metav1.Time `json:"requestStartedTimestamp"`
 		RequestCompletedTimestamp metav1.Time `json:"requestCompletedTimestamp"`
 		Cluster                   string      `json:"cluster"`
+		GeneratedTime             *time.Time  `json:"generated_time,omitempty"`
 	})
 	if err = json.Unmarshal(b, meta); err != nil {
 		return err
@@ -58,6 +60,7 @@ func (l *TimestampedResourceList) UnmarshalJSON(b []byte) error {
 	l.RequestStartedTimestamp = meta.RequestStartedTimestamp
 	l.RequestCompletedTimestamp = meta.RequestCompletedTimestamp
 	l.Cluster = meta.Cluster
+	l.GeneratedTime = meta.GeneratedTime
 	return nil
 }
 
@@ -77,6 +80,15 @@ func (l *TimestampedResourceList) MarshalJSON() ([]byte, error) {
 	rct, err := l.RequestCompletedTimestamp.MarshalJSON()
 	if err != nil {
 		return nil, err
+	}
+	if l.GeneratedTime != nil {
+		generatedTime, err := l.GeneratedTime.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+		if generatedTime != nil {
+			buf.WriteString(fmt.Sprintf(`,"generated_time":%s`, generatedTime))
+		}
 	}
 	buf.WriteString(fmt.Sprintf(`,"requestStartedTimestamp":%s,"requestCompletedTimestamp":%s, "cluster":"%s"}`, rst, rct, l.Cluster))
 	return buf.Bytes(), nil

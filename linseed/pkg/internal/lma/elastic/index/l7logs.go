@@ -163,9 +163,21 @@ func (h l7LogsIndexHelper) NewRBACQuery(
 }
 
 func (h l7LogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	timeField := GetTimeFieldForQuery(h, r)
+	timeRangeQuery := elastic.NewRangeQuery(timeField)
+	if timeField == "generated_time" {
+		if !r.From.IsZero() {
+			timeRangeQuery.Gt(r.From)
+		}
+		if !r.To.IsZero() {
+			timeRangeQuery.Lte(r.To)
+		}
+		return timeRangeQuery
+	}
+
 	fromStr := strconv.FormatInt(r.From.Unix(), 10)
 	toStr := strconv.FormatInt(r.To.Unix(), 10)
-	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(fromStr).Lte(toStr)
+	return timeRangeQuery.Gt(fromStr).Lte(toStr)
 }
 
 func (h l7LogsIndexHelper) GetTimeField() string {

@@ -142,6 +142,7 @@ type IPGeoInfo struct {
 }
 
 type Event struct {
+	GeneratedTime   *time.Time      `json:"generated_time,omitempty"`
 	ID              string          `json:"id"`
 	Time            TimestampOrDate `json:"time" validate:"required"`
 	Description     string          `json:"description" validate:"required"`

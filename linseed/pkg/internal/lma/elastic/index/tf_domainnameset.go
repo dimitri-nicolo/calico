@@ -38,15 +38,26 @@ func (h domainSetIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceV
 }
 
 func (h domainSetIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	timeField := GetTimeFieldForQuery(h, r)
+	timeRangeQuery := elastic.NewRangeQuery(timeField)
+	if timeField == "generated_time" {
+		if !r.From.IsZero() {
+			timeRangeQuery.Gt(r.From)
+		}
+		if !r.To.IsZero() {
+			timeRangeQuery.Lte(r.To)
+		}
+		return timeRangeQuery
+	}
+
 	unset := time.Time{}
-	tr := elastic.NewRangeQuery(GetTimeFieldForQuery(h, r))
 	if r.From != unset {
-		tr.From(r.From)
+		timeRangeQuery.From(r.From)
 	}
 	if r.To != unset {
-		tr.To(r.To)
+		timeRangeQuery.To(r.To)
 	}
-	return tr
+	return timeRangeQuery
 }
 
 func (h domainSetIndexHelper) GetTimeField() string {

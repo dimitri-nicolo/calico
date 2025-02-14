@@ -48,12 +48,15 @@ func AssertFlowClusterAndReset(t *testing.T, expectedCluster string, item *v1.L3
 	item.Key.Cluster = ""
 }
 
-func AssertEventIDAndClusterAndReset(t *testing.T, expectedCluster string, item v1.Event) v1.Event {
+func AssertEventIDAndClusterAndGeneratedTimeAndReset(t *testing.T, expectedCluster string, item v1.Event) v1.Event {
 	require.NotEmpty(t, item.ID)
 	item.ID = ""
 
 	require.Equal(t, expectedCluster, item.Cluster)
 	item.Cluster = ""
+
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
 
 	return item
 }
@@ -61,6 +64,12 @@ func AssertEventIDAndClusterAndReset(t *testing.T, expectedCluster string, item 
 func AssertEventClusterAndReset(t *testing.T, expectedCluster string, item *v1.Event) {
 	require.Equal(t, expectedCluster, item.Cluster)
 	item.Cluster = ""
+}
+
+func AssertEventGeneratedTimeAndReset(t *testing.T, item *v1.Event) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
 }
 
 func AssertDNSLogIDAndClusterAndReset(t *testing.T, expectedCluster string, item *v1.DNSLog) {
@@ -83,6 +92,18 @@ func AssertAuditLogClusterAndReset(t *testing.T, expectedCluster string, item *v
 	item.Cluster = ""
 }
 
+func AssertAuditLogGeneratedTimeAndReset(t *testing.T, item *v1.AuditLog) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
+}
+
+func AssertAuditLogsGeneratedTimeAndReset(t *testing.T, items *v1.List[v1.AuditLog]) {
+	require.NotNil(t, items)
+	for i := range items.Items {
+		AssertAuditLogGeneratedTimeAndReset(t, &items.Items[i])
+	}
+}
 func AssertBenchmarkIDAndClusterAndReset(t *testing.T, expectedID string, expectedCluster string, item *v1.Benchmarks) {
 	require.NotNil(t, item)
 	require.Equal(t, expectedID, item.ID)
@@ -97,10 +118,22 @@ func AssertBenchmarkClusterAndReset(t *testing.T, expectedCluster string, item *
 	item.Cluster = ""
 }
 
+func AssertBenchmarkGeneratedTimeAndReset(t *testing.T, item *v1.Benchmarks) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
+}
+
 func AssertDomainNameSetThreatFeedClusterAndReset(t *testing.T, expectedCluster string, item *v1.DomainNameSetThreatFeed) {
 	require.NotNil(t, item)
 	require.Equal(t, expectedCluster, item.Data.Cluster)
 	item.Data.Cluster = ""
+}
+
+func AssertDomainNameSetThreatFeedGeneratedTimeAndReset(t *testing.T, item *v1.DomainNameSetThreatFeed) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.Data.GeneratedTime)
+	item.Data.GeneratedTime = nil
 }
 
 func AssertIPSetThreatFeedClusterAndReset(t *testing.T, expectedCluster string, item *v1.IPSetThreatFeed) {
@@ -109,12 +142,24 @@ func AssertIPSetThreatFeedClusterAndReset(t *testing.T, expectedCluster string, 
 	item.Data.Cluster = ""
 }
 
+func AssertIPSetThreatFeedGeneratedTimeAndReset(t *testing.T, item *v1.IPSetThreatFeed) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.Data.GeneratedTime)
+	item.Data.GeneratedTime = nil
+}
+
 func AssertReportDataIDAndClusterAndReset(t *testing.T, expectedID string, expectedCluster string, item *v1.ReportData) {
 	require.NotNil(t, item)
 	require.Equal(t, expectedID, item.ID)
 	item.ID = ""
 	require.Equal(t, expectedCluster, item.Cluster)
 	item.Cluster = ""
+}
+
+func AssertReportDataGeneratedTimeAndReset(t *testing.T, item *v1.ReportData) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.GenerationTime)
+	item.GeneratedTime = nil
 }
 
 func AssertReportDataClusterAndReset(t *testing.T, expectedCluster string, item *v1.ReportData) {
@@ -131,6 +176,13 @@ func AssertSnapshotIDAndClusterAndReset(t *testing.T, expectedCluster string, it
 	item.ResourceList.Cluster = ""
 }
 
+func AssertSnapshotGeneratedTimeAndReset(t *testing.T, item *v1.Snapshot) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.ResourceList)
+	require.NotNil(t, item.ResourceList.GeneratedTime)
+	item.ResourceList.GeneratedTime = nil
+}
+
 func AssertSnapshotClusterAndReset(t *testing.T, expectedCluster string, item *v1.Snapshot) {
 	require.NotNil(t, item)
 	require.Equal(t, expectedCluster, item.ResourceList.Cluster)
@@ -143,10 +195,22 @@ func AssertBGPLogClusterAndReset(t *testing.T, expectedCluster string, item *v1.
 	item.Cluster = ""
 }
 
+func AssertBGPLogGeneratedTimeAndReset(t *testing.T, item *v1.BGPLog) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
+}
+
 func AssertWAFLogClusterAndReset(t *testing.T, expectedCluster string, item *v1.WAFLog) {
 	require.NotNil(t, item)
 	require.Equal(t, expectedCluster, item.Cluster)
 	item.Cluster = ""
+}
+
+func AssertWAFLogGeneratedTimeAndReset(t *testing.T, item *v1.WAFLog) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
 }
 
 func AssertL7LogClusterAndReset(t *testing.T, expectedCluster string, item *v1.L7Log) {
@@ -155,13 +219,19 @@ func AssertL7LogClusterAndReset(t *testing.T, expectedCluster string, item *v1.L
 	item.Cluster = ""
 }
 
-func AssertEventsIDAndClusterAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.Event]) []v1.Event {
+func AssertL7LogGeneratedTimeAndReset(t *testing.T, item *v1.L7Log) {
+	require.NotNil(t, item)
+	require.NotNil(t, item.GeneratedTime)
+	item.GeneratedTime = nil
+}
+
+func AssertEventsIDAndClusterAndGeneratedTimeAndReset(t *testing.T, expectedCluster string, r *v1.List[v1.Event]) []v1.Event {
 	require.NotNil(t, r)
 
 	// Asert that we have an ID assigned from Elastic
 	var copyOfEvents []v1.Event
 	for _, item := range r.Items {
-		item = AssertEventIDAndClusterAndReset(t, expectedCluster, item)
+		item = AssertEventIDAndClusterAndGeneratedTimeAndReset(t, expectedCluster, item)
 		copyOfEvents = append(copyOfEvents, item)
 	}
 	return copyOfEvents

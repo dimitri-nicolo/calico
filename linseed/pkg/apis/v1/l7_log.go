@@ -4,6 +4,7 @@ package v1
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // L7LogParams define querying parameters to retrieve L7 logs
@@ -21,8 +22,9 @@ type L7AggregationParams struct {
 
 // L7Log is the structure which defines a single instance of an L7 flow log.
 type L7Log struct {
-	StartTime int64 `json:"start_time"`
-	EndTime   int64 `json:"end_time"`
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
+	StartTime     int64      `json:"start_time"`
+	EndTime       int64      `json:"end_time"`
 
 	DurationMean int64 `json:"duration_mean"`
 	DurationMax  int64 `json:"duration_max"`

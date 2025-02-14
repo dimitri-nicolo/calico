@@ -2,10 +2,9 @@
 package index
 
 import (
-	"time"
-
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"time"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -37,6 +36,18 @@ func (h complianceReportsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedR
 }
 
 func (h complianceReportsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
+	timeField := GetTimeFieldForQuery(h, r)
+	timeRangeQuery := elastic.NewRangeQuery(timeField)
+	if timeField == "generated_time" {
+		if !r.From.IsZero() {
+			timeRangeQuery.Gt(r.From)
+		}
+		if !r.To.IsZero() {
+			timeRangeQuery.Lte(r.To)
+		}
+		return timeRangeQuery
+	}
+
 	unset := time.Time{}
 	if r.From != unset && r.To != unset {
 		return elastic.NewBoolQuery().Should(

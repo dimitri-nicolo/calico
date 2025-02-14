@@ -64,7 +64,7 @@ func RunAllModes(t *testing.T, name string, testFn func(t *testing.T)) {
 // after each test.
 func setupTest(t *testing.T, singleIndex bool) func() {
 	// Hook logrus into testing.T
-	config.ConfigureLogging("DEBUG")
+	config.ConfigureLogging("TRACE")
 	logCancel := logutils.RedirectLogrusToTestingT(t)
 
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
@@ -202,6 +202,7 @@ func TestCreateKubeAuditLog(t *testing.T) {
 			// List the event, assert that it matches the one we just wrote.
 			results, err := b.List(ctx, cluster1Info, params)
 			require.NoError(t, err)
+			backendutils.AssertAuditLogsGeneratedTimeAndReset(t, results)
 			require.Equal(t, 1, len(results.Items))
 
 			// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
@@ -317,6 +318,7 @@ func TestCreateEEAuditLog(t *testing.T) {
 			f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
 			f.StageTimestamp = results.Items[0].StageTimestamp
 			f.Cluster = clusterInfo.Cluster // cluster is set by the backend.
+			backendutils.AssertAuditLogGeneratedTimeAndReset(t, &results.Items[0])
 			require.Equal(t, f, results.Items[0])
 		})
 
@@ -804,6 +806,7 @@ func TestAuditLogFiltering(t *testing.T) {
 					require.Empty(t, err)
 					for i := range r.Items {
 						backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+						backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
 					}
 
 					// Querying with another tenant ID should result in zero results.
@@ -1148,6 +1151,7 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
 		}
 
 		// Assert that the logs are returned in the correct order.
@@ -1167,8 +1171,182 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, log2, r.Items[0])
 		require.Equal(t, log1, r.Items[1])
 	})
+}
+
+func TestRetrieveMostRecentAuditLogs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentAuditLogs (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			t1 := time.Unix(500, 0)
+			t2 := time.Unix(400, 0)
+			t3 := time.Unix(300, 0)
+
+			now := time.Now().UTC()
+
+			log1 := v1.AuditLog{
+				Event: kaudit.Event{
+					TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+					Stage:    kaudit.StageResponseComplete,
+					Level:    kaudit.LevelRequestResponse,
+					User: authnv1.UserInfo{
+						Username: "prince",
+						UID:      "uid",
+						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"value"})},
+					},
+					ImpersonatedUser: &authnv1.UserInfo{
+						Username: "impuser",
+						UID:      "impuid",
+						Groups:   []string{"g1"},
+					},
+					SourceIPs: []string{"1.2.3.4"},
+					ObjectRef: &kaudit.ObjectReference{
+						Resource:   "daemonsets",
+						Name:       "calico-node",
+						Namespace:  "calico-system",
+						APIGroup:   "apps",
+						APIVersion: "v1",
+					},
+					RequestReceivedTimestamp: metav1.NewMicroTime(t1),
+					StageTimestamp:           metav1.NewMicroTime(t1),
+					Annotations:              map[string]string{"brick": "red"},
+				},
+				Name: testutils.StringPtr("any"),
+			}
+			log2 := v1.AuditLog{
+				Event: kaudit.Event{
+					TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+					Stage:    kaudit.StageResponseComplete,
+					Level:    kaudit.LevelRequestResponse,
+					User: authnv1.UserInfo{
+						Username: "aladdin",
+						UID:      "uid",
+						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"strong"})},
+					},
+					ImpersonatedUser: &authnv1.UserInfo{
+						Username: "impuser",
+						UID:      "impuid",
+						Groups:   []string{"g1"},
+					},
+					SourceIPs: []string{"1.2.3.4"},
+					ObjectRef: &kaudit.ObjectReference{
+						Resource:   "daemonsets",
+						Name:       "calico-node",
+						Namespace:  "calico-system",
+						APIGroup:   "apps",
+						APIVersion: "v1",
+					},
+					RequestReceivedTimestamp: metav1.NewMicroTime(t2),
+					StageTimestamp:           metav1.NewMicroTime(t2),
+					Annotations:              map[string]string{"brick": "red"},
+				},
+				Name: testutils.StringPtr("log2-any"),
+			}
+
+			response, err := b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{log1, log2})
+			require.NoError(t, err)
+			require.Equal(t, []v1.BulkError(nil), response.Errors)
+			require.Equal(t, 0, response.Failed)
+
+			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.AuditLogParams{}
+			params.Type = v1.AuditLogTypeEE
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  now,
+				},
+			}
+			params.Sort = []v1.SearchRequestSortBy{
+				{
+					Field: string(lmav1.FieldGeneratedTime),
+				},
+			}
+			r, err := b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].GeneratedTime
+			for i := range r.Items {
+				backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, log1, r.Items[0])
+			require.Equal(t, log2, r.Items[1])
+
+			log3 := v1.AuditLog{
+				Event: kaudit.Event{
+					TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+					Stage:    kaudit.StageResponseComplete,
+					Level:    kaudit.LevelRequestResponse,
+					User: authnv1.UserInfo{
+						Username: "jasmin",
+						UID:      "uid",
+						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"strong"})},
+					},
+					ImpersonatedUser: &authnv1.UserInfo{
+						Username: "impuser",
+						UID:      "impuid",
+						Groups:   []string{"g1"},
+					},
+					SourceIPs: []string{"1.2.3.4"},
+					ObjectRef: &kaudit.ObjectReference{
+						Resource:   "deployments",
+						Name:       "linseed",
+						Namespace:  "tigera-elasticsearch",
+						APIGroup:   "apps",
+						APIVersion: "v1",
+					},
+					RequestReceivedTimestamp: metav1.NewMicroTime(t3),
+					StageTimestamp:           metav1.NewMicroTime(t3),
+					Annotations:              map[string]string{"brick": "red"},
+				},
+				Name: testutils.StringPtr("log3-any"),
+			}
+
+			response, err = b.Create(ctx, v1.AuditLogTypeEE, clusterInfo, []v1.AuditLog{log3})
+			require.NoError(t, err)
+			require.Equal(t, []v1.BulkError(nil), response.Errors)
+			require.Equal(t, 0, response.Failed)
+
+			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+			for i := range r.Items {
+				backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, log3, r.Items[0])
+		})
+	}
 }

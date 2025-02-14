@@ -166,6 +166,7 @@ func TestIPSetBasic(t *testing.T) {
 				require.Len(t, resp.Items, 1)
 				require.Equal(t, "my-threat-feed", resp.Items[0].ID)
 				backendutils.AssertIPSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				backendutils.AssertIPSetThreatFeedGeneratedTimeAndReset(t, &resp.Items[0])
 				require.Equal(t, feed, *resp.Items[0].Data)
 
 				// Attempt to delete it with an invalid tenant ID. It should fail.
@@ -315,5 +316,96 @@ func TestIPSetFiltering(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestRetrieveMostRecentIPSet(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentIPSet (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0).UTC()
+			t2 := time.Unix(400, 0).UTC()
+			t3 := time.Unix(300, 0).UTC()
+
+			f1 := v1.IPSetThreatFeed{
+				ID: "feed-id-1",
+				Data: &v1.IPSetThreatFeedData{
+					CreatedAt: t1,
+					IPs:       []string{"1.2.3.4/32"},
+				},
+			}
+
+			f2 := v1.IPSetThreatFeed{
+				ID: "feed-id-2",
+				Data: &v1.IPSetThreatFeedData{
+					CreatedAt: t2,
+					IPs:       []string{"1.2.3.4/32"},
+				},
+			}
+			_, err := ib.Create(ctx, clusterInfo, []v1.IPSetThreatFeed{f1, f2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, ipsetIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.IPSetThreatFeedParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				QuerySortParams: v1.QuerySortParams{
+					Sort: []v1.SearchRequestSortBy{
+						{
+							Field: string(lmav1.FieldGeneratedTime),
+						},
+					},
+				},
+			}
+			r, err := ib.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].Data.GeneratedTime
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, f1, r.Items[0])
+			require.Equal(t, f2, r.Items[1])
+
+			f3 := v1.IPSetThreatFeed{
+				ID: "feed-id-3",
+				Data: &v1.IPSetThreatFeedData{
+					CreatedAt: t3,
+					IPs:       []string{"1.2.3.4/32"},
+				},
+			}
+			_, err = ib.Create(ctx, clusterInfo, []v1.IPSetThreatFeed{f3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, ipsetIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = ib.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, f3, r.Items[0])
+		})
 	}
 }

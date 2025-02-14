@@ -5,6 +5,7 @@ package v1
 import (
 	gojson "encoding/json"
 	"fmt"
+	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	authnv1 "k8s.io/api/authentication/v1"
@@ -128,7 +129,8 @@ type AuditLog struct {
 	Name *string `json:"name,omitempty"`
 
 	// Cluster is populated by Linseed from the request context
-	Cluster string `json:"cluster,omitempty"`
+	Cluster       string     `json:"cluster,omitempty"`
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 // internalEvent is a copy of the K8S Audit Event in order to perform JSON marshaling/unmarshalling
@@ -158,7 +160,8 @@ type internalEvent struct {
 	Name *string `json:"name,omitempty"`
 
 	// Cluster is populated by linseed from the request context.
-	Cluster string `json:"cluster,omitempty"`
+	Cluster       string     `json:"cluster,omitempty"`
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 type internalObjectReference struct {
@@ -228,6 +231,7 @@ func (auditLog *AuditLog) MarshalJSON() ([]byte, error) {
 	}
 
 	val.Cluster = auditLog.Cluster
+	val.GeneratedTime = auditLog.GeneratedTime
 
 	return json.Marshal(val)
 }
@@ -306,6 +310,7 @@ func (auditLog *AuditLog) UnmarshalJSON(data []byte) error {
 	auditLog.Event = k8sEvent
 
 	auditLog.Cluster = internalEvent.Cluster
+	auditLog.GeneratedTime = internalEvent.GeneratedTime
 
 	return nil
 }

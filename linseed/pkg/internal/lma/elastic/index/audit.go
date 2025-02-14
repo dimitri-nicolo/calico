@@ -4,10 +4,9 @@ package index
 
 import (
 	"fmt"
-	"net/http"
-
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"net/http"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -66,7 +65,19 @@ func (h auditLogsIndexHelper) NewRBACQuery(
 }
 
 func (h auditLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).Gt(r.From).Lte(r.To)
+	timeField := GetTimeFieldForQuery(h, r)
+	timeRangeQuery := elastic.NewRangeQuery(timeField)
+	if timeField == "generated_time" {
+		if !r.From.IsZero() {
+			timeRangeQuery.Gt(r.From)
+		}
+		if !r.To.IsZero() {
+			timeRangeQuery.Lte(r.To)
+		}
+		return timeRangeQuery
+	}
+
+	return timeRangeQuery.Gt(r.From).Lte(r.To)
 }
 
 func (h auditLogsIndexHelper) GetTimeField() string {

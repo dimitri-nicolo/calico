@@ -38,9 +38,21 @@ func (h bgpLogsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVer
 }
 
 func (h bgpLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return elastic.NewRangeQuery(GetTimeFieldForQuery(h, r)).
-		Gt(r.From.Format(v1.BGPLogTimeFormat)).
-		Lte(r.To.Format(v1.BGPLogTimeFormat))
+	timeField := GetTimeFieldForQuery(h, r)
+	timeRangeQuery := elastic.NewRangeQuery(timeField)
+	if timeField == "generated_time" {
+		if !r.From.IsZero() {
+			timeRangeQuery.Gt(r.From)
+		}
+		if !r.To.IsZero() {
+			timeRangeQuery.Lte(r.To)
+		}
+		return timeRangeQuery
+	}
+
+	from := r.From.Format(v1.BGPLogTimeFormat)
+	to := r.To.Format(v1.BGPLogTimeFormat)
+	return timeRangeQuery.Gt(from).Lte(to)
 }
 
 func (h bgpLogsIndexHelper) GetTimeField() string {

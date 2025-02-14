@@ -74,6 +74,7 @@ func TestDomainSetBasic(t *testing.T) {
 				require.Len(t, resp.Items, 1)
 				require.Equal(t, "my-threat-feed", resp.Items[0].ID)
 				backendutils.AssertDomainNameSetThreatFeedClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				backendutils.AssertDomainNameSetThreatFeedGeneratedTimeAndReset(t, &resp.Items[0])
 				require.Equal(t, feed, *resp.Items[0].Data)
 
 				// Attempt to delete it with an invalid tenant ID. It should fail.
@@ -224,5 +225,97 @@ func TestDomainSetFiltering(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestRetrieveMostRecentDomainNameSet(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentDomainNameSet (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0).UTC()
+			t2 := time.Unix(400, 0).UTC()
+			t3 := time.Unix(300, 0).UTC()
+
+			f1 := v1.DomainNameSetThreatFeed{
+				ID: "feed-id-1",
+				Data: &v1.DomainNameSetThreatFeedData{
+					CreatedAt: t1,
+					Domains:   []string{"a.b.c.d"},
+				},
+			}
+
+			f2 := v1.DomainNameSetThreatFeed{
+				ID: "feed-id-2",
+				Data: &v1.DomainNameSetThreatFeedData{
+					CreatedAt: t2,
+					Domains:   []string{"a.b.c.d"},
+				},
+			}
+			_, err := db.Create(ctx, clusterInfo, []v1.DomainNameSetThreatFeed{f1, f2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.DomainNameSetThreatFeedParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				QuerySortParams: v1.QuerySortParams{
+					Sort: []v1.SearchRequestSortBy{
+						{
+							Field: string(lmav1.FieldGeneratedTime),
+						},
+					},
+				},
+			}
+			r, err := db.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].Data.GeneratedTime
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, f1, r.Items[0])
+			require.Equal(t, f2, r.Items[1])
+
+			f3 := v1.DomainNameSetThreatFeed{
+				ID: "feed-id-3",
+				Data: &v1.DomainNameSetThreatFeedData{
+					CreatedAt: t3,
+					Domains:   []string{"a.b.c.d"},
+				},
+			}
+			_, err = db.Create(ctx, clusterInfo, []v1.DomainNameSetThreatFeed{f3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = db.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, f3, r.Items[0])
+		})
 	}
 }

@@ -145,6 +145,7 @@ func TestCreateBGPLog(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, 1, len(results.Items))
 				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+				backendutils.AssertBGPLogGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 
 				// List again with a bogus tenant ID.
@@ -204,4 +205,102 @@ func TestCreateBGPLog(t *testing.T) {
 		require.Error(t, err)
 		require.Nil(t, results)
 	})
+}
+
+func TestRetrieveMostRecentBGPLogs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentBGPLogs (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			log1 := v1.BGPLog{
+				LogTime:   "1991-09-15T06:12:32",
+				Message:   "BGP is wonderful",
+				IPVersion: v1.IPv6BGPLog,
+				Host:      "lenox-host1",
+			}
+			log2 := v1.BGPLog{
+				LogTime:   "1990-09-15T06:12:32",
+				Message:   "BGP is wonderful",
+				IPVersion: v1.IPv6BGPLog,
+				Host:      "lenox-host2",
+			}
+
+			// Create the log in ES.
+			response, err := b.Create(ctx, clusterInfo, []v1.BGPLog{log1, log2})
+			require.NoError(t, err)
+			require.Equal(t, []v1.BulkError(nil), response.Errors)
+			require.Equal(t, 0, response.Failed)
+
+			// Refresh the index.
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.BGPLogParams{}
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  now,
+				},
+			}
+			params.Sort = []v1.SearchRequestSortBy{
+				{
+					Field: string(lmav1.FieldGeneratedTime),
+				},
+			}
+			r, err := b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].GeneratedTime
+			for i := range r.Items {
+				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertBGPLogGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, log1, r.Items[0])
+			require.Equal(t, log2, r.Items[1])
+
+			log3 := v1.BGPLog{
+				LogTime:   "1989-12-25T00:00:00",
+				Message:   "BGP is wonderful",
+				IPVersion: v1.IPv6BGPLog,
+				Host:      "lenox-host3",
+			}
+
+			response, err = b.Create(ctx, clusterInfo, []v1.BGPLog{log3})
+			require.NoError(t, err)
+			require.Equal(t, []v1.BulkError(nil), response.Errors)
+			require.Equal(t, 0, response.Failed)
+
+			// Refresh the index.
+			err = testutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+			for i := range r.Items {
+				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertBGPLogGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, log3, r.Items[0])
+		})
+	}
 }

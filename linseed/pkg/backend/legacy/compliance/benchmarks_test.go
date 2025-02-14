@@ -83,6 +83,7 @@ func TestBenchmarksBasic(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, resp.Items, 1)
 				backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
 				require.Equal(t, f, resp.Items[0])
 			})
 
@@ -172,6 +173,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
 			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, b1, resp.Items[0])
 
 			// Read back data a managed cluster and check it matches.
@@ -180,6 +182,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
 			backendutils.AssertBenchmarkClusterAndReset(t, anotherClusterInfo.Cluster, &resp.Items[0])
+			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, b2, resp.Items[0])
 		})
 	}
@@ -326,6 +329,7 @@ func TestBenchmarksFiltering(t *testing.T) {
 				require.NoError(t, err)
 				for i := range resp.Items {
 					backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
+					backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[i])
 				}
 
 				if tc.Expect1 {
@@ -417,6 +421,7 @@ func TestBenchmarkSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		for i := range r.Items {
 			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Nil(t, r.AfterKey)
 
@@ -436,8 +441,147 @@ func TestBenchmarkSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		for i := range r.Items {
 			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, bm2, r.Items[1])
 		require.Equal(t, bm1, r.Items[0])
 	})
+}
+
+func TestRetrieveMostRecentBenchmarks(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentBenchmarks (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0)
+			t2 := time.Unix(400, 0)
+			t3 := time.Unix(300, 0)
+
+			bm1 := v1.Benchmarks{
+				ID:                "bm1",
+				Version:           "v1",
+				KubernetesVersion: "v1.0",
+				Type:              v1.TypeKubernetes,
+				NodeName:          "lodestone",
+				Timestamp:         metav1.Time{Time: t1},
+				Error:             "",
+				Tests: []v1.BenchmarkTest{
+					{
+						Section:     "a.1",
+						SectionDesc: "testing the test",
+						TestNumber:  "1",
+						TestDesc:    "making sure that we're right",
+						TestInfo:    "information is fluid",
+						Status:      "Just swell",
+						Scored:      true,
+					},
+				},
+			}
+			bm2 := v1.Benchmarks{
+				ID:                "bm2",
+				Version:           "v2",
+				KubernetesVersion: "v1.2",
+				Type:              "unknownType",
+				NodeName:          "golem",
+				Timestamp:         metav1.Time{Time: t2},
+				Error:             "",
+				Tests: []v1.BenchmarkTest{
+					{
+						Section:     "a.1",
+						SectionDesc: "testing the test",
+						TestNumber:  "1",
+						TestDesc:    "making sure that we're right",
+						TestInfo:    "information is fluid",
+						Status:      "Just swell",
+						Scored:      true,
+					},
+				},
+			}
+
+			_, err := bb.Create(ctx, clusterInfo, []v1.Benchmarks{bm1, bm2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.BenchmarksParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				Sort: []v1.SearchRequestSortBy{
+					{
+						Field: string(lmav1.FieldGeneratedTime),
+					},
+				},
+			}
+			r, err := bb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].GeneratedTime
+			for i := range r.Items {
+				backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, bm1, r.Items[0])
+			require.Equal(t, bm2, r.Items[1])
+
+			bm3 := v1.Benchmarks{
+				ID:                "bm3",
+				Version:           "v2",
+				KubernetesVersion: "v1.2",
+				Type:              "unknownType",
+				NodeName:          "golem",
+				Timestamp:         metav1.Time{Time: t3},
+				Error:             "",
+				Tests: []v1.BenchmarkTest{
+					{
+						Section:     "a.1",
+						SectionDesc: "testing the test",
+						TestNumber:  "1",
+						TestDesc:    "making sure that we're right",
+						TestInfo:    "information is fluid",
+						Status:      "Just swell",
+						Scored:      true,
+					},
+				},
+			}
+
+			_, err = bb.Create(ctx, clusterInfo, []v1.Benchmarks{bm3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, bIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = bb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+			for i := range r.Items {
+				backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, bm3, r.Items[0])
+		})
+	}
 }

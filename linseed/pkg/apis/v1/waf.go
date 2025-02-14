@@ -40,18 +40,19 @@ type WAFLogAggregationParams struct {
 }
 
 type WAFLog struct {
-	Timestamp   time.Time    `json:"@timestamp"`
-	Destination *WAFEndpoint `json:"destination"`
-	Level       string       `json:"level"`
-	Method      string       `json:"method"`
-	Msg         string       `json:"msg"`
-	Path        string       `json:"path"`
-	Protocol    string       `json:"protocol"`
-	RequestId   string       `json:"request_id,omitempty"`
-	RuleInfo    string       `json:"rule_info,omitempty"`
-	Rules       []WAFRuleHit `json:"rules,omitempty"`
-	Source      *WAFEndpoint `json:"source"`
-	Host        string       `json:"host"`
+	GeneratedTime *time.Time   `json:"generated_time,omitempty"`
+	Timestamp     time.Time    `json:"@timestamp"`
+	Destination   *WAFEndpoint `json:"destination"`
+	Level         string       `json:"level"`
+	Method        string       `json:"method"`
+	Msg           string       `json:"msg"`
+	Path          string       `json:"path"`
+	Protocol      string       `json:"protocol"`
+	RequestId     string       `json:"request_id,omitempty"`
+	RuleInfo      string       `json:"rule_info,omitempty"`
+	Rules         []WAFRuleHit `json:"rules,omitempty"`
+	Source        *WAFEndpoint `json:"source"`
+	Host          string       `json:"host"`
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`

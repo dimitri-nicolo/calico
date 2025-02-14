@@ -1,6 +1,8 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 package v1
 
+import "time"
+
 type BGPLogIPVersion string
 
 const (
@@ -13,10 +15,11 @@ const (
 const BGPLogTimeFormat = "2006-01-02T15:04:05"
 
 type BGPLog struct {
-	LogTime   string          `json:"logtime"`
-	Message   string          `json:"message"`
-	Host      string          `json:"host"`
-	IPVersion BGPLogIPVersion `json:"ip_version"`
+	GeneratedTime *time.Time      `json:"generated_time,omitempty"`
+	LogTime       string          `json:"logtime"`
+	Message       string          `json:"message"`
+	Host          string          `json:"host"`
+	IPVersion     BGPLogIPVersion `json:"ip_version"`
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
@@ -25,4 +28,7 @@ type BGPLog struct {
 // BGPLogParams define querying parameters to retrieve BGP logs
 type BGPLogParams struct {
 	QueryParams `json:",inline" validate:"required"`
+
+	// Sort configures the sorting of results.
+	Sort []SearchRequestSortBy `json:"sort"`
 }

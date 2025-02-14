@@ -119,6 +119,7 @@ func TestFV_AuditEE(t *testing.T) {
 			require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
 			resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
 			testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
+			testutils.AssertAuditLogGeneratedTimeAndReset(t, &resp.Items[0])
 
 			require.Equal(t, audits, resp.Items)
 		})
@@ -209,6 +210,7 @@ func TestFV_AuditEE(t *testing.T) {
 			require.NotEqual(t, "", resp.Items[0].RequestReceivedTimestamp)
 			resp.Items[0].RequestReceivedTimestamp = metav1.NewMicroTime(reqTime)
 			testutils.AssertAuditLogClusterAndReset(t, cluster, &resp.Items[0])
+			testutils.AssertAuditLogGeneratedTimeAndReset(t, &resp.Items[0])
 
 			require.Equal(t, audits, resp.Items)
 		})

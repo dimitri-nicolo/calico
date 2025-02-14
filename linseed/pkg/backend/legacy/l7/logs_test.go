@@ -62,6 +62,7 @@ func TestL7Logs(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, results.Items, 1)
 				backendutils.AssertL7LogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+				backendutils.AssertL7LogGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 			})
 
@@ -259,4 +260,120 @@ func TestAggregations(t *testing.T) {
 		require.NotNil(t, count.Value)
 		require.Equal(t, float64(1200), *count.Value)
 	})
+}
+
+func TestRetrieveMostRecentL7Logs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentL7Logs (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0).UTC()
+			t2 := time.Unix(400, 0).UTC()
+			t3 := time.Unix(300, 0).UTC()
+
+			l1 := v1.L7Log{
+				StartTime:            t1.Unix(),
+				EndTime:              t1.Add(1 * time.Second).Unix(),
+				DestType:             "wep",
+				SourceNamespace:      "default",
+				DestNamespace:        "kube-system",
+				DestNameAggr:         "kube-dns-*",
+				DestServiceNamespace: "default",
+				DestServiceName:      "kube-dns",
+				ResponseCode:         "200",
+				DurationMean:         300,
+			}
+
+			l2 := v1.L7Log{
+				StartTime:            t2.Unix(),
+				EndTime:              t2.Add(1 * time.Second).Unix(),
+				DestType:             "wep",
+				SourceNamespace:      "default",
+				DestNamespace:        "kube-system",
+				DestNameAggr:         "kube-dns-*",
+				DestServiceNamespace: "default",
+				DestServiceName:      "kube-dns",
+				ResponseCode:         "200",
+				DurationMean:         300,
+			}
+
+			_, err := lb.Create(ctx, clusterInfo, []v1.L7Log{l1, l2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.L7LogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				QuerySortParams: v1.QuerySortParams{
+					Sort: []v1.SearchRequestSortBy{
+						{
+							Field: string(lmav1.FieldGeneratedTime),
+						},
+					},
+				},
+			}
+			r, err := lb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].GeneratedTime
+			for i := range r.Items {
+				backendutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
+				backendutils.AssertL7LogGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, l1, r.Items[0])
+			require.Equal(t, l2, r.Items[1])
+
+			l3 := v1.L7Log{
+				StartTime:            t3.Unix(),
+				EndTime:              t3.Add(1 * time.Second).Unix(),
+				DestType:             "wep",
+				SourceNamespace:      "default",
+				DestNamespace:        "kube-system",
+				DestNameAggr:         "kube-dns-*",
+				DestServiceNamespace: "default",
+				DestServiceName:      "kube-dns",
+				ResponseCode:         "200",
+				DurationMean:         300,
+			}
+			_, err = lb.Create(ctx, clusterInfo, []v1.L7Log{l3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = lb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+			for i := range r.Items {
+				backendutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
+				backendutils.AssertL7LogGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, l3, r.Items[0])
+		})
+	}
 }

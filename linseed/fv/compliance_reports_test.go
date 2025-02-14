@@ -96,6 +96,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 			// The ID should be set.
 			require.Len(t, resp.Items, 1)
 			testutils.AssertReportDataIDAndClusterAndReset(t, report.UID(), cluster, &resp.Items[0])
+			testutils.AssertReportDataGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, reports, resp.Items)
 		})
 
@@ -171,6 +172,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 			resp, err := cli.Compliance(cluster).ReportData().List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
+			testutils.AssertReportDataGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.ReportData{
 				{
 					ReportData: &apiv3.ReportData{
@@ -208,6 +210,7 @@ func TestFV_ComplianceReports(t *testing.T) {
 		resp, err := cli.Compliance(cluster).ReportData().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
+		testutils.AssertReportDataGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.ReportData{
 			{
 				ReportData: &apiv3.ReportData{

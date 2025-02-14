@@ -230,6 +230,7 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 		var esLogs []string
 		for _, log := range resultList.Items {
 			testutils.AssertAuditLogClusterAndReset(t, cluster, &log)
+			testutils.AssertAuditLogGeneratedTimeAndReset(t, &log)
 			logStr, err := log.MarshalJSON()
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
@@ -284,6 +285,7 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 		var esLogs []string
 		for _, log := range resultList.Items {
 			testutils.AssertAuditLogClusterAndReset(t, cluster, &log)
+			testutils.AssertAuditLogGeneratedTimeAndReset(t, &log)
 			logStr, err := log.MarshalJSON()
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
@@ -337,6 +339,7 @@ func TestFV_BGPIngestion(t *testing.T) {
 		var esLogs []string
 		for _, log := range resultList.Items {
 			testutils.AssertBGPLogClusterAndReset(t, cluster, &log)
+			testutils.AssertBGPLogGeneratedTimeAndReset(t, &log)
 			buffer := &bytes.Buffer{}
 			encoder := json.NewEncoder(buffer)
 			encoder.SetEscapeHTML(false)
@@ -394,6 +397,7 @@ func TestFV_WAFIngestion(t *testing.T) {
 		var esLogs []string
 		for _, log := range resultList.Items {
 			testutils.AssertWAFLogClusterAndReset(t, cluster, &log)
+			testutils.AssertWAFLogGeneratedTimeAndReset(t, &log)
 			logStr, err := json.Marshal(log)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
@@ -531,6 +535,6 @@ func TestFV_AnomalyDetectionEventsIngestion(t *testing.T) {
 		expectedEvent := v1.Event{}
 		err = json.Unmarshal([]byte(anomalyDetectionEvent), &expectedEvent)
 		require.NoError(t, err)
-		assert.Equal(t, []v1.Event{expectedEvent}, testutils.AssertEventsIDAndClusterAndReset(t, cluster, resultList))
+		assert.Equal(t, []v1.Event{expectedEvent}, testutils.AssertEventsIDAndClusterAndGeneratedTimeAndReset(t, cluster, resultList))
 	})
 }

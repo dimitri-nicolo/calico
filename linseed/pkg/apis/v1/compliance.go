@@ -52,7 +52,8 @@ type ReportData struct {
 	ID                string `json:"id,omitempty"`
 
 	// Cluster is populated by linseed from the request context.
-	Cluster string `json:"cluster,omitempty"`
+	Cluster       string     `json:"cluster,omitempty"`
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 func (r *ReportData) UID() string {
@@ -87,6 +88,7 @@ type BenchmarksParams struct {
 
 // Benchmarks is a set of benchmarks for a given node.
 type Benchmarks struct {
+	GeneratedTime     *time.Time      `json:"generated_time,omitempty"`
 	ID                string          `json:"id,omitempty"`
 	Version           string          `json:"version"`
 	KubernetesVersion string          `json:"kubernetesVersion"`
