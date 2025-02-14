@@ -53,11 +53,19 @@ func OpenObject(filename string) (*Obj, error) {
 	panic("LIBBPF syscall stub")
 }
 
+func OpenObjectWithLogBuffer(filename string, buf []byte) (*Obj, error) {
+	panic("LIBBPF syscall stub")
+}
+
 func (o *Obj) Load() error {
 	panic("LIBBPF syscall stub")
 }
 
 func (o *Obj) FirstMap() (*Map, error) {
+	panic("LIBBPF syscall stub")
+}
+
+func (o *Obj) Filename() string {
 	panic("LIBBPF syscall stub")
 }
 
