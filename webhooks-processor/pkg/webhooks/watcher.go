@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -32,11 +33,13 @@ type WebhookWatcherUpdater struct {
 	whClient           clientv3.SecurityEventWebhookInterface
 	controller         WebhookControllerInterface
 	webhookUpdatesChan chan *api.SecurityEventWebhook
+	webhookInventory   map[types.UID]*api.SecurityEventWebhook
 }
 
 func NewWebhookWatcherUpdater() (watcher *WebhookWatcherUpdater) {
 	watcher = new(WebhookWatcherUpdater)
 	watcher.webhookUpdatesChan = make(chan *api.SecurityEventWebhook)
+	watcher.webhookInventory = make(map[types.UID]*api.SecurityEventWebhook)
 	return
 }
 
@@ -163,6 +166,8 @@ func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) error {
 
 func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 	var watchRevision string
+	localInventory := make(map[types.UID]*api.SecurityEventWebhook)
+
 	if webhooks, err := w.whClient.List(ctx, options.ListOptions{}); err != nil {
 		logrus.WithError(err).Error("unable to list webhooks")
 		return err
@@ -170,19 +175,40 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 		watchRevision = webhooks.ResourceVersion
 		for _, webhook := range webhooks.Items {
 			w.controller.WebhookEventsChan() <- calicoWatch.Event{Type: calicoWatch.Added, Previous: nil, Object: &webhook}
+			delete(w.webhookInventory, webhook.UID)
+			localInventory[webhook.UID] = &webhook
+		}
+		// swap the watcher/updater inventory with the local one:
+		w.webhookInventory, localInventory = localInventory, w.webhookInventory
+		// and make sure no delete operations were lost in the process,
+		// whatever is left in the old inventory must now be gone:
+		for _, webhook := range localInventory {
+			w.controller.WebhookEventsChan() <- calicoWatch.Event{Type: calicoWatch.Deleted, Previous: nil, Object: webhook}
 		}
 	}
 
 	watcherCtx, watcherCtxCancel := context.WithTimeout(ctx, WebhooksWatcherTimeout)
 	defer watcherCtxCancel()
 
-	if watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{ResourceVersion: watchRevision}); err != nil {
+	watcher, err := w.whClient.Watch(watcherCtx, options.ListOptions{ResourceVersion: watchRevision})
+
+	if err != nil {
 		logrus.WithError(err).Error("unable to watch for webhook changes")
 		return err
-	} else {
-		for event := range watcher.ResultChan() {
-			w.controller.WebhookEventsChan() <- event
-		}
-		return nil
 	}
+
+	for event := range watcher.ResultChan() {
+		switch event.Type {
+		case calicoWatch.Deleted:
+			if webhook, ok := event.Previous.(*api.SecurityEventWebhook); ok {
+				delete(w.webhookInventory, webhook.UID)
+			}
+		default:
+			if webhook, ok := event.Object.(*api.SecurityEventWebhook); ok {
+				w.webhookInventory[webhook.UID] = webhook
+			}
+		}
+		w.controller.WebhookEventsChan() <- event
+	}
+	return nil
 }
