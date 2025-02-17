@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG CALICO_BASE
 FROM scratch AS source
 
 ARG BIN_DIR
 
 COPY ${BIN_DIR} /opt/cni/bin/
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 

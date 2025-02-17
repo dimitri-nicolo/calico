@@ -13,6 +13,8 @@
 # limitations under the License.
 
 ARG UBI8_IMAGE
+ARG CALICO_BASE
+ARG QEMU_IMAGE
 
 FROM ${UBI8_IMAGE} AS builder
 
@@ -37,7 +39,7 @@ COPY --from=builder /deps /
 
 COPY ${BIN_DIR}/dikastes-${TARGETARCH} /dikastes
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 

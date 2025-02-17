@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG CALICO_BASE
 FROM scratch AS source
 
 ARG TARGETARCH
 
 COPY bin/calicoctl-linux-${TARGETARCH} /usr/bin/calicoctl
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 
