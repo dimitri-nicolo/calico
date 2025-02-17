@@ -160,13 +160,12 @@ func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) error {
 
 func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 	var watchRevision string
-	localInventory := make(map[types.UID]*api.SecurityEventWebhook)
-
 	if webhooks, err := w.whClient.List(ctx, options.ListOptions{}); err != nil {
 		logrus.WithError(err).Error("unable to list webhooks")
 		return err
 	} else {
 		watchRevision = webhooks.ResourceVersion
+		localInventory := make(map[types.UID]*api.SecurityEventWebhook)
 		for _, webhook := range webhooks.Items {
 			w.controller.WebhookEventsChan() <- calicoWatch.Event{Type: calicoWatch.Added, Previous: nil, Object: &webhook}
 			delete(w.webhookInventory, webhook.UID)
