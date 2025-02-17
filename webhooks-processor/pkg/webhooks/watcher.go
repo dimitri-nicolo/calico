@@ -67,10 +67,8 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer logrus.Info("Webhook updater/watcher is terminating")
 
-	if stopInformers, err := w.startInformers(); err != nil {
+	if err := w.startInformers(ctx); err != nil {
 		logrus.WithError(err).Error("unable to start informers")
-	} else {
-		defer stopInformers()
 	}
 
 	watchGroup := sync.WaitGroup{}
@@ -94,7 +92,7 @@ func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, 
 	}
 }
 
-func (w *WebhookWatcherUpdater) startInformers() (func(), error) {
+func (w *WebhookWatcherUpdater) startInformers(ctx context.Context) error {
 	informerFactory := informers.NewSharedInformerFactoryWithOptions(
 		w.client, InformerResyncTime, informers.WithNamespace(ConfigVarNamespace),
 	)
@@ -117,7 +115,7 @@ func (w *WebhookWatcherUpdater) startInformers() (func(), error) {
 			}
 		},
 	}); err != nil {
-		return nil, err
+		return err
 	}
 
 	secretInformer := informerFactory.Core().V1().Secrets().Informer()
@@ -138,16 +136,12 @@ func (w *WebhookWatcherUpdater) startInformers() (func(), error) {
 			}
 		},
 	}); err != nil {
-		return nil, err
+		return err
 	}
 
-	stopCh := make(chan struct{})
-	informerFactory.Start(stopCh)
-	informerFactory.WaitForCacheSync(stopCh)
-
-	return func() {
-		stopCh <- struct{}{}
-	}, nil
+	informerFactory.Start(ctx.Done())
+	informerFactory.WaitForCacheSync(ctx.Done())
+	return nil
 }
 
 func (w *WebhookWatcherUpdater) updateWebhooks(ctx context.Context) error {
