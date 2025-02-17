@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -93,8 +92,9 @@ func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, 
 }
 
 func (w *WebhookWatcherUpdater) startInformers() (func(), error) {
-	informerFactory := informers.NewFilteredSharedInformerFactory(
-		w.client, InformerResyncTime, ConfigVarNamespace, func(lo *metav1.ListOptions) {})
+	informerFactory := informers.NewSharedInformerFactoryWithOptions(
+		w.client, InformerResyncTime, informers.WithNamespace(ConfigVarNamespace),
+	)
 
 	cmInformer := informerFactory.Core().V1().ConfigMaps().Informer()
 	if _, err := cmInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
