@@ -1,10 +1,4 @@
-ARG QEMU_IMAGE
-
-FROM ${QEMU_IMAGE} AS qemu
-
 FROM alpine:3.18 AS base
-
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 RUN apk update && apk upgrade && apk add iptables
 

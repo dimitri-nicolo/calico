@@ -1,12 +1,7 @@
-ARG QEMU_IMAGE
 ARG THIRD_PARTY_REGISTRY
 ARG UBI9_IMAGE
 
-FROM ${QEMU_IMAGE} AS qemu
-
 FROM ${UBI9_IMAGE} AS ubi
-
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 # Update base packages to pick up security updates. 
 RUN microdnf upgrade -y && microdnf install -y shadow-utils

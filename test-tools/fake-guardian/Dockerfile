@@ -1,16 +1,10 @@
 # Copyright (c) 2024 Tigera, Inc. All rights reserved.
 
-ARG QEMU_IMAGE
-
-FROM ${QEMU_IMAGE} AS qemu
-
 FROM alpine:3 AS builder
 
 ARG CONTROLLER_RUNTIME_VERSION
 ARG K8S_VERSION
 ARG TARGETARCH
-
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 RUN apk add --no-cache curl
 

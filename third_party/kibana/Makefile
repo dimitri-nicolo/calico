@@ -48,7 +48,7 @@ $(KIBANA_DOWNLOADED):
 # always register because build target will build images for all supported arches
 .PHONY: register
 register:
-	docker run --rm --privileged multiarch/qemu-user-static:register || true
+	docker run --privileged --rm tonistiigi/binfmt --install all || true
 
 .PHONY: build
 build: register $(KIBANA_DOWNLOADED)
@@ -108,7 +108,6 @@ $(KIBANA_IMAGE_MARKER): tigera-plugin gtm-plugin
 		--build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) \
 		--build-arg KIBANA_VERSION=$(KIBANA_VERSION) \
 		--build-arg LATEST_IMAGE_TAG=$(LATEST_IMAGE_TAG) \
-		--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 		-t $(KIBANA_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) \
 		-f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=$(LATEST_IMAGE_TAG)
