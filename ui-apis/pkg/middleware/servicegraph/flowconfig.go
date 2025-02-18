@@ -27,7 +27,7 @@ func GetFlowConfig(ctx context.Context, cs k8s.ClientSet) (*FlowConfig, error) {
 
 	felixConfig, err := cs.ProjectcalicoV3().FelixConfigurations().Get(ctx, "default", v1.GetOptions{})
 	if err != nil {
-		if errors.IsForbidden(err) {
+		if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
 			// If forbidden just use the defaults. We shouldn't prevent graph access in this case.
 			return fc, nil
 		}

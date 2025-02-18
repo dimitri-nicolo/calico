@@ -22,7 +22,6 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
 	"github.com/projectcalico/calico/ui-apis/pkg/math"
@@ -42,7 +41,12 @@ const (
 //
 // Validates request http method and calls different handlers based on the SearchType - flowLogTypeSearchHandler for
 // SearchTypeFlows and commonTypeSearchHandler for other types.
-func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClientSetFactory lmak8s.ClientSetFactory, lsclient client.Client) http.Handler {
+func SearchHandler(
+	t SearchType,
+	authReview middleware.AuthorizationReview,
+	k8sClientSetFactory lmak8s.ClientSetFactory,
+	lsclient client.Client,
+) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the request user
 		user, ok := request.UserFrom(r.Context())
@@ -85,7 +89,7 @@ func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sC
 
 		switch t {
 		case SearchTypeFlows:
-			response, err = flowlogTypeSearchHandler(authReview, k8sClient, lsclient, w, r)
+			response, err = flowlogTypeSearchHandler(authReview, lsclient, w, r)
 		default:
 			response, err = commonTypeSearchHandler(t, authReview, k8sClient, lsclient, w, r)
 		}
@@ -103,9 +107,12 @@ func SearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sC
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func flowlogTypeSearchHandler(authReview middleware.AuthorizationReview, k8sClient lmak8s.ClientSet,
-	lsclient client.Client, w http.ResponseWriter, r *http.Request) (*v1.SearchResponse, error) {
-
+func flowlogTypeSearchHandler(
+	authReview middleware.AuthorizationReview,
+	lsclient client.Client,
+	w http.ResponseWriter,
+	r *http.Request,
+) (*v1.SearchResponse, error) {
 	// Decode the request
 	searchRequest, err := middleware.ParseBody[v1.FlowLogSearchRequest](w, r)
 	if err != nil {
@@ -124,16 +131,21 @@ func flowlogTypeSearchHandler(authReview middleware.AuthorizationReview, k8sClie
 	defer cancel()
 
 	// Perform the search.
-	return searchFlowLogs(ctx, lsclient, searchRequest, authReview, k8sClient)
+	return searchFlowLogs(ctx, lsclient, searchRequest, authReview)
 }
 
 // commonTypeSearchHandler handles dnslogs, l7logs, and event search requests.
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func commonTypeSearchHandler(t SearchType, authReview middleware.AuthorizationReview, k8sClient lmak8s.ClientSet,
-	lsclient client.Client, w http.ResponseWriter, r *http.Request) (*v1.SearchResponse, error) {
-
+func commonTypeSearchHandler(
+	t SearchType,
+	authReview middleware.AuthorizationReview,
+	k8sClient lmak8s.ClientSet,
+	lsclient client.Client,
+	w http.ResponseWriter,
+	r *http.Request,
+) (*v1.SearchResponse, error) {
 	// Decode the request
 	searchRequest, err := middleware.ParseBody[v1.CommonSearchRequest](w, r)
 	if err != nil {
@@ -275,13 +287,15 @@ func intoLogParams(ctx context.Context, t SearchType, request *v1.CommonSearchRe
 		params.SetTimeRange(request.TimeRange)
 	}
 
-	// Get the user's permissions. We'll pass these to Linseed to filter out logs that
-	// the user doens't have permission to view.
-	verbs, err := authReview.PerformReview(ctx, request.ClusterName)
-	if err != nil {
-		return err
+	if authReview != nil {
+		// Get the user's permissions. We'll pass these to Linseed to filter out logs that
+		// the user doens't have permission to view.
+		verbs, err := authReview.PerformReview(ctx, request.ClusterName)
+		if err != nil {
+			return err
+		}
+		params.SetPermissions(verbs)
 	}
-	params.SetPermissions(verbs)
 
 	// Configure sorting, if set.
 	for _, s := range request.SortBy {
@@ -323,7 +337,6 @@ func searchFlowLogs(
 	lsclient client.Client,
 	request *v1.FlowLogSearchRequest,
 	authReview middleware.AuthorizationReview,
-	lmak8s k8s.ClientSet,
 ) (*v1.SearchResponse, error) {
 	// build base params.
 	params := &lapi.FlowLogParams{}

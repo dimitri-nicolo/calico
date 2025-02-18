@@ -18,8 +18,7 @@ import (
 )
 
 // EventExceptionsHandler handles requests related to security-event exceptions.
-func EventExceptionsHandler(authReview middleware.AuthorizationReview, k8sClientSetFactory lmak8s.ClientSetFactory, lsclient client.Client) http.Handler {
-
+func EventExceptionsHandler(k8sClientSetFactory lmak8s.ClientSetFactory, lsclient client.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the request user
 		user, ok := request.UserFrom(r.Context())

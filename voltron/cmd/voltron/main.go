@@ -48,7 +48,6 @@ func main() {
 		`^/api/?`,
 		`^/apis/?`,
 	})
-
 	if err != nil {
 		log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 	}
@@ -123,6 +122,7 @@ func main() {
 			`^/api/?`,
 			`^/apis/?`,
 			`^/packet-capture/?`,
+			`^/goldmane.Statistics/List?`,
 		})
 		if err != nil {
 			log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
@@ -288,6 +288,15 @@ func main() {
 			// Need this unauthenticated so a browser can download the manager UI webcode.
 			Unauthenticated: true,
 		},
+	}
+
+	if cfg.GoldmaneEnabled {
+		// We need to add a Target to the default proxy so that these requests don't fallthrough to
+		// the default "/" target.
+		targetList = append(targetList, bootstrap.Target{
+			Path: "/goldmane.Statistics/List",
+			Dest: cfg.GoldmaneEndpoint,
+		})
 	}
 
 	if cfg.EnableCompliance {

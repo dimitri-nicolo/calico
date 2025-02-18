@@ -5,10 +5,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -18,6 +22,7 @@ import (
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
+	goldmane "github.com/projectcalico/calico/goldmane/pkg/client"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
@@ -147,7 +152,8 @@ func Start(cfg *Config) error {
 	// system:serviceaccount:tigera-manager:tigera-manager service account. This is because each tenant runs
 	// this component in its own namespace, whereas the managed cluster isn't tenant aware and expects the
 	// canonical name.
-	if cfg.TenantNamespace != "" {
+	if cfg.Impersonate && cfg.TenantNamespace != "" {
+		// For free-tier, we don't impersonate. We'll just make the requests with Guardian's credentials.
 		impersonationInfo := user.DefaultInfo{
 			Name:   "system:serviceaccount:tigera-manager:tigera-manager",
 			Groups: []string{},
@@ -157,9 +163,18 @@ func Start(cfg *Config) error {
 	}
 
 	// Create a PIP backend.
-	p := pip.New(pipcfg.MustLoadConfig(), &clusterAwareLister{k8sClientFactory}, linseed)
+	pipBackend := pip.New(pipcfg.MustLoadConfig(), &clusterAwareLister{k8sClientFactory}, linseed)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
+
+	// Create an AuthorizationReview to perform RBAC checks for the user making the request.
+	// If impersonation is not enabled, we don't need to perform any authorization reviews, since user identity
+	// is not being passed through to managed clusters. This is used in free-tier clusters in order to reduce the permissions
+	// required by Guardian in the managed cluster. OSS clusters also do not have the AuthorizationReview API.
+	var authzReview middleware.AuthorizationReview
+	if cfg.Impersonate {
+		authzReview = middleware.NewAuthorizationReview(k8sClientSetFactory)
+	}
 
 	// Service graph has additional RBAC control built in since it accesses multiple different tables. However, the
 	// minimum requirements for accessing SG is access to the flow logs. Perform that check here so it is done at the
@@ -184,25 +199,36 @@ func Start(cfg *Config) error {
 							ServiceGraphCacheDataSettleTime:       cfg.ServiceGraphCacheDataSettleTime,
 							ServiceGraphCacheDataPrefetch:         cfg.ServiceGraphCacheDataPrefetch,
 							TenantNamespace:                       cfg.TenantNamespace,
+
+							// If impersonation is not enabled, then we cannot perform RBAC based on the original user.
+							FineGrainedRBAC: cfg.Impersonate,
 						},
 					)))))
+
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.FlowLogsHandler(k8sClientFactory, linseed, p)))))
+					middleware.FlowLogsHandler(
+						k8sClientFactory,
+						linseed,
+						pipBackend,
+						cfg.Impersonate,
+					)))))
+
 	sm.Handle("/flowLogs/aggregation",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					aggregation.NewHandler(linseed, k8sClientSetFactory, aggregation.TypeFlows)))))
+
 	sm.Handle("/flowLogs/search",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
 						search.SearchTypeFlows,
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						authzReview,
 						k8sClientSetFactory,
 						linseed,
 					)))))
@@ -213,14 +239,14 @@ func Start(cfg *Config) error {
 	sm.Handle("/endpoints/aggregation",
 		middleware.AuthenticateRequest(authn,
 			middleware.EndpointsAggregationHandler(authz,
-				middleware.NewAuthorizationReview(k8sClientSetFactory),
+				authzReview,
 				qsConfig,
 				linseed,
 			)))
 	sm.Handle("/endpoints/names",
 		middleware.AuthenticateRequest(authn,
 			middleware.EndpointsNamesHandler(
-				middleware.NewAuthorizationReview(k8sClientSetFactory),
+				authzReview,
 				qsConfig,
 			)))
 	sm.Handle("/dnsLogs/aggregation",
@@ -234,7 +260,7 @@ func Start(cfg *Config) error {
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
 						search.SearchTypeDNS,
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						authzReview,
 						k8sClientSetFactory,
 						linseed,
 					)))))
@@ -249,7 +275,7 @@ func Start(cfg *Config) error {
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
 						search.SearchTypeL7,
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						authzReview,
 						k8sClientSetFactory,
 						linseed,
 					)))))
@@ -264,7 +290,7 @@ func Start(cfg *Config) error {
 				middleware.AuthorizeRequest(authz,
 					search.SearchHandler(
 						search.SearchTypeEvents,
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						authzReview,
 						k8sClientSetFactory,
 						linseed,
 					)))))
@@ -279,7 +305,6 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					exceptions.EventExceptionsHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSetFactory,
 						linseed,
 					)))))
@@ -288,27 +313,21 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					waf.WAFRulesetsHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSetFactory,
-						linseed,
 					)))))
 	sm.Handle("/waf/rulesets/{rulesetID}",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					waf.WAFRulesetHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSetFactory,
-						linseed,
 					)))))
 	sm.Handle("/waf/rulesets/{rulesetID}/rules/{ruleID}",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					waf.WAFRuleDetailsHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSetFactory,
-						linseed,
 					)))))
 
 	sm.Handle("/auditlogs",
@@ -321,7 +340,7 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					process.ProcessHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						authzReview,
 						linseed,
 					)))))
 	sm.Handle("/services",
@@ -329,7 +348,7 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					application.ApplicationHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						authzReview,
 						linseed,
 						application.ApplicationTypeService,
 					)))))
@@ -338,7 +357,7 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					application.ApplicationHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						authzReview,
 						linseed,
 						application.ApplicationTypeURL,
 					)))))
@@ -360,7 +379,7 @@ func Start(cfg *Config) error {
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.FlowLogNamespaceHandler(k8sClientFactory, linseed)))))
+					middleware.FlowLogNamespaceHandler(k8sClientFactory, linseed, cfg.Impersonate)))))
 	sm.Handle("/flowLogNames",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
@@ -374,6 +393,20 @@ func Start(cfg *Config) error {
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
+
+	if cfg.GoldmaneEnabled && cfg.VoltronURL != "" {
+		creds, err := credentials.NewClientTLSFromFile(cfg.VoltronCAPath, "")
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to create goldmane stats client.")
+		}
+		statsCli, err := goldmane.NewStatisticsAPIClient(strings.TrimPrefix("https://", cfg.VoltronURL), grpc.WithTransportCredentials(creds))
+		if err != nil {
+			logrus.WithError(err).Fatal("Failed to create goldmane stats client.")
+		}
+		sm.Handle("/flows/statistics",
+			middleware.AuthenticateRequest(authn,
+				middleware.NewStatsHandler(statsCli)))
+	}
 
 	if !cfg.ElasticKibanaDisabled {
 		kibanaTLSConfig := calicotls.NewTLSConfig()

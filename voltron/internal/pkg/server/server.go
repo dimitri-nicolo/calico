@@ -23,7 +23,6 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	authnv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -247,7 +246,7 @@ func (s *Server) ListenAndServeHTTPS() error {
 // ListenAndServeInternalHTTPS starts listening and serving the internalHTTP server
 func (s *Server) ListenAndServeInternalHTTPS() error {
 	if s.internalHTTP != nil {
-		log.Infof("Voltron listens for Internal HTTP requests at %s", s.internalAddr)
+		logrus.Infof("Voltron listens for Internal HTTP requests at %s", s.internalAddr)
 		return s.internalHTTP.ListenAndServeTLS("", "")
 	}
 	return nil
@@ -292,8 +291,8 @@ func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
 }
 
 func (s *Server) acceptTunnels(opts ...tunnel.Option) {
-	log.Debugf("Accepting tunnel connections")
-	defer log.Debugf("acceptTunnels exited")
+	logrus.Debugf("Accepting tunnel connections")
+	defer logrus.Debugf("acceptTunnels exited")
 
 	for {
 		t, err := s.tunSrv.AcceptTunnel(opts...)
@@ -304,17 +303,17 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				// error, will not block
 				return
 			default:
-				log.Warnf("accepting tunnel failed: %s", err)
+				logrus.Warnf("accepting tunnel failed: %s", err)
 				continue
 			}
 		}
-		log.Debugf("tunnel accepted")
+		logrus.Debugf("tunnel accepted")
 
 		clusterID, fingerprint, tunnelCert := s.extractIdentity(t)
 
 		c := s.clusters.get(clusterID)
 		if c == nil {
-			log.Errorf("cluster %q does not exist", clusterID)
+			logrus.Errorf("cluster %q does not exist", clusterID)
 			t.Close()
 			continue
 		}
@@ -330,13 +329,13 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 
 			if len(managedCertificate) != 0 {
 				if err := validateCertificate(tunnelCert, managedCertificate); err != nil {
-					log.WithError(err).Errorf("failed to verify certificate for cluster %s", clusterID)
+					logrus.WithError(err).Errorf("failed to verify certificate for cluster %s", clusterID)
 					closeTunnel(t)
 					return
 				}
 			} else {
 				if len(c.ActiveFingerprint) == 0 {
-					log.Error("no fingerprint has been stored against the current connection")
+					logrus.Error("no fingerprint has been stored against the current connection")
 					closeTunnel(t)
 					return
 				}
@@ -345,42 +344,42 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
 				if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
 					if fingerprint != c.ActiveFingerprint {
-						log.Error("stored fingerprint does not match provided fingerprint")
+						logrus.Error("stored fingerprint does not match provided fingerprint")
 						closeTunnel(t)
 						return
 					}
 				} else {
 					// check pre-v3.15 fingerprint (md5)
 					if s.extractMD5Identity(t) != c.ActiveFingerprint {
-						log.Error("stored fingerprint does not match provided fingerprint")
+						logrus.Error("stored fingerprint does not match provided fingerprint")
 						closeTunnel(t)
 						return
 					}
 
 					// update to v3.15 fingerprint hash (sha256) when matched
 					if err := c.updateActiveFingerprint(fingerprint); err != nil {
-						log.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
+						logrus.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
 						closeTunnel(t)
 						return
 					}
 
-					log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
+					logrus.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 				}
 			}
 
 			if err := c.assignTunnel(t); err != nil {
 				if err == tunnelmgr.ErrTunnelSet {
-					log.Errorf("opening a second tunnel ID %s rejected", clusterID)
+					logrus.Errorf("opening a second tunnel ID %s rejected", clusterID)
 				} else {
-					log.WithError(err).Errorf("failed to open the tunnel for cluster %s", clusterID)
+					logrus.WithError(err).Errorf("failed to open the tunnel for cluster %s", clusterID)
 				}
 
 				if err := t.Close(); err != nil {
-					log.WithError(err).Errorf("failed closed tunnel after failing to assign it to cluster %s", clusterID)
+					logrus.WithError(err).Errorf("failed closed tunnel after failing to assign it to cluster %s", clusterID)
 				}
 			}
 
-			log.Debugf("Accepted a new tunnel from %s", clusterID)
+			logrus.Debugf("Accepted a new tunnel from %s", clusterID)
 		}()
 	}
 }
@@ -388,7 +387,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 func closeTunnel(t *tunnel.Tunnel) {
 	err := t.Close()
 	if err != nil {
-		log.WithError(err).Error("Could not close tunnel")
+		logrus.WithError(err).Error("Could not close tunnel")
 	}
 }
 
@@ -404,7 +403,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint strin
 		fingerprint = utils.GenerateFingerprint(id)
 		certificate = id
 	default:
-		log.Errorf("unknown tunnel identity type %T", id)
+		logrus.Errorf("unknown tunnel identity type %T", id)
 	}
 	return
 }
@@ -414,7 +413,7 @@ func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
 	case *x509.Certificate:
 		fingerprint = fmt.Sprintf("%x", md5.Sum(id.Raw))
 	default:
-		log.Errorf("unknown tunnel identity type %T", id)
+		logrus.Errorf("unknown tunnel identity type %T", id)
 	}
 	return
 }
@@ -427,7 +426,7 @@ func validateCertificate(tunnelCert *x509.Certificate, certPEM []byte) error {
 	block, _ := pem.Decode(certPEM)
 	if block == nil || block.Type != "CERTIFICATE" {
 		err := errors.New("failed to decode PEM block containing certificate")
-		log.WithError(err).Error("failed to validate certificate")
+		logrus.WithError(err).Error("failed to validate certificate")
 		return err
 	}
 
@@ -483,6 +482,9 @@ func wrapInCORSHandler(cors *cors.CORS, delegate http.HandlerFunc) http.HandlerF
 	return delegate
 }
 
+// clusterMuxer is the main handler for all requests coming into voltron. It determines
+// if the request should be proxied to a managed cluster, or the local cluster itself and performs
+// the necessary authentication and impersonation.
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	chdr, hasClusterHeader := r.Header[ClusterHeaderFieldCanon]
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
@@ -498,14 +500,14 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 	if len(chdr) > 1 {
 		msg := fmt.Sprintf("multiple %q headers", utils.ClusterHeaderField)
-		log.Errorf("clusterMuxer: %s", msg)
+		logrus.Errorf("clusterMuxer: %s", msg)
 		http.Error(w, msg, 400)
 		return
 	}
 
 	usr, status, err := s.authenticator.Authenticate(r)
 	if err != nil {
-		log.Errorf("Could not authenticate user from request: %s", err)
+		logrus.Errorf("Could not authenticate user from request: %s", err)
 		http.Error(w, err.Error(), status)
 		return
 	}
@@ -515,14 +517,32 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// If neither is true, we proxy the request without impersonation. Authn will also be handled there.
 	if (!shouldUseTunnel || !hasClusterHeader) && !isK8sRequest {
 		// This is a request for the backend servers in the management cluster, like ui-apis or compliance.
+		logrus.Debug("Request is for the management cluster backing services")
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}
 
-	// Don't overwrite impersonation headers set by clients
-	if len(r.Header.Get(authnv1.ImpersonateUserHeader)) == 0 {
-		addImpersonationHeaders(r, usr)
+	// There are two cases where we want to propagate the authenticated user info via impersonation headers:
+	// 1. The request is going to a managed cluster, and Guardian has impersonation capabilities.
+	// 2. The request is going to the management cluster.
+	if s.clusters.voltronCfg.ManagedClusterSupportsImpersonation || !shouldUseTunnel {
+		// Don't overwrite impersonation headers set by clients.
+		if len(r.Header.Get(authnv1.ImpersonateUserHeader)) == 0 {
+			addImpersonationHeaders(r, usr)
+		}
 	}
+
+	if shouldUseTunnel && !s.clusters.voltronCfg.ManagedClusterSupportsImpersonation {
+		// If the request is going to a managed cluster, but the managed cluster does not support impersonation,
+		// remove impersonation headers. This isn't strictly necessary - the managed cluster will ignore the headers
+		// if they are present - but it's cleaner to remove them.
+		logrus.Debug("Removing impersonation headers")
+		r.Header.Del(authnv1.ImpersonateUserHeader)
+		r.Header.Del(authnv1.ImpersonateGroupHeader)
+	}
+
+	// Always remove the auth headers before proxying the request. Management cluster requests will
+	// use impersonation, and tunneled requests will either use impersonation or Guardian's AuthN.
 	removeAuthHeaders(r)
 
 	// Note, we expect the value passed in the request header field to be the resource
@@ -541,7 +561,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
-		log.Errorf("clusterMuxer: %s", msg)
+		logrus.Errorf("clusterMuxer: %s", msg)
 		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
 	}
@@ -556,7 +576,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 			Name:     clusterID,
 		}, nil)
 		if err != nil {
-			log.Errorf("Could not authenticate user for cluster: %s", err)
+			logrus.Errorf("Could not authenticate user for cluster: %s", err)
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
@@ -572,6 +592,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	if r.ProtoMajor == 2 {
 		r.URL.Scheme = "https"
 	}
+
 	// N.B. Host is only set to make the ReverseProxy happy, DialContext ignores
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"
@@ -618,7 +639,7 @@ func addImpersonationHeaders(r *http.Request, user user.Info) {
 	for _, group := range user.GetGroups() {
 		r.Header.Add(authnv1.ImpersonateGroupHeader, group)
 	}
-	log.Debugf("Adding impersonation headers")
+	logrus.Debugf("Adding impersonation headers")
 }
 
 // WatchK8s starts watching k8s resources, always exits with an error
