@@ -278,15 +278,33 @@ GOARCH_FLAGS :=-e GOARCH=$(ARCH)
 REPO_ROOT := $(shell git rev-parse --show-toplevel)
 CERTS_PATH := $(REPO_ROOT)/hack/test/certs
 
+
 QEMU_IMAGE ?= calico/qemu-user-static:latest
 
+# The image to use for building calico/base-dependent modules (e.g. apiserver, typha).
+ifdef USE_UBI8_AS_CALICO_BASE
+CALICO_BASE ?= $(UBI8_IMAGE)
+else ifdef USE_UBI9_AS_CALICO_BASE
+CALICO_BASE ?= $(UBI9_IMAGE)
+else
+CALICO_BASE ?= calico/base
+endif
+
+ifndef NO_DOCKER_PULL
+DOCKER_PULL = --pull
+else
+DOCKER_PULL =
+endif
+
 # DOCKER_BUILD is the base build command used for building all images.
-DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) --pull \
+DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg QEMU_IMAGE=$(QEMU_IMAGE) \
 	--build-arg UBI8_IMAGE=$(UBI8_IMAGE) \
 	--build-arg UBI9_IMAGE=$(UBI9_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
-	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE)
+	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE) \
+	--build-arg CALICO_BASE=$(CALICO_BASE)
+
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
@@ -529,6 +547,7 @@ commit-and-push-pr:
 #   Helper macros and targets to help with communicating with the github API
 ###############################################################################
 GIT_COMMIT_MESSAGE?="Automatic Pin Updates"
+GIT_COMMIT_TITLE?="Semaphore Auto Pin Update"
 GIT_PR_BRANCH_BASE?=$(SEMAPHORE_GIT_BRANCH)
 PIN_UPDATE_BRANCH?=semaphore-auto-pin-updates-$(GIT_PR_BRANCH_BASE)
 GIT_PR_BRANCH_HEAD?=$(PIN_UPDATE_BRANCH)
@@ -605,7 +624,7 @@ endif
 	git checkout -b $(GIT_PR_BRANCH_HEAD)
 
 create-pin-update-pr:
-	$(call github_pr_create,$(GIT_REPO_SLUG),[$(GIT_PR_BRANCH_BASE)] Semaphore Auto Pin Update,$(GIT_PR_BRANCH_HEAD),$(GIT_PR_BRANCH_BASE))
+	$(call github_pr_create,$(GIT_REPO_SLUG),[$(GIT_PR_BRANCH_BASE)] $(GIT_COMMIT_TITLE),$(GIT_PR_BRANCH_HEAD),$(GIT_PR_BRANCH_BASE))
 	echo 'Created pin update pull request $(PR_NUMBER)'
 
 # Add the "/merge-when-ready" comment to enable the "merge when ready" functionality, i.e. when the pull request is passing
@@ -1613,7 +1632,7 @@ windows-sub-image-%: var-require-all-GIT_VERSION-WINDOWS_IMAGE-WINDOWS_DIST-WIND
 	docker buildx build \
 		--platform windows/amd64 \
 		--output=type=docker,dest=$(CURDIR)/$(WINDOWS_DIST)/$(WINDOWS_IMAGE)-$(GIT_VERSION)-$*.tar \
-		--pull \
+		$(DOCKER_PULL) \
 		-t $(WINDOWS_IMAGE):latest \
 		--build-arg GIT_VERSION=$(GIT_VERSION) \
 		--build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \

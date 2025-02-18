@@ -1,5 +1,6 @@
 # Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
+ARG CALICO_BASE
 FROM scratch AS source
 
 ARG BIN_DIR
@@ -7,7 +8,7 @@ ARG TARGETARCH
 
 COPY ${BIN_DIR}/apiserver-${TARGETARCH} /code/apiserver
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 
