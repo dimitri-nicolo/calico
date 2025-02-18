@@ -26,33 +26,6 @@ index f422d9fae..de2d3f951 100644
      await runDockerGenerator(config, log, build, {
        architecture: 'x64',
        baseImage: 'ubi',
-diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
-index ecb93cfd5..450ace611 100644
---- a/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
-+++ b/src/dev/build/tasks/os_packages/docker_generator/templates/base/Dockerfile
-@@ -9,8 +9,12 @@
- # Build stage 0 `builder`:
- # Extract Kibana artifact
- ################################################################################
-+FROM calico/qemu-user-static as qemu
-+
- FROM {{{baseImageName}}} AS builder
- 
-+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
-+
- {{#ubi}}
- RUN microdnf install -y findutils tar gzip
- {{/ubi}}
-@@ -84,6 +88,9 @@ RUN mkdir -p /opt/filebeat /opt/metricbeat && \
- # Add entrypoint
- ################################################################################
- FROM {{{baseImageName}}}
-+
-+COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
-+
- EXPOSE 5601
- 
- {{#ubi}}
 diff --git a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts b/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts
 index 2da3821ef..33cec08ed 100644
 --- a/src/dev/build/tasks/os_packages/docker_generator/templates/build_docker_sh.template.ts

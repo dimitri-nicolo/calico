@@ -1,13 +1,8 @@
 ARG KIBANA_VERSION
-ARG QEMU_IMAGE
-
-FROM ${QEMU_IMAGE} AS qemu
 
 ARG TARGETARCH
 
 FROM docker.elastic.co/kibana/kibana-ubi:${KIBANA_VERSION}-${TARGETARCH}
-
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 USER 0
 

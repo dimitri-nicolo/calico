@@ -1,13 +1,8 @@
-ARG QEMU_IMAGE
 ARG THIRD_PARTY_REGISTRY
-
-FROM ${QEMU_IMAGE} AS qemu
 
 ARG TARGETARCH
 
 FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.17.1 AS kibana
-
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 # the base image runs as the kibana user (1000) so change user
 # to root (0) to run setup scripts

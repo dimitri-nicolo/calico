@@ -1,11 +1,6 @@
-ARG QEMU_IMAGE
 ARG UBI8_IMAGE
 
-FROM ${QEMU_IMAGE} AS qemu
-
 FROM ${UBI8_IMAGE} AS ubi
-
-COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 RUN microdnf upgrade
 
