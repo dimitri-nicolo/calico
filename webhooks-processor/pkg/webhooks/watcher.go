@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -33,13 +32,13 @@ type WebhookWatcherUpdater struct {
 	whClient           clientv3.SecurityEventWebhookInterface
 	controller         WebhookControllerInterface
 	webhookUpdatesChan chan *api.SecurityEventWebhook
-	webhookInventory   map[types.UID]*api.SecurityEventWebhook
+	webhookInventory   map[string]*api.SecurityEventWebhook
 }
 
 func NewWebhookWatcherUpdater() (watcher *WebhookWatcherUpdater) {
 	watcher = new(WebhookWatcherUpdater)
 	watcher.webhookUpdatesChan = make(chan *api.SecurityEventWebhook)
-	watcher.webhookInventory = make(map[types.UID]*api.SecurityEventWebhook)
+	watcher.webhookInventory = make(map[string]*api.SecurityEventWebhook)
 	return
 }
 
@@ -165,18 +164,18 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 		return err
 	} else {
 		watchRevision = webhooks.ResourceVersion
-		localInventory := make(map[types.UID]*api.SecurityEventWebhook)
+		localInventory := make(map[string]*api.SecurityEventWebhook)
 		for _, webhook := range webhooks.Items {
 			w.controller.WebhookEventsChan() <- calicoWatch.Event{Type: calicoWatch.Added, Previous: nil, Object: &webhook}
-			delete(w.webhookInventory, webhook.UID)
-			localInventory[webhook.UID] = &webhook
+			delete(w.webhookInventory, webhook.Name)
+			localInventory[webhook.Name] = &webhook
 		}
 		// swap the watcher/updater inventory with the local one:
 		w.webhookInventory, localInventory = localInventory, w.webhookInventory
 		// and make sure no delete operations were lost in the process,
 		// whatever is left in the old inventory must now be gone:
 		for _, webhook := range localInventory {
-			w.controller.WebhookEventsChan() <- calicoWatch.Event{Type: calicoWatch.Deleted, Previous: nil, Object: webhook}
+			w.controller.WebhookEventsChan() <- calicoWatch.Event{Type: calicoWatch.Deleted, Previous: webhook, Object: nil}
 		}
 	}
 
@@ -194,11 +193,11 @@ func (w *WebhookWatcherUpdater) watchWebhooks(ctx context.Context) error {
 		switch event.Type {
 		case calicoWatch.Deleted:
 			if webhook, ok := event.Previous.(*api.SecurityEventWebhook); ok {
-				delete(w.webhookInventory, webhook.UID)
+				delete(w.webhookInventory, webhook.Name)
 			}
 		default:
 			if webhook, ok := event.Object.(*api.SecurityEventWebhook); ok {
-				w.webhookInventory[webhook.UID] = webhook
+				w.webhookInventory[webhook.Name] = webhook
 			}
 		}
 		w.controller.WebhookEventsChan() <- event
