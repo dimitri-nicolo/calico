@@ -21,9 +21,10 @@ import (
 // once their advantages become more obvious.
 // So this approach is likely to evolve as test coverage increases...
 type FakeSecurityEventWebhook struct {
-	ExpectedWebhook *api.SecurityEventWebhook
-	Watcher         *FakeWatcher
-	webhookNames    []string
+	ExpectedWebhook                 *api.SecurityEventWebhook
+	Watcher                         *FakeWatcher
+	DontCloseWatchOnCtxCancellation bool
+	webhookNames                    []string
 }
 
 type FakeWatcher struct {
@@ -42,6 +43,7 @@ func (w *FakeSecurityEventWebhook) Update(ctx context.Context, res *api.Security
 	for _, name := range w.webhookNames {
 		if name == res.Name {
 			eventType = watch.Modified
+			break
 		}
 	}
 	if eventType == watch.Added {
@@ -56,7 +58,11 @@ func (w *FakeSecurityEventWebhook) Watch(ctx context.Context, opts options.ListO
 		Results: make(chan watch.Event),
 	}
 
-	// Close on context cancellation
+	if w.DontCloseWatchOnCtxCancellation {
+		return w.Watcher, nil
+	}
+
+	// Otherwise close on context cancellation
 	go func() {
 		<-ctx.Done()
 		w.Watcher.Stop()
