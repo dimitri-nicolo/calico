@@ -1,7 +1,20 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package nfnl
 
 import (
@@ -19,20 +32,20 @@ const (
 )
 
 type NflogMsgPktHdr struct {
-	hwProtocol uint16
-	hook       uint8
-	_pad       uint8
+	_ uint16 // hwProtocol
+	_ uint8  // hook
+	_ uint8  // pad
 }
 
 type NflogMsgPktHw struct {
-	hwAddrlen uint16
-	_pad      uint16
-	hwAddr    [8]uint8
+	_ uint16   // hwAddrlen
+	_ uint16   // pad
+	_ [8]uint8 //hwAddr
 }
 
 type NflogMsgPktTimestamp struct {
-	sec  uint64
-	usec uint64
+	_ uint64 // sec
+	_ uint64 // usec
 }
 
 type NflogMsgConfigCmd struct {

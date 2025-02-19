@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 //go:build linux
 // +build linux
@@ -15,9 +15,9 @@ import (
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/felix/nfnetlink"
+	"github.com/projectcalico/calico/felix/nfnetlink/nfnl"
 	"github.com/projectcalico/calico/felix/rules"
-	"github.com/projectcalico/calico/nfnetlink"
-	"github.com/projectcalico/calico/nfnetlink/nfnl"
 )
 
 // NFLogReader consumes NFLog data and converts them to a format used by collector.

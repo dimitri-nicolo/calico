@@ -1,7 +1,20 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package nfnetlink
 
 import (
@@ -16,9 +29,9 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/calico/felix/nfnetlink/nfnl"
+	"github.com/projectcalico/calico/felix/nfnetlink/pkt"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/nfnetlink/nfnl"
-	"github.com/projectcalico/calico/nfnetlink/pkt"
 )
 
 const (
@@ -359,20 +372,17 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, callback 
 			"groupNum": groupNum,
 		})
 		logCtx.Debug("Start DNS response capture loop")
-		for {
-			select {
-			case res := <-resChan:
-				logCtx.Debugf("%v messages from DNS response channel", len(res))
-				for _, m := range res {
-					msg := nfnl.DeserializeNfGenMsg(m)
-					packetData, timestamp, err := getNflogPacketData(m[msg.Len():])
-					if err != nil {
-						logCtx.Warnf("Error parsing NFLOG %v", err)
-						continue
-					}
-					logCtx.Debugf("DNS response length %v", len(packetData))
-					callback(packetData, timestamp)
+		for res := range resChan {
+			logCtx.Debugf("%v messages from DNS response channel", len(res))
+			for _, m := range res {
+				msg := nfnl.DeserializeNfGenMsg(m)
+				packetData, timestamp, err := getNflogPacketData(m[msg.Len():])
+				if err != nil {
+					logCtx.Warnf("Error parsing NFLOG %v", err)
+					continue
 				}
+				logCtx.Debugf("DNS response length %v", len(packetData))
+				callback(packetData, timestamp)
 			}
 		}
 	}()

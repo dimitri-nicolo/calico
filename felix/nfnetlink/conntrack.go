@@ -1,10 +1,23 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2025 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package nfnetlink
 
 import (
 	"errors"
 
-	"github.com/projectcalico/calico/nfnetlink/nfnl"
+	"github.com/projectcalico/calico/felix/nfnetlink/nfnl"
 )
 
 const (
@@ -65,24 +78,15 @@ type CtEntry struct {
 }
 
 func (cte *CtEntry) IsNAT() bool {
-	if cte.Status&nfnl.IPS_NAT_MASK != 0 {
-		return true
-	}
-	return false
+	return cte.Status&nfnl.IPS_NAT_MASK != 0
 }
 
 func (cte *CtEntry) IsSNAT() bool {
-	if cte.Status&nfnl.IPS_SRC_NAT != 0 {
-		return true
-	}
-	return false
+	return cte.Status&nfnl.IPS_SRC_NAT != 0
 }
 
 func (cte *CtEntry) IsDNAT() bool {
-	if cte.Status&nfnl.IPS_DST_NAT != 0 {
-		return true
-	}
-	return false
+	return cte.Status&nfnl.IPS_DST_NAT != 0
 }
 
 func (cte *CtEntry) OriginalTuplePostDNAT() (CtTuple, error) {

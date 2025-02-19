@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 
 package dnsdeniedpacket
 
@@ -12,12 +12,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/felix/nfnetlink"
+	"github.com/projectcalico/calico/felix/nfnetlink/pkt"
 	"github.com/projectcalico/calico/felix/nfqueue"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	"github.com/projectcalico/calico/nfnetlink"
-	"github.com/projectcalico/calico/nfnetlink/pkt"
 )
 
 var (
