@@ -94,13 +94,19 @@ check-release-cut-promotions:
 check-language:
 	./hack/check-language.sh
 
+protobuf:
+	$(MAKE) -C app-policy protobuf
+	$(MAKE) -C cni-plugin protobuf
+	$(MAKE) -C egress-gateway protobuf
+	$(MAKE) -C felix protobuf
+	$(MAKE) -C pod2daemon protobuf
+
 generate:
 	$(MAKE) gen-semaphore-yaml
+	$(MAKE) protobuf
 	$(MAKE) -C api gen-files
 	$(MAKE) -C libcalico-go gen-files
 	$(MAKE) -C felix gen-files
-	$(MAKE) -C app-policy protobuf
-	$(MAKE) -C egress-gateway protobuf
 	$(MAKE) gen-manifests
 
 gen-manifests: bin/helm bin/yq
