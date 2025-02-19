@@ -168,8 +168,6 @@ func TestFV_WAF(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
 			testutils.AssertWAFLogGeneratedTimeAndReset(t, &resp.Items[0])
-			testutils.AssertWAFLogGeneratedTimeAndReset(t, &resp.Items[0])
-
 			require.Equal(t, []v1.WAFLog{
 				{
 					Timestamp: logTime.Add(time.Duration(i) * time.Second),

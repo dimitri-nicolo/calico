@@ -108,6 +108,7 @@ func TestFV_Snapshots(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
 			testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+			testutils.AssertSnapshotGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, snapshots, resp.Items[0])
 
 			// Read it back, using a time range

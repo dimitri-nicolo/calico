@@ -176,6 +176,7 @@ func TestFV_L7Ingestion(t *testing.T) {
 		var esLogs []string
 		for _, log := range resultList.Items {
 			testutils.AssertL7LogClusterAndReset(t, cluster, &log)
+			testutils.AssertL7LogGeneratedTimeAndReset(t, &log)
 			logStr, err := json.Marshal(log)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))

@@ -114,6 +114,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 
 			// The ID should be set.
 			require.Len(t, resp.Items, 1)
+			testutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
 			testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
 			require.Equal(t, benchmarks, resp.Items[0])
 		})

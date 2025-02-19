@@ -388,6 +388,7 @@ func TestFV_AuditEE(t *testing.T) {
 			resp, err := cli.AuditLogs(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
+			testutils.AssertAuditLogGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.AuditLog{
 				{
 					Event: audit.Event{
@@ -423,6 +424,7 @@ func TestFV_AuditEE(t *testing.T) {
 		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
+		testutils.AssertAuditLogGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.AuditLog{
 			{
 				Event: audit.Event{
@@ -481,6 +483,7 @@ func TestFV_AuditEE(t *testing.T) {
 			resp, err := cli.AuditLogs(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
+			testutils.AssertAuditLogGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.AuditLog{
 				{
 					Event: audit.Event{
@@ -516,6 +519,7 @@ func TestFV_AuditEE(t *testing.T) {
 		resp, err := cli.AuditLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
+		testutils.AssertAuditLogGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.AuditLog{
 			{
 				Event: audit.Event{
