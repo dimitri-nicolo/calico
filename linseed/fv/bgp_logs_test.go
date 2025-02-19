@@ -90,7 +90,7 @@ func TestFV_BGP(t *testing.T) {
 
 			require.Len(t, resp.Items, 1)
 			testutils.AssertBGPLogClusterAndReset(t, cluster, &resp.Items[0])
-			testutils.AssertBGPLogGeneratedTimeAndReset(t, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, bgpLogs, resp.Items)
 		})
 
@@ -161,7 +161,7 @@ func TestFV_BGP(t *testing.T) {
 			resp, err := cli.BGPLogs(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
-			testutils.AssertBGPLogGeneratedTimeAndReset(t, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.BGPLog{
 				{
 					LogTime: logTime.Add(time.Duration(i) * time.Second).Format(v1.BGPLogTimeFormat),
@@ -194,7 +194,7 @@ func TestFV_BGP(t *testing.T) {
 		resp, err := cli.BGPLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
-		testutils.AssertBGPLogGeneratedTimeAndReset(t, &resp.Items[0])
+		testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.BGPLog{
 			{
 				LogTime: logTime.Add(time.Duration(lastItem) * time.Second).Format(v1.BGPLogTimeFormat),

@@ -52,7 +52,8 @@ type ReportData struct {
 	ID                string `json:"id,omitempty"`
 
 	// Cluster is populated by linseed from the request context.
-	Cluster       string     `json:"cluster,omitempty"`
+	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
 	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
@@ -88,7 +89,6 @@ type BenchmarksParams struct {
 
 // Benchmarks is a set of benchmarks for a given node.
 type Benchmarks struct {
-	GeneratedTime     *time.Time      `json:"generated_time,omitempty"`
 	ID                string          `json:"id,omitempty"`
 	Version           string          `json:"version"`
 	KubernetesVersion string          `json:"kubernetesVersion"`
@@ -100,6 +100,8 @@ type Benchmarks struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 // Test is a given test within a set of benchmarks.

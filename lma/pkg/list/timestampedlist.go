@@ -20,7 +20,8 @@ type TimestampedResourceList struct {
 	RequestCompletedTimestamp metav1.Time `json:"requestCompletedTimestamp"`
 
 	// Cluster is populated by linseed from the request context.
-	Cluster       string     `json:"cluster"`
+	Cluster string `json:"cluster"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
 	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 

@@ -83,7 +83,7 @@ func TestBenchmarksBasic(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, resp.Items, 1)
 				backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-				backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
+				backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 				require.Equal(t, f, resp.Items[0])
 			})
 
@@ -173,7 +173,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
 			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
+			backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, b1, resp.Items[0])
 
 			// Read back data a managed cluster and check it matches.
@@ -182,7 +182,7 @@ func TestBenchmarksBasic(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
 			backendutils.AssertBenchmarkClusterAndReset(t, anotherClusterInfo.Cluster, &resp.Items[0])
-			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
+			backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, b2, resp.Items[0])
 		})
 	}
@@ -329,7 +329,7 @@ func TestBenchmarksFiltering(t *testing.T) {
 				require.NoError(t, err)
 				for i := range resp.Items {
 					backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
-					backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[i])
+					backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[i])
 				}
 
 				if tc.Expect1 {
@@ -421,7 +421,7 @@ func TestBenchmarkSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		for i := range r.Items {
 			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Nil(t, r.AfterKey)
 
@@ -441,7 +441,7 @@ func TestBenchmarkSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		for i := range r.Items {
 			backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-			backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, bm2, r.Items[1])
 		require.Equal(t, bm1, r.Items[0])
@@ -529,7 +529,7 @@ func TestRetrieveMostRecentBenchmarks(t *testing.T) {
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
 				backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -577,7 +577,7 @@ func TestRetrieveMostRecentBenchmarks(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
 				backendutils.AssertBenchmarkClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertBenchmarkGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.

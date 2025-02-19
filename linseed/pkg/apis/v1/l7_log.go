@@ -22,9 +22,8 @@ type L7AggregationParams struct {
 
 // L7Log is the structure which defines a single instance of an L7 flow log.
 type L7Log struct {
-	GeneratedTime *time.Time `json:"generated_time,omitempty"`
-	StartTime     int64      `json:"start_time"`
-	EndTime       int64      `json:"end_time"`
+	StartTime int64 `json:"start_time"`
+	EndTime   int64 `json:"end_time"`
 
 	DurationMean int64 `json:"duration_mean"`
 	DurationMax  int64 `json:"duration_max"`
@@ -66,4 +65,6 @@ type L7Log struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }

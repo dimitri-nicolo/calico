@@ -206,7 +206,7 @@ func TestCreateEvent(t *testing.T) {
 		require.NotNil(t, 1, results)
 		require.Equal(t, 1, len(results.Items))
 		backendutils.AssertEventClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
-		backendutils.AssertEventGeneratedTimeAndReset(t, &results.Items[0])
+		backendutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 
 		// We expect the ID to be same as the passed event id.
 		require.Equal(t, event, results.Items[0])

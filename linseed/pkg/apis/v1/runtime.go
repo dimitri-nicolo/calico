@@ -17,20 +17,21 @@ type RuntimeReport struct {
 // We are currently storing this temporarily until https://tigera.atlassian.net/browse/EV-3460
 // gets resolved
 type Report struct {
-	GeneratedTime *time.Time   `json:"generated_time,omitempty"`
-	Count         int          `json:"count"`
-	Type          string       `json:"type"`
-	ConfigName    string       `json:"config_name"`
-	StartTime     time.Time    `json:"start_time"`
-	EndTime       time.Time    `json:"end_time"`
-	Pod           PodInfo      `json:"pod"`
-	File          File         `json:"file"`
-	ProcessStart  ProcessStart `json:"process_start"`
-	FileAccess    FileAccess   `json:"file_access"`
-	Host          string       `json:"host,omitempty"`
+	Count        int          `json:"count"`
+	Type         string       `json:"type"`
+	ConfigName   string       `json:"config_name"`
+	StartTime    time.Time    `json:"start_time"`
+	EndTime      time.Time    `json:"end_time"`
+	Pod          PodInfo      `json:"pod"`
+	File         File         `json:"file"`
+	ProcessStart ProcessStart `json:"process_start"`
+	FileAccess   FileAccess   `json:"file_access"`
+	Host         string       `json:"host,omitempty"`
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 // RuntimeReportParams define querying parameters to retrieve runtime reports

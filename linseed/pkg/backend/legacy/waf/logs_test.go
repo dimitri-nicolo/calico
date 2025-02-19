@@ -179,7 +179,7 @@ func TestWAFLogBasic(t *testing.T) {
 				// Timestamps don't equal on read.
 				results.Items[0].Timestamp = f.Timestamp
 				backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
-				backendutils.AssertWAFLogGeneratedTimeAndReset(t, &results.Items[0])
+				testutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 
 				// Read again using a dummy tenant - we should get nothing.
@@ -479,7 +479,7 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-			backendutils.AssertWAFLogGeneratedTimeAndReset(t, &r.Items[i])
+			testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 
 		// Assert that the logs are returned in the correct order.
@@ -499,7 +499,7 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-			backendutils.AssertWAFLogGeneratedTimeAndReset(t, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, log2, r.Items[0])
 		require.Equal(t, log1, r.Items[1])
@@ -579,7 +579,7 @@ func TestWAFLogFiltering(t *testing.T) {
 				require.NotEqual(t, "", result.Items[0].Timestamp)
 				result.Items[0].Timestamp = reqTime
 				backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &result.Items[0])
-				backendutils.AssertWAFLogGeneratedTimeAndReset(t, &result.Items[0])
+				testutils.AssertGeneratedTimeAndReset(t, &result.Items[0])
 
 				require.Equal(t, wafLogs[testcase.ExpectLogIndex], result.Items[0])
 			})
@@ -649,7 +649,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
 				backendutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
-				backendutils.AssertWAFLogGeneratedTimeAndReset(t, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -685,7 +685,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
 				backendutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
-				backendutils.AssertWAFLogGeneratedTimeAndReset(t, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.

@@ -145,7 +145,7 @@ func TestCreateBGPLog(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, 1, len(results.Items))
 				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
-				backendutils.AssertBGPLogGeneratedTimeAndReset(t, &results.Items[0])
+				backendutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 
 				// List again with a bogus tenant ID.
@@ -259,7 +259,7 @@ func TestRetrieveMostRecentBGPLogs(t *testing.T) {
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
 				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertBGPLogGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -296,7 +296,7 @@ func TestRetrieveMostRecentBGPLogs(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
 				backendutils.AssertBGPLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertBGPLogGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.

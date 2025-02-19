@@ -93,7 +93,7 @@ func TestL7_L7Logs(t *testing.T) {
 			require.NoError(t, err)
 			for i := range resp.Items {
 				testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[i])
-				testutils.AssertL7LogGeneratedTimeAndReset(t, &resp.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &resp.Items[i])
 			}
 			require.Equal(t, logs, resp.Items)
 		})
@@ -240,7 +240,7 @@ func TestL7_L7Logs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
 			testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[0])
-			testutils.AssertL7LogGeneratedTimeAndReset(t, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.L7Log{
 				{
 					StartTime: logTime,
@@ -273,7 +273,7 @@ func TestL7_L7Logs(t *testing.T) {
 		resp, err := cli.L7Logs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
-		testutils.AssertL7LogGeneratedTimeAndReset(t, &resp.Items[0])
+		testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.L7Log{
 			{
 				StartTime: logTime,

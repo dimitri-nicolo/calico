@@ -318,7 +318,7 @@ func TestCreateEEAuditLog(t *testing.T) {
 			f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
 			f.StageTimestamp = results.Items[0].StageTimestamp
 			f.Cluster = clusterInfo.Cluster // cluster is set by the backend.
-			backendutils.AssertAuditLogGeneratedTimeAndReset(t, &results.Items[0])
+			backendutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 			require.Equal(t, f, results.Items[0])
 		})
 
@@ -806,7 +806,7 @@ func TestAuditLogFiltering(t *testing.T) {
 					require.Empty(t, err)
 					for i := range r.Items {
 						backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-						backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
+						backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 					}
 
 					// Querying with another tenant ID should result in zero results.
@@ -1151,7 +1151,7 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-			backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 
 		// Assert that the logs are returned in the correct order.
@@ -1171,7 +1171,7 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-			backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, log2, r.Items[0])
 		require.Equal(t, log1, r.Items[1])
@@ -1281,7 +1281,7 @@ func TestRetrieveMostRecentAuditLogs(t *testing.T) {
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
 				backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -1342,7 +1342,7 @@ func TestRetrieveMostRecentAuditLogs(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
 				backendutils.AssertAuditLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
-				backendutils.AssertAuditLogGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.

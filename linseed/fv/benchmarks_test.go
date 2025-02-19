@@ -97,7 +97,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 			// The ID should be set.
 			require.Len(t, resp.Items, 1)
 			testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
-			testutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, benchmarks, resp.Items[0])
 
 			// Read it back, using a time range
@@ -114,7 +114,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 
 			// The ID should be set.
 			require.Len(t, resp.Items, 1)
-			testutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			testutils.AssertBenchmarkIDAndClusterAndReset(t, benchmarks.UID(), cluster, &resp.Items[0])
 			require.Equal(t, benchmarks, resp.Items[0])
 		})
@@ -191,7 +191,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 			resp, err := cli.Compliance(cluster).Benchmarks().List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
-			testutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.Benchmarks{
 				{
 					Timestamp: metav1.Time{Time: logTime.Add(time.Duration(i) * time.Second)},
@@ -229,7 +229,7 @@ func TestFV_ComplianceBenchmarks(t *testing.T) {
 		resp, err := cli.Compliance(cluster).Benchmarks().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
-		testutils.AssertBenchmarkGeneratedTimeAndReset(t, &resp.Items[0])
+		testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.Benchmarks{
 			{
 				Timestamp: metav1.Time{Time: logTime.Add(time.Duration(lastItem) * time.Second)},

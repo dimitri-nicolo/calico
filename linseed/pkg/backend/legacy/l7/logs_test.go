@@ -62,7 +62,7 @@ func TestL7Logs(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, results.Items, 1)
 				backendutils.AssertL7LogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
-				backendutils.AssertL7LogGeneratedTimeAndReset(t, &results.Items[0])
+				backendutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 			})
 
@@ -330,7 +330,7 @@ func TestRetrieveMostRecentL7Logs(t *testing.T) {
 			lastGeneratedTime := r.Items[1].GeneratedTime
 			for i := range r.Items {
 				backendutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
-				backendutils.AssertL7LogGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.
@@ -369,7 +369,7 @@ func TestRetrieveMostRecentL7Logs(t *testing.T) {
 			require.Nil(t, r.AfterKey)
 			for i := range r.Items {
 				backendutils.AssertL7LogClusterAndReset(t, cluster1, &r.Items[i])
-				backendutils.AssertL7LogGeneratedTimeAndReset(t, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 			}
 
 			// Assert that the logs are returned in the correct order.

@@ -142,7 +142,6 @@ type IPGeoInfo struct {
 }
 
 type Event struct {
-	GeneratedTime   *time.Time      `json:"generated_time,omitempty"`
 	ID              string          `json:"id"`
 	Time            TimestampOrDate `json:"time" validate:"required"`
 	Description     string          `json:"description" validate:"required"`
@@ -172,6 +171,8 @@ type Event struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 // Events can take records of numerous forms. GetRecord extracts the record
