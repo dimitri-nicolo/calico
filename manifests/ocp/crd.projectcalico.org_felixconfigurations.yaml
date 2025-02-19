@@ -692,7 +692,7 @@ spec:
                   where endpoint status will be written. Endpoint status file reporting
                   is disabled if field is left empty. \n Chosen directory should match
                   the directory used by the CNI plugin for PodStartupDelay. [Default:
-                  \"\"]"
+                  /var/run/calico]"
                 type: string
 <<<<<<< HEAD
               externalNetworkRoutingRulePriority:
