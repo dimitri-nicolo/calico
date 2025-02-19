@@ -66,19 +66,18 @@ func (h alertsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVerb
 func (h alertsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	timeField := GetTimeFieldForQuery(h, r)
 	timeRangeQuery := elastic.NewRangeQuery(timeField)
-	if timeField == "generated_time" {
-		if !r.From.IsZero() {
-			timeRangeQuery.Gt(r.From)
-		}
-		if !r.To.IsZero() {
-			timeRangeQuery.Lte(r.To)
-		}
-		return timeRangeQuery
+	switch timeField {
+	case "generated_time":
+		return processGeneratedField(r, timeRangeQuery)
+	default:
+		// Any query that targets the default field requires further processing
+		// and assumes we have defaults for both start and end of the interval.
+		// This query will target any value that is higher that the start, but lower or
+		// equal to the end of the interval
+		from := strconv.FormatInt(r.From.Unix(), 10)
+		to := strconv.FormatInt(r.To.Unix(), 10)
+		return timeRangeQuery.Gt(from).Lte(to)
 	}
-
-	from := strconv.FormatInt(r.From.Unix(), 10)
-	to := strconv.FormatInt(r.To.Unix(), 10)
-	return timeRangeQuery.Gt(from).Lte(to)
 }
 
 func (h alertsIndexHelper) GetTimeField() string {

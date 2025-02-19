@@ -40,19 +40,18 @@ func (h bgpLogsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVer
 func (h bgpLogsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	timeField := GetTimeFieldForQuery(h, r)
 	timeRangeQuery := elastic.NewRangeQuery(timeField)
-	if timeField == "generated_time" {
-		if !r.From.IsZero() {
-			timeRangeQuery.Gt(r.From)
-		}
-		if !r.To.IsZero() {
-			timeRangeQuery.Lte(r.To)
-		}
-		return timeRangeQuery
+	switch timeField {
+	case "generated_time":
+		return processGeneratedField(r, timeRangeQuery)
+	default:
+		// Any query that targets the default field requires further processing
+		// and assumes we have defaults for both start and end of the interval.
+		// This query will target any value that is higher that the start, but lower or
+		// equal to the end of the interval
+		from := r.From.Format(v1.BGPLogTimeFormat)
+		to := r.To.Format(v1.BGPLogTimeFormat)
+		return timeRangeQuery.Gt(from).Lte(to)
 	}
-
-	from := r.From.Format(v1.BGPLogTimeFormat)
-	to := r.To.Format(v1.BGPLogTimeFormat)
-	return timeRangeQuery.Gt(from).Lte(to)
 }
 
 func (h bgpLogsIndexHelper) GetTimeField() string {

@@ -2,8 +2,6 @@
 package index
 
 import (
-	"time"
-
 	"github.com/olivere/elastic/v7"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -39,24 +37,20 @@ func (h ipsetIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedResourceVerbs
 func (h ipsetIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
 	timeField := GetTimeFieldForQuery(h, r)
 	timeRangeQuery := elastic.NewRangeQuery(timeField)
-	if timeField == "generated_time" {
+	switch timeField {
+	case "generated_time":
+		return processGeneratedField(r, timeRangeQuery)
+	default:
+		// Any query that targets the default time field will target value higher than the start
+		// and lower than the end of the interval
 		if !r.From.IsZero() {
-			timeRangeQuery.Gt(r.From)
+			timeRangeQuery.From(r.From)
 		}
 		if !r.To.IsZero() {
-			timeRangeQuery.Lte(r.To)
+			timeRangeQuery.To(r.To)
 		}
 		return timeRangeQuery
 	}
-
-	unset := time.Time{}
-	if r.From != unset {
-		timeRangeQuery.From(r.From)
-	}
-	if r.To != unset {
-		timeRangeQuery.To(r.To)
-	}
-	return timeRangeQuery
 }
 
 func (h ipsetIndexHelper) GetTimeField() string {
