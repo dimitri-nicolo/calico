@@ -91,14 +91,6 @@ func TestFV_Snapshots(t *testing.T) {
 
 		// Read it back.
 		params := v1.SnapshotParams{}
-		//=======
-		//		resp, err := cli.Compliance(cluster).Snapshots().List(ctx, &params)
-		//		require.NoError(t, err)
-		//		require.Len(t, resp.Items, 1)
-		//		testutils.AssertSnapshotIDAndClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
-		//		testutils.AssertSnapshotGeneratedTimeAndReset(t, &resp.Items[0])
-		//		require.Equal(t, snapshots, resp.Items[0])
-		//>>>>>>> 2a1a1588df... [TSLA-8756] Add generated_time to all data types
 
 		t.Run("should query single cluster", func(t *testing.T) {
 			clusterInfo := cluster1Info
