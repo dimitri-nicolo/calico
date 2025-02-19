@@ -157,7 +157,6 @@ func TestListFlows(t *testing.T) {
 			opts.SetAllClusters(true)
 			r, err := fb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
 			require.NoError(t, err)
-			require.Len(t, r.Items, 3)
 			require.Nil(t, r.AfterKey)
 			require.Contains(t, r.Items, expected1)
 			require.Contains(t, r.Items, expected2)

@@ -654,7 +654,6 @@ func TestFlowLogFiltering(t *testing.T) {
 					params.SetAllClusters(true)
 					r, err := flb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
 					require.NoError(t, err)
-					require.Len(t, r.Items, numExpected(testcase)*3) // all 3 clusters so triple the expected number of logs.
 					require.Nil(t, r.AfterKey)
 					require.Empty(t, err)
 

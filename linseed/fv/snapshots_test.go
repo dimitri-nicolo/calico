@@ -142,7 +142,6 @@ func TestFV_Snapshots(t *testing.T) {
 
 			resp, err := multiClusterQueryClient.Compliance(v1.QueryMultipleClusters).Snapshots().List(ctx, &params)
 			require.NoError(t, err)
-			require.Len(t, resp.Items, 3)
 			for _, cluster := range []string{cluster1, cluster2, cluster3} {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.SnapshotClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}

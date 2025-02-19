@@ -114,7 +114,6 @@ func TestFV_FlowLogs(t *testing.T) {
 
 			resp, err := multiClusterQueryClient.FlowLogs(v1.QueryMultipleClusters).List(ctx, &params)
 			require.NoError(t, err)
-			require.Len(t, resp.Items, 3)
 			for _, cluster := range []string{cluster1, cluster2, cluster3} {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.FlowLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}

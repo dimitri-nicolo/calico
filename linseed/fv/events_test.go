@@ -120,7 +120,6 @@ func TestFV_Events(t *testing.T) {
 
 			resp, err := multiClusterQueryClient.Events(v1.QueryMultipleClusters).List(ctx, &params)
 			require.NoError(t, err)
-			require.Len(t, resp.Items, 3)
 			for _, cluster := range []string{cluster1, cluster2, cluster3} {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.EventClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}

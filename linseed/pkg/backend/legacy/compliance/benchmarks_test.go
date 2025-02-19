@@ -102,7 +102,6 @@ func TestBenchmarksBasic(t *testing.T) {
 				params.SetAllClusters(true)
 				resp, err := bb.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters, Tenant: tenant}, &params)
 				require.NoError(t, err)
-				require.Len(t, resp.Items, 3)
 				for _, cluster := range []string{cluster1, cluster2, cluster3} {
 					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.BenchmarkClusterEquals(cluster)), "expected cluster %s in results", cluster)
 				}

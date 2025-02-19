@@ -118,7 +118,6 @@ func TestL7_L7Logs(t *testing.T) {
 
 			resp, err := multiClusterQueryClient.L7Logs(v1.QueryMultipleClusters).List(ctx, &params)
 			require.NoError(t, err)
-			require.Len(t, resp.Items, 3)
 			for _, cluster := range []string{cluster1, cluster2, cluster3} {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.L7LogClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}

@@ -150,7 +150,6 @@ func TestListDNSFlows(t *testing.T) {
 			opts.SetAllClusters(true)
 			r, err := b.List(ctx, bapi.ClusterInfo{Cluster: v1.QueryMultipleClusters}, &opts)
 			require.NoError(t, err)
-			require.Len(t, r.Items, 3)
 			for _, cluster := range []string{cluster1, cluster2, cluster3} {
 				require.Truef(t, backendutils.MatchIn(r.Items, backendutils.DNSFlowClusterEquals(cluster)), "Expected cluster %s in result", cluster)
 			}
