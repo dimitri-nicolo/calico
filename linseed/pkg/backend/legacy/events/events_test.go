@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -63,7 +64,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := backendutils.CreateElasticClient()
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
@@ -86,7 +87,7 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 500*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	// Function contains teardown logic.
 	return func() {

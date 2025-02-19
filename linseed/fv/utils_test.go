@@ -78,13 +78,10 @@ func RunLinseed(t *testing.T, args *RunLinseedArgs) *containers.Container {
 		"-v", fmt.Sprintf("%s/linseed-token:/var/run/secrets/kubernetes.io/serviceaccount/token", cwd),
 		"-v", fmt.Sprintf("%s/tenant-namespace:/var/run/secrets/kubernetes.io/serviceaccount/namespace", cwd),
 		"-v", fmt.Sprintf("%s/ca.pem:/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", certsPath),
-		"-v", fmt.Sprintf("%s/cert/http_ca.crt:/certs/elasticsearch/tls.crt", cwd),
 		"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
 		"-e", "KUBERNETES_SERVICE_PORT=6443",
 		"-e", "ELASTIC_HOST=localhost",
-		"-e", "ELASTIC_SCHEME=https",
-		"-e", fmt.Sprintf("ELASTIC_USERNAME=%s", os.Getenv("ELASTIC_USERNAME")),
-		"-e", fmt.Sprintf("ELASTIC_PASSWORD=%s", os.Getenv("ELASTIC_PASSWORD")),
+		"-e", "ELASTIC_SCHEME=http",
 		"-e", "LINSEED_LOG_LEVEL=debug",
 		"-e", fmt.Sprintf("LINSEED_HEALTH_PORT=%d", args.HealthPort),
 		"-e", fmt.Sprintf("LINSEED_ENABLE_METRICS=%t", args.MetricsPort != 0),
@@ -164,21 +161,10 @@ func RunConfigureElasticLinseed(t *testing.T, args *RunConfigureElasticArgs) {
 	// The container library uses gomega, so we need to connect our testing.T to it.
 	gomega.RegisterTestingT(t)
 
-	// Get the current working directory, which we expect to by the fv dir.
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-
-	// Turn it to an absolute path.
-	cwd, err = filepath.Abs(cwd)
-	require.NoError(t, err)
-
 	dockerArgs := []string{
 		"--net=host",
-		"-v", fmt.Sprintf("%s/cert/http_ca.crt:/certs/elasticsearch/tls.crt", cwd),
 		"-e", "ELASTIC_HOST=localhost",
-		"-e", "ELASTIC_SCHEME=https",
-		"-e", fmt.Sprintf("ELASTIC_USERNAME=%s", os.Getenv("ELASTIC_USERNAME")),
-		"-e", fmt.Sprintf("ELASTIC_PASSWORD=%s", os.Getenv("ELASTIC_PASSWORD")),
+		"-e", "ELASTIC_SCHEME=http",
 		"-e", "LINSEED_LOG_LEVEL=debug",
 		"-e", fmt.Sprintf("LINSEED_BACKEND=%s", config.BackendTypeSingleIndex),
 		"-e", fmt.Sprintf("ELASTIC_ALERTS_BASE_INDEX_NAME=%s", args.AlertBaseIndexName),

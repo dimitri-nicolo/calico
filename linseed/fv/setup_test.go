@@ -6,14 +6,6 @@ package fv_test
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -63,40 +55,7 @@ func setupAndTeardown(t *testing.T, args *RunLinseedArgs, confArgs *RunConfigure
 	// Create an ES client.
 	var err error
 
-	// Load credentials from environment variables
-	username := os.Getenv("ELASTIC_USERNAME")
-	password := os.Getenv("ELASTIC_PASSWORD")
-
-	// Get the current working directory, which we expect to by the fv dir.
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-
-	// Turn it to an absolute path.
-	cwd, err = filepath.Abs(cwd)
-	require.NoError(t, err)
-
-	caCertFile := fmt.Sprintf("%s/cert/http_ca.crt", cwd)
-	caCert, err := ioutil.ReadFile(caCertFile)
-	if err != nil {
-		log.Fatalf("Error loading CA certificate: %s", err)
-	}
-
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
-
-	esClient, err = elastic.NewSimpleClient(elastic.SetURL("https://localhost:9200"),
-		elastic.SetBasicAuth(username, password),
-		elastic.SetInfoLog(logrus.StandardLogger()),
-		elastic.SetSniff(false),
-		elastic.SetHealthcheck(false),
-		elastic.SetHttpClient(&http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					RootCAs: caCertPool,
-				},
-			},
-		}),
-	)
+	esClient, err = elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 
 	require.NoError(t, err)
 	lmaClient = lmaelastic.NewWithClient(esClient)
