@@ -286,6 +286,8 @@ CALICO_BASE ?= $(UBI9_IMAGE)
 else
 CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif
+# TODO Remove once CALICO_BASE is updated to UBI9
+CALICO_BASE_UBI9 ?= calico/base:$(CALICO_BASE_UBI9_VER)
 
 ifndef NO_DOCKER_PULL
 DOCKER_PULL = --pull
@@ -299,7 +301,8 @@ DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
 	--build-arg UBI9_IMAGE=$(UBI9_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE) \
-	--build-arg CALICO_BASE=$(CALICO_BASE)
+	--build-arg CALICO_BASE=$(CALICO_BASE) \
+	--build-arg CALICO_BASE_UBI9=$(CALICO_BASE_UBI9)
 
 
 DOCKER_RUN := mkdir -p $(REPO_ROOT)/.go-pkg-cache bin $(GOMOD_CACHE) && \

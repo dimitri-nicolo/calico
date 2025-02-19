@@ -52,8 +52,6 @@ COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=elastic /lib64/liblzma.so.5 /lib64/liblzma.so.5
 COPY --from=elastic /lib64/liblz4.so.1 /lib64/liblz4.so.1
 COPY --from=elastic /lib64/libgcrypt.so.20 /lib64/libgcrypt.so.20
-COPY --from=elastic /lib64/libpthread.so.0 /lib64/libpthread.so.0
-COPY --from=elastic /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=elastic /lib64/libgpg-error.so.0 /lib64/libgpg-error.so.0
 
 COPY --from=elastic /lib64/libmount.so.1 /lib64/libmount.so.1
