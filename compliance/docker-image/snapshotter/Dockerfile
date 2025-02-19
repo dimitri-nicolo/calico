@@ -1,4 +1,6 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -6,7 +8,7 @@ ARG TARGETARCH
 
 COPY bin/snapshotter-${TARGETARCH} /usr/bin/compliance-snapshotter
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

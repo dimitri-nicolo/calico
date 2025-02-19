@@ -1,4 +1,6 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM alpine:3 AS builder
 
@@ -28,7 +30,7 @@ COPY bin/kube-bench-${TARGETARCH} /usr/bin/kube-bench
 COPY --from=builder /etc/kube-bench /etc/kube-bench/
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

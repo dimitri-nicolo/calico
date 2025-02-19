@@ -1,3 +1,6 @@
+# Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 ARG UBI8_IMAGE
 
 FROM ${UBI8_IMAGE} AS ubi
@@ -56,7 +59,7 @@ COPY prometheus/consoles/ /usr/share/prometheus/consoles/
 COPY prometheus/documentation/examples/prometheus.yml /etc/prometheus/prometheus.yml
 COPY prometheus/npm_licenses.tar.bz2 /npm_licenses.tar.bz2
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

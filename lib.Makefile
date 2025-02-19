@@ -215,8 +215,8 @@ ifeq ($(BUILDARCH),amd64)
 	# *-amd64 tagged images for etcd are not available until v3.5.0
 	ETCD_IMAGE = quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
-UBI8_IMAGE ?= registry.access.redhat.com/ubi8/ubi-minimal:$(UBI8_VERSION)
-UBI9_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:$(UBI9_VERSION)
+UBI8_IMAGE ?= registry.access.redhat.com/ubi8/ubi-minimal:latest
+UBI9_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 ifeq ($(GIT_USE_SSH),true)
 	GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/";
@@ -284,7 +284,7 @@ CALICO_BASE ?= $(UBI8_IMAGE)
 else ifdef USE_UBI9_AS_CALICO_BASE
 CALICO_BASE ?= $(UBI9_IMAGE)
 else
-CALICO_BASE ?= calico/base
+CALICO_BASE ?= calico/base:$(CALICO_BASE_VER)
 endif
 
 ifndef NO_DOCKER_PULL
