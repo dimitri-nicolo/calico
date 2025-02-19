@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 
@@ -152,7 +153,7 @@ func (c *statusUpdateController) retryCleanupPacketCaptureNodes() error {
 	return nil
 }
 
-func (c *statusUpdateController) OnKubernetesNodeDeleted() {
+func (c *statusUpdateController) OnKubernetesNodeDeleted(_ *v1.Node) {
 	// When a Kubernetes node is deleted, trigger a sync.
 	log.Debug("Kubernetes node deletion event")
 	kick(c.syncChan)
