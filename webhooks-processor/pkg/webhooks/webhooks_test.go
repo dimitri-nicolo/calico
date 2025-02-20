@@ -837,7 +837,9 @@ func SetupWithTestState(t *testing.T, testState *TestState) *TestState {
 	require.Eventually(t, func() bool { return testState.Running }, time.Second, 10*time.Millisecond)
 
 	// Sanity test
-	require.NotNil(t, testState.WebHooksAPI.Watcher)
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		assert.NotNil(t, testState.WebHooksAPI.Watcher)
+	}, time.Second, 100*time.Millisecond)
 
 	t.Cleanup(func() {
 		if testState.Stop != nil {

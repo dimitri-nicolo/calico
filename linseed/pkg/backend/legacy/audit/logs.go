@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -121,6 +122,13 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 	bulk := b.client.Bulk()
 
 	for _, f := range logs {
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		generatedTime := time.Now().UTC()
+		f.GeneratedTime = &generatedTime
+
 		doc, err := b.prepareForWrite(i, kind, f)
 		if err != nil {
 			log.Errorf("Error preparing audit log for write: %s", err)

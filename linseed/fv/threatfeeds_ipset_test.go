@@ -88,6 +88,7 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 			require.Len(t, resp.Items, 1)
 			require.Equal(t, feed.ID, resp.Items[0].ID)
 			testutils.AssertIPSetThreatFeedClusterAndReset(t, cluster, &resp.Items[0])
+			testutils.AssertIPSetThreatFeedGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, feed, resp.Items[0])
 		})
 
@@ -172,6 +173,7 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		require.Len(t, resp.Items, 1)
 		require.Equal(t, feed.ID, resp.Items[0].ID)
 		testutils.AssertIPSetThreatFeedClusterAndReset(t, clusterBInfo.Cluster, &resp.Items[0])
+		testutils.AssertIPSetThreatFeedGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, feed, resp.Items[0])
 
 		// Read back the other one, which was created first
@@ -182,6 +184,7 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		require.Len(t, resp.Items, 1)
 		require.Equal(t, feed.ID, resp.Items[0].ID)
 		testutils.AssertIPSetThreatFeedClusterAndReset(t, clusterAInfo.Cluster, &resp.Items[0])
+		testutils.AssertIPSetThreatFeedGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, feed, resp.Items[0])
 	})
 
@@ -225,6 +228,7 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 			resp, err := cli.ThreatFeeds(cluster).IPSet().List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
+			testutils.AssertIPSetThreatFeedGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.IPSetThreatFeed{
 				{
 					ID: strconv.Itoa(i),
@@ -259,6 +263,7 @@ func TestFV_ThreatFeedsIPSet(t *testing.T) {
 		resp, err := cli.ThreatFeeds(cluster).IPSet().List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
+		testutils.AssertIPSetThreatFeedGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.IPSetThreatFeed{
 			{
 				ID: strconv.Itoa(lastItem),

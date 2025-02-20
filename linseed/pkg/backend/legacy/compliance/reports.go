@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -136,6 +137,14 @@ func (b *reportsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.
 		// body of the document.
 		id := backend.ToElasticID(b.singleIndex, f.ID, i)
 		f.ID = ""
+
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		generatedTime := time.Now().UTC()
+		f.GeneratedTime = &generatedTime
+
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f)).Id(id)
 		bulk.Add(req)
 	}

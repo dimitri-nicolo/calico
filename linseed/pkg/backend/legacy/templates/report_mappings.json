@@ -1,5 +1,8 @@
 {
   "properties": {
+    "generated_time": {
+      "type": "date"
+    },
     "reportName": {
       "type": "keyword"
     },

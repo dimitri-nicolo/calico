@@ -4,6 +4,7 @@ package v1
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // L7LogParams define querying parameters to retrieve L7 logs
@@ -64,4 +65,6 @@ type L7Log struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }

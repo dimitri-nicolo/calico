@@ -57,9 +57,8 @@ type FlowLogAggregationParams struct {
 // an empty string
 // Having such values as pointers ensures that json marshalling will render it as such.
 type FlowLog struct {
-	GeneratedTime *time.Time `json:"generated_time,omitempty"`
-	StartTime     int64      `json:"start_time"`
-	EndTime       int64      `json:"end_time"`
+	StartTime int64 `json:"start_time"`
+	EndTime   int64 `json:"end_time"`
 
 	// Source fields.
 	SourceIP         *string        `json:"source_ip"`
@@ -139,6 +138,8 @@ type FlowLog struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 type FlowLogPolicy struct {

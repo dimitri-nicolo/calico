@@ -129,6 +129,7 @@ func TestCreateSnapshots(t *testing.T) {
 					require.NoError(t, err)
 					require.Len(t, resp.Items, 1)
 					backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+					backendutils.AssertSnapshotGeneratedTimeAndReset(t, &resp.Items[0])
 					require.Equal(t, trl, resp.Items[0].ResourceList)
 				})
 
@@ -181,6 +182,7 @@ func TestCreateSnapshots(t *testing.T) {
 				// Overwrite the ID to match the generated one
 				s1.ID = s1.ResourceList.String()
 				backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				backendutils.AssertSnapshotGeneratedTimeAndReset(t, &resp.Items[0])
 				require.Equal(t, s1, resp.Items[0])
 
 				// Read back data a managed cluster and check it matches.
@@ -192,6 +194,7 @@ func TestCreateSnapshots(t *testing.T) {
 				// Overwrite the ID to match the generated one
 				s2.ID = s2.ResourceList.String()
 				backendutils.AssertSnapshotClusterAndReset(t, anotherClusterInfo.Cluster, &resp.Items[0])
+				backendutils.AssertSnapshotGeneratedTimeAndReset(t, &resp.Items[0])
 				require.Equal(t, s2, resp.Items[0])
 			})
 
@@ -301,6 +304,7 @@ func TestSnapshotsFiltering(t *testing.T) {
 				require.NoError(t, err)
 				for i := range resp.Items {
 					backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
+					backendutils.AssertSnapshotGeneratedTimeAndReset(t, &resp.Items[i])
 				}
 
 				if tc.Expect1 {
@@ -315,5 +319,141 @@ func TestSnapshotsFiltering(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestRetrieveMostRecentSnapshots(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentSnapshots (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0)
+			t2 := time.Unix(400, 0)
+			t3 := time.Unix(300, 0)
+
+			s1 := v1.Snapshot{
+				ResourceList: list.TimestampedResourceList{
+					ResourceList: &apiv3.GlobalNetworkPolicyList{
+						TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkPolicy", APIVersion: "projectcalico.org/v3"},
+						ListMeta: metav1.ListMeta{},
+						Items: []apiv3.GlobalNetworkPolicy{
+							{
+								TypeMeta: metav1.TypeMeta{Kind: "GlobalNetworkPolicy", APIVersion: "projectcalico.org/v3"},
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "np1",
+								},
+							},
+						},
+					},
+					RequestStartedTimestamp:   metav1.Time{Time: t1},
+					RequestCompletedTimestamp: metav1.Time{Time: t1},
+				},
+			}
+			s1.ID = s1.ResourceList.String()
+			s2 := v1.Snapshot{
+				ResourceList: list.TimestampedResourceList{
+					ResourceList: &apiv3.NetworkPolicyList{
+						TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+						ListMeta: metav1.ListMeta{},
+						Items: []apiv3.NetworkPolicy{
+							{
+								TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "np1",
+									Namespace: "default",
+								},
+							},
+						},
+					},
+					RequestStartedTimestamp:   metav1.Time{Time: t2},
+					RequestCompletedTimestamp: metav1.Time{Time: t2},
+				},
+			}
+			s2.ID = s2.ResourceList.String()
+
+			_, err := sb.Create(ctx, clusterInfo, []v1.Snapshot{s1, s2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.SnapshotParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				Sort: []v1.SearchRequestSortBy{
+					{
+						Field: string(lmav1.FieldGeneratedTime),
+					},
+				},
+			}
+			r, err := sb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].ResourceList.GeneratedTime
+			for i := range r.Items {
+				backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertSnapshotGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, s1, r.Items[0])
+			require.Equal(t, s2, r.Items[1])
+
+			s3 := v1.Snapshot{
+				ResourceList: list.TimestampedResourceList{
+					ResourceList: &apiv3.NetworkPolicyList{
+						TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+						ListMeta: metav1.ListMeta{},
+						Items: []apiv3.NetworkPolicy{
+							{
+								TypeMeta: metav1.TypeMeta{Kind: "NetworkPolicy", APIVersion: "projectcalico.org/v3"},
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "np3",
+									Namespace: "default",
+								},
+							},
+						},
+					},
+					RequestStartedTimestamp:   metav1.Time{Time: t3},
+					RequestCompletedTimestamp: metav1.Time{Time: t3},
+				},
+			}
+			s3.ID = s3.ResourceList.String()
+			_, err = sb.Create(ctx, clusterInfo, []v1.Snapshot{s3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, sIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = sb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+			for i := range r.Items {
+				backendutils.AssertSnapshotClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertSnapshotGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, s3, r.Items[0])
+		})
 	}
 }

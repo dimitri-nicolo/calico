@@ -95,6 +95,7 @@ func TestFV_WAF(t *testing.T) {
 			require.NotEqual(t, "", resp.Items[0].Timestamp)
 			resp.Items[0].Timestamp = reqTime
 			testutils.AssertWAFLogClusterAndReset(t, cluster, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 
 			require.Equal(t, wafLogs, resp.Items)
 		})
@@ -125,7 +126,6 @@ func TestFV_WAF(t *testing.T) {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.WAFLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}
 		})
-
 	})
 
 	RunWAFTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {
@@ -166,6 +166,7 @@ func TestFV_WAF(t *testing.T) {
 			resp, err := cli.WAFLogs(cluster).List(ctx, &params)
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.WAFLog{
 				{
 					Timestamp: logTime.Add(time.Duration(i) * time.Second),
@@ -198,6 +199,7 @@ func TestFV_WAF(t *testing.T) {
 		resp, err := cli.WAFLogs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
+		testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.WAFLog{
 			{
 				Timestamp: logTime.Add(time.Duration(lastItem) * time.Second),

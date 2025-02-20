@@ -1,6 +1,9 @@
 {
   "dynamic": false,
   "properties": {
+    "generated_time": {
+      "type": "date"
+    },
     "logtime": {
       "type": "date",
       "format": "yyyy-MM-dd'T'HH:mm:ss"

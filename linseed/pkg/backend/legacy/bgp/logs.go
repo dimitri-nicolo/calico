@@ -5,6 +5,7 @@ package bgp
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -95,6 +96,13 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 	bulk := b.client.Bulk()
 
 	for _, l := range logs {
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		generatedTime := time.Now().UTC()
+		l.GeneratedTime = &generatedTime
+
 		// Add this log to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, l))
 		bulk.Add(req)
@@ -145,7 +153,14 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 		return nil, err
 	}
 
-	query.Sort("logtime", true)
+	// Configure sorting.
+	if len(opts.Sort) != 0 {
+		for _, s := range opts.Sort {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort("logtime", true)
+	}
 
 	results, err := query.Do(ctx)
 	if err != nil {

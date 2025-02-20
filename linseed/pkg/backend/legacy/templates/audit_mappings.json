@@ -67,6 +67,9 @@
     },
     "verb": { "type": "keyword" },
     "annotations" :{"type": "flattened"},
-    "cluster": { "type": "keyword" }
+    "cluster": { "type": "keyword" },
+    "generated_time": {
+      "type": "date"
+    }
   }
 }

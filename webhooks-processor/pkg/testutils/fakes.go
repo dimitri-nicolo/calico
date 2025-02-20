@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,9 +22,11 @@ import (
 // once their advantages become more obvious.
 // So this approach is likely to evolve as test coverage increases...
 type FakeSecurityEventWebhook struct {
-	ExpectedWebhook *api.SecurityEventWebhook
-	Watcher         *FakeWatcher
-	webhookNames    []string
+	ExpectedWebhook                 *api.SecurityEventWebhook
+	Watcher                         *FakeWatcher
+	DontCloseWatchOnCtxCancellation bool
+	WatcherLock                     sync.Mutex
+	webhookNames                    []string
 }
 
 type FakeWatcher struct {
@@ -42,6 +45,7 @@ func (w *FakeSecurityEventWebhook) Update(ctx context.Context, res *api.Security
 	for _, name := range w.webhookNames {
 		if name == res.Name {
 			eventType = watch.Modified
+			break
 		}
 	}
 	if eventType == watch.Added {
@@ -52,16 +56,30 @@ func (w *FakeSecurityEventWebhook) Update(ctx context.Context, res *api.Security
 }
 
 func (w *FakeSecurityEventWebhook) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
+	w.WatcherLock.Lock()
+	defer w.WatcherLock.Unlock()
+
 	w.Watcher = &FakeWatcher{
 		Results: make(chan watch.Event),
 	}
 
-	// Close on context cancellation
+	if w.DontCloseWatchOnCtxCancellation {
+		return w.Watcher, nil
+	}
+
+	// Otherwise close on context cancellation
 	go func() {
 		<-ctx.Done()
 		w.Watcher.Stop()
 	}()
 	return w.Watcher, nil
+}
+
+func (w *FakeSecurityEventWebhook) GetWatcher() *FakeWatcher {
+	w.WatcherLock.Lock()
+	defer w.WatcherLock.Unlock()
+
+	return w.Watcher
 }
 
 // We only care about list and watch, the other ones are only here to please the compiler
@@ -75,7 +93,7 @@ func (w *FakeSecurityEventWebhook) Get(ctx context.Context, name string, opts op
 	return nil, nil
 }
 func (w *FakeSecurityEventWebhook) List(ctx context.Context, opts options.ListOptions) (*api.SecurityEventWebhookList, error) {
-	return nil, nil
+	return &api.SecurityEventWebhookList{}, nil
 }
 
 type FakeConsumer struct {

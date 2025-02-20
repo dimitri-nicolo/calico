@@ -1,6 +1,9 @@
 {
   "dynamic": false,
   "properties": {
+    "generated_time": {
+      "type": "date"
+    },
     "time": {
       "type": "date",
       "format": "strict_date_optional_time||epoch_second"

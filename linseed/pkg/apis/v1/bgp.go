@@ -1,6 +1,8 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 package v1
 
+import "time"
+
 type BGPLogIPVersion string
 
 const (
@@ -20,9 +22,14 @@ type BGPLog struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 // BGPLogParams define querying parameters to retrieve BGP logs
 type BGPLogParams struct {
 	QueryParams `json:",inline" validate:"required"`
+
+	// Sort configures the sorting of results.
+	Sort []SearchRequestSortBy `json:"sort"`
 }

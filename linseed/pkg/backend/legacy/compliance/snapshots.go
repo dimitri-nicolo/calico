@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -136,12 +137,20 @@ func (b *snapshotsBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v
 	bulk := b.client.Bulk()
 
 	for _, f := range l {
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		generatedTime := time.Now().UTC()
+		f.ResourceList.GeneratedTime = &generatedTime
+
 		// Add this log to the bulk request.
 		doc, err := b.prepareForWrite(i, &f.ResourceList)
 		if err != nil {
 			log.WithError(err).Error("Error preparing snapshot for write")
 			continue
 		}
+
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(doc).Id(backend.ToElasticID(b.singleIndex, f.ResourceList.String(), i))
 		bulk.Add(req)
 	}

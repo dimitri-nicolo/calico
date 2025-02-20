@@ -93,6 +93,7 @@ func TestL7_L7Logs(t *testing.T) {
 			require.NoError(t, err)
 			for i := range resp.Items {
 				testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &resp.Items[i])
 			}
 			require.Equal(t, logs, resp.Items)
 		})
@@ -122,7 +123,6 @@ func TestL7_L7Logs(t *testing.T) {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.L7LogClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}
 		})
-
 	})
 
 	RunL7LogTest(t, "should return an empty aggregations if there are no l7 logs", func(t *testing.T, idx bapi.Index) {
@@ -239,6 +239,7 @@ func TestL7_L7Logs(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 1, len(resp.Items))
 			testutils.AssertL7LogClusterAndReset(t, cluster, &resp.Items[0])
+			testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, []v1.L7Log{
 				{
 					StartTime: logTime,
@@ -271,6 +272,7 @@ func TestL7_L7Logs(t *testing.T) {
 		resp, err := cli.L7Logs(cluster).List(ctx, &params)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(resp.Items))
+		testutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 		require.Equal(t, []v1.L7Log{
 			{
 				StartTime: logTime,

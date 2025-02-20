@@ -210,9 +210,9 @@ func TestAuditLog_UnmarshalJSON(t *testing.T) {
 			"empty", []byte(`{}`), AuditLog{}, false,
 		},
 		{
-			"valid audit", compact([]byte(auditLog)), AuditLog{
-				k8sEvent, testutils.StringPtr("any-name"), "cluster-one",
-			}, false,
+			name: "valid audit", data: compact([]byte(auditLog)), want: AuditLog{
+				Event: k8sEvent, Name: testutils.StringPtr("any-name"), Cluster: "cluster-one",
+			},
 		},
 	}
 	for _, tt := range tests {

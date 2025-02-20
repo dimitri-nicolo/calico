@@ -162,7 +162,7 @@ func TestCreateEvent(t *testing.T) {
 
 				// We expect the ID to be present, but it's a random value so we
 				// can't assert on the exact value.
-				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
+				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, results.Items[0]))
 			})
 
 			t.Run("should query multiple clusters", func(t *testing.T) {
@@ -207,6 +207,7 @@ func TestCreateEvent(t *testing.T) {
 		require.NotNil(t, 1, results)
 		require.Equal(t, 1, len(results.Items))
 		backendutils.AssertEventClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+		backendutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 
 		// We expect the ID to be same as the passed event id.
 		require.Equal(t, event, results.Items[0])
@@ -309,7 +310,7 @@ func TestEventSelector(t *testing.T) {
 			if numResults > 0 {
 				// We expect the ID to be present, but it's a random value so we
 				// can't assert on the exact value.
-				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, r.Items[0]))
+				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, r.Items[0]))
 			}
 		} else {
 			require.Error(t, e)
@@ -442,7 +443,7 @@ func TestSecurityEvents(t *testing.T) {
 		for i := range expectedEvents {
 			// We expect the ID to be present, but it's a random value so we
 			// can't assert on the exact value, but we do know the value of cluster
-			require.Equal(t, expectedEvents[i], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, r.Items[i]))
+			require.Equal(t, expectedEvents[i], backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, r.Items[i]))
 		}
 	}
 
@@ -1049,7 +1050,7 @@ func TestPagination(t *testing.T) {
 			if numResults > 0 {
 				// We expect the ID to be present, but it's a random value so we
 				// can't assert on the exact value, but we do know the value of cluster
-				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, r.Items[0]))
+				require.Equal(t, event, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, r.Items[0]))
 			}
 		} else {
 			require.Error(t, e)
@@ -1138,8 +1139,8 @@ func TestSorting(t *testing.T) {
 		require.NotNil(t, 1, results)
 		require.Equal(t, 2, len(results.Items))
 
-		require.Equal(t, events[0], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
-		require.Equal(t, events[1], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[1]))
+		require.Equal(t, events[0], backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, results.Items[0]))
+		require.Equal(t, events[1], backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, results.Items[1]))
 	}
 
 	RunAllModes(t, "Sort using the time in descending order", func(t *testing.T) {
@@ -1159,8 +1160,8 @@ func TestSorting(t *testing.T) {
 		require.NotNil(t, 1, results)
 		require.Equal(t, 2, len(results.Items))
 
-		require.Equal(t, events[0], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[1]))
-		require.Equal(t, events[1], backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
+		require.Equal(t, events[0], backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, results.Items[1]))
+		require.Equal(t, events[1], backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, results.Items[0]))
 	})
 
 	RunAllModes(t, "Sort using the host in descending order", func(t *testing.T) {
@@ -1239,7 +1240,7 @@ func TestDismissEvent(t *testing.T) {
 
 		// We expect the ID to be present, but it's a random value so we
 		// can't assert on the exact value, but we know the expected value of cluster
-		require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
+		require.Equal(t, event, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, results.Items[0]))
 	}
 
 	RunAllModes(t, "Dismiss an Event", func(t *testing.T) {
@@ -1730,7 +1731,7 @@ func TestDeleteEvent(t *testing.T) {
 
 		// We expect the ID to be present, but it's a random value so we
 		// can't assert on the exact value, but we know the expected value of cluster
-		require.Equal(t, event, backendutils.AssertEventIDAndClusterAndReset(t, clusterInfo.Cluster, results.Items[0]))
+		require.Equal(t, event, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, results.Items[0]))
 	}
 
 	RunAllModes(t, "Delete an Event", func(t *testing.T) {
@@ -1795,4 +1796,129 @@ func TestDeleteEvent(t *testing.T) {
 			require.Nil(t, resp.Deleted)
 		}
 	})
+}
+
+func TestRetrieveMostRecentEvents(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentEvents (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0).UTC()
+			t2 := time.Unix(400, 0).UTC()
+			t3 := time.Unix(300, 0).UTC()
+
+			event1 := v1.Event{
+				Time:            v1.NewEventTimestamp(t1.Unix()),
+				Description:     "Just a city event",
+				Origin:          "Constanta",
+				Severity:        1,
+				Type:            "TODO",
+				DestIP:          testutils.StringPtr("192.168.1.1"),
+				DestName:        "anywhere-1234",
+				DestNameAggr:    "anywhere",
+				DestPort:        testutils.Int64Ptr(53),
+				Dismissed:       false,
+				Host:            "midnight-train",
+				SourceIP:        testutils.StringPtr("192.168.2.2"),
+				SourceName:      "north-station-1234",
+				SourceNameAggr:  "north-station",
+				SourceNamespace: "buc",
+				SourcePort:      testutils.Int64Ptr(48127),
+			}
+			event2 := v1.Event{
+				Time:            v1.NewEventTimestamp(t2.Unix()),
+				Description:     "Just a city event",
+				Origin:          "Constanta",
+				Severity:        1,
+				Type:            "TODO",
+				DestIP:          testutils.StringPtr("192.168.1.1"),
+				DestName:        "anywhere-1234",
+				DestNameAggr:    "anywhere",
+				DestPort:        testutils.Int64Ptr(53),
+				Dismissed:       false,
+				Host:            "midnight-train",
+				SourceIP:        testutils.StringPtr("192.168.2.2"),
+				SourceName:      "north-station-1234",
+				SourceNameAggr:  "north-station",
+				SourceNamespace: "Bucuresti",
+				SourcePort:      testutils.Int64Ptr(48127),
+			}
+
+			_, err := b.Create(ctx, clusterInfo, []v1.Event{event1, event2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.EventParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				QuerySortParams: v1.QuerySortParams{
+					Sort: []v1.SearchRequestSortBy{
+						{
+							Field: string(lmav1.FieldGeneratedTime),
+						},
+					},
+				},
+			}
+			r, err := b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].GeneratedTime
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, event1, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, r.Items[0]))
+			require.Equal(t, event2, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, r.Items[1]))
+
+			event3 := v1.Event{
+				Time:            v1.NewEventTimestamp(t3.Unix()),
+				Description:     "Just a city event",
+				Origin:          "Constanta",
+				Severity:        1,
+				Type:            "TODO",
+				DestIP:          testutils.StringPtr("192.168.1.1"),
+				DestName:        "anywhere-1234",
+				DestNameAggr:    "anywhere",
+				DestPort:        testutils.Int64Ptr(53),
+				Dismissed:       false,
+				Host:            "midnight-train",
+				SourceIP:        testutils.StringPtr("192.168.2.2"),
+				SourceName:      "north-station-1234",
+				SourceNameAggr:  "north-station",
+				SourceNamespace: "Bucuresti",
+				SourcePort:      testutils.Int64Ptr(48127),
+			}
+			_, err = b.Create(ctx, clusterInfo, []v1.Event{event3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, event3, backendutils.AssertEventIDAndClusterAndGeneratedTimeAndReset(t, clusterInfo.Cluster, r.Items[0]))
+		})
+	}
 }

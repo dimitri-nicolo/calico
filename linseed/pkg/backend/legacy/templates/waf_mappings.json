@@ -1,6 +1,9 @@
 {
   "dynamic": false,
   "properties": {
+    "generated_time": {
+      "type": "date"
+    },
     "@timestamp": {
       "type": "date"
     },

@@ -9,7 +9,8 @@ import (
 // IPSetThreatFeedParams defines the parameters
 // to query threat feeds for malicious IPs
 type IPSetThreatFeedParams struct {
-	QueryParams `json:",inline" validate:"required"`
+	QueryParams     `json:",inline" validate:"required"`
+	QuerySortParams `json:",inline"`
 
 	// Match on the ID of the threat feed
 	ID string `json:"id"`
@@ -18,7 +19,8 @@ type IPSetThreatFeedParams struct {
 // DomainNameSetThreatFeedParams defines the parameters
 // to query threat feeds for malicious DNS names
 type DomainNameSetThreatFeedParams struct {
-	QueryParams `json:",inline" validate:"required"`
+	QueryParams     `json:",inline" validate:"required"`
+	QuerySortParams `json:",inline"`
 
 	// Match on the ID of the threat feed
 	ID string `json:"id"`
@@ -41,6 +43,8 @@ type IPSetThreatFeedData struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }
 
 // DomainNameSetThreatFeed defines a threat feed that
@@ -60,4 +64,6 @@ type DomainNameSetThreatFeedData struct {
 
 	// Cluster is populated by linseed from the request context.
 	Cluster string `json:"cluster,omitempty"`
+	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
+	GeneratedTime *time.Time `json:"generated_time,omitempty"`
 }

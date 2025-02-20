@@ -177,6 +177,7 @@ func TestReportDataBasic(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, resp.Items, 1)
 				backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+				backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 				require.NotEmpty(t, resp.Items[0].ID)
 				require.Equal(t, f, resp.Items[0])
 			})
@@ -202,7 +203,6 @@ func TestReportDataBasic(t *testing.T) {
 					require.Truef(t, backendutils.MatchIn(resp.Items, backendutils.ReportDataClusterEquals(cluster)), "cluster %s should be in the results", cluster)
 				}
 			})
-
 		})
 
 		RunAllModes(t, "should ensure data does not overlap", func(t *testing.T) {
@@ -250,6 +250,7 @@ func TestReportDataBasic(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
 			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[0])
+			backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, r1, resp.Items[0])
 
 			// Read back data a managed cluster and check it matches.
@@ -258,6 +259,7 @@ func TestReportDataBasic(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, resp.Items, 1)
 			backendutils.AssertReportDataClusterAndReset(t, anotherClusterInfo.Cluster, &resp.Items[0])
+			backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[0])
 			require.Equal(t, r2, resp.Items[0])
 		})
 	}
@@ -410,6 +412,7 @@ func TestReportDataFiltering(t *testing.T) {
 				require.NoError(t, err)
 				for i := range resp.Items {
 					backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &resp.Items[i])
+					backendutils.AssertGeneratedTimeAndReset(t, &resp.Items[i])
 				}
 
 				if tc.Expect1 {
@@ -469,6 +472,7 @@ func TestReportDataSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 
 		// Assert that the logs are returned in the correct order.
@@ -487,8 +491,117 @@ func TestReportDataSorting(t *testing.T) {
 		require.Len(t, r.Items, 2)
 		for i := range r.Items {
 			backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, r2, r.Items[0])
 		require.Equal(t, r1, r.Items[1])
 	})
+}
+
+func TestRetrieveMostRecentReports(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentReports (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0)
+			t2 := time.Unix(400, 0)
+			t3 := time.Unix(300, 0)
+
+			r1 := v1.ReportData{
+				ID: "report-id-1",
+				ReportData: &apiv3.ReportData{
+					ReportName:     "report-name-1",
+					ReportTypeName: "report-type-1",
+					StartTime:      metav1.Time{Time: t1},
+					EndTime:        metav1.Time{Time: t1},
+					GenerationTime: metav1.Time{Time: t1},
+				},
+			}
+			r2 := v1.ReportData{
+				ID: "report-id-2",
+				ReportData: &apiv3.ReportData{
+					ReportName:     "report-name-2",
+					ReportTypeName: "report-type-2",
+					StartTime:      metav1.Time{Time: t2},
+					EndTime:        metav1.Time{Time: t2},
+					GenerationTime: metav1.Time{Time: t2},
+				},
+			}
+
+			_, err := rb.Create(ctx, clusterInfo, []v1.ReportData{r1, r2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.ReportDataParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				Sort: []v1.SearchRequestSortBy{
+					{
+						Field: string(lmav1.FieldGeneratedTime),
+					},
+				},
+			}
+			r, err := rb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].GeneratedTime
+			for i := range r.Items {
+				backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, r1, r.Items[0])
+			require.Equal(t, r2, r.Items[1])
+
+			r3 := v1.ReportData{
+				ID: "report-id-3",
+				ReportData: &apiv3.ReportData{
+					ReportName:     "report-name-3",
+					ReportTypeName: "report-type-3",
+					StartTime:      metav1.Time{Time: t3},
+					EndTime:        metav1.Time{Time: t3},
+					GenerationTime: metav1.Time{Time: t3},
+				},
+			}
+
+			_, err = rb.Create(ctx, clusterInfo, []v1.ReportData{r3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, rIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = rb.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+			for i := range r.Items {
+				backendutils.AssertReportDataClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+				backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, r3, r.Items[0])
+		})
+	}
 }

@@ -84,3 +84,18 @@ func validateClusterValue(cluster string) error {
 	}
 	return nil
 }
+
+func processGeneratedField(r *lmav1.TimeRange, timeRangeQuery *elastic.RangeQuery) elastic.Query {
+	// Any query that targets generated_time will optionally
+	// pass the start and/or the end of the interval without
+	// any processing on the value provided. This query will
+	// target any value that is higher that the start, but lower or
+	// equal to the end of the interval
+	if !r.From.IsZero() {
+		timeRangeQuery.Gt(r.From)
+	}
+	if !r.To.IsZero() {
+		timeRangeQuery.Lte(r.To)
+	}
+	return timeRangeQuery
+}

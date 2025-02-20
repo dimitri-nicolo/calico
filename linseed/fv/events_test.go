@@ -95,7 +95,7 @@ func TestFV_Events(t *testing.T) {
 			require.NoError(t, err)
 
 			// The ID should be set, but random, so we can't assert on its value.
-			require.Equal(t, events, testutils.AssertEventsIDAndClusterAndReset(t, cluster, resp))
+			require.Equal(t, events, testutils.AssertEventsIDAndClusterAndGeneratedTimeAndReset(t, cluster, resp))
 		})
 
 		t.Run("should query multiple clusters", func(t *testing.T) {
@@ -124,7 +124,6 @@ func TestFV_Events(t *testing.T) {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.EventClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}
 		})
-
 	})
 
 	RunEventsTest(t, "should dismiss and delete events", func(t *testing.T, idx bapi.Index) {
@@ -305,7 +304,7 @@ func TestFV_Events(t *testing.T) {
 					Time: v1.NewEventTimestamp(logTime.Unix() + int64(i)),
 					Host: fmt.Sprintf("%d", i),
 				},
-			}, testutils.AssertEventsIDAndClusterAndReset(t, cluster, resp), fmt.Sprintf("Event #%d did not match", i))
+			}, testutils.AssertEventsIDAndClusterAndGeneratedTimeAndReset(t, cluster, resp), fmt.Sprintf("Event #%d did not match", i))
 			require.NotNil(t, resp.AfterKey)
 			require.Contains(t, resp.AfterKey, "startFrom")
 			require.Equal(t, resp.AfterKey["startFrom"], float64(i+1))
@@ -336,7 +335,7 @@ func TestFV_Events(t *testing.T) {
 				Time: v1.NewEventTimestamp(logTime.Unix() + int64(lastItem)),
 				Host: fmt.Sprintf("%d", lastItem),
 			},
-		}, testutils.AssertEventsIDAndClusterAndReset(t, cluster, resp), fmt.Sprintf("Event #%d did not match", lastItem))
+		}, testutils.AssertEventsIDAndClusterAndGeneratedTimeAndReset(t, cluster, resp), fmt.Sprintf("Event #%d did not match", lastItem))
 		require.Equal(t, resp.TotalHits, int64(totalItems))
 
 		// Once we reach the end of the data, we should not receive
@@ -546,7 +545,7 @@ func TestFV_EventFiltering(t *testing.T) {
 			require.NoError(t, err)
 
 			// The ID should be set, but random, so we can't assert on its value.
-			require.Equal(t, tt.expectedEvents, testutils.AssertEventsIDAndClusterAndReset(t, cluster, resp))
+			require.Equal(t, tt.expectedEvents, testutils.AssertEventsIDAndClusterAndGeneratedTimeAndReset(t, cluster, resp))
 		})
 	}
 }
