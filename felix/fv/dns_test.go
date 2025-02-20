@@ -112,7 +112,7 @@ func StartExternalWorkloads(workloadNamePrefix string, workloadNumber int) []*co
 	return workloads
 }
 
-var _ = FDescribe("DNS Policy", func() {
+var _ = Describe("DNS Policy", func() {
 	testDnsPolicy(false, false)
 })
 
@@ -121,7 +121,7 @@ var _ = FDescribe("DNS Policy", func() {
 // ipsets manager can query which domains belong to which ipsets (which is
 // necessary to build the bpf structures, but it does not receive ip updates and
 // thus does not write the IPs in the sets.
-var _ = FDescribe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix to ipsets", func() {
+var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix to ipsets", func() {
 	if NFTMode() {
 		return
 	}
@@ -129,7 +129,7 @@ var _ = FDescribe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix
 })
 
 // This is the new default for BPF, precessing in BPF, with fixups from Felix
-var _ = FDescribe("_BPF-SAFE_ Zero latency DNS Policy", func() {
+var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy", func() {
 	if NFTMode() {
 		return
 	}
