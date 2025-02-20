@@ -91,8 +91,11 @@ func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
 
 	// wait for the mockWebhooksClient watch to be ready
 	// (Watch() inside watcherUpdater needs to be called before Update() calls are possible)
-	for mockWebhooksClient.GetWatcher() == nil {
-		<-time.After(100 * time.Millisecond)
+	for loopStart := time.Now(); mockWebhooksClient.GetWatcher() == nil; {
+		if <-time.After(100 * time.Millisecond); time.Since(loopStart) > 5*time.Second {
+			t.Error("timed-out waiting for Watch() call (1)")
+			break
+		}
 	}
 
 	watcherRef := mockWebhooksClient.GetWatcher()
@@ -113,8 +116,11 @@ func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
 	mockWebhooksClient.Watcher.Stop()
 
 	// wait for another Watch() call and retrieve issued updates
-	for mockWebhooksClient.GetWatcher() == watcherRef {
-		<-time.After(100 * time.Millisecond)
+	for loopStart := time.Now(); mockWebhooksClient.GetWatcher() == watcherRef; {
+		if <-time.After(100 * time.Millisecond); time.Since(loopStart) > 5*time.Second {
+			t.Error("timed-out waiting for Watch() call (2)")
+			break
+		}
 	}
 	receivedUpdates := mockCtrl.GetUpdates()
 
