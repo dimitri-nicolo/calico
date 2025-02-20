@@ -5,6 +5,7 @@ package threatfeeds
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/projectcalico/go-json/json"
@@ -92,6 +93,13 @@ func (b *ipSetThreatFeedBackend) Create(ctx context.Context, i bapi.ClusterInfo,
 	bulk := b.client.Bulk()
 
 	for _, f := range feeds {
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		generatedTime := time.Now().UTC()
+		f.Data.GeneratedTime = &generatedTime
+
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f.Data)).Id(backend.ToElasticID(b.singleIndex, f.ID, i))
 		bulk.Add(req)
 	}
@@ -183,7 +191,14 @@ func (b *ipSetThreatFeedBackend) getSearch(i bapi.ClusterInfo, p *v1.IPSetThreat
 		return nil, 0, err
 	}
 
-	query.Sort(b.queryHelper.GetTimeField(), true)
+	// Configure sorting.
+	if len(p.GetSortBy()) != 0 {
+		for _, s := range p.GetSortBy() {
+			query.Sort(s.Field, !s.Descending)
+		}
+	} else {
+		query.Sort(b.queryHelper.GetTimeField(), true)
+	}
 
 	return query, startFrom, nil
 }

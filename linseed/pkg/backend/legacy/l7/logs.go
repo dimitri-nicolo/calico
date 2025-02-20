@@ -5,6 +5,7 @@ package l7
 import (
 	"context"
 	"fmt"
+	"time"
 
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -95,6 +96,13 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1
 	bulk := b.client.Bulk()
 
 	for _, f := range logs {
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		generatedTime := time.Now().UTC()
+		f.GeneratedTime = &generatedTime
+
 		// Add this log to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f))
 		bulk.Add(req)

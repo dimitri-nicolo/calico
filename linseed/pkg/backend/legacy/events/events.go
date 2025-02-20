@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/sirupsen/logrus"
@@ -136,6 +137,14 @@ func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events [
 
 	for _, event := range events {
 		id := event.ID
+
+		// Populate the log's GeneratedTime field.  This field exists to enable a way for
+		// clients to efficiently query newly generated logs, and having Linseed fill it in
+		// - instead of an upstream client - makes this less vulnerable to time skew between
+		// clients, and between clients and Linseed.
+		generatedTime := time.Now().UTC()
+		event.GeneratedTime = &generatedTime
+
 		eventJSON, err := json.Marshal(b.prepareForWrite(i, event))
 		if err != nil {
 			log.WithError(err).Warningf("Failed to marshal event and add it to the request %+v", event)

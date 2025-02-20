@@ -37,16 +37,24 @@ func (h complianceReportsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedR
 }
 
 func (h complianceReportsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	unset := time.Time{}
-	if r.From != unset && r.To != unset {
-		return elastic.NewBoolQuery().Should(
-			elastic.NewRangeQuery("startTime").From(r.From).To(r.To),
-			elastic.NewRangeQuery("endTime").From(r.From).To(r.To),
-		)
-	} else if r.From != unset && r.To == unset {
-		return elastic.NewRangeQuery("endTime").From(r.From)
-	} else if r.From == unset && r.To != unset {
-		return elastic.NewRangeQuery("startTime").To(r.To)
+	timeField := GetTimeFieldForQuery(h, r)
+	timeRangeQuery := elastic.NewRangeQuery(timeField)
+	switch timeField {
+	case "generated_time":
+		return processGeneratedField(r, timeRangeQuery)
+	default:
+		// Any query that targets the default time field will target both startTime and endTime
+		unset := time.Time{}
+		if r.From != unset && r.To != unset {
+			return elastic.NewBoolQuery().Should(
+				elastic.NewRangeQuery("startTime").From(r.From).To(r.To),
+				elastic.NewRangeQuery("endTime").From(r.From).To(r.To),
+			)
+		} else if r.From != unset && r.To == unset {
+			return elastic.NewRangeQuery("endTime").From(r.From)
+		} else if r.From == unset && r.To != unset {
+			return elastic.NewRangeQuery("startTime").To(r.To)
+		}
 	}
 	return nil
 }

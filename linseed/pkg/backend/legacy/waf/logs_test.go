@@ -180,6 +180,7 @@ func TestWAFLogBasic(t *testing.T) {
 				// Timestamps don't equal on read.
 				results.Items[0].Timestamp = f.Timestamp
 				backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &results.Items[0])
+				testutils.AssertGeneratedTimeAndReset(t, &results.Items[0])
 				require.Equal(t, f, results.Items[0])
 
 				// Read again using a dummy tenant - we should get nothing.
@@ -479,6 +480,7 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 
 		// Assert that the logs are returned in the correct order.
@@ -498,6 +500,7 @@ func TestSorting(t *testing.T) {
 		require.Nil(t, r.AfterKey)
 		for i := range r.Items {
 			backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &r.Items[i])
+			backendutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
 		}
 		require.Equal(t, log2, r.Items[0])
 		require.Equal(t, log1, r.Items[1])
@@ -577,9 +580,117 @@ func TestWAFLogFiltering(t *testing.T) {
 				require.NotEqual(t, "", result.Items[0].Timestamp)
 				result.Items[0].Timestamp = reqTime
 				backendutils.AssertWAFLogClusterAndReset(t, clusterInfo.Cluster, &result.Items[0])
+				testutils.AssertGeneratedTimeAndReset(t, &result.Items[0])
 
 				require.Equal(t, wafLogs[testcase.ExpectLogIndex], result.Items[0])
 			})
 		}
+	}
+}
+
+func TestRetrieveMostRecentWAFLogs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		name := fmt.Sprintf("TestRetrieveMostRecentWAFLogs (tenant=%s)", tenant)
+		RunAllModes(t, name, func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Tenant: tenant, Cluster: cluster1}
+
+			now := time.Now().UTC()
+
+			t1 := time.Unix(500, 0).UTC()
+			t2 := time.Unix(400, 0).UTC()
+			t3 := time.Unix(300, 0).UTC()
+
+			l1 := v1.WAFLog{
+				Timestamp: t1,
+				Msg:       "Here Comes The Sun",
+				Rules: []v1.WAFRuleHit{
+					{
+						Id: "8",
+					},
+				},
+			}
+
+			l2 := v1.WAFLog{
+				Timestamp: t2,
+				Msg:       "Hey Jude",
+				Rules: []v1.WAFRuleHit{
+					{
+						Id: "8",
+					},
+				},
+			}
+
+			_, err := b.Create(ctx, clusterInfo, []v1.WAFLog{l1, l2})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query for logs
+			params := v1.WAFLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						Field: lmav1.FieldGeneratedTime,
+						From:  now,
+					},
+				},
+				QuerySortParams: v1.QuerySortParams{
+					Sort: []v1.SearchRequestSortBy{
+						{
+							Field: string(lmav1.FieldGeneratedTime),
+						},
+					},
+				},
+			}
+			r, err := b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 2)
+			require.Nil(t, r.AfterKey)
+			lastGeneratedTime := r.Items[1].GeneratedTime
+			for i := range r.Items {
+				backendutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, l1, r.Items[0])
+			require.Equal(t, l2, r.Items[1])
+
+			l3 := v1.WAFLog{
+				Timestamp: t3,
+				Msg:       "Eleanor Rigby",
+				Rules: []v1.WAFRuleHit{
+					{
+						Id: "8",
+					},
+				},
+			}
+			_, err = b.Create(ctx, clusterInfo, []v1.WAFLog{l3})
+			require.NoError(t, err)
+
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Query the last ingested log
+			params.QueryParams = v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					Field: lmav1.FieldGeneratedTime,
+					From:  lastGeneratedTime.UTC(),
+				},
+			}
+
+			r, err = b.List(ctx, clusterInfo, &params)
+			require.NoError(t, err)
+			require.Len(t, r.Items, 1)
+			require.Nil(t, r.AfterKey)
+			for i := range r.Items {
+				backendutils.AssertWAFLogClusterAndReset(t, cluster1, &r.Items[i])
+				testutils.AssertGeneratedTimeAndReset(t, &r.Items[i])
+			}
+
+			// Assert that the logs are returned in the correct order.
+			require.Equal(t, l3, r.Items[0])
+		})
 	}
 }

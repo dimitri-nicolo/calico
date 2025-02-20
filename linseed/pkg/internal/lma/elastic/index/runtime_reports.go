@@ -59,7 +59,14 @@ func (h runtimeReportsIndexHelper) NewRBACQuery(resources []apiv3.AuthorizedReso
 }
 
 func (h runtimeReportsIndexHelper) NewTimeRangeQuery(r *lmav1.TimeRange) elastic.Query {
-	return nil
+	timeField := GetTimeFieldForQuery(h, r)
+	timeRangeQuery := elastic.NewRangeQuery(timeField)
+	switch timeField {
+	case "generated_time":
+		return processGeneratedField(r, timeRangeQuery)
+	default:
+		return nil
+	}
 }
 
 func (h runtimeReportsIndexHelper) GetTimeField() string {
