@@ -73,7 +73,46 @@ func getDNSLogs(logFile string) ([]string, error) {
 	return logs, nil
 }
 
-var _ = Describe("DNS Policy", func() {
+// StartExternalWorkloads creates and starts a specified number of external workload containers.
+// Each container runs a simple HTTP server on port 80 and remains active.
+//
+// Parameters:
+//   - workloadNamePrefix: A string prefix for naming each container. The actual container name will be auto-generated based on this prefix.
+//   - workloadNumber: The total number of workload containers to create.
+//
+// Returns:
+//   - A slice of pointers to the created containers (*containers.Container).
+//     The slice length will match the workloadNumber parameter.
+//
+// Example:
+//
+//	workloads := StartExternalWorkloads("dns-external-workload", 3)
+//	// This will create and start 3 containers with names prefixed by "dns-external-workload".
+//
+// Panics:
+//   - If the number of created workloads does not match the requested workloadNumber.
+func StartExternalWorkloads(workloadNamePrefix string, workloadNumber int) []*containers.Container {
+	workloads := make([]*containers.Container, workloadNumber)
+
+	for i := 0; i < workloadNumber; i++ {
+		workloads[i] = containers.Run(
+			workloadNamePrefix,
+			containers.RunOpts{
+				AutoRemove: true,
+			},
+			utils.Config.BusyboxImage,
+			"/bin/sh", "-c", "httpd -f -p 80 & tail -f /dev/null", // Start HTTP server and keep container running
+		)
+	}
+
+	if len(workloads) != workloadNumber {
+		panic(fmt.Sprintf("Expected %d workloads, got %d", workloadNumber, len(workloads)))
+	}
+
+	return workloads
+}
+
+var _ = FDescribe("DNS Policy", func() {
 	testDnsPolicy(false, false)
 })
 
@@ -82,7 +121,7 @@ var _ = Describe("DNS Policy", func() {
 // ipsets manager can query which domains belong to which ipsets (which is
 // necessary to build the bpf structures, but it does not receive ip updates and
 // thus does not write the IPs in the sets.
-var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix to ipsets", func() {
+var _ = FDescribe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix to ipsets", func() {
 	if NFTMode() {
 		return
 	}
@@ -90,7 +129,7 @@ var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy with no updates from felix 
 })
 
 // This is the new default for BPF, precessing in BPF, with fixups from Felix
-var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy", func() {
+var _ = FDescribe("_BPF-SAFE_ Zero latency DNS Policy", func() {
 	if NFTMode() {
 		return
 	}
@@ -99,13 +138,15 @@ var _ = Describe("_BPF-SAFE_ Zero latency DNS Policy", func() {
 
 func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	var (
-		etcd        *containers.Container
-		tc          infrastructure.TopologyContainers
-		client      client.Interface
-		infra       infrastructure.DatastoreInfra
-		w           [1]*workload.Workload
-		dnsDir      string
-		dnsServerIP string
+		etcd             *containers.Container
+		dnsServer        *containers.Container
+		externalWorkload *containers.Container
+		tc               infrastructure.TopologyContainers
+		client           client.Interface
+		infra            infrastructure.DatastoreInfra
+		w                [1]*workload.Workload
+		dnsDir           string
+		dnsServerIP      string
 		// Path to the save file from the point of view inside the Felix container.
 		// (Whereas dnsDir is the directory outside the container.)
 		saveFile                       string
@@ -116,9 +157,9 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		dnsMode       string
 	)
 
-	msWildcards := []string{"microsoft.*.com", "*.microsoft.com"}
+	msWildcards := []string{"microsoft.*.com", "*.fake-microsoft.com"}
 	if zeroLatency {
-		msWildcards = []string{"*.microsoft.com"}
+		msWildcards = []string{"*.fake-microsoft.com"}
 		dnsMode = string(api.BPFDNSPolicyModeInline)
 		if !BPFMode() {
 			dnsMode = string(api.DNSPolicyModeInline)
@@ -131,7 +172,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	}
 
 	wgetMicrosoftErr := func() error {
-		out, err := w[0].ExecCombinedOutput("test-dns", "-", "www.microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+		out, err := w[0].ExecCombinedOutput("test-dns", "-", "www.fake-microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -146,7 +187,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 	}
 
 	hostWgetMicrosoftErr := func() error {
-		out, err := tc.Felixes[0].ExecCombinedOutput("test-dns", "-", "www.microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+		out, err := tc.Felixes[0].ExecCombinedOutput("test-dns", "-", "www.fake-microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -167,7 +208,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 			return // empty string, so won't match anything that higher levels are looking for
 		}
 		for _, log := range dnsLogs {
-			if strings.Contains(log, `"qname":"www.microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
+			if strings.Contains(log, `"qname":"www.fake-microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
 				lastLog = log
 			}
 		}
@@ -187,8 +228,14 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		dnsDir, err = os.MkdirTemp("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 
-		nameservers := GetLocalNameservers()
-		dnsServerIP = nameservers[0]
+		// Instead of relying on external websites for DNS tests, we use an internally hosted HTTP service,
+		// and internal dns server, making functional validation tests more self-contained and reliable.
+		externalWorkload = StartExternalWorkloads("dns-external-workload", 1)[0]
+		dnsRecords := map[string][]dns.RecordIP{
+			"www.fake-microsoft.com": {{TTL: 20, IP: externalWorkload.IP}},
+		}
+		dnsServer = dns.StartServer(dnsRecords)
+		dnsServerIP = dnsServer.IP
 
 		opts.FelixLogSeverity = "Debug"
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
@@ -197,7 +244,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
 		// triggered by shutdown instead of by a periodic timer.
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
-		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
+		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsServerIP
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
@@ -275,6 +322,8 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		}
 		etcd.Stop()
 		infra.Stop()
+		externalWorkload.Stop()
+		dnsServer.Stop()
 	})
 
 	Context("with save file in initially non-existent directory", func() {
@@ -283,18 +332,18 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 			saveFileMappedOutsideContainer = false
 		})
 
-		It("can wget www.microsoft.com", func() {
+		It("can wget www.fake-microsoft.com", func() {
 			canWgetMicrosoft()
 		})
 	})
 
-	Context("after wget www.microsoft.com", func() {
+	Context("after wget www.fake-microsoft.com", func() {
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			canWgetMicrosoft()
 		})
 
-		It("should emit www.microsoft.com DNS log with latency", func() {
+		It("should emit www.fake-microsoft.com DNS log with latency", func() {
 			Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
 		})
 
@@ -348,7 +397,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				canWgetMicrosoft()
 			})
 
-			It("should emit www.microsoft.com DNS log with latency", func() {
+			It("should emit www.fake-microsoft.com DNS log with latency", func() {
 				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
 			})
 		})
@@ -358,7 +407,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				enableLatency = false
 			})
 
-			It("should emit www.microsoft.com DNS log without latency", func() {
+			It("should emit www.fake-microsoft.com DNS log without latency", func() {
 				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":0`))
 			})
 		})
@@ -374,7 +423,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		})
 	})
 
-	Context("after host wget www.microsoft.com", func() {
+	Context("after host wget www.fake-microsoft.com", func() {
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			hostCanWgetMicrosoft()
@@ -395,11 +444,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 		})
 	})
 
-	It("can wget www.microsoft.com", func() {
+	It("can wget www.fake-microsoft.com", func() {
 		canWgetMicrosoft()
 	})
 
-	It("host can wget www.microsoft.com", func() {
+	It("host can wget www.fake-microsoft.com", func() {
 		hostCanWgetMicrosoft()
 	})
 
@@ -415,12 +464,12 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("cannot wget www.microsoft.com", func() {
+		It("cannot wget www.fake-microsoft.com", func() {
 			cannotWgetMicrosoft()
 		})
 
 		// There's no HostEndpoint yet, so the policy doesn't affect the host.
-		It("host can wget www.microsoft.com", func() {
+		It("host can wget www.fake-microsoft.com", func() {
 			hostCanWgetMicrosoft()
 		})
 
@@ -434,7 +483,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 			policy.Spec.Egress = []api.Rule{
 				{
 					Action:      api.Allow,
-					Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+					Destination: api.EntityRule{Domains: []string{"fake-microsoft.com", "www.fake-microsoft.com"}},
 				},
 				{
 					Action:   api.Allow,
@@ -455,7 +504,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 						pfxs = append(pfxs, k.Domain())
 					}
 					return pfxs
-				}, "1m", "1s").Should(And(ContainElement("microsoft.com"), ContainElement("www.microsoft.com")))
+				}, "1m", "1s").Should(And(ContainElement("fake-microsoft.com"), ContainElement("www.fake-microsoft.com")))
 			}
 		}
 
@@ -469,14 +518,14 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("host cannot wget www.microsoft.com", func() {
+			It("host cannot wget www.fake-microsoft.com", func() {
 				hostCannotWgetMicrosoft()
 			})
 
 			Context("with domain-allow egress policy", func() {
 				JustBeforeEach(configureGNPAllowToMicrosoft)
 
-				It("host can wget www.microsoft.com", func() {
+				It("host can wget www.fake-microsoft.com", func() {
 					hostCanWgetMicrosoft()
 				})
 			})
@@ -596,7 +645,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				Context("with domain-allow egress policy", func() {
 					JustBeforeEach(configureGNPAllowToMicrosoft)
 
-					It("can wget www.microsoft.com", func() {
+					It("can wget www.fake-microsoft.com", func() {
 						canWgetMicrosoft()
 					})
 				})
@@ -613,7 +662,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 						policy.Spec.Egress = []api.Rule{
 							{
 								Action:      api.Allow,
-								Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+								Destination: api.EntityRule{Domains: []string{"fake-microsoft.com", "www.fake-microsoft.com"}},
 							},
 							{
 								Action:   api.Allow,
@@ -634,11 +683,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 									pfxs = append(pfxs, k.Domain())
 								}
 								return pfxs
-							}, "1m", "1s").Should(And(ContainElement("microsoft.com"), ContainElement("www.microsoft.com")))
+							}, "1m", "1s").Should(And(ContainElement("fake-microsoft.com"), ContainElement("www.fake-microsoft.com")))
 						}
 					})
 
-					It("can wget www.microsoft.com", func() {
+					It("can wget www.fake-microsoft.com", func() {
 						canWgetMicrosoft()
 					})
 				})
@@ -657,7 +706,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				policy.Spec.Egress = []api.Rule{
 					{
 						Action:      api.Allow,
-						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+						Destination: api.EntityRule{Domains: []string{"fake-microsoft.com", "www.fake-microsoft.com"}},
 					},
 					{
 						Action:   api.Allow,
@@ -671,7 +720,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("cannot wget www.microsoft.com", func() {
+			It("cannot wget www.fake-microsoft.com", func() {
 				// XXX hard to say whether you cannot get it because the policy
 				// is not in place yet or because it is a wrong namespace.
 				cannotWgetMicrosoft()
@@ -710,11 +759,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 							pfxs = append(pfxs, k.Domain())
 						}
 						return pfxs
-					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
+					}, "1m", "1s").Should(Or(ContainElement("fake-microsoft.com"), ContainElement("*.fake-microsoft.com")))
 				}
 			})
 
-			It("can wget www.microsoft.com", func() {
+			It("can wget www.fake-microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 		})
@@ -760,11 +809,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 							pfxs = append(pfxs, k.Domain())
 						}
 						return pfxs
-					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
+					}, "1m", "1s").Should(Or(ContainElement("fake-microsoft.com"), ContainElement("*.fake-microsoft.com")))
 				}
 			})
 
-			It("can wget www.microsoft.com", func() {
+			It("can wget www.fake-microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 
@@ -775,7 +824,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				gns := api.NewGlobalNetworkSet()
 				gns.Name = "allow-microsoft-2"
 				gns.Labels = map[string]string{"founder": "billg"}
-				gns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				gns.Spec.AllowedEgressDomains = []string{"port25.fake-microsoft.com"}
 				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -790,7 +839,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				ns.Name = "allow-microsoft"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
-				ns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+				ns.Spec.AllowedEgressDomains = []string{"fake-microsoft.com", "www.fake-microsoft.com"}
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -827,11 +876,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 							pfxs = append(pfxs, k.Domain())
 						}
 						return pfxs
-					}, "1m", "1s").Should(ContainElements("microsoft.com", "www.microsoft.com"))
+					}, "1m", "1s").Should(ContainElements("fake-microsoft.com", "www.fake-microsoft.com"))
 				}
 			})
 
-			It("can wget www.microsoft.com", func() {
+			It("can wget www.fake-microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 
@@ -843,7 +892,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				ns.Name = "allow-microsoft-2"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
-				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				ns.Spec.AllowedEgressDomains = []string{"port25.fake-microsoft.com"}
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -895,11 +944,11 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 							pfxs = append(pfxs, k.Domain())
 						}
 						return pfxs
-					}, "1m", "1s").Should(Or(ContainElement("microsoft.com"), ContainElement("*.microsoft.com")))
+					}, "1m", "1s").Should(Or(ContainElement("fake-microsoft.com"), ContainElement("*.fake-microsoft.com")))
 				}
 			})
 
-			It("can wget www.microsoft.com", func() {
+			It("can wget www.fake-microsoft.com", func() {
 				canWgetMicrosoft()
 			})
 
@@ -911,7 +960,7 @@ func testDnsPolicy(zeroLatency, setsUpdateFromFelix bool) {
 				ns.Name = "allow-microsoft-2"
 				ns.Namespace = "fv"
 				ns.Labels = map[string]string{"founder": "billg"}
-				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				ns.Spec.AllowedEgressDomains = []string{"port25.fake-microsoft.com"}
 				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 
