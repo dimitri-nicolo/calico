@@ -107,9 +107,13 @@ func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{Name: "test-webhook"},
 	}
 	// this update will result in ADDED event type sent to the controller:
-	mockWebhooksClient.Update(ctx, &webhook, options.SetOptions{})
+	if _, err := mockWebhooksClient.Update(ctx, &webhook, options.SetOptions{}); err != nil {
+		t.Error("this will never happen (1)")
+	}
 	// this update will result in MODIFIED event type sent to the controller:
-	mockWebhooksClient.Update(ctx, &webhook, options.SetOptions{})
+	if _, err := mockWebhooksClient.Update(ctx, &webhook, options.SetOptions{}); err != nil {
+		t.Error("this will never happen (2)")
+	}
 	// NOTE: we are NOT sending DELETED event type here.
 
 	// let's now close the watcher channel - this should result in reconcilliation and the controller
