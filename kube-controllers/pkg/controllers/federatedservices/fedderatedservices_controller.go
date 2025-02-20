@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -16,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/pkg/api/v1/endpoints"
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -641,7 +641,7 @@ func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceIn
 			Namespace:   id.namespace,
 			Annotations: serviceInfo.federationConfig.annotations,
 		},
-		Subsets: GetOrderedEndpointSubsets(subsets),
+		Subsets: endpoints.RepackSubsets(subsets),
 	}
 }
 
@@ -741,7 +741,7 @@ func (_ *federatedServicesController) sanitizeEndpoints(e *v1.Endpoints) {
 	e.TypeMeta = metav1.TypeMeta{}
 
 	// Finally, deduplicate and order the Subsets (since Kubernetes re-orders and re-groups them).
-	e.Subsets = GetOrderedEndpointSubsets(e.Subsets)
+	e.Subsets = endpoints.RepackSubsets(e.Subsets)
 }
 
 // nameNamespaceToCacheKey converts the namespace and name of a service to a key that may be used for the
@@ -756,78 +756,6 @@ func nameNamespaceToCacheKey(namespace, name string) string {
 func nameNamespaceFromCacheKey(key string) (string, string) {
 	parts := strings.Split(key, "/")
 	return parts[0], parts[1]
-}
-
-// GetOrderedEndpointSubsets expands and orders the endpoint subsets to simplify comparison and for
-// deduplification (since we could be combining multiple services containing the same endpoint). This
-// is necessary because Kubernetes re-orders the endpoint subsets so it makes it more difficult to
-// compare calculated against configured.
-func GetOrderedEndpointSubsets(e []v1.EndpointSubset) []v1.EndpointSubset {
-	// Start by expanding the endpoint subsets so that each subset contains only one address and one port,
-	// and store in a map to deduplicate.
-	epmap := make(map[epKey]v1.EndpointSubset)
-	for ei := range e {
-		for pi := range e[ei].Ports {
-			for ai := range e[ei].Addresses {
-				k := epKey{
-					ip:   e[ei].Addresses[ai].IP,
-					port: e[ei].Ports[pi],
-				}
-				epmap[k] = v1.EndpointSubset{
-					Addresses: []v1.EndpointAddress{e[ei].Addresses[ai]},
-					Ports:     []v1.EndpointPort{e[ei].Ports[pi]},
-				}
-			}
-			for ni := range e[ei].NotReadyAddresses {
-				k := epKey{
-					ip:   e[ei].NotReadyAddresses[ni].IP,
-					port: e[ei].Ports[pi],
-				}
-				epmap[k] = v1.EndpointSubset{
-					NotReadyAddresses: []v1.EndpointAddress{e[ei].NotReadyAddresses[ni]},
-					Ports:             []v1.EndpointPort{e[ei].Ports[pi]},
-				}
-			}
-		}
-	}
-
-	// Get a slice of keys and order them.
-	keys := make([]epKey, 0, len(epmap))
-	for key := range epmap {
-		keys = append(keys, key)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		// Fairly arbitrary sorting, the key thing is that we are consistent.
-		ki := keys[i]
-		kj := keys[j]
-		c := strings.Compare(ki.port.Name, kj.port.Name)
-		if c != 0 {
-			return c < 0
-		}
-		c = strings.Compare(string(ki.port.Protocol), string(kj.port.Protocol))
-		if c != 0 {
-			return c < 0
-		}
-		c = strings.Compare(string(ki.ip), string(kj.ip))
-		if c != 0 {
-			return c < 0
-		}
-		return ki.port.Port < kj.port.Port
-	})
-
-	// Create the ordered slice of EndpointSubsets
-	ordered := make([]v1.EndpointSubset, len(epmap))
-	for i := range keys {
-		ordered[i] = epmap[keys[i]]
-	}
-
-	return ordered
-}
-
-// The unique identifiers of an endpoint used for deduplification when combining sets of data.
-type epKey struct {
-	ip   string
-	port v1.EndpointPort
 }
 
 type portId struct {
