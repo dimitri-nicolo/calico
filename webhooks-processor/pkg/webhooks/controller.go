@@ -94,7 +94,7 @@ func (c *WebhookController) Run(ctx context.Context, wg *sync.WaitGroup) {
 			c.updater.UpdatesChan() <- webhook
 		case event := <-c.k8sEventsChan:
 			switch event.Type {
-			case watch.Modified, watch.Deleted:
+			case watch.Added, watch.Modified, watch.Deleted:
 				c.state.CheckDependencies(event.Object)
 			default:
 				logrus.Debug("webhook controller k8s events unhandled event type: ", event.Type)
