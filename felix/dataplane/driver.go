@@ -278,6 +278,7 @@ func StartDataplaneDriver(
 				NetlinkTimeout:    configParams.NetlinkTimeoutSecs,
 			},
 			RulesConfig: rules.Config{
+				FlowLogsEnabled:       configParams.FlowLogsEnabled(),
 				NFTables:              configParams.NFTablesMode == "Enabled",
 				WorkloadIfacePrefixes: configParams.InterfacePrefixes(),
 
