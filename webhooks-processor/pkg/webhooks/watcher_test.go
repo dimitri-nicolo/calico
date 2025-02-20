@@ -117,7 +117,7 @@ func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
 	// NOTE: we are NOT sending DELETED event type here.
 
 	// let's now close the watcher channel - this should result in reconcilliation and the controller
-	// should also receive watch.Deleted event type after the initial List() call detect inconsistencies:
+	// should also receive DELETED event type after the initial List() call detect inconsistencies:
 	mockWebhooksClient.Watcher.Stop()
 
 	// wait for another Watch() call and retrieve issued updates

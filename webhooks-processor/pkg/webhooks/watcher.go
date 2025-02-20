@@ -70,17 +70,16 @@ func (w *WebhookWatcherUpdater) Run(ctx context.Context, wg *sync.WaitGroup) {
 		logrus.WithError(err).Error("unable to start informers")
 	}
 
-	watchGroup := sync.WaitGroup{}
-	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.watchWebhooks)
-	go w.executeWhileContextIsAlive(ctx, &watchGroup, w.updateWebhooks)
-	watchGroup.Wait()
+	webhooksWaitGroup := new(sync.WaitGroup)
+	go w.executeWhileContextIsAlive(ctx, webhooksWaitGroup, w.watchWebhooks)
+	go w.executeWhileContextIsAlive(ctx, webhooksWaitGroup, w.updateWebhooks)
+	webhooksWaitGroup.Wait()
 }
 
 func (w *WebhookWatcherUpdater) executeWhileContextIsAlive(ctx context.Context, wg *sync.WaitGroup, f func(context.Context) error) {
 	wg.Add(1)
 	defer wg.Done()
-	var errorCounter int
-	for ctx.Err() == nil {
+	for errorCounter := 0; ctx.Err() == nil; {
 		if err := f(ctx); err == nil {
 			errorCounter = 0
 		} else if errorCounter++; errorCounter >= MaxRetryTimesBeforeBailingOut {
@@ -96,45 +95,47 @@ func (w *WebhookWatcherUpdater) startInformers(ctx context.Context) error {
 		w.client, InformerResyncTime, informers.WithNamespace(ConfigVarNamespace),
 	)
 
-	cmInformer := informerFactory.Core().V1().ConfigMaps().Informer()
-	if _, err := cmInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			if cm, ok := obj.(v1.ConfigMap); ok {
-				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &cm}
-			}
+	if _, err := informerFactory.Core().V1().ConfigMaps().Informer().AddEventHandler(
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				if cm, ok := obj.(v1.ConfigMap); ok {
+					w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &cm}
+				}
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				if cm, ok := newObj.(v1.ConfigMap); ok {
+					w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &cm}
+				}
+			},
+			DeleteFunc: func(obj interface{}) {
+				if cm, ok := obj.(v1.ConfigMap); ok {
+					w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &cm}
+				}
+			},
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			if cm, ok := newObj.(v1.ConfigMap); ok {
-				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &cm}
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			if cm, ok := obj.(v1.ConfigMap); ok {
-				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &cm}
-			}
-		},
-	}); err != nil {
+	); err != nil {
 		return err
 	}
 
-	secretInformer := informerFactory.Core().V1().Secrets().Informer()
-	if _, err := secretInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			if secret, ok := obj.(v1.Secret); ok {
-				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
-			}
+	if _, err := informerFactory.Core().V1().Secrets().Informer().AddEventHandler(
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				if secret, ok := obj.(v1.Secret); ok {
+					w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
+				}
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				if secret, ok := newObj.(v1.Secret); ok {
+					w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &secret}
+				}
+			},
+			DeleteFunc: func(obj interface{}) {
+				if secret, ok := obj.(v1.Secret); ok {
+					w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &secret}
+				}
+			},
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			if secret, ok := newObj.(v1.Secret); ok {
-				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Modified, Object: &secret}
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			if secret, ok := obj.(v1.Secret); ok {
-				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Deleted, Object: &secret}
-			}
-		},
-	}); err != nil {
+	); err != nil {
 		return err
 	}
 
