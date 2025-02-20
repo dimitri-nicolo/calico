@@ -2,7 +2,6 @@ package webhooks_test
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -20,12 +19,14 @@ import (
 type MockCtrl struct {
 	webhooksChan    chan calicoWatch.Event
 	receivedUpdates []calicoWatch.Event
+	updatesLock     sync.Mutex
 }
 
 func NewMockCtrl() *MockCtrl {
 	return &MockCtrl{
 		webhooksChan:    make(chan calicoWatch.Event),
 		receivedUpdates: []calicoWatch.Event{},
+		updatesLock:     sync.Mutex{},
 	}
 }
 
@@ -44,12 +45,19 @@ func (m *MockCtrl) Run(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case update := <-m.webhooksChan:
-			fmt.Println(update.Type)
+			m.updatesLock.Lock()
 			m.receivedUpdates = append(m.receivedUpdates, update)
+			m.updatesLock.Unlock()
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+func (m *MockCtrl) GetUpdates() []calicoWatch.Event {
+	m.updatesLock.Lock()
+	defer m.updatesLock.Unlock()
+	return append([]calicoWatch.Event{}, m.receivedUpdates...)
 }
 
 func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
@@ -83,9 +91,11 @@ func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
 
 	// wait for the mockWebhooksClient watch to be ready
 	// (Watch() inside watcherUpdater needs to be called before Update() calls are possible)
-	for mockWebhooksClient.Watcher == nil {
+	for mockWebhooksClient.GetWatcher() == nil {
 		<-time.After(100 * time.Millisecond)
 	}
+
+	watcherRef := mockWebhooksClient.GetWatcher()
 
 	// --- ACTUAL TEST STARTS HERE ---
 
@@ -102,21 +112,24 @@ func TestWebhookWatcherUpdaterMissingDeletions(t *testing.T) {
 	// should also receive watch.Deleted event type after the initial List() call detect inconsistencies:
 	mockWebhooksClient.Watcher.Stop()
 
-	// wait for things to settle after the above:
-	<-time.After(200 * time.Millisecond)
+	// wait for another Watch() call and retrieve issued updates
+	for mockWebhooksClient.GetWatcher() == watcherRef {
+		<-time.After(100 * time.Millisecond)
+	}
+	receivedUpdates := mockCtrl.GetUpdates()
 
 	// make sure the updates received by the controller are the ones sent here (ADDED/MODIFIED)
 	// and one after reconcilliation (DELETED):
-	if len(mockCtrl.receivedUpdates) != 3 {
-		t.Error("unexpected number of updates received")
+	if len(receivedUpdates) != 3 {
+		t.Error("unexpected number of updates received", len(mockCtrl.receivedUpdates))
 	}
-	if mockCtrl.receivedUpdates[0].Type != calicoWatch.Added {
+	if receivedUpdates[0].Type != calicoWatch.Added {
 		t.Error("unexpected received update type (1)")
 	}
-	if mockCtrl.receivedUpdates[1].Type != calicoWatch.Modified {
+	if receivedUpdates[1].Type != calicoWatch.Modified {
 		t.Error("unexpected received update type (2)")
 	}
-	if mockCtrl.receivedUpdates[2].Type != calicoWatch.Deleted {
+	if receivedUpdates[2].Type != calicoWatch.Deleted {
 		t.Error("unexpected received update type (3)")
 	}
 }

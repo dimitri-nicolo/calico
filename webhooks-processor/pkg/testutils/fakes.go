@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,7 @@ type FakeSecurityEventWebhook struct {
 	ExpectedWebhook                 *api.SecurityEventWebhook
 	Watcher                         *FakeWatcher
 	DontCloseWatchOnCtxCancellation bool
+	WatcherLock                     sync.Mutex
 	webhookNames                    []string
 }
 
@@ -54,6 +56,9 @@ func (w *FakeSecurityEventWebhook) Update(ctx context.Context, res *api.Security
 }
 
 func (w *FakeSecurityEventWebhook) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
+	w.WatcherLock.Lock()
+	defer w.WatcherLock.Unlock()
+
 	w.Watcher = &FakeWatcher{
 		Results: make(chan watch.Event),
 	}
@@ -68,6 +73,13 @@ func (w *FakeSecurityEventWebhook) Watch(ctx context.Context, opts options.ListO
 		w.Watcher.Stop()
 	}()
 	return w.Watcher, nil
+}
+
+func (w *FakeSecurityEventWebhook) GetWatcher() *FakeWatcher {
+	w.WatcherLock.Lock()
+	defer w.WatcherLock.Unlock()
+
+	return w.Watcher
 }
 
 // We only care about list and watch, the other ones are only here to please the compiler
