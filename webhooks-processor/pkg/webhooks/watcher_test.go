@@ -6,14 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/options"
-	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
-	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
-	"github.com/projectcalico/calico/webhooks-processor/pkg/webhooks"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/testutils"
+	"github.com/projectcalico/calico/webhooks-processor/pkg/webhooks"
 )
 
 type MockCtrl struct {

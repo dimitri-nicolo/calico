@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 	"github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	calicoWatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
 const (
