@@ -736,7 +736,7 @@ var _ = Describe("IPAM controller UTs", func() {
 
 		// Trigger a node deletion. The node referenced in the allocation above
 		// never existed in the k8s API so this should result in a GC.
-		c.OnKubernetesNodeDeleted()
+		c.OnKubernetesNodeDeleted(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "kname"}})
 
 		// Confirm the IP and block affinity were released.
 		fakeClient := cli.IPAM().(*fakeIPAMClient)
@@ -809,7 +809,7 @@ var _ = Describe("IPAM controller UTs", func() {
 			c.onStatusUpdate(bapi.InSync)
 
 			// Trigger a sync.
-			c.OnKubernetesNodeDeleted()
+			c.OnKubernetesNodeDeleted(&v1.Node{ObjectMeta: metav1.ObjectMeta{Name: "kname"}})
 
 			// Wait for at least one timed sync to complete (we set LeakGracePeriod to 5s, which means syncs
 			// run ever 2.5s).

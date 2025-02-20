@@ -24,30 +24,39 @@ const (
 )
 
 var (
-	dpiRes = &v3.DeepPacketInspection{ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
+	dpiRes = &v3.DeepPacketInspection{
+		ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
 		Status: v3.DeepPacketInspectionStatus{Nodes: []v3.DPINode{
 			{Node: "node-0", Active: v3.DPIActive{Success: true}},
-		}}}
-	pcapRes = &v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Namespace: pcapNs, Name: pcapName},
+		}},
+	}
+	pcapRes = &v3.PacketCapture{
+		ObjectMeta: metav1.ObjectMeta{Namespace: pcapNs, Name: pcapName},
 		Status: v3.PacketCaptureStatus{Files: []v3.PacketCaptureFile{
-			{Node: "node-0", Directory: "/random-dir", FileNames: []string{"file-01"}}}}}
+			{Node: "node-0", Directory: "/random-dir", FileNames: []string{"file-01"}},
+		}},
+	}
 )
 
 func getDPINodes() v3.DeepPacketInspection {
-	return v3.DeepPacketInspection{ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
+	return v3.DeepPacketInspection{
+		ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
 		Status: v3.DeepPacketInspectionStatus{Nodes: []v3.DPINode{
 			{Node: "node-0", Active: v3.DPIActive{Success: true}},
-		}}}
+		}},
+	}
 }
 
 func getPCAPNodes() v3.PacketCapture {
-	return v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Namespace: pcapNs, Name: pcapName},
+	return v3.PacketCapture{
+		ObjectMeta: metav1.ObjectMeta{Namespace: pcapNs, Name: pcapName},
 		Status: v3.PacketCaptureStatus{Files: []v3.PacketCaptureFile{
-			{Node: "node-0", Directory: "/random-dir", FileNames: []string{"file-01"}}}}}
+			{Node: "node-0", Directory: "/random-dir", FileNames: []string{"file-01"}},
+		}},
+	}
 }
 
 var _ = Describe("DPI status on node create or delete", func() {
-
 	var cli *FakeCalicoClient
 	var mockDPIClient *MockDeepPacketInspectionInterface
 	var mockPCAPClient *MockPacketCaptureInterface
@@ -186,7 +195,7 @@ var _ = Describe("DPI status on node create or delete", func() {
 		ctrl.Start(stopCh)
 		Eventually(getNodeCacheCount, 5*time.Second).Should(Equal(2))
 		setNodes()
-		ctrl.OnKubernetesNodeDeleted()
+		ctrl.OnKubernetesNodeDeleted(nil)
 		Eventually(getNodeCacheCount, 5*time.Second).Should(BeNumerically(">", 2))
 		Eventually(getActualDPIUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
 		Eventually(getActualPCAPUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
