@@ -15,7 +15,7 @@
 ARG CALICO_BASE_UBI9
 ARG THIRD_PARTY_REGISTRY
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.17.1 AS fluentd
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0 AS fluentd
 
 FROM scratch AS source
 
