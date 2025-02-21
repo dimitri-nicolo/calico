@@ -18,8 +18,8 @@ import (
 //
 // Example:
 //
-//	workloads := StartExternalWorkloads("dns-external-workload", 3)
-//	// This will create and start 3 containers with names prefixed by "dns-external-workload".
+//	workloads := StartExternalWorkloads("dns-external-workload", 2)
+//	// This will create and start 2 containers with names prefixed by "dns-external-workload".
 //
 // Panics:
 //   - If the number of created workloads does not match the requested workloadNumber.
