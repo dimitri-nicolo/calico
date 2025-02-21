@@ -36,11 +36,11 @@ import (
 // This is an extension of the flow_logs_tests.go file to test flow logs for flows enforced with DNS based policies.
 //
 // Felix1
-//  EP1-1 ----> www.fake-google.com
-//  EP1-1 ----> fake-microsoft.com
+//  EP1-1 ----> www.fake-google.test
+//  EP1-1 ----> fake-microsoft.test
 //
-// NetworkSet "netset1" with *.fake-google.com
-// NetworkSet "netset2" with fake-microsoft.com
+// NetworkSet "netset1" with *.fake-google.test
+// NetworkSet "netset2" with fake-microsoft.test
 //
 // Egress Policies
 //   Tier1                          |  Tier2
@@ -94,10 +94,10 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 
 		// Instead of relying on external websites for DNS tests, we use an internally hosted HTTP service,
 		// and internal dns server, making functional validation tests more self-contained and reliable.
-		externalWorkloads = StartExternalWorkloads("dns-external-workload", 2)
+		externalWorkloads = infrastructure.StartExternalWorkloads("dns-external-workload", 2)
 		dnsRecords := map[string][]dns.RecordIP{
-			"www.fake-google.com": {{TTL: 20, IP: externalWorkloads[0].IP}},
-			"fake-microsoft.com":  {{TTL: 20, IP: externalWorkloads[1].IP}},
+			"www.fake-google.test": {{TTL: 20, IP: externalWorkloads[0].IP}},
+			"fake-microsoft.test":  {{TTL: 20, IP: externalWorkloads[1].IP}},
 		}
 		dnsServer = dns.StartServer(dnsRecords)
 		dnsServerIP = dnsServer.IP
@@ -143,14 +143,14 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		gns := api.NewGlobalNetworkSet()
 		gns.Name = "netset1"
 		gns.Labels = map[string]string{"netset1": ""}
-		gns.Spec.AllowedEgressDomains = []string{"*.fake-google.com"}
+		gns.Spec.AllowedEgressDomains = []string{"*.fake-google.test"}
 		_, err = client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
 		gns = api.NewGlobalNetworkSet()
 		gns.Name = "netset2"
 		gns.Labels = map[string]string{"netset2": ""}
-		gns.Spec.AllowedEgressDomains = []string{"fake-microsoft.com"}
+		gns.Spec.AllowedEgressDomains = []string{"fake-microsoft.test"}
 		_, err = client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -228,14 +228,14 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		time.Sleep(5 * time.Second)
 	})
 
-	It("should correctly resolve and connectivity should be based on enforced policy.", func() {
+	FIt("should correctly resolve and connectivity should be based on enforced policy.", func() {
 		// Run a few tests for both interesting domains.  These should work immediately and consistently.
-		canWgetDomain("fake-microsoft.com")
-		cannotWgetDomain("www.fake-google.com")
-		canWgetDomain("fake-microsoft.com")
-		cannotWgetDomain("www.fake-google.com")
-		canWgetDomain("fake-microsoft.com")
-		cannotWgetDomain("www.fake-google.com")
+		canWgetDomain("fake-microsoft.test")
+		cannotWgetDomain("www.fake-google.test")
+		canWgetDomain("fake-microsoft.test")
+		cannotWgetDomain("www.fake-google.test")
+		canWgetDomain("fake-microsoft.test")
+		cannotWgetDomain("www.fake-google.test")
 
 		if bpfEnabled {
 			// Make sure that conntrack scanning ticks at least once
@@ -299,9 +299,9 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 				}
 
 				if flowLog.DstMeta.Name == "netset1" {
-					// Networkset 1 is a match on www.fake-google.com
+					// Networkset 1 is a match on www.fake-google.test
 					domains := destDomainsToSlice(flowLog.FlowDestDomains)
-					if len(domains) != 1 || domains[0] != "www.fake-google.com" {
+					if len(domains) != 1 || domains[0] != "www.fake-google.test" {
 						errs = append(errs, fmt.Sprintf("Unexpected domains for netset1: %#v", domains))
 					}
 
@@ -324,9 +324,9 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 				}
 
 				if flowLog.DstMeta.Name == "netset2" {
-					// Networkset 2 is a match on fake-microsoft.com
+					// Networkset 2 is a match on fake-microsoft.test
 					domains := destDomainsToSlice(flowLog.FlowDestDomains)
-					if len(domains) != 1 || domains[0] != "fake-microsoft.com" {
+					if len(domains) != 1 || domains[0] != "fake-microsoft.test" {
 						errs = append(errs, fmt.Sprintf("Unexpected domains for netset2 at %s: %#v", flowLog.Tuple.DestNet().String(), domains))
 					}
 
@@ -411,9 +411,9 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 // DNS queried by different endpoints, and resolving to the same domain.
 //
 // Felix1
-//  EP1-1 ----> gist.fake-github.com (resolves to the same IP as fake-github.com)
-//  EP2-1 ----> fake-github.com
-//  EP2-1 ----> fake-microsoft.com
+//  EP1-1 ----> gist.fake-github.test (resolves to the same IP as fake-github.test)
+//  EP2-1 ----> fake-github.test
+//  EP2-1 ----> fake-microsoft.test
 //
 //
 
@@ -455,11 +455,11 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
 
-		externalWorkloads = StartExternalWorkloads("dns-external-workload", 2)
+		externalWorkloads = infrastructure.StartExternalWorkloads("dns-external-workload", 2)
 		dnsRecords := map[string][]dns.RecordIP{
-			"fake-microsoft.com":   {{TTL: 20, IP: externalWorkloads[0].IP}},
-			"gist.fake-github.com": {{TTL: 20, IP: externalWorkloads[1].IP}},
-			"fake-github.com":      {{TTL: 20, IP: externalWorkloads[1].IP}},
+			"fake-microsoft.test":   {{TTL: 20, IP: externalWorkloads[0].IP}},
+			"gist.fake-github.test": {{TTL: 20, IP: externalWorkloads[1].IP}},
+			"fake-github.test":      {{TTL: 20, IP: externalWorkloads[1].IP}},
 		}
 		dnsServer = dns.StartServer(dnsRecords)
 		dnsServerIP = dnsServer.IP
@@ -515,11 +515,11 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 
 	// When FELIX_FLOWLOGSDESTDOMAINSBYCLIENT is true, domains that are queried by different endpoints
 	// and that resolve to the same IP should not be reported in the destination domains together.
-	It("should correctly resolve and domains should be listed by client", func() {
+	FIt("should correctly resolve and domains should be listed by client", func() {
 		// Run a few tests for both interesting domains. These should work immediately and consistently.
-		canWgetDomain(ep1_1, "gist.fake-github.com")
-		canWgetDomain(ep2_1, "fake-github.com")
-		canWgetDomain(ep2_1, "fake-microsoft.com")
+		canWgetDomain(ep1_1, "gist.fake-github.test")
+		canWgetDomain(ep2_1, "fake-github.test")
+		canWgetDomain(ep2_1, "fake-microsoft.test")
 
 		if bpfEnabled {
 			// Make sure that conntrack scanning ticks at least once
@@ -539,19 +539,19 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 				if flowLog.SrcMeta.Type == "wep" && flowLog.DstMeta.Type == "net" && flowLog.DstMeta.AggregatedName == "pub" {
 					log.Debugf("FlowLog: %#v", flowLog)
 					if strings.Contains(flowLog.SrcMeta.AggregatedName, ep1_1.Name) {
-						// dest_domains should only report gist.fake-github.com for ep1_1
+						// dest_domains should only report gist.fake-github.test for ep1_1
 						domains := destDomainsToSlice(flowLog.FlowDestDomains)
 						for _, domain := range domains {
-							if domain != "gist.fake-github.com" {
+							if domain != "gist.fake-github.test" {
 								errs = append(errs, fmt.Sprintf("Unexpected domains for ep1_1: %#v", domains))
 							}
 						}
 					}
 					if strings.Contains(flowLog.SrcMeta.AggregatedName, ep2_1.Name) {
 						domains := destDomainsToSlice(flowLog.FlowDestDomains)
-						// dest_domains should either report fake-github.com and/or fake-microsoft.com for ep2_1
+						// dest_domains should either report fake-github.test and/or fake-microsoft.test for ep2_1
 						for _, domain := range domains {
-							if domain != "fake-github.com" && domain != "fake-microsoft.com" {
+							if domain != "fake-github.test" && domain != "fake-microsoft.test" {
 								errs = append(errs, fmt.Sprintf("Unexpected domains for ep2_1: %#v", domains))
 							}
 						}
