@@ -13,7 +13,6 @@ import (
 	"time"
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
-	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/nxadm/tail"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -274,7 +273,7 @@ func (ec *envoyCollector) ReceiveLogs(logMsg *accesslogv3.HTTPAccessLogEntry) {
 	// Treat values
 	timeToLastUpstreamTxByte := logMsg.GetCommonProperties().GetTimeToLastUpstreamTxByte()
 	if timeToLastUpstreamTxByte == nil {
-		timeToLastUpstreamTxByte = &duration.Duration{}
+		timeToLastUpstreamTxByte = &durationpb.Duration{}
 	}
 	startTime := logMsg.GetCommonProperties().GetStartTime()
 	duration := logMsg.GetCommonProperties().GetTimeToLastDownstreamTxByte()
