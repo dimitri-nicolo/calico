@@ -632,7 +632,7 @@ func TestRetrieveMostRecentWAFLogs(t *testing.T) {
 				QueryParams: v1.QueryParams{
 					TimeRange: &lmav1.TimeRange{
 						Field: lmav1.FieldGeneratedTime,
-						From:  now,
+						From:  now.Add(-1 * time.Second).UTC(),
 					},
 				},
 				QuerySortParams: v1.QuerySortParams{
