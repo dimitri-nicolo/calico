@@ -27,6 +27,7 @@ SKIP_SUBDIRS = [
     "networking-calico",
     "selinux",
     "release",
+    "oiler",
 ]
 
 if sys.stdout.isatty():

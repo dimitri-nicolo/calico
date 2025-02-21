@@ -26,6 +26,7 @@ const (
 	LabelMethod    = "method"
 	LabelClusterID = "cluster_id"
 	LabelTenantID  = "tenant_id"
+	Source         = "source"
 )
 
 var (
@@ -90,7 +91,7 @@ var (
 		Name:      "elastic_response_time_seconds",
 		Help:      "Duration of HTTP requests to Elastic.",
 		Buckets:   histogramBuckets,
-	}, []string{LabelPath, LabelMethod})
+	}, []string{LabelPath, LabelMethod, Source})
 
 	// ElasticResponseStatus will track the duration of Elastic's HTTP response
 	// across all APIs broken down by path and method
@@ -101,7 +102,7 @@ var (
 			Name:      "elastic_response_status",
 			Help:      "Status of HTTP response to Elastic.",
 		},
-		[]string{LabelCode, LabelMethod, LabelPath},
+		[]string{LabelCode, LabelMethod, LabelPath, Source},
 	)
 
 	// ElasticConnectionErrors will track the duration of Elastic's HTTP response
@@ -113,7 +114,7 @@ var (
 			Name:      "elastic_connection_errors",
 			Help:      "Number of connection errors from Elastic.",
 		},
-		[]string{LabelCode, LabelMethod, LabelPath},
+		[]string{LabelCode, LabelMethod, LabelPath, Source},
 	)
 
 	// BytesWrittenPerClusterIDAndTenantID will track how many bytes are written across
