@@ -1,4 +1,6 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM alpine:3 AS builder
 
@@ -12,7 +14,7 @@ COPY bin/ui-apis-${TARGETARCH} /usr/bin/ui-apis
 # /etc/ui-apis directory used for storing self-signed certificates
 COPY --chown=10001:10001 --from=builder /etc/ui-apis /etc/ui-apis/
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

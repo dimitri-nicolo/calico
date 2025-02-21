@@ -1,4 +1,6 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -10,7 +12,7 @@ COPY bin/database/GeoLite2-City.mmdb /etc/maxmind/GeoLite2-City.mmdb
 COPY bin/controller-${TARGETARCH} /usr/bin/intrusion-detection-controller
 COPY bin/healthz-${TARGETARCH} /usr/bin/healthz
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

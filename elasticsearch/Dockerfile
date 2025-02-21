@@ -1,3 +1,6 @@
+# Copyright (c) 2020-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 
 FROM ${THIRD_PARTY_REGISTRY}/elasticsearch:v8.17.1 AS elastic
@@ -49,8 +52,6 @@ COPY --from=elastic /lib64/librt.so.1 /lib64/librt.so.1
 COPY --from=elastic /lib64/liblzma.so.5 /lib64/liblzma.so.5
 COPY --from=elastic /lib64/liblz4.so.1 /lib64/liblz4.so.1
 COPY --from=elastic /lib64/libgcrypt.so.20 /lib64/libgcrypt.so.20
-COPY --from=elastic /lib64/libpthread.so.0 /lib64/libpthread.so.0
-COPY --from=elastic /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=elastic /lib64/libgpg-error.so.0 /lib64/libgpg-error.so.0
 
 COPY --from=elastic /lib64/libmount.so.1 /lib64/libmount.so.1
@@ -73,7 +74,7 @@ COPY --from=elastic /usr/bin/tini /usr/bin/tini
 # tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-${TARGETARCH} /usr/bin/readiness-probe
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/elasticsearch/bin:/usr/sbin:/usr/bin:/sbin:/bin

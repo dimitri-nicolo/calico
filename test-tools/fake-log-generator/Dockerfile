@@ -1,4 +1,6 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -8,7 +10,7 @@ ARG TARGETARCH
 COPY bin/fake-log-generator-${TARGETARCH} /usr/bin/fake-log-generator
 COPY example-flows /home/log-gen/
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 

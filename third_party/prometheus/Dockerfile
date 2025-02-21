@@ -1,3 +1,6 @@
+# Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 ARG UBI8_IMAGE
 
 FROM ${UBI8_IMAGE} AS ubi
@@ -32,7 +35,6 @@ COPY --from=ubi /lib64/liblber-2.4.so.2 /lib64/liblber-2.4.so.2
 COPY --from=ubi /lib64/libldap-2.4.so.2 /lib64/libldap-2.4.so.2
 COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
 COPY --from=ubi /lib64/libnghttp2.so.14 /lib64/libnghttp2.so.14
-COPY --from=ubi /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
 COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=ubi /lib64/libpsl.so.5 /lib64/libpsl.so.5
 COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
@@ -56,7 +58,7 @@ COPY prometheus/consoles/ /usr/share/prometheus/consoles/
 COPY prometheus/documentation/examples/prometheus.yml /etc/prometheus/prometheus.yml
 COPY prometheus/npm_licenses.tar.bz2 /npm_licenses.tar.bz2
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 
