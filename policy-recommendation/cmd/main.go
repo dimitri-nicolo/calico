@@ -22,6 +22,7 @@ import (
 	linseedrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/config"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
 	mscontroller "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/managed_cluster"
 	rscontroller "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/recommendation_scope"
 )
@@ -36,7 +37,6 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to load Policy Recommendation config")
 	}
-	// Initialize logging.
 	config.InitializeLogging()
 
 	//	Initialize context.
@@ -116,22 +116,26 @@ func main() {
 		log.WithError(err).Fatal("Failed to create PolicyRecommendationScope controller")
 	}
 
-	// Create the managed cluster controller. Each managed cluster will have its own
-	// PolicyRecommendationScope and Recommendation controllers.
-	if config.TenantNamespace != "" {
-		// We need to set the impersonation before passing the clientFactory to the managed cluster
-		// controller in order to make sure we use this service account when calling managed cluster
-		// in a multi-tenant setup. Inside a multi-tenant management setup, we want to be able to use
-		// the tenant's service account when querying the management cluster
-		impersonationInfo := user.DefaultInfo{
-			Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
-			Groups: []string{},
+	var mctrl controller.Controller
+	isManagementCluster := config.ClusterConnectionType == "management"
+	if isManagementCluster {
+		// Create the managed cluster controller. Each managed cluster will have its own
+		// PolicyRecommendationScope and Recommendation controllers.
+		if config.TenantNamespace != "" {
+			// We need to set the impersonation before passing the clientFactory to the managed cluster
+			// controller in order to make sure we use this service account when calling managed cluster
+			// in a multi-tenant setup. Inside a multi-tenant management setup, we want to be able to use
+			// the tenant's service account when querying the management cluster
+			impersonationInfo := user.DefaultInfo{
+				Name:   "system:serviceaccount:tigera-policy-recommendation:tigera-policy-recommendation",
+				Groups: []string{},
+			}
+			clientFactory = clientFactory.Impersonate(&impersonationInfo)
 		}
-		clientFactory = clientFactory.Impersonate(&impersonationInfo)
-	}
-	mctrl, err := mscontroller.NewManagedClusterController(ctx, client, clientFactory, linseedClient, config.TenantNamespace)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to create ManagedCluster controller")
+		mctrl, err = mscontroller.NewManagedClusterController(ctx, client, clientFactory, linseedClient, config.TenantNamespace)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to create ManagedCluster controller")
+		}
 	}
 
 	// Setup shutdown sigs
@@ -145,12 +149,16 @@ func main() {
 
 	for {
 		if hasLicense && !controllersRunning {
+			// The controllers run until the stop signal is received.
 			log.Info("License status is valid, starting controllers")
-			// Both controllers run until the stop signal is received.
+
 			// Start the PolicyRecommendationScope controller for the standalone or management cluster.
 			go rctrl.Run(stopChan)
-			// Start the ManagedCluster controller.
-			go mctrl.Run(stopChan)
+
+			if isManagementCluster && mctrl != nil {
+				// Start the ManagedCluster controller for management clusters only.
+				go mctrl.Run(stopChan)
+			}
 
 			controllersRunning = true
 		} else if !hasLicense && controllersRunning {
