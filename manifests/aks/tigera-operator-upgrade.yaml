@@ -54030,7 +54030,7 @@ rules:
       - networkpolicies.crd.projectcalico.org
       - networksets.crd.projectcalico.org
       - tiers.crd.projectcalico.org
-      - whiskers.crd.projectcalico.org
+      - whiskers.operator.tigera.io
        # Enterprise/Cloud Resources
       - alertexceptions.crd.projectcalico.org
       - bfdconfigurations.crd.projectcalico.org
@@ -54198,6 +54198,7 @@ rules:
       - gatewayapis
       - gatewayapis/finalizers
       - imagesets
+      - whiskers
       - installations
       - installations/finalizers
       - installations/status
