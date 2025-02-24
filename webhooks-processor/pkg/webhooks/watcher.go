@@ -96,7 +96,7 @@ func (w *WebhookWatcherUpdater) startInformers(ctx context.Context) error {
 	)
 
 	configMapInfomer := informerFactory.Core().V1().ConfigMaps().Informer()
-	eventHandlerFunctions := cache.ResourceEventHandlerFuncs{
+	eventHandlerConfigMapFunctions := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if cm, ok := obj.(v1.ConfigMap); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &cm}
@@ -114,14 +114,14 @@ func (w *WebhookWatcherUpdater) startInformers(ctx context.Context) error {
 		},
 	}
 
-	_, err := configMapInfomer.AddEventHandler(eventHandlerFunctions)
+	_, err := configMapInfomer.AddEventHandler(eventHandlerConfigMapFunctions)
 
 	if err != nil {
 		return err
 	}
 
 	secretInformer := informerFactory.Core().V1().Secrets().Informer()
-	eventHandlerFunctions = cache.ResourceEventHandlerFuncs{
+	eventHandlerSecretFunctions := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			if secret, ok := obj.(v1.Secret); ok {
 				w.controller.K8sEventsChan() <- watch.Event{Type: watch.Added, Object: &secret}
@@ -139,7 +139,7 @@ func (w *WebhookWatcherUpdater) startInformers(ctx context.Context) error {
 		},
 	}
 
-	_, err = secretInformer.AddEventHandler(eventHandlerFunctions)
+	_, err = secretInformer.AddEventHandler(eventHandlerSecretFunctions)
 
 	if err != nil {
 		return err
