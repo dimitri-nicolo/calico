@@ -1,5 +1,6 @@
-# Copyright (c) 2023-2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
 
+ARG CALICO_BASE
 ARG THIRD_PARTY_REGISTRY
 
 FROM ${THIRD_PARTY_REGISTRY}/snort:v3.3.7.0 AS snort
@@ -46,7 +47,7 @@ COPY --from=snort /lib64/libdl.so.2 /lib64/libdl.so.2
 # Copy the deep-packet-inspection binary
 COPY bin/deep-packet-inspection-${TARGETARCH} /usr/bin/deep-packet-inspection
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

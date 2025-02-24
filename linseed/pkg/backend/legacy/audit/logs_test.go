@@ -1267,7 +1267,7 @@ func TestRetrieveMostRecentAuditLogs(t *testing.T) {
 			params.QueryParams = v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
 					Field: lmav1.FieldGeneratedTime,
-					From:  now,
+					From:  now.Add(-1 * time.Second).UTC(),
 				},
 			}
 			params.Sort = []v1.SearchRequestSortBy{

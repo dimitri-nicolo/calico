@@ -1,6 +1,7 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
+
 FROM scratch AS source
 
 ARG BIN_DIR

@@ -1,4 +1,6 @@
-# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -7,7 +9,7 @@ ARG TARGETARCH
 COPY bin/intrusion-detection-job-installer-${TARGETARCH} /usr/bin/intrusion-detection-job-installer
 COPY cmd/install/data/flowlog-dashboard.ndjson /etc/dashboards/flowlog-dashboard.ndjson
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

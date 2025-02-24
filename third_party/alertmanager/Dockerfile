@@ -1,3 +1,7 @@
+# Copyright (c) 2022-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
+
 FROM alpine:3 AS builder
 
 RUN mkdir /alertmanager
@@ -12,7 +16,7 @@ COPY alertmanager/examples/ha/alertmanager.yml /etc/alertmanager/alertmanager.ym
 COPY bin/alertmanager-${TARGETARCH} /bin/alertmanager
 COPY bin/amtool-${TARGETARCH} /bin/amtool
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 
