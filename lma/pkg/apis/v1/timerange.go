@@ -17,6 +17,7 @@ type TimeField string
 
 const (
 	FieldDefault       TimeField = ""
+	FieldStartTime     TimeField = "start_time"
 	FieldGeneratedTime TimeField = "generated_time"
 )
 
@@ -103,7 +104,7 @@ func (t *TimeRange) UnmarshalJSON(b []byte) error {
 	}
 
 	switch s.Field {
-	case FieldDefault, FieldGeneratedTime:
+	case FieldDefault, FieldGeneratedTime, FieldStartTime:
 		t.Field = s.Field
 	default:
 		return httputils.NewHttpStatusErrorBadRequest(
