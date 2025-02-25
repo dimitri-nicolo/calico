@@ -137,6 +137,12 @@ promotions:
       when: "branch =~ 'master|release-'"
   - name: Push voltron images
     pipeline_file: push-images/voltron.yml
+  - name: Push Goldmane images
+    pipeline_file: push-images/goldmane.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
+  - name: Publish openstack packages
+    pipeline_file: push-images/packaging.yaml
     auto_promote:
       when: "branch =~ 'master|release-'"
   - name: Push webhooks-processor images
