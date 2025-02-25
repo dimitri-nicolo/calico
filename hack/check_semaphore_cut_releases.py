@@ -18,6 +18,7 @@ SKIP_SUBDIRS = [
     "e2e",
     "felix",
     "fluent-bit",
+    "goldmane",
     "libcalico-go",
     "licensing",
     "lma",
