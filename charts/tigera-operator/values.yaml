@@ -53,6 +53,10 @@ applicationLayer:
   enabled: false
 amazonCloudIntegration:
   enabled: false
+# whisker configures the Calico Whisker observability UI.
+whisker:
+  enabled: true
+
 defaultFelixConfiguration:
   enabled: false
 # MCM configuration options.
