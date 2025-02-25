@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/http2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -322,7 +323,14 @@ func (cs *clusters) get(id string) *cluster {
 }
 
 func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last string) error {
-	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{}, &ctrlclient.ListOptions{Namespace: cs.voltronCfg.TenantNamespace})
+	watcher, err := cs.client.Watch(ctx, &v3.ManagedClusterList{},
+		&ctrlclient.ListOptions{
+			Namespace: cs.voltronCfg.TenantNamespace,
+			Raw: &metav1.ListOptions{
+				ResourceVersion: last,
+			},
+		},
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create k8s watch: %s", err)
 	}
@@ -391,13 +399,13 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 	cs.Lock()
 	defer cs.Unlock()
 
-	for _, mc := range list.Items {
-		id := mc.ObjectMeta.Name
+	for _, managedCluster := range list.Items {
+		id := managedCluster.ObjectMeta.Name
 
 		mc := &jclust.ManagedCluster{
 			ID:                id,
-			ActiveFingerprint: mc.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
-			Certificate:       mc.Spec.Certificate,
+			ActiveFingerprint: managedCluster.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+			Certificate:       managedCluster.Spec.Certificate,
 		}
 
 		known[id] = struct{}{}
@@ -408,9 +416,9 @@ func (cs *clusters) resyncWithK8s(ctx context.Context, startupSync bool) (string
 			logrus.Errorf("ManagedClusters listing failed: %s", err)
 		}
 
-		if c, ok := cs.clusters[id]; ok {
-			if startupSync {
-				c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse, mc.ID)
+		if startupSync && isConnectedStatus(&managedCluster, v3.ManagedClusterStatusValueTrue) {
+			if c, ok := cs.clusters[id]; ok {
+				c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse)
 			}
 		}
 	}
@@ -499,7 +507,7 @@ func (c *cluster) checkTunnelState() {
 	if err := c.tunnelManager.CloseTunnel(); err != nil && err != tunnel.ErrTunnelClosed {
 		logrus.WithError(err).Error("an error occurred closing the tunnel")
 	}
-	c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse, c.ID)
+	c.sendStatusUpdate(v3.ManagedClusterStatusValueFalse)
 
 	if err != nil {
 		clog.WithError(err).Error("Cluster tunnel is broken, deleted")
@@ -587,7 +595,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 		}()
 	}
 
-	c.sendStatusUpdate(v3.ManagedClusterStatusValueTrue, c.ID)
+	c.sendStatusUpdate(v3.ManagedClusterStatusValueTrue)
 
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
 	go c.checkTunnelState()
@@ -595,8 +603,8 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 	return nil
 }
 
-func (c *cluster) sendStatusUpdate(status v3.ManagedClusterStatusValue, managedClusterID string) {
-	c.statusUpdateFunc(managedClusterID, status)
+func (c *cluster) sendStatusUpdate(status v3.ManagedClusterStatusValue) {
+	c.statusUpdateFunc(c.ID, status)
 }
 
 func (c *cluster) stop() {
@@ -645,4 +653,16 @@ func parseCertificatePEMBlock(certPEM []byte) (*x509.Certificate, error) {
 		return nil, err
 	}
 	return cert, nil
+}
+
+func isConnectedStatus(mc *v3.ManagedCluster, status v3.ManagedClusterStatusValue) bool {
+	if mc == nil {
+		return false
+	}
+	for _, c := range mc.Status.Conditions {
+		if c.Type == v3.ManagedClusterStatusTypeConnected {
+			return c.Status == status
+		}
+	}
+	return false
 }
