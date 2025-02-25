@@ -11,9 +11,11 @@ import (
 
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
+	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
@@ -122,10 +124,6 @@ func collectDiags(opts *diagOpts) error {
 	// Ensure max-logs value is non-negative
 	argutils.ValidateMaxLogs(opts.MaxLogs)
 
-	if err := common.CheckVersionMismatch(opts.Config, opts.AllowVersionMismatch); err != nil {
-		return err
-	}
-
 	// Ensure kubectl command is available (since we need it to access BGP information)
 	if err := common.KubectlExists(); err != nil {
 		return fmt.Errorf("missing dependency: %s", err)
@@ -152,24 +150,23 @@ func collectDiags(opts *diagOpts) error {
 	archiveName := directoryName + ".tar.gz"
 	dir := fmt.Sprintf("%s/%s", tempDir, directoryName)
 
+	// Create Kubernetes client from config or env vars.
+	kubeClient, _, _, err := clientmgr.GetClients(opts.Config)
+	if err != nil {
+		fmt.Printf("ERROR creating clients: %v\n", err)
+		return err
+	}
+	if kubeClient != nil {
+		collectTLSSecrets(kubeClient, dir+"/tls")
+		collectSelectedNodeLogs(kubeClient, dir+"/nodes", dir+"/links", opts)
+	}
 	collectGlobalClusterInformation(dir + "/cluster")
-	collectSelectedNodeLogs(dir+"/nodes", dir+"/links", opts)
 	createArchive(tempDir, directoryName, archiveName)
 
 	return nil
 }
 
-func collectSelectedNodeLogs(dir, linkDir string, opts *diagOpts) {
-	// Create Kubernetes client from config or env vars.
-	kubeClient, _, _, err := clientmgr.GetClients(opts.Config)
-	if err != nil {
-		fmt.Printf("ERROR creating clients: %v\n", err)
-		return
-	}
-	if kubeClient == nil {
-		fmt.Println("ERROR: can't create Kubernetes client on etcd datastore")
-		return
-	}
+func collectSelectedNodeLogs(kubeClient kubernetes.Interface, dir, linkDir string, opts *diagOpts) {
 
 	// If --focus-nodes is specified, put those node names at the start of the node list.
 	nodeList := strings.Split(opts.FocusNodes, ",")
@@ -242,7 +239,7 @@ func collectSelectedNodeLogs(dir, linkDir string, opts *diagOpts) {
 	}
 }
 
-func collectDiagsForSelectedPods(dir, linkDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeList []string, ns string, selector *v1.LabelSelector) {
+func collectDiagsForSelectedPods(dir, linkDir string, opts *diagOpts, kubeClient kubernetes.Interface, nodeList []string, ns string, selector *v1.LabelSelector) {
 
 	labelMap, err := v1.LabelSelectorAsMap(selector)
 	if err != nil {
@@ -279,9 +276,9 @@ func collectDiagsForSelectedPods(dir, linkDir string, opts *diagOpts, kubeClient
 			fmt.Printf("Collecting detailed diags for pod %v in namespace %v on node %v...\n", podName, ns, nodeName)
 			if strings.HasPrefix(podName, "calico-node-") {
 				nodeDir := dir + "/" + nodeName
-				collectCalicoNodeDiags(nodeDir, opts, kubeClient, nodeName, ns, podName)
+				collectCalicoNodeDiags(nodeDir, nodeName, ns, podName)
 			}
-			cmds = append(cmds, diagsCmdsForPod(dir, linkDir, opts, kubeClient, nodeName, ns, podName)...)
+			cmds = append(cmds, diagsCmdsForPod(dir, linkDir, opts, nodeName, ns, podName)...)
 			logsWanted--
 			if logsWanted <= 0 {
 				break
@@ -458,6 +455,82 @@ func collectThirdPartyResource(dir string) {
 	common.ExecAllCmdsWriteToFile(commands)
 }
 
+type tls struct {
+	name string
+	ns   string
+}
+
+// collectTLSSecrets collects a selection of TLS assets, removes confidential information and stores the results.
+func collectTLSSecrets(kubeClient kubernetes.Interface, dir string) {
+	fmt.Println("Collecting (censored) TLS secrets")
+	ctx := context.Background()
+	err := os.MkdirAll(dir, 0777)
+	if err != nil {
+		fmt.Printf("failed to create TLS directory: %v\n", err)
+		return
+	}
+	for _, t := range []tls{
+		{"calico-kube-controllers-metrics-tls", "calico-system"},
+		{"calico-node-prometheus-server-tls", "calico-system"},
+		{"node-certs", "calico-system"},
+		{"typa-certs", "calico-system"},
+		{"calico-node-prometheus-client-tls", "tigera-prometheus"},
+		{"calico-node-prometheus-tls", "tigera-prometheus"},
+		{"deep-packet-inspection-tls", "tigera-dpi"},
+		{"tigera-secure-elasticsearch-cert", "tigera-elasticsearch"},
+		{"tigera-secure-internal-elasticsearch-cert", "tigera-prometheus"},
+		{"tigera-secure-linseed-cert", "tigera-prometheus"},
+		{"tigera-ee-elasticsearch-metrics-tls", "tigera-prometheus"},
+		{"tigera-fluentd-prometheus-tls", "tigera-fluentd"},
+		{"intrusion-detection-tls", "tigera-intrusion-detection"},
+		{"tigera-secure-kibana-cert", "tigera-kibana"},
+		{"manager-tls", "tigera-manager"},
+		{"internal-manager-tls", "tigera-manager"},
+		{"tigera-voltron", "tigera-manager"},
+		{"tigera-packetcapture-server-tls", "tigera-packetcapture"},
+		{"tigera-managed-cluster-connection", "tigera-guardian"},
+		{"tigera-compliance-benchmarker-tls", "tigera-compliance"},
+		{"tigera-compliance-controller-tls", "tigera-compliance"},
+		{"tigera-compliance-reporter-tls", "tigera-compliance"},
+		{"tigera-compliance-server-tls ", "tigera-compliance"},
+		{"tigera-compliance-snapshotter-tls ", "tigera-compliance"},
+	} {
+		for _, ns := range []string{t.ns, "tigera-operator"} {
+			fmt.Printf("Collecting secret %s/%s (censoring sensitive data) \n", t.ns, t.name)
+			secret, err := kubeClient.CoreV1().Secrets(ns).Get(ctx, t.name, v1.GetOptions{})
+			if err != nil {
+				fmt.Printf("unable to get secret %s/%s, skipping...\n", t.ns, t.name)
+			} else if secret != nil {
+				censorSecret(secret)
+				yamlData, err := yaml.Marshal(secret)
+				if err == nil {
+					err = os.WriteFile(fmt.Sprintf("%s/%s_%s.yaml", dir, ns, t.name), yamlData, 0644)
+					if err != nil {
+						fmt.Printf("failed to write YAML to file: %v\n", err)
+					}
+				}
+			}
+		}
+	}
+}
+
+func censorSecret(secret *apiv1.Secret) {
+	newData := make(map[string][]byte)
+	for key, value := range secret.Data {
+		if key == "tls.crt" ||
+			key == "cert" ||
+			key == "cert.crt" ||
+			key == "apiserver.crt" ||
+			key == "managed-cluster.crt" ||
+			key == "management-cluster.crt" {
+			newData[key] = value
+		} else {
+			newData[key] = []byte("<censored>")
+		}
+	}
+	secret.Data = newData
+}
+
 // collectGlobalClusterInformation collects the Kubernetes resource, Calico Resource and Tigera operator details
 func collectGlobalClusterInformation(dir string) {
 	fmt.Println("Collecting kubernetes version...")
@@ -477,7 +550,7 @@ func collectGlobalClusterInformation(dir string) {
 }
 
 // func diagsCmdsForPod(pod, namespace, dir /*node_name*/, sinceFlag string) {
-func diagsCmdsForPod(dir, linkDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) []common.Cmd {
+func diagsCmdsForPod(dir, linkDir string, opts *diagOpts, nodeName, namespace, podName string) []common.Cmd {
 	nodeDir := dir + "/" + nodeName
 	namespaceDir := nodeDir + "/" + namespace
 	cmds := []common.Cmd{
@@ -497,7 +570,7 @@ func diagsCmdsForPod(dir, linkDir string, opts *diagOpts, kubeClient *kubernetes
 	return cmds
 }
 
-func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
+func collectCalicoNodeDiags(curNodeDir string, nodeName, namespace, podName string) {
 	fmt.Printf("Collecting dataplane diags for calico-node: %s\n", podName)
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		// ip diagnostics
