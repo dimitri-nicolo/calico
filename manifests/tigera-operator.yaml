@@ -88,6 +88,7 @@ rules:
       - networkpolicies.crd.projectcalico.org
       - networksets.crd.projectcalico.org
       - tiers.crd.projectcalico.org
+      - whiskers.crd.projectcalico.org
        # Enterprise/Cloud Resources
       - alertexceptions.crd.projectcalico.org
       - bfdconfigurations.crd.projectcalico.org
