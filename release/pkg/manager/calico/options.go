@@ -17,8 +17,6 @@ package calico
 import (
 	"fmt"
 
-	"fmt"
-
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/registry"
