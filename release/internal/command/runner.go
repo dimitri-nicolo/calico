@@ -23,6 +23,7 @@ func Run(command string, args []string) (string, error) {
 	return runner().Run(command, args, nil)
 }
 
+// RunInDir runs a command with arguments in a specific directory.
 func RunInDir(dir, command string, args []string) (string, error) {
 	return runner().RunInDir(dir, command, args, nil)
 }

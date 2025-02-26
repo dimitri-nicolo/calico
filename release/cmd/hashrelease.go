@@ -127,11 +127,9 @@ func hashreleaseSubCommands(cfg *Config) []*cli.Command {
 				// Define the hashrelease directory using the hash from the pinned file.
 				hashreleaseDir := filepath.Join(baseHashreleaseDir, data.Hash())
 
-				// Configure a release builder using the generated versions, and use it
-				// to build a Calico release.
 				opts := []calico.Option{
 					calico.WithVersion(data.ProductVersion()),
-					calico.WithOperatorVersion(data.OperatorVersion()),
+					calico.WithOperator(c.String(operatorRegistryFlag.Name), c.String(operatorImageFlag.Name), data.OperatorVersion()),
 					calico.WithRepoRoot(cfg.RepoRootDir),
 					calico.WithReleaseBranchPrefix(c.String(releaseBranchPrefixFlag.Name)),
 					calico.IsHashRelease(),

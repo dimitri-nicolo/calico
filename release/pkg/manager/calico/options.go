@@ -17,6 +17,8 @@ package calico
 import (
 	"fmt"
 
+	"fmt"
+
 	"github.com/projectcalico/calico/release/internal/hashreleaseserver"
 	"github.com/projectcalico/calico/release/internal/imagescanner"
 	"github.com/projectcalico/calico/release/internal/registry"
@@ -59,7 +61,7 @@ func WithVersion(version string) Option {
 	}
 }
 
-func WithOperator(image, version, registry string) Option {
+func WithOperator(registry, image, version string) Option {
 	return func(r *CalicoManager) error {
 		if image == "" {
 			return fmt.Errorf("operator image cannot be blank")
