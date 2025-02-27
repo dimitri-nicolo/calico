@@ -3,11 +3,14 @@
 ARG CALICO_BASE_UBI9
 ARG THIRD_PARTY_REGISTRY
 
-FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.17.1 AS kibana
+FROM gcr.io/unique-caldron-775/third-party-ci/kibana-ubi:v8.17.1 AS kibana
+#FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.17.1 AS kibana
 
 # the base image runs as the kibana user (1000) so change user
 # to root (0) to run setup scripts
 USER 0
+
+ARG GTM_INTEGRATION
 
 COPY create_kibana_config.sh /usr/bin/create_kibana_config.sh
 RUN /usr/bin/create_kibana_config.sh /usr/share/kibana/config/kibana.yml
@@ -57,6 +60,7 @@ ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/kibana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 COPY --from=source / /
+
 
 WORKDIR /usr/share/kibana
 
