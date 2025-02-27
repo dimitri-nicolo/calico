@@ -9,7 +9,7 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/eck-operator
 ECK_OPERATOR_IMAGE    ?= eck-operator
 BUILD_IMAGES          ?= $(ECK_OPERATOR_IMAGE)
 
-ECK_OPERATOR_VERSION = v2.16.0
+ECK_OPERATOR_VERSION = v2.16.1
 
 VERSION ?= $(shell cat cloud-on-k8s/VERSION)
 
@@ -49,7 +49,7 @@ $(ECK_OPERATOR_DOWNLOADED):
 	mkdir -p cloud-on-k8s
 	curl -sfL https://github.com/elastic/cloud-on-k8s/archive/refs/tags/$(ECK_OPERATOR_VERSION).tar.gz | tar xz --strip-components 1 -C cloud-on-k8s
 	patch -d cloud-on-k8s -p1 < patches/0001-Chown-for-elasticserach-folder-recursively.patch
-	patch -d cloud-on-k8s -p1 < patches/0002-Patch-go-CVEs.patch
+	patch -d cloud-on-k8s -p1 < patches/0002-Upgrade-x-net-crypto-to-v0.35.0-update-x-oauth-to-v0.patch
 	touch $@
 
 .PHONY: build
