@@ -71,15 +71,10 @@ tigera-plugin:
 
 # Build Google Tag Manager plugin
 .PHONY: gtm-plugin
-ifeq ($(GTM_INTEGRATION), enabled)
 gtm-plugin:
 	cd kibana/plugins/googletagmanager/ && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
 	yarn kbn bootstrap && yarn build --kibana-version $(LATEST_IMAGE_TAG)
-else
-gtm-plugin:
-	@echo "GTM Integration is disabled. Skipping GTM plugin build."
-endif
 
 
 .PHONY: clean
