@@ -19,6 +19,7 @@ SKIP_SUBDIRS = [
     "felix",
     "fluent-bit",
     "goldmane",
+    "oss-ui",
     "libcalico-go",
     "licensing",
     "lma",
