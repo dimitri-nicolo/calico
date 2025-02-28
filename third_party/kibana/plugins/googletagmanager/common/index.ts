@@ -1,5 +1,5 @@
-export const PLUGIN_ID = 'googleTagManager';
-export const PLUGIN_NAME = 'googleTagManager';
+export const PLUGIN_ID = 'googletagmanager';
+export const PLUGIN_NAME = 'googletagmanager';
 
 import { schema, TypeOf } from '@kbn/config-schema';
 

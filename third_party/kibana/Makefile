@@ -41,7 +41,7 @@ $(KIBANA_DOWNLOADED):
 	patch -d kibana -p1 < patches/0003-support-ubi-arm64-builds.patch
 	patch -d kibana -p1 < patches/0004-update-node-js-version-to-fix-cves.patch
 	cp -r plugins/tigera kibana/plugins/
-	cp -r plugins/google_tag_manager kibana/plugins/
+	cp -r plugins/googletagmanager kibana/plugins/
 	touch $@
 
 
@@ -71,15 +71,10 @@ tigera-plugin:
 
 # Build Google Tag Manager plugin
 .PHONY: gtm-plugin
-ifeq ($(GTM_INTEGRATION), true)
 gtm-plugin:
-	cd kibana/plugins/google_tag_manager/ && \
+	cd kibana/plugins/googletagmanager/ && \
 	. $(NVM_DIR)/nvm.sh && nvm install && nvm use && \
 	yarn kbn bootstrap && yarn build --kibana-version $(LATEST_IMAGE_TAG)
-else
-gtm-plugin:
-	@echo "GTM Integration is disabled. Skipping GTM plugin build."
-endif
 
 
 .PHONY: clean

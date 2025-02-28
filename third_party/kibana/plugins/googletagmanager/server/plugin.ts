@@ -8,7 +8,7 @@ import {
 import { schema } from '@kbn/config-schema';
 import { ConfigSchema } from '../common';
 
-export class GoogleTagManagerPlugin implements Plugin {
+export class GoogletagmanagerPlugin implements Plugin {
   private readonly logger: Logger;
 
   constructor(initializerContext: PluginInitializerContext) {
@@ -16,12 +16,12 @@ export class GoogleTagManagerPlugin implements Plugin {
   }
 
   public setup(core: CoreSetup) {
-    this.logger.info('googleTagManager: Setup');
+    this.logger.info('googletagmanager: Setup');
     return {};
   }
 
   public start(core: CoreStart) {
-    this.logger.debug('googleTagManager: Started');
+    this.logger.debug('googletagmanager: Started');
     return {};
   }
 

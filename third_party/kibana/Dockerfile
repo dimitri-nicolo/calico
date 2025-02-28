@@ -17,11 +17,15 @@ COPY kibana/plugins/tigera/build/tigera-${LATEST_IMAGE_TAG}.zip /tmp/tigera-${LA
 RUN /usr/share/kibana/bin/kibana-plugin install file:///tmp/tigera-${LATEST_IMAGE_TAG}.zip && \
     rm -f /tmp/tigera-${LATEST_IMAGE_TAG}.zip
 
+COPY kibana/plugins/googletagmanager/build/googletagmanager-${LATEST_IMAGE_TAG}.zip /tmp/googletagmanager-${LATEST_IMAGE_TAG}.zip
 RUN if [ "$GTM_INTEGRATION" = "enabled" ]; then \
-        cp kibana/plugins/google_tag_manager/build/googleTagManager-${LATEST_IMAGE_TAG}.zip /tmp/googleTagManager-${LATEST_IMAGE_TAG}.zip && \
-        /usr/share/kibana/bin/kibana-plugin install file:///tmp/googleTagManager-${LATEST_IMAGE_TAG}.zip; \
-        rm -f /tmp/googleTagManager-${LATEST_IMAGE_TAG}.zip; \
+        echo "Installing Google Tag Manager plugin..."; \
+        /usr/share/kibana/bin/kibana-plugin install file:///tmp/googletagmanager-${LATEST_IMAGE_TAG}.zip; \
+    else \
+        echo  "Google Tag Manager integration is not enabled"; \
     fi
+
+RUN rm -f /tmp/googletagmanager-${LATEST_IMAGE_TAG}.zip
 
 
 CMD ["/usr/local/bin/kibana-docker"]
