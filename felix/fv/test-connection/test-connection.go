@@ -47,14 +47,13 @@ import (
 const usage = `test-connection: test connection to some target, for Felix FV testing.
 
 Usage:
-  test-connection <namespace-path> <destination> <port> [--source-ip=<source_ip>] [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>] [--loop-with-file=<file>] [--sendlen=<bytes>] [--recvlen=<bytes>] [--log-pongs] [--stdin] [--timeout=<seconds>] [--dns-server=<dns-server>]
+  test-connection <namespace-path> <destination> <port> [--source-ip=<source_ip>] [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>] [--loop-with-file=<file>] [--sendlen=<bytes>] [--recvlen=<bytes>] [--log-pongs] [--stdin] [--timeout=<seconds>] [--sleep=<seconds>] [--dns-server=<dns-server>]
 
 Options:
   --source-ip=<source_ip>   Source IP to use for the connection [default: 0.0.0.0].
   --source-port=<source>    Source port to use for the connection [default: 0].
   --protocol=<protocol>     Protocol to test tcp (default), udp (connected) udp-noconn (unconnected).
   --duration=<seconds>      Total seconds test should run. 0 means run a one off connectivity check. Non-Zero means packets loss test.[default: 0]
-  --dns-server=<dns-server> If specified use the given address to do the DNS lookup. Only valid if <destination> is a domain name.
   --loop-with-file=<file>   Whether to send messages repeatedly, file is used for synchronization
   --log-pongs               Whether to log every response
   --debug                   Enable debug logging
@@ -62,6 +61,8 @@ Options:
   --recvlen=<bytes>         Tell the other side to send this many additional bytes
   --stdin                   Read and send data from stdin
   --timeout=<seconds>       Exit after timeout if pong not received
+  --sleep=<seconds>         How long to sleep before seding another ping
+  --dns-server=<dns-server> If specified use the given address to do the DNS lookup. Only valid if <destination> is a domain name.
 
 If connection is successful, test-connection exits successfully.
 
@@ -81,8 +82,10 @@ If connection is unsuccessful, test-connection panics and so exits with a failur
 // If the other process creates the file again, it will tell this
 // program to close the connection, remove the file and quit.
 
-const defaultIPv4SourceIP = "0.0.0.0"
-const defaultIPv6SourceIP = "::"
+const (
+	defaultIPv4SourceIP = "0.0.0.0"
+	defaultIPv6SourceIP = "::"
+)
 
 func main() {
 	log.SetLevel(log.InfoLevel)
@@ -153,7 +156,7 @@ func main() {
 		log.WithError(err).Fatal("Invalid --stdin")
 	}
 
-	var timeout time.Duration
+	var timeout, sleep time.Duration
 
 	if toval := arguments["--timeout"]; toval != nil {
 		timeoutSecs, err := strconv.ParseFloat(toval.(string), 64)
@@ -162,6 +165,15 @@ func main() {
 			log.WithField("timeout", timeout).Fatal("Invalid --timeout argument")
 		}
 		timeout = time.Duration(timeoutSecs * float64(time.Second))
+	}
+
+	if toval := arguments["--sleep"]; toval != nil {
+		secs, err := strconv.ParseFloat(toval.(string), 64)
+		if err != nil {
+			// panic on error
+			log.WithField("sleep", sleep).Fatal("Invalid --sleep argument")
+		}
+		sleep = time.Duration(secs * float64(time.Second))
 	}
 
 	log.Infof("Test connection from namespace %v IP %v port %v to IP %v port %v proto %v "+
@@ -217,7 +229,7 @@ func main() {
 		// Test connection from wherever we are already running.
 		if err == nil {
 			err = tryConnect(ipAddress, port, sourceIpAddress, sourcePort, protocol,
-				seconds, loopFile, sendLen, recvLen, logPongs, stdin, timeout)
+				seconds, loopFile, sendLen, recvLen, logPongs, stdin, timeout, sleep)
 		}
 	} else {
 		// Get the specified network namespace (representing a workload).
@@ -236,7 +248,7 @@ func main() {
 				return e
 			}
 			return tryConnect(ipAddress, port, sourceIpAddress, sourcePort, protocol,
-				seconds, loopFile, sendLen, recvLen, logPongs, stdin, timeout)
+				seconds, loopFile, sendLen, recvLen, logPongs, stdin, timeout, sleep)
 		})
 	}
 
@@ -296,7 +308,8 @@ type protocolDriver interface {
 }
 
 func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol string,
-	duration time.Duration, sendLen, recvLen int, stdin bool) (*testConn, error) {
+	duration time.Duration, sendLen, recvLen int, stdin bool,
+) (*testConn, error) {
 	err := utils.RunCommand("ip", "r")
 	if err != nil {
 		return nil, err
@@ -384,12 +397,11 @@ func NewTestConn(remoteIpAddr, remotePort, sourceIpAddr, sourcePort, protocol st
 		recvLen:  recvLen,
 		stdin:    stdin,
 	}, nil
-
 }
 
 func tryConnect(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol string,
-	seconds int, loopFile string, sendLen, recvLen int, logPongs, stdin bool, timeout time.Duration) error {
-
+	seconds int, loopFile string, sendLen, recvLen int, logPongs, stdin bool, timeout, sleep time.Duration,
+) error {
 	tc, err := NewTestConn(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol,
 		time.Duration(seconds)*time.Second, sendLen, recvLen, stdin)
 	if err != nil {
@@ -443,7 +455,7 @@ func tryConnect(remoteIPAddr, remotePort, sourceIPAddr, sourcePort, protocol str
 	}
 
 	if loopFile != "" {
-		return tc.tryLoopFile(loopFile, logPongs, timeout)
+		return tc.tryLoopFile(loopFile, logPongs, timeout, sleep)
 	}
 
 	if tc.config.ConnType == connectivity.ConnectionTypePing {
@@ -461,7 +473,7 @@ func (tc *testConn) GetTestMessage(sequence int) connectivity.Request {
 	return req
 }
 
-func (tc *testConn) tryLoopFile(loopFile string, logPongs bool, timeout time.Duration) error {
+func (tc *testConn) tryLoopFile(loopFile string, logPongs bool, timeout, sleep time.Duration) error {
 	req := tc.GetTestMessage(0)
 	msg, err := json.Marshal(req)
 	if err != nil {
@@ -469,6 +481,7 @@ func (tc *testConn) tryLoopFile(loopFile string, logPongs bool, timeout time.Dur
 	}
 
 	ls := newLoopState(loopFile)
+	ls.sleep = sleep
 	var lastResponse connectivity.Response
 
 	var retryStart time.Time
@@ -766,7 +779,6 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 				time.Sleep(5 * time.Millisecond)
 			}
 		}
-
 	}()
 
 	// Wait for writer and reader to complete.
@@ -791,6 +803,7 @@ func (tc *testConn) Close() error {
 type loopState struct {
 	sentInitial bool
 	loopFile    string
+	sleep       time.Duration
 }
 
 func newLoopState(loopFile string) *loopState {
@@ -832,7 +845,11 @@ func (l *loopState) Next() bool {
 		}
 		l.sentInitial = true
 	}
-	time.Sleep(500 * time.Millisecond)
+	if l.sleep != 0 {
+		time.Sleep(l.sleep)
+	} else {
+		time.Sleep(500 * time.Millisecond)
+	}
 	return true
 }
 

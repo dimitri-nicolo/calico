@@ -56,21 +56,21 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		},
 		Entry("normal entry - no NAT",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
-			conntrack.NewValueNormal(now, now, 0, LegSrcDst, LegDstSrc),
+			conntrack.NewValueNormal(now, 0, LegSrcDst, LegDstSrc),
 			collector.ConntrackInfo{
 				Tuple: makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 			},
 		),
 		Entry("normal entry - no NAT - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
-			conntrack.NewValueNormal(now, now, 0, LegDstSrc, LegSrcDst),
+			conntrack.NewValueNormal(now, 0, LegDstSrc, LegSrcDst),
 			collector.ConntrackInfo{
 				Tuple: makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
 			},
 		),
 		Entry("normal entry - no NAT - expired",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
-			conntrack.NewValueNormal(now-2*time.Hour, now-time.Hour, 0, LegSrcDst, LegDstSrc),
+			conntrack.NewValueNormal(now-time.Hour, 0, LegSrcDst, LegDstSrc),
 			collector.ConntrackInfo{
 				Expired: true,
 				Tuple:   makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
@@ -78,7 +78,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		),
 		Entry("normal entry - no NAT - expired - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
-			conntrack.NewValueNormal(now-2*time.Hour, now-time.Hour, 0, LegDstSrc, LegSrcDst),
+			conntrack.NewValueNormal(now-time.Hour, 0, LegDstSrc, LegSrcDst),
 			collector.ConntrackInfo{
 				Expired: true,
 				Tuple:   makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
@@ -87,7 +87,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 
 		Entry("reverse entry - NAT",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
-			conntrack.NewValueNATReverse(now, now, 0, LegSrcDst, LegDstSrc, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
+			conntrack.NewValueNATReverse(now, 0, LegSrcDst, LegDstSrc, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
 			collector.ConntrackInfo{
 				IsDNAT:       true,
 				Tuple:        makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
@@ -96,7 +96,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		),
 		Entry("reverse entry - NAT - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
-			conntrack.NewValueNATReverse(now, now, 0, LegDstSrc, LegSrcDst, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
+			conntrack.NewValueNATReverse(now, 0, LegDstSrc, LegSrcDst, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
 			collector.ConntrackInfo{
 				IsDNAT:       true,
 				Tuple:        makeTuple(clientIP, backendIP, clientPort, backendPort, 123),
@@ -105,7 +105,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		),
 		Entry("reverse entry - NAT - expired",
 			conntrack.NewKey(123, clientIP, clientPort, backendIP, backendPort),
-			conntrack.NewValueNATReverse(now-2*time.Hour, now-time.Hour, 0, LegSrcDst, LegDstSrc, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
+			conntrack.NewValueNATReverse(now-time.Hour, 0, LegSrcDst, LegDstSrc, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
 			collector.ConntrackInfo{
 				Expired:      true,
 				IsDNAT:       true,
@@ -115,7 +115,7 @@ var _ = Describe("BPF Conntrack InfoReader", func() {
 		),
 		Entry("reverse entry - NAT - expired - swapped legs",
 			conntrack.NewKey(123, backendIP, backendPort, clientIP, clientPort),
-			conntrack.NewValueNATReverse(now-2*time.Hour, now-time.Hour, 0, LegDstSrc, LegSrcDst, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
+			conntrack.NewValueNATReverse(now-time.Hour, 0, LegDstSrc, LegSrcDst, net.IPv4(0, 0, 0, 0), svcIP, svcPort),
 			collector.ConntrackInfo{
 				Expired:      true,
 				IsDNAT:       true,
