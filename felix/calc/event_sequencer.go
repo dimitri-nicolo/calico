@@ -461,6 +461,19 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 	if ep.Mac != nil {
 		mac = ep.Mac.String()
 	}
+	var qosControls *proto.QoSControls
+	if ep.QoSControls != nil {
+		qosControls = &proto.QoSControls{
+			IngressBandwidth:      ep.QoSControls.IngressBandwidth,
+			EgressBandwidth:       ep.QoSControls.EgressBandwidth,
+			IngressBurst:          ep.QoSControls.IngressBurst,
+			EgressBurst:           ep.QoSControls.EgressBurst,
+			IngressPacketRate:     ep.QoSControls.IngressPacketRate,
+			EgressPacketRate:      ep.QoSControls.EgressPacketRate,
+			IngressMaxConnections: ep.QoSControls.IngressMaxConnections,
+			EgressMaxConnections:  ep.QoSControls.EgressMaxConnections,
+		}
+	}
 	return &proto.WorkloadEndpoint{
 		State:                      ep.State,
 		Name:                       ep.Name,
@@ -476,6 +489,7 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 		AwsElasticIps:              ep.AWSElasticIPs,
 		ExternalNetworkNames:       ep.ExternalNetworkNames,
 		ApplicationLayer:           appLayerToProtoAppLayer(ep.ApplicationLayer),
+		QosControls:                qosControls,
 	}
 }
 
