@@ -3819,7 +3819,8 @@
           "Description": "Controls whether and how we scale the conntrack map size depending\non its usage. 'Disabled' make the size stay at the default or whatever is set by\nBPFMapSizeConntrack*. 'DoubleIfFull' doubles the size when the map is pretty much full even\nafter cleanups.",
           "DescriptionHTML": "<p>Controls whether and how we scale the conntrack map size depending\non its usage. 'Disabled' make the size stay at the default or whatever is set by\nBPFMapSizeConntrack*. 'DoubleIfFull' doubles the size when the map is pretty much full even\nafter cleanups.</p>",
           "UserEditable": true,
-          "GoType": "string"
+          "GoType": "string",
+          "OpenSourceOnly": false
         },
         {
           "Group": "Dataplane: eBPF",
