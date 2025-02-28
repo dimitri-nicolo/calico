@@ -16,12 +16,12 @@ package flowgen
 
 import (
 	"context"
+	"math/rand/v2"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
