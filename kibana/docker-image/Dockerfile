@@ -9,7 +9,7 @@ FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.17.1 AS kibana
 # to root (0) to run setup scripts
 USER 0
 
-ARG GTM_INTEGRATION=disable
+ARG GTM_INTEGRATION=disabled
 
 COPY create_kibana_config.sh /usr/bin/create_kibana_config.sh
 RUN /usr/bin/create_kibana_config.sh /usr/share/kibana/config/kibana.yml
