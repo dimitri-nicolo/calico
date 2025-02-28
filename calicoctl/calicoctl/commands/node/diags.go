@@ -42,13 +42,12 @@ type diagCmd struct {
 func Diags(args []string) error {
 	var err error
 	doc := `Usage:
-  <BINARY_NAME> node diags [--log-dir=<LOG_DIR>] [--allow-version-mismatch]
+  <BINARY_NAME> node diags [--log-dir=<LOG_DIR>]
 
 Options:
   -h --help                    Show this screen.
      --log-dir=<LOG_DIR>       The directory containing Calico logs.
                                [default: /var/log/calico]
-     --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
   This command is used to gather diagnostic information from a Calico node.
@@ -69,8 +68,6 @@ Description:
 	if len(arguments) == 0 {
 		return nil
 	}
-
-	// Note: Intentionally not check version mismatch for this command
 
 	return runDiags(arguments["--log-dir"].(string))
 }

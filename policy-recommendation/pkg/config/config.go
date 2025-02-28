@@ -14,6 +14,9 @@ import (
 type Config struct {
 	LogLevel log.Level `envconfig:"LOG_LEVEL" default:"INFO"`
 
+	// Cluster connection type
+	ClusterConnectionType string `envconfig:"CLUSTER_CONNECTION_TYPE" default:"standalone"`
+
 	// Linseed parameters
 	LinseedURL        string `envconfig:"LINSEED_URL" default:"https://tigera-linseed.tigera-elasticsearch.svc"`
 	LinseedCA         string `envconfig:"LINSEED_CA" default:"/etc/pki/tls/certs/tigera-ca-bundle.crt"`

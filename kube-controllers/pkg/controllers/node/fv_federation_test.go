@@ -17,10 +17,10 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/pkg/api/v1/endpoints"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/calico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -238,7 +238,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			return nil
 		}
 		Expect(err).NotTo(HaveOccurred())
-		return federatedservices.GetOrderedEndpointSubsets(eps.Subsets)
+		return endpoints.RepackSubsets(eps.Subsets)
 	}
 
 	getSubsetsFn := func(namespace, name string) func() []v1.EndpointSubset {
@@ -399,7 +399,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		_, err = localK8sClient.CoreV1().Endpoints(ns2Name).Create(ctx, makeEndpoints(eps2, "wrongns", nil), metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		By("Creating a federated service which matches the two indentical backing services")
+		By("Creating a federated service which matches the two identical backing services")
 		fedCfg, err := localK8sClient.CoreV1().Services(ns1Name).Create(ctx, &v1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "federated",
@@ -436,19 +436,24 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			{
 				Addresses: []v1.EndpointAddress{
 					{
-						IP:       "1.0.0.1",
-						NodeName: &node1Name,
+						IP: "2.0.0.1",
 					},
 				},
 				Ports: []v1.EndpointPort{
 					{
-						Name:     "port1",
+						Name:     "port2",
 						Port:     1234,
-						Protocol: v1.ProtocolUDP,
+						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},
 			{
+				Addresses: []v1.EndpointAddress{
+					{
+						IP:       "1.0.0.1",
+						NodeName: &node1Name,
+					},
+				},
 				NotReadyAddresses: []v1.EndpointAddress{
 					{
 						IP:       "1.0.0.2",
@@ -465,20 +470,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						Name:     "port1",
 						Port:     1234,
 						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
-				Addresses: []v1.EndpointAddress{
-					{
-						IP: "2.0.0.1",
-					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port2",
-						Port:     1234,
-						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},
@@ -513,19 +504,28 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			{
 				Addresses: []v1.EndpointAddress{
 					{
-						IP:       "1.0.0.1",
-						NodeName: &node1Name,
+						IP: "2.0.0.1",
 					},
 				},
 				Ports: []v1.EndpointPort{
 					{
-						Name:     "port1",
+						Name:     "port2",
 						Port:     1234,
-						Protocol: v1.ProtocolUDP,
+						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},
 			{
+				Addresses: []v1.EndpointAddress{
+					{
+						IP:       "1.0.0.1",
+						NodeName: &node1Name,
+					},
+					{
+						IP:       "10.10.10.1",
+						NodeName: &node1Name,
+					},
+				},
 				NotReadyAddresses: []v1.EndpointAddress{
 					{
 						IP:       "1.0.0.2",
@@ -536,32 +536,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 							Name:      "pod1",
 						},
 					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port1",
-						Port:     1234,
-						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
-				Addresses: []v1.EndpointAddress{
-					{
-						IP:       "10.10.10.1",
-						NodeName: &node1Name,
-					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port1",
-						Port:     1234,
-						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
-				NotReadyAddresses: []v1.EndpointAddress{
 					{
 						IP:       "10.10.10.2",
 						NodeName: &node2Name,
@@ -577,20 +551,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						Name:     "port1",
 						Port:     1234,
 						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
-				Addresses: []v1.EndpointAddress{
-					{
-						IP: "2.0.0.1",
-					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port2",
-						Port:     1234,
-						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},
@@ -611,15 +571,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						NodeName: &node1Name,
 					},
 				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port1",
-						Port:     1234,
-						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
 				NotReadyAddresses: []v1.EndpointAddress{
 					{
 						IP:       "10.10.10.2",
@@ -730,19 +681,28 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			{
 				Addresses: []v1.EndpointAddress{
 					{
-						IP:       "1.0.0.1",
-						NodeName: &node1Name,
+						IP: "2.0.0.1",
 					},
 				},
 				Ports: []v1.EndpointPort{
 					{
-						Name:     "port1",
+						Name:     "port2",
 						Port:     1234,
-						Protocol: v1.ProtocolUDP,
+						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},
 			{
+				Addresses: []v1.EndpointAddress{
+					{
+						IP:       "1.0.0.1",
+						NodeName: &node1Name,
+					},
+					{
+						IP:       "10.10.10.1",
+						NodeName: &node1Name,
+					},
+				},
 				NotReadyAddresses: []v1.EndpointAddress{
 					{
 						IP:       "1.0.0.2",
@@ -753,32 +713,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 							Name:      "my-remote/pod1",
 						},
 					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port1",
-						Port:     1234,
-						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
-				Addresses: []v1.EndpointAddress{
-					{
-						IP:       "10.10.10.1",
-						NodeName: &node1Name,
-					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port1",
-						Port:     1234,
-						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
-				NotReadyAddresses: []v1.EndpointAddress{
 					{
 						IP:       "10.10.10.2",
 						NodeName: &node2Name,
@@ -797,20 +731,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 					},
 				},
 			},
-			{
-				Addresses: []v1.EndpointAddress{
-					{
-						IP: "2.0.0.1",
-					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port2",
-						Port:     1234,
-						Protocol: v1.ProtocolTCP,
-					},
-				},
-			},
 		}))
 
 		By("Deleting the local services")
@@ -826,19 +746,24 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 			{
 				Addresses: []v1.EndpointAddress{
 					{
-						IP:       "1.0.0.1",
-						NodeName: &node1Name,
+						IP: "2.0.0.1",
 					},
 				},
 				Ports: []v1.EndpointPort{
 					{
-						Name:     "port1",
+						Name:     "port2",
 						Port:     1234,
-						Protocol: v1.ProtocolUDP,
+						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},
 			{
+				Addresses: []v1.EndpointAddress{
+					{
+						IP:       "1.0.0.1",
+						NodeName: &node1Name,
+					},
+				},
 				NotReadyAddresses: []v1.EndpointAddress{
 					{
 						IP:       "1.0.0.2",
@@ -855,20 +780,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 						Name:     "port1",
 						Port:     1234,
 						Protocol: v1.ProtocolUDP,
-					},
-				},
-			},
-			{
-				Addresses: []v1.EndpointAddress{
-					{
-						IP: "2.0.0.1",
-					},
-				},
-				Ports: []v1.EndpointPort{
-					{
-						Name:     "port2",
-						Port:     1234,
-						Protocol: v1.ProtocolTCP,
 					},
 				},
 			},

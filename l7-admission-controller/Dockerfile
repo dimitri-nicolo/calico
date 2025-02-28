@@ -1,4 +1,6 @@
-# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -6,7 +8,7 @@ ARG TARGETARCH
 
 COPY bin/l7-admission-controller-${TARGETARCH} /usr/bin/l7-admission-controller
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 

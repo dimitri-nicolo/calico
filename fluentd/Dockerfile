@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG CALICO_BASE_UBI9
 ARG THIRD_PARTY_REGISTRY
 
-FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.17.1 AS fluentd
+FROM ${THIRD_PARTY_REGISTRY}/fluentd-base:v1.18.0 AS fluentd
 
 FROM scratch AS source
 
@@ -38,13 +39,8 @@ COPY --from=fluentd /usr/bin/tar /usr/bin/tar
 COPY --from=fluentd /usr/bin/test /usr/bin/test
 COPY --from=fluentd /usr/bin/which /usr/bin/which
 
-# arm64 loader under /lib/ld-linux-aarch64.so.1
-COPY --from=fluentd /lib/ld-linux-*.so.? /lib/
-# amd64 loader under /lib64/ld-linux-x86-64.so.2
-COPY --from=fluentd /lib64/ld-linux-*.so.? /lib64/
 COPY --from=fluentd /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=fluentd /lib64/libattr.so.1 /lib64/libattr.so.1
-COPY --from=fluentd /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=fluentd /lib64/libcap.so.2 /lib64/libcap.so.2
 COPY --from=fluentd /lib64/libcom_err.so.2 /lib64/libcom_err.so.2
 COPY --from=fluentd /lib64/libcrypto.so.3 /lib64/libcrypto.so.3
@@ -62,20 +58,10 @@ COPY --from=fluentd /lib64/libnghttp2.so.14 /lib64/libnghttp2.so.14
 COPY --from=fluentd /lib64/libonig.so.5 /lib64/libonig.so.5
 COPY --from=fluentd /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
 COPY --from=fluentd /lib64/libreadline.so.8 /lib64/libreadline.so.8
-COPY --from=fluentd /lib64/libresolv.so.2 /lib64/libresolv.so.2
 COPY --from=fluentd /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=fluentd /lib64/libsigsegv.so.2 /lib64/libsigsegv.so.2
 COPY --from=fluentd /lib64/libssl.so.3 /lib64/libssl.so.3
 COPY --from=fluentd /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
-
-# glibc NSS plugins and config files.
-COPY --from=fluentd /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
-COPY --from=fluentd /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
-
-COPY --from=fluentd /etc/host.conf /etc/host.conf
-COPY --from=fluentd /etc/hosts /etc/hosts
-COPY --from=fluentd /etc/networks /etc/networks
-COPY --from=fluentd /etc/nsswitch.conf /etc/nsswitch.conf
 
 # ruby and fluentd
 COPY --from=fluentd /usr/bin/gem /usr/bin/gem
@@ -130,7 +116,7 @@ COPY inputs/ /fluentd/etc/inputs/
 COPY output_match/ /fluentd/etc/output_match/
 COPY outputs/ /fluentd/etc/outputs/
 
-FROM scratch
+FROM ${CALICO_BASE_UBI9}
 
 ENV PATH=$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 

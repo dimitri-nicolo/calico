@@ -15,6 +15,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	kapiv1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/calico/app-policy/checker"
@@ -126,6 +127,7 @@ type Config struct {
 	EnableNetworkSets         bool
 	EnableServices            bool
 	EnableDestDomainsByClient bool
+	PolicyEvaluationMode      string
 	FlowLogsFlushInterval     time.Duration
 
 	MaxOriginalSourceIPsIncluded int
@@ -167,7 +169,7 @@ type collector struct {
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
 // function for collector instantiation.
 func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
-	return &collector{
+	c := &collector{
 		luc:                   lc,
 		epStats:               make(map[tuple.Tuple]*Data),
 		ticker:                jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
@@ -181,6 +183,15 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 		policyStoreManager:    policystore.NewPolicyStoreManager(),
 		displayDebugTraceLogs: cfg.DisplayDebugTraceLogs,
 	}
+
+	if apiv3.FlowLogsPolicyEvaluationModeType(cfg.PolicyEvaluationMode) == apiv3.FlowLogsPolicyEvaluationModeContinuous {
+		log.Infof("Pending policies enabled, initiating pending policy evaluation ticker")
+		c.tickerPolicyEval = jitter.NewTicker(cfg.FlowLogsFlushInterval*8/10, cfg.FlowLogsFlushInterval*1/10)
+	} else {
+		log.Infof("Pending policies disabled")
+	}
+
+	return c
 }
 
 // ReportingChannel returns the channel used to report dataplane statistics.
@@ -222,15 +233,17 @@ func (c *collector) Start() error {
 	go c.startStatsCollectionAndReporting()
 	c.setupStatsDumping()
 
-	// Processes dataplane updates into the PolicyStore.
-	if c.dataplaneInfoReader != nil {
-		if err := c.dataplaneInfoReader.Start(); err != nil {
-			return fmt.Errorf("DataplaneInfoReader failed to start: %w", err)
-		}
+	if apiv3.FlowLogsPolicyEvaluationModeType(c.config.PolicyEvaluationMode) == apiv3.FlowLogsPolicyEvaluationModeContinuous {
+		// Processes dataplane updates into the PolicyStore.
+		if c.dataplaneInfoReader != nil {
+			if err := c.dataplaneInfoReader.Start(); err != nil {
+				return fmt.Errorf("DataplaneInfoReader failed to start: %w", err)
+			}
 
-		go c.loopProcessingDataplaneInfoUpdates(c.dataplaneInfoReader.DataplaneInfoChan())
-	} else {
-		log.Warning("missing DataplaneInfoReader")
+			go c.loopProcessingDataplaneInfoUpdates(c.dataplaneInfoReader.DataplaneInfoChan())
+		} else {
+			log.Warning("missing DataplaneInfoReader")
+		}
 	}
 
 	if c.dnsLogReporter != nil {

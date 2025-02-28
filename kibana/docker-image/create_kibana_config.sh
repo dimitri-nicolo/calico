@@ -25,7 +25,7 @@ csp:
   img_src:
     - https://www.googletagmanager.com
 
-google_tag_manager.enabled: true
-google_tag_manager.container: "GTM-TCNXTCJ"
+googletagmanager.enabled: true
+googletagmanager.container: "GTM-TCNXTCJ"
 EOF
 fi

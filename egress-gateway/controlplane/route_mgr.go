@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
@@ -99,14 +99,14 @@ func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, h
 	if m.nlHandle == nil {
 		nl, err := netlink.NewHandle(syscall.NETLINK_GENERIC)
 		if err != nil {
-			log.Fatalf("error while fetching netlink handle: %v", err)
+			logrus.Fatalf("error while fetching netlink handle: %v", err)
 		}
 		m.nlHandle = nl
 	}
 
 	defaultRoute, err := netutil.GetDefaultRoute(m.nlHandle)
 	if err != nil {
-		log.Fatalf("error fetching default routing from kernel: %v", err)
+		logrus.Fatalf("error fetching default routing from kernel: %v", err)
 	}
 
 	if m.defaultRouteGateway == nil {
@@ -116,7 +116,7 @@ func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, h
 	if m.defaultRouteIface == nil {
 		iface, err := m.nlHandle.LinkByIndex(defaultRoute.LinkIndex)
 		if err != nil {
-			log.Fatalf("error fetching default interface from kernel: %v", err)
+			logrus.Fatalf("error fetching default interface from kernel: %v", err)
 		}
 		m.defaultRouteIface = iface
 	}
@@ -125,14 +125,14 @@ func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, h
 		// find the designated link
 		link, err := m.nlHandle.LinkByName(egressTunnelIfaceName)
 		if err != nil {
-			log.Fatalf("could not find tunnel interface '%s'", egressTunnelIfaceName)
+			logrus.Fatalf("could not find tunnel interface '%s'", egressTunnelIfaceName)
 		}
 		m.egressTunnelIface = link
 	}
 
 	// subscribe to datastore updates
 	s.Subscribe(m)
-	log.Debugf("new RouteManager constructed: %+v\n", m)
+	logrus.Debugf("new RouteManager constructed: %+v\n", m)
 	return m
 }
 
@@ -174,6 +174,8 @@ func (m *RouteManager) Start(ctx context.Context) {
 
 	// begin our kernel-reconcilliation loop
 	var s data.RouteStore
+	var incompleteTunnelUpdateKeys, incompleteWorkloadUpdateKeys []string
+	var hadIncompleteTunnelUpdates, hadIncompleteWorkloadUpdates bool
 	for {
 		// track if the kernel is successfully sync'd for each iteration
 		var inSync bool
@@ -183,12 +185,11 @@ func (m *RouteManager) Start(ctx context.Context) {
 			return
 		// pull in the latest snapshot of the routeStore if it exists, to build netlink structs from its routes
 		case s = <-m.latestUpdate:
-
 			// in order to maintain symmetrical traffic paths over all types of cluster encap,
 			// we must know what tunnel device IP's to target when sending back packets
 			thisWorkload, workloadsByNodeName, tunnelsByNodeName := s.Routes()
 			if thisWorkload == nil {
-				log.Error("could not find RouteUpdate for this egress-gateway workload")
+				logrus.Error("could not find RouteUpdate for this egress-gateway workload")
 				inSync = false
 				break
 			}
@@ -201,9 +202,14 @@ func (m *RouteManager) Start(ctx context.Context) {
 			// now that we know what src-IP outbound egress packets will be coming in with,
 			// we can begin building routes back to the nodes via the same tunnels/IP's.
 			// we'll first create default routes and FDB entries for remote tunnels
-			fdbNeighsByHWAddr, exitRoutesByDstCIDR := m.createTunnelNeighsAndRoutes(activeTunnelsByNodeName)
+			var fdbNeighsByHWAddr map[string]netlink.Neigh
+			var exitRoutesByDstCIDR map[string]netlink.Route
+			fdbNeighsByHWAddr, exitRoutesByDstCIDR, incompleteTunnelUpdateKeys = m.createTunnelNeighsAndRoutes(activeTunnelsByNodeName)
+
 			// fill in remaining FDB entries, ARP entries, and encap routes,
-			routesByDstCIDR, arpNeighsByKey, fdbNeighsByKey := m.createWorkloadNeighsAndRoutes(workloadsByNodeName, fdbNeighsByHWAddr)
+			var routesByDstCIDR map[string]netlink.Route
+			var arpNeighsByKey, fdbNeighsByKey map[string]netlink.Neigh
+			routesByDstCIDR, arpNeighsByKey, fdbNeighsByKey, incompleteWorkloadUpdateKeys = m.createWorkloadNeighsAndRoutes(workloadsByNodeName, fdbNeighsByHWAddr)
 
 			// overwrite route manager state in prep for ensuring networking
 			m.exitRoutesByDstCIDR = exitRoutesByDstCIDR
@@ -213,13 +219,12 @@ func (m *RouteManager) Start(ctx context.Context) {
 
 			// attempt to program the new routemanager state to the kernel
 			inSync = m.ensureNetworking()
-
 		// if a retry timer has fired, attempt to ensure networking without a new update
 		case <-retry:
 			// first discard the stopped timer (calling stop again would otherwise block forever)
 			retry = nil
 			backoffTimer = nil
-			log.Info("retrying kernel sync...")
+			logrus.Info("retrying kernel sync...")
 			inSync = m.ensureNetworking()
 		}
 		m.healthAgg.Report(healthName, &health.HealthReport{Ready: inSync})
@@ -232,17 +237,33 @@ func (m *RouteManager) Start(ctx context.Context) {
 			// calling backoff returns the timer set to go off at the next wait-interval according to the backoff manager
 			backoffTimer = m.backoffManager.Backoff()
 			retry = backoffTimer.C() // get our notification channel for that timer to watch in parallel with new updates
+		} else {
+			// Only bother to fire this log if we're not in a retry loop (avoiding spam).
+			if hasIncompleteTunnelUpdates := len(incompleteTunnelUpdateKeys) > 0; hasIncompleteTunnelUpdates {
+				logrus.WithField("updates", incompleteTunnelUpdateKeys).Warn("Unable to set up tunnel routing to some nodes due to missing MAC or VTEP information. This should resolve when node / tunnel IPs and MAC addresses are allocated")
+				hadIncompleteTunnelUpdates = true
+			} else if hadIncompleteTunnelUpdates {
+				hadIncompleteTunnelUpdates = false
+				logrus.Info("Successfully resolved tunnel routing that had previously failed")
+			}
+			if hasIncompleteWorkloadUpdates := len(incompleteWorkloadUpdateKeys) > 0; hasIncompleteWorkloadUpdates {
+				logrus.WithField("updates", incompleteWorkloadUpdateKeys).Warn("Unable to set up return-routing to workloads due to missing MAC or workload information. This should resolve when node / workload IPs and MAC addresses are allocated")
+				hadIncompleteWorkloadUpdates = true
+			} else if hadIncompleteWorkloadUpdates {
+				hadIncompleteWorkloadUpdates = false
+				logrus.Info("Successfully resolved workload return-routing that had previously failed")
+			}
 		}
 	}
 }
 
 // NotifyResync is an implementation of the data.Observer interface - it queue's an update from the datastore, dropping any older, unhandled ones
 func (m *RouteManager) NotifyResync(s data.RouteStore) {
-	log.Info("route manager notified of datastore resync, queueing update...")
+	logrus.Info("route manager notified of datastore resync, queueing update...")
 
 	select {
 	case <-m.latestUpdate:
-		log.Info("dropping stale store update")
+		logrus.Info("dropping stale store update")
 	default:
 	}
 
@@ -261,11 +282,11 @@ func calculateActiveTunnelsForNodes(
 
 	// first check if the egress gateway's node has a wireguard device - if not, we can ignore all wireguard tunnels on other hosts
 	gatewayNodeTunnels := tunnelsByNodeName[thisWorkload.DstNodeName]
-	log.Debugf("searching gateway's host tunnels for wireguard devices: %+v", gatewayNodeTunnels)
+	logrus.Debugf("searching gateway's host tunnels for wireguard devices: %+v", gatewayNodeTunnels)
 	for _, tunnel := range gatewayNodeTunnels {
 		if protoutil.IsWireguardTunnel(tunnel) {
 			gatewayNodeHasWireguard = true
-			log.Debug("wireguard device found on gateway host")
+			logrus.Debug("wireguard device found on gateway host")
 		}
 	}
 
@@ -280,7 +301,7 @@ func calculateActiveTunnelsForNodes(
 		nodeWorkloads, ok := workloadsByNodeName[nodeName]
 		// if there are no workloads for this node, skip it
 		if !ok || len(nodeWorkloads) == 0 {
-			log.Debugf("skipping tunnel checks for node '%s' due to no active workloads...", nodeName)
+			logrus.Debugf("skipping tunnel checks for node '%s' due to no active workloads...", nodeName)
 			continue
 		}
 
@@ -291,7 +312,7 @@ func calculateActiveTunnelsForNodes(
 		for _, tunnel := range tunnels {
 			// this is our best guess that wireguard will be used
 			if gatewayNodeHasWireguard && protoutil.IsWireguardTunnel(tunnel) {
-				log.Debugf("found wireguard peer: %+v", tunnel)
+				logrus.Debugf("found wireguard peer: %+v", tunnel)
 				activeTunnel = tunnel
 				break // highest priority tunnel matched, no need to check any more
 			} else if gatewayEncapType == tunnel.IpPoolType {
@@ -299,18 +320,18 @@ func calculateActiveTunnelsForNodes(
 				// we must now check if our encap setting is cross-subnet, since a remote host
 				// in our subnet will not use encap in that case
 				if thisWorkload.SameSubnet {
-					log.Debugf("egress-gateway ippool is in cross-subnet mode: %+v", thisWorkload)
+					logrus.Debugf("egress-gateway ippool is in cross-subnet mode: %+v", thisWorkload)
 					// we are in cross-subnet mode, is this tunnel across a subnet?
 					// if it's in the same subnet, this tunnel won't be active; skip
 					if tunnel.SameSubnet {
-						log.Debugf("skipping tunnel in same subnet...")
+						logrus.Debugf("skipping tunnel in same subnet...")
 						continue
 					}
 				}
 				activeTunnel = tunnel
 			}
 		}
-		log.Debugf("added tunnel %+v", activeTunnel)
+		logrus.Debugf("added tunnel %+v", activeTunnel)
 		activeTunnelsByNodeName[nodeName] = activeTunnel
 	}
 
@@ -327,16 +348,19 @@ func (m *RouteManager) createWorkloadNeighsAndRoutes(
 	routesByDstCIDR map[string]netlink.Route,
 	arpNeighsByKey map[string]netlink.Neigh,
 	fdbNeighsByKey map[string]netlink.Neigh,
+	incompleteUpdates []string,
 ) {
 	// we now have any special-case routes/neighs created, so create the rest normally to fill in the blanks
 	routesByDstCIDR = make(map[string]netlink.Route)
 	arpNeighsByKey = make(map[string]netlink.Neigh)
+	incompleteUpdates = make([]string, 0)
 	for _, workloads := range workloadsByNodeName {
 		for _, wl := range workloads {
 			// create an ARP entry for this workload's host (ARP entries dont need to know about tunnels)
 			arpNeigh, err := m.newNeigh(wl, false, netlink.FAMILY_V4)
 			if err != nil {
-				log.WithError(err).Warnf("could not parse ARP neigh from RouteUpdate: %+v", wl)
+				logrus.WithError(err).WithField("update", wl).Debug("could not parse ARP neigh from RouteUpdate")
+				incompleteUpdates = append(incompleteUpdates, wl.Dst)
 				continue
 			} else {
 				arpNeighsByKey[netlinkutil.KeyForNeigh(arpNeigh)] = arpNeigh
@@ -346,7 +370,8 @@ func (m *RouteManager) createWorkloadNeighsAndRoutes(
 			if _, ok := fdbNeighsByHWAddr[arpNeigh.HardwareAddr.String()]; !ok {
 				fdbNeigh, err := m.newNeigh(wl, false, syscall.AF_BRIDGE)
 				if err != nil {
-					log.WithError(err).Warnf("could not parse FDB neigh from RouteUpdate: %+v", wl)
+					logrus.WithError(err).WithField("update", wl).Debug("could not parse FDB neigh from RouteUpdate")
+					incompleteUpdates = appendUntil(incompleteUpdates, wl.Dst, 10)
 					continue
 				} else {
 					fdbNeighsByHWAddr[fdbNeigh.HardwareAddr.String()] = fdbNeigh
@@ -356,7 +381,8 @@ func (m *RouteManager) createWorkloadNeighsAndRoutes(
 			// finally, create the route that will encap returning egress packets for this CIDR
 			encapRoute, err := m.newRoute(wl, false)
 			if err != nil {
-				log.WithError(err).Warnf("could not parse encap route from RouteUpdate: %+v", wl)
+				logrus.WithError(err).WithField("update", wl).Debug("could not parse encap route from RouteUpdate")
+				incompleteUpdates = appendUntil(incompleteUpdates, wl.Dst, 10)
 				continue
 			} else {
 				routesByDstCIDR[wl.Dst] = encapRoute
@@ -372,34 +398,43 @@ func (m *RouteManager) createWorkloadNeighsAndRoutes(
 		fdbNeighsByKey[key] = n
 	}
 
-	return routesByDstCIDR, arpNeighsByKey, fdbNeighsByKey
+	return routesByDstCIDR, arpNeighsByKey, fdbNeighsByKey, incompleteUpdates
 }
 
 func (m *RouteManager) createTunnelNeighsAndRoutes(activeTunnelsByNodeName map[string]*proto.RouteUpdate) (
 	map[string]netlink.Neigh,
 	map[string]netlink.Route,
+	[]string,
 ) {
 	fdbNeighsByHWAddr := make(map[string]netlink.Neigh)
 	exitRoutesByDstCIDR := make(map[string]netlink.Route)
+	var incompleteUpdates []string
 	for _, tunnel := range activeTunnelsByNodeName {
+		errorsOccurred := false
 		if tunnel != nil {
 			fdbNeigh, err := m.newNeigh(tunnel, true, syscall.AF_BRIDGE)
 			if err != nil {
-				log.WithError(err).Warnf("could not parse neigh from RouteUpdate: %+v", tunnel)
+				logrus.WithError(err).WithField("update", tunnel).Debug("could not parse neigh from RouteUpdate")
+				errorsOccurred = true
 			} else {
 				fdbNeighsByHWAddr[fdbNeigh.HardwareAddr.String()] = fdbNeigh
 			}
 
 			defaultRoute, err := m.newRoute(tunnel, true)
 			if err != nil {
-				log.WithError(err).Warnf("could not parse default route from RouteUpdate: %+v", tunnel)
+				logrus.WithError(err).WithField("update", tunnel).Debug("could not parse default route from RouteUpdate")
+				errorsOccurred = true
 			} else {
 				exitRoutesByDstCIDR[tunnel.Dst] = defaultRoute
 			}
 		}
+
+		if errorsOccurred {
+			incompleteUpdates = appendUntil(incompleteUpdates, tunnel.Dst, 10)
+		}
 	}
 
-	return fdbNeighsByHWAddr, exitRoutesByDstCIDR
+	return fdbNeighsByHWAddr, exitRoutesByDstCIDR, incompleteUpdates
 }
 
 // newRoute creates a new netlink.Route from a Felix RouteUpdate
@@ -469,7 +504,7 @@ func (m *RouteManager) newNeigh(ru *proto.RouteUpdate, isHostTunnel bool, family
 
 // ensureNetworking attempts to ensure that kernel networking is inSync the manager's desired config, returns bool inSync indicating success or failure
 func (m *RouteManager) ensureNetworking() (inSync bool) {
-	log.Info("Attempting to ensure kernel networking...")
+	logrus.Info("Attempting to ensure kernel networking...")
 	inSync = true // assume the kernel will be in-sync, flip to false if we see a failure
 
 	kernelOperations := sync.WaitGroup{}
@@ -477,13 +512,13 @@ func (m *RouteManager) ensureNetworking() (inSync bool) {
 	go func() {
 		err := ensureNeighs(m.nlHandle, m.egressTunnelNeighsByKey, m.egressTunnelIface, false)
 		if err != nil {
-			log.WithError(err).Warn("error programming kernel ARP")
+			logrus.WithError(err).Warn("error programming kernel ARP")
 			inSync = false
 		}
 
 		err = ensureNeighs(m.nlHandle, m.egressTunnelBridgeNeighsByKey, m.egressTunnelIface, true)
 		if err != nil {
-			log.WithError(err).Warn("error programming kernel FDB")
+			logrus.WithError(err).Warn("error programming kernel FDB")
 			inSync = false
 		}
 		kernelOperations.Done()
@@ -491,12 +526,12 @@ func (m *RouteManager) ensureNetworking() (inSync bool) {
 	go func() {
 		err := ensureRouting(m.nlHandle, m.egressTunnelWorkloadRoutesByDstCIDR, m.egressTunnelIface)
 		if err != nil {
-			log.WithError(err).Warn("error programming kernel with VXLAN routes")
+			logrus.WithError(err).Warn("error programming kernel with VXLAN routes")
 			inSync = false
 		}
 		err = ensureRouting(m.nlHandle, m.exitRoutesByDstCIDR, m.defaultRouteIface)
 		if err != nil {
-			log.WithError(err).Warn("error programming kernel with node routes")
+			logrus.WithError(err).Warn("error programming kernel with node routes")
 			inSync = false
 		}
 		kernelOperations.Done()
@@ -509,7 +544,7 @@ func (m *RouteManager) ensureNetworking() (inSync bool) {
 
 // ensureRouting applies in-memory routes (built from store data) to the kernel, deleting stale ones
 func ensureRouting(nl netlinkshim.Handle, routesByDstCIDR map[string]netlink.Route, iface netlink.Link) error {
-	log.Debugf("ensuring kernel with routes: %+v", routesByDstCIDR)
+	logrus.Debugf("ensuring kernel with routes: %+v", routesByDstCIDR)
 	// get a list of kernel routes filtered by the output interface (e.g. vxlan0)
 	ifaceAttrs := iface.Attrs()
 	kernelRoutes, err := nl.RouteListFiltered(
@@ -520,7 +555,7 @@ func ensureRouting(nl netlinkshim.Handle, routesByDstCIDR map[string]netlink.Rou
 		netlink.RT_FILTER_OIF,
 	)
 	if err != nil {
-		log.WithError(err).Errorf("could not list routes for iface '%s'", ifaceAttrs.Name)
+		logrus.WithError(err).Errorf("could not list routes for iface '%s'", ifaceAttrs.Name)
 		return err
 	}
 
@@ -539,7 +574,7 @@ func ensureRouting(nl netlinkshim.Handle, routesByDstCIDR map[string]netlink.Rou
 			// the route does not exist in memory, so delete it from the kernel
 			if err = nl.RouteDel(&kr); err != nil {
 				lastErr = err
-				log.WithError(err).Warnf("could not delete stale route %+v", kr)
+				logrus.WithError(err).Warnf("could not delete stale route %+v", kr)
 			}
 		} else {
 			// collect routes that have not been deleted
@@ -555,13 +590,13 @@ func ensureRouting(nl netlinkshim.Handle, routesByDstCIDR map[string]netlink.Rou
 			if !kr.Equal(r) {
 				if err := nl.RouteReplace(&r); err != nil {
 					lastErr = err
-					log.WithError(err).Warnf("could not rectify out-of-sync kernel route")
+					logrus.WithError(err).Warnf("could not rectify out-of-sync kernel route")
 				}
 			}
 		} else { // if the route has not yet been programmed, add it
 			if err = nl.RouteAdd(&r); err != nil {
 				lastErr = err
-				log.WithError(err).Warnf("could not program kernel with route %+v", r)
+				logrus.WithError(err).Warnf("could not program kernel with route %+v", r)
 			}
 		}
 	}
@@ -582,7 +617,7 @@ func isDefaultCIDR(dst *net.IPNet) bool {
 // ensureNeighs applies in-memory link data to the kernel, updating or deleting stale kernel entries.
 // fdb of true will target FDB/Bridge neigh's rather than ARP neigh's
 func ensureNeighs(nl netlinkshim.Handle, neighsByKey map[string]netlink.Neigh, iface netlink.Link, fdb bool) error {
-	log.Debugf("ensuring kernel with neighs: %+v", neighsByKey)
+	logrus.Debugf("ensuring kernel with neighs: %+v", neighsByKey)
 
 	family := netlink.FAMILY_V4
 	if fdb {
@@ -595,7 +630,7 @@ func ensureNeighs(nl netlinkshim.Handle, neighsByKey map[string]netlink.Neigh, i
 		family,
 	)
 	if err != nil {
-		log.WithError(err).Errorf("error listing neighbors for iface '%s'", ifaceAttrs.Name)
+		logrus.WithError(err).Errorf("error listing neighbors for iface '%s'", ifaceAttrs.Name)
 		return err
 	}
 
@@ -611,7 +646,7 @@ func ensureNeighs(nl netlinkshim.Handle, neighsByKey map[string]netlink.Neigh, i
 			if err := nl.NeighDel(&kn); err != nil {
 				if !strings.Contains(err.Error(), "no such file or directory") {
 					lastErr = err
-					log.WithError(err).Warnf("Failed to delete ARP entry %+v", kn)
+					logrus.WithError(err).Warnf("Failed to delete ARP entry %+v", kn)
 				}
 			}
 		} else {
@@ -627,10 +662,19 @@ func ensureNeighs(nl netlinkshim.Handle, neighsByKey map[string]netlink.Neigh, i
 		if !ok || !netlinkutil.NeighsEqual(kn, n) {
 			if err = nl.NeighSet(&n); err != nil {
 				lastErr = err
-				log.WithError(err).Warnf("could not program L2 neighbor: %+v", n)
+				logrus.WithError(err).Warnf("could not program L2 neighbor: %+v", n)
 			}
 		}
 	}
 
 	return lastErr
+}
+
+// appendUntil appends to a slice until the length of the slice reaches 'limit'.
+func appendUntil[Slice []Item, Item any](s Slice, i Item, limit int) Slice {
+	if len(s) == limit {
+		return s
+	}
+
+	return append(s, i)
 }

@@ -1,7 +1,7 @@
 import { PluginInitializerContext, CoreSetup, CoreStart, Plugin } from '@kbn/core/public';
 import { ConfigSchema } from '../common';
 
-export class GoogleTagManagerPlugin implements Plugin {
+export class GoogletagmanagerPlugin implements Plugin {
   private config: ConfigSchema;
   private logger: any;
 
@@ -18,7 +18,7 @@ export class GoogleTagManagerPlugin implements Plugin {
       return;
     }
 
-    this.initGoogleTagManager(googleTagId);
+    this.initGoogletagmanager(googleTagId);
 
     return {};
   }
@@ -31,7 +31,7 @@ export class GoogleTagManagerPlugin implements Plugin {
     // Cleanup if necessary
   }
 
-  private initGoogleTagManager(containerId: string) {
+  private initGoogletagmanager(containerId: string) {
     (function (w: any, d: any, s, l, i) {
       w[l] = w[l] || [];
       w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });

@@ -1,4 +1,6 @@
-# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM alpine:3 AS builder
 
@@ -21,7 +23,7 @@ ARG TARGETARCH
 COPY --from=builder /usr/local/bin/k8s/${K8S_VERSION}-linux-${TARGETARCH}/ /usr/share/kubebuilder-envtest/
 COPY bin/fake-guardian-${TARGETARCH} /usr/bin/fake-guardian
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 ARG GIT_VERSION=unknown
 

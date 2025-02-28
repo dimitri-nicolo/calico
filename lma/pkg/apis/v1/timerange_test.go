@@ -6,6 +6,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/projectcalico/calico/lma/pkg/apis/v1"
@@ -112,16 +113,18 @@ var _ = Describe("Unmarshaling works correctly", func() {
 		Expect(err.Error()).To(Equal("Request body contains an invalid value for the time range 'to' field: now-X"))
 	})
 
-	It("Handles Field field", func() {
+	DescribeTable("Test Field field", func(fieldValue string, d string) {
 		var tr TimeRange
-		d := "{\"field\":\"generated_time\", \"from\":\"2021-05-30T21:23:10Z\", \"to\":\"2021-05-30T21:24:10Z\"}"
 
 		err := json.Unmarshal([]byte(d), &tr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(tr.Now).To(BeNil())
 		Expect(tr.Duration()).To(Equal(time.Minute))
-		Expect(string(tr.Field)).To(Equal("generated_time"))
-	})
+		Expect(string(tr.Field)).To(Equal(fieldValue))
+	},
+		Entry("Handles start_time value", "start_time", "{\"field\":\"start_time\", \"from\":\"2021-05-30T21:23:10Z\", \"to\":\"2021-05-30T21:24:10Z\"}"),
+		Entry("Handles generated_time value", "generated_time", "{\"field\":\"generated_time\", \"from\":\"2021-05-30T21:23:10Z\", \"to\":\"2021-05-30T21:24:10Z\"}"),
+	)
 
 	It("Rejects an unsupported Field field", func() {
 		var tr TimeRange

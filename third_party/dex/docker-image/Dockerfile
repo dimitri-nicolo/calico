@@ -1,4 +1,6 @@
-# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -7,7 +9,7 @@ ARG TARGETARCH
 COPY dex/bin/dex-${TARGETARCH} /usr/bin/dex
 COPY docker-image/web /srv/dex/web
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

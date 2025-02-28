@@ -209,10 +209,9 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 
 	AfterEach(func() {
 		_ = guardian.Close()
+		_ = guardian2.Close()
 		_ = os.Remove(guardianTokenFile.Name())
 		_ = voltron.Close()
-		_ = guardian.Close()
-		_ = guardian2.Close()
 		_ = ts.http.Close()
 		_ = ts2.http.Close()
 		if proxyMode != proxyModeDisabled {
@@ -488,19 +487,29 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			}()
 		})
 
+		By("should be possible to reach the test server on http2", func() {
+			var msg string
+			Eventually(func() error {
+				var err error
+				msg, err = ui.doRequest(clusterID)
+				return err
+			}, "10s", "1s").ShouldNot(HaveOccurred())
+			Expect(msg).To(Equal(ts.msg))
+		})
+
+		By("should be possible to reach the other test server on http2", func() {
+			var msg string
+			Eventually(func() error {
+				var err error
+				msg, err = ui.doRequest(clusterID2)
+				return err
+			}, "10s", "1s").ShouldNot(HaveOccurred())
+			Expect(msg).To(Equal(ts2.msg))
+		})
+
 		By("indicating that before each is complete", func() {
 			logrus.Info("[TEST] BeforeEach complete")
 		})
-	})
-
-	It("should be possible to reach the test server on http2", func() {
-		var msg string
-		Eventually(func() error {
-			var err error
-			msg, err = ui.doRequest(clusterID)
-			return err
-		}, "10s", "1s").ShouldNot(HaveOccurred())
-		Expect(msg).To(Equal(ts.msg))
 	})
 
 	It("should pickup refreshed token", func() {
@@ -526,16 +535,6 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 			}
 			return ts.authHeader
 		}, "1m", "1s").Should(Equal("Bearer updatedToken"))
-	})
-
-	It("should be possible to reach the other test server on http2", func() {
-		var msg string
-		Eventually(func() error {
-			var err error
-			msg, err = ui.doRequest(clusterID2)
-			return err
-		}, "10s", "1s").ShouldNot(HaveOccurred())
-		Expect(msg).To(Equal(ts2.msg))
 	})
 
 	It("should not be possible to reach the test server on http", func() {

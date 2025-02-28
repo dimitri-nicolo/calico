@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/rbac"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
@@ -558,6 +559,12 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 		ServiceAccountSelector: p.GetServiceAccountSelector(),
 	}
 
+	// Kubernetes network policies go through are converted to Calico network policies and in this process the UUID is getting converted
+	// in libcalico-go/lib/backend/k8s/conversion/conversion.go:K8sNetworkPolicyToCalico
+	// Since the UUID conversion is reversable, we run the ConvertUID here again to get the original UUID in the api resource.
+	if p.IsKubernetesType() {
+		policy.UID, _ = conversion.ConvertUID(policy.UID)
+	}
 	if fieldSelector != nil {
 		updatedPolicy := new(Policy)
 		policyFields := reflect.TypeOf(policy)

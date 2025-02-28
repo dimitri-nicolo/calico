@@ -1,4 +1,4 @@
-# googleTagManager
+# googletagmanager
 
 A Kibana plugin
 

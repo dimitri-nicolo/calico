@@ -1,12 +1,15 @@
-ARG THIRD_PARTY_REGISTRY
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
-ARG TARGETARCH
+ARG CALICO_BASE_UBI9
+ARG THIRD_PARTY_REGISTRY
 
 FROM ${THIRD_PARTY_REGISTRY}/kibana-ubi:v8.17.1 AS kibana
 
 # the base image runs as the kibana user (1000) so change user
 # to root (0) to run setup scripts
 USER 0
+
+ARG GTM_INTEGRATION
 
 COPY create_kibana_config.sh /usr/bin/create_kibana_config.sh
 RUN /usr/bin/create_kibana_config.sh /usr/share/kibana/config/kibana.yml
@@ -30,11 +33,7 @@ COPY --from=kibana /usr/bin/touch /usr/bin/touch
 COPY --from=kibana /usr/bin/tr /usr/bin/tr
 COPY --from=kibana /usr/bin/xargs /usr/bin/xargs
 
-COPY --from=kibana /lib/ld-linux-*.so.? /lib/
-COPY --from=kibana /lib64/ld-linux-*.so.? /lib64/
 COPY --from=kibana /lib64/libdl.so.2 /lib64/libdl.so.2
-COPY --from=kibana /lib64/libpthread.so.0 /lib64/libpthread.so.0
-COPY --from=kibana /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=kibana /lib64/libselinux.so.1 /lib64/libselinux.so.1
 COPY --from=kibana /lib64/libacl.so.1 /lib64/libacl.so.1
 COPY --from=kibana /lib64/libattr.so.1 /lib64/libattr.so.1
@@ -54,7 +53,7 @@ COPY --from=kibana /usr/local/bin/kibana-docker /usr/local/bin/kibana-docker
 COPY --from=kibana /usr/share/fonts /usr/share/fonts/
 COPY --from=kibana --chown=1000:0 /usr/share/kibana /usr/share/kibana/
 
-FROM scratch
+FROM ${CALICO_BASE_UBI9}
 
 ENV ELASTIC_CONTAINER=true
 ENV PATH=/usr/share/kibana/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

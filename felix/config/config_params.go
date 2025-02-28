@@ -457,6 +457,7 @@ type Config struct {
 	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
 	FlowLogsDestDomainsByClient           bool   `config:"bool;true"`
 	FlowLogsDynamicAggregationEnabled     bool   `config:"bool;false"`
+	FlowLogsPolicyEvaluationMode          string `config:"oneof(OnNewConnection,Continuous);Continuous"`
 	FlowLogsPositionFilePath              string `config:"string;/var/log/calico/flows.log.pos"`
 	FlowLogsAggregationThresholdBytes     int    `config:"int;8192"`
 	FlowLogsFilePerFlowProcessLimit       int    `config:"int;2"`

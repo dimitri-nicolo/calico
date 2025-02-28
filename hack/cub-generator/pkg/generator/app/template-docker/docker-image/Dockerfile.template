@@ -1,10 +1,14 @@
+# Copyright (c) 2023-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
+
 FROM scratch AS source
 
 ARG TARGETARCH
 
 COPY bin/{{ lower .Name }}-${TARGETARCH} /usr/bin/{{ lower .Name }}
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

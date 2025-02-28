@@ -1,4 +1,6 @@
-# Copyright (c) 2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -7,7 +9,7 @@ ARG TARGETARCH
 COPY bin/eck-operator-${TARGETARCH} /usr/bin/elastic-operator
 COPY cloud-on-k8s/config/eck.yaml /conf/eck.yaml
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 

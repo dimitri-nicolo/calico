@@ -51,6 +51,7 @@ func New(
 			EnableServices:               configParams.FlowLogsFileIncludeService,
 			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
 			EnableDestDomainsByClient:    configParams.FlowLogsDestDomainsByClient,
+			PolicyEvaluationMode:         configParams.FlowLogsPolicyEvaluationMode,
 			FlowLogsFlushInterval:        configParams.FlowLogsFlushInterval,
 			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
 			IsBPFDataplane:               configParams.BPFEnabled,

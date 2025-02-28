@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -53,6 +54,7 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 	var fakeClient runtimeClient.WithWatch
 	var ctx context.Context
 	var cancel context.CancelFunc
+	var statusUpdater *RequestRecordingStatusUpdater
 
 	voltronConfig := config.Config{
 		TenantNamespace: clusterNamespace,
@@ -67,12 +69,12 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 			Expect(err).NotTo(HaveOccurred())
 			fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
 
-			su := NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig)
+			statusUpdater = NewRequestRecordingStatusUpdater(NewStatusUpdater(ctx, fakeClient, voltronConfig, testStatusConfig))
 			myClusters = &clusters{
 				clusters:         make(map[string]*cluster),
 				client:           fakeClient,
 				voltronCfg:       &vcfg.Config{TenantNamespace: clusterNamespace},
-				statusUpdateFunc: su.SetStatus,
+				statusUpdateFunc: statusUpdater.SetStatus,
 			}
 
 			go func() {
@@ -364,7 +366,8 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 	})
 
 	Context("New watch", func() {
-		const clusterName = "sample-restart-cluster"
+		const clusterNameConnected = "sample-restart-cluster"
+		const clusterNameNeverConnected = "never-connected-cluster"
 
 		BeforeEach(func() {
 			ctx, cancel = context.WithCancel(context.Background())
@@ -390,14 +393,32 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 					APIVersion: v3.GroupVersionCurrent,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      clusterName,
+					Name:      clusterNameConnected,
 					Namespace: clusterNamespace,
 				},
 				Status: v3.ManagedClusterStatus{
 					Conditions: []v3.ManagedClusterStatusCondition{
 						{
 							Status: v3.ManagedClusterStatusValueTrue,
-							Type:   "ManagedClusterConnected",
+							Type:   v3.ManagedClusterStatusTypeConnected,
+						},
+					},
+				},
+			})).NotTo(HaveOccurred())
+			Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v3.KindManagedCluster,
+					APIVersion: v3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clusterNameNeverConnected,
+					Namespace: clusterNamespace,
+				},
+				Status: v3.ManagedClusterStatus{
+					Conditions: []v3.ManagedClusterStatusCondition{
+						{
+							Status: v3.ManagedClusterStatusValueUnknown,
+							Type:   v3.ManagedClusterStatusTypeConnected,
 						},
 					},
 				},
@@ -409,11 +430,16 @@ var _ = describe("Clusters", func(clusterNamespace string) {
 
 			Eventually(func() v3.ManagedClusterStatusValue {
 				mc := &v3.ManagedCluster{}
-				_ = fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterName, Namespace: clusterNamespace}, mc)
+				_ = fakeClient.Get(context.Background(), types.NamespacedName{Name: clusterNameConnected, Namespace: clusterNamespace}, mc)
 				return mc.Status.Conditions[0].Status
 			}, 5*time.Second, 5*time.Millisecond).Should(Equal(v3.ManagedClusterStatusValueFalse))
 
-			Expect(len(myClusters.List())).To(Equal(1))
+			// ensure no request was made to update the status of clusterNameNeverConnected
+			for _, request := range statusUpdater.Requests() {
+				Expect(request.ManagedClusterName).NotTo(Equal(clusterNameNeverConnected))
+			}
+
+			Expect(len(myClusters.List())).To(Equal(2))
 		})
 	})
 })
@@ -518,3 +544,31 @@ var _ = describe("Update certificates", func(clusterNamespace string) {
 		Expect(clusters.clientCertificatePool.Subjects()).To(ContainElement(expectedCertCluster1.RawSubject))
 	})
 })
+
+// RequestRecordingStatusUpdater records requests to update the status of a managedcluster before calling the delegate which works asynchronously
+type RequestRecordingStatusUpdater struct {
+	delegate StatusUpdater
+	requests []StatusUpdateRequest
+}
+
+func NewRequestRecordingStatusUpdater(delegate StatusUpdater) *RequestRecordingStatusUpdater {
+	return &RequestRecordingStatusUpdater{delegate: delegate}
+}
+
+func (r *RequestRecordingStatusUpdater) IsRetryInProgress(s string) bool {
+	return r.delegate.IsRetryInProgress(s)
+}
+
+func (r *RequestRecordingStatusUpdater) SetStatus(managedClusterName string, status v3.ManagedClusterStatusValue) {
+	r.requests = append(r.requests, StatusUpdateRequest{ManagedClusterName: managedClusterName, Status: status})
+	r.delegate.SetStatus(managedClusterName, status)
+}
+
+func (r *RequestRecordingStatusUpdater) Requests() []StatusUpdateRequest {
+	return slices.Clone(r.requests)
+}
+
+type StatusUpdateRequest struct {
+	ManagedClusterName string
+	Status             v3.ManagedClusterStatusValue
+}

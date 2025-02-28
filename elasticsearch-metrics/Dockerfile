@@ -1,4 +1,6 @@
-# Copyright (c) 2021-2024 Tigera, Inc. All rights reserved.
+# Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
+
+ARG CALICO_BASE
 
 FROM scratch AS source
 
@@ -6,7 +8,7 @@ ARG TARGETARCH
 
 COPY bin/elasticsearch-metrics-${TARGETARCH} /bin/elasticsearch_exporter
 
-FROM calico/base
+FROM ${CALICO_BASE}
 
 COPY --from=source / /
 
