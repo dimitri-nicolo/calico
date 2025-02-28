@@ -3342,6 +3342,25 @@ Specifies the number of unique IP addresses (if relevant) that should be include
 | `FelixConfiguration` schema | Integer |
 | Default value (YAML) | `50` |
 
+### `FlowLogsPolicyEvaluationMode` (config file) / `flowLogsPolicyEvaluationMode` (YAML)
+
+Defines how policies are evaluated and reflected in flow logs.
+OnNewConnection - In this mode, staged policies are only evaluated when new connections are
+made in the dataplane. Staged/active policy changes will not be reflected in the
+`pending_policies` field of flow logs for long lived connections.
+Continuous - Felix evaluates active flows on a regular basis to determine the rule
+traces in the flow logs. Any policy updates that impact a flow will be reflected in the
+pending_policies field, offering a near-real-time view of policy changes across flows.
+
+| Detail |   |
+| --- | --- |
+| Environment variable | `FELIX_FlowLogsPolicyEvaluationMode` |
+| Encoding (env var/config file) | One of: <code>Continuous</code>, <code>OnNewConnection</code> (case insensitive) |
+| Default value (above encoding) | `Continuous` |
+| `FelixConfiguration` field | `flowLogsPolicyEvaluationMode` (YAML) `FlowLogsPolicyEvaluationMode` (Go API) |
+| `FelixConfiguration` schema | String. |
+| Default value (YAML) | `Continuous` |
+
 ### `FlowLogsPositionFilePath` (config file) / `flowLogsPositionFilePath` (YAML)
 
 Used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos.
