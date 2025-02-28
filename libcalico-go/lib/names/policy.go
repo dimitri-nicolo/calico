@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2025 Tigera, Inc. All rights reserved.
 
 package names
 
@@ -48,6 +48,9 @@ func TierFromPolicyName(name string) (string, error) {
 	}
 	if strings.HasPrefix(name, K8sBaselineAdminNetworkPolicyNamePrefix) {
 		return BaselineAdminNetworkPolicyTierName, nil
+	}
+	if strings.HasPrefix(name, OssNetworkPolicyNamePrefix) {
+		return DefaultTierName, nil
 	}
 	parts := strings.SplitN(name, ".", 2)
 	if len(parts) < 2 {
