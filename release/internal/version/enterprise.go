@@ -13,6 +13,18 @@ func NewEnterpriseVersionData(calico Version, chartVersion, operator, manager st
 	}
 }
 
+func NewEnterpriseReleaseVersionData(calico Version, chartVersion, operator string) *EnterpriseVersionData {
+	return &EnterpriseVersionData{
+		CalicoVersionData: CalicoVersionData{
+			calico:   calico,
+			operator: operator,
+		},
+		chartVersion: chartVersion,
+		manager:      calico.FormattedString(),
+		release:      true,
+	}
+}
+
 type EnterpriseVersionData struct {
 	CalicoVersionData
 	chartVersion string
@@ -44,9 +56,4 @@ func (v *EnterpriseVersionData) Hash() string {
 
 func (v *EnterpriseVersionData) ManagerVersion() string {
 	return v.manager
-}
-
-func (v *EnterpriseVersionData) ForRelease() *EnterpriseVersionData {
-	v.release = true
-	return v
 }

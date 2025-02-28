@@ -255,7 +255,7 @@ bin/gh:
 	rm bin/gh.tgz
 
 # Create updates for pre-release
-release-prep: release/bin/release bin/gh var-require-all-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
+release-prep: release/bin/release bin/gh var-require-all-HASHRELEASE-RELEASE_VERSION-HELM_RELEASE-OPERATOR_VERSION-REGISTRY var-require-one-of-CONFIRM-DRYRUN
 	@REGISTRIES=$(REGISTRY) release/bin/release release prep
 
 # Install ghr for publishing to github.

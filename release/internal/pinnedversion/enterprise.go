@@ -339,6 +339,7 @@ func UpdateVersionsFile(repoRootDir string, update *version.EnterpriseVersionDat
 		return fmt.Errorf("failed to load versions file: %w", err)
 	}
 	calicoVer, err := utils.DetermineCalicoVersion(repoRootDir)
+	calicoVersion := version.New(calicoVer)
 	if err != nil {
 		return fmt.Errorf("failed to determine calico version: %s", err)
 	}
@@ -353,7 +354,7 @@ func UpdateVersionsFile(repoRootDir string, update *version.EnterpriseVersionDat
 			Components: versions.Components,
 		},
 		Calico: CalicoComponent{
-			MinorVersion: calicoVer,
+			MinorVersion: calicoVersion.Stream(),
 			ArchivePath:  versions.Calico.ArchivePath,
 		},
 	}

@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	defaultEnterpriseRegistry = registry.QuayRegistry
+	defaultEnterpriseRegistry = registry.QuayRegistry + "/tigera"
 
 	windowsGCSBucket = "tigera-windows"
 
@@ -255,11 +255,13 @@ func (m *EnterpriseManager) PreReleaseValidate(ver string) error {
 }
 
 func (m *EnterpriseManager) generateManifests() error {
+	// Manifests are expecting registry to be the Contaier registry platform.
+	reg := strings.TrimSuffix(m.imageRegistries[0], "/tigera")
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("CALICO_VERSION=%s", m.calicoVersion))
 	env = append(env, fmt.Sprintf("OPERATOR_VERSION=%s", m.operatorVersion))
 	env = append(env, fmt.Sprintf("OPERATOR_REGISTRY=%s", m.operatorRegistry))
-	env = append(env, fmt.Sprintf("REGISTRY=%s", m.imageRegistries[0]))
+	env = append(env, fmt.Sprintf("REGISTRY=%s", reg))
 	if m.isHashRelease {
 		env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))
 	}
@@ -834,8 +836,7 @@ func (m *EnterpriseManager) PrepareRelease() error {
 }
 
 func (m *EnterpriseManager) modifyVersionsFile() error {
-	versionData := version.NewEnterpriseVersionData(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion, m.calicoVersion).(*version.EnterpriseVersionData)
-	versionData = versionData.ForRelease()
+	versionData := version.NewEnterpriseReleaseVersionData(version.New(m.calicoVersion), m.chartVersion, m.operatorVersion)
 	err := pinnedversion.UpdateVersionsFile(m.repoRoot, versionData)
 	if err != nil {
 		return fmt.Errorf("failed to update versions file: %s", err)
