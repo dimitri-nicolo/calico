@@ -190,5 +190,8 @@ func (p Policy) String() string {
 	if len(p.PerformanceHints) > 0 {
 		parts = append(parts, fmt.Sprintf("performance_hints:%v", p.PerformanceHints))
 	}
+	if p.StagedAction != nil {
+		parts = append(parts, fmt.Sprintf("staged_action:%v", p.StagedAction))
+	}
 	return strings.Join(parts, ",")
 }

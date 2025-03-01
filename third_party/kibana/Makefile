@@ -12,14 +12,6 @@ DEV_REGISTRIES = $(THIRD_PARTY_REGISTRY)
 BRANCH_NAME = v$(KIBANA_VERSION)
 LATEST_IMAGE_TAG = $(BRANCH_NAME)
 
-# Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
-# accidentally enable the integration
-GTM_INTEGRATION?=disabled
-
-ifeq ($(TESLA),true)
-GTM_INTEGRATION=enabled
-endif
-
 ###############################################################################
 # Include lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -100,7 +92,6 @@ $(KIBANA_IMAGE): $(KIBANA_IMAGE_MARKER)
 
 $(KIBANA_IMAGE_MARKER): tigera-plugin gtm-plugin
 	docker buildx build --load --platform=linux/$(ARCH) \
-		--build-arg GTM_INTEGRATION=$(GTM_INTEGRATION) \
 		--build-arg KIBANA_VERSION=$(KIBANA_VERSION) \
 		--build-arg LATEST_IMAGE_TAG=$(LATEST_IMAGE_TAG) \
 		-t $(KIBANA_IMAGE):$(LATEST_IMAGE_TAG)-$(ARCH) \

@@ -157,6 +157,12 @@ func (rs *noopRuleScanner) OnProfileActive(model.ProfileRulesKey, *model.Profile
 func (rs *noopRuleScanner) OnProfileInactive(model.ProfileRulesKey) {
 }
 
+func (rs *noopRuleScanner) OnTierActive(model.TierKey, *model.Tier) {
+}
+
+func (rs *noopRuleScanner) OnTierInactive(model.TierKey) {
+}
+
 type describeCmd struct {
 	// Config.
 	hideSelectors     bool
