@@ -98,6 +98,7 @@ func (d *calicoTemplateData) ReleaseURL() string {
 	return fmt.Sprintf("https://%s.%s", d.ReleaseName, d.BaseDomain)
 }
 
+// PinnedVersionFilePath returns the path of the pinned version file.
 func PinnedVersionFilePath(outputDir string) string {
 	return filepath.Join(outputDir, pinnedVersionFileName)
 }
