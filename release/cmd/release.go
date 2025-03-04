@@ -103,6 +103,7 @@ func releaseSubCommands(cfg *Config) []*cli.Command {
 				}
 				if c.Bool(skipValidationFlag.Name) {
 					opts = append(opts, calico.WithValidate(false))
+					opts = append(opts, calico.WithReleaseBranchValidation(false))
 				}
 				if reg := c.StringSlice(registryFlag.Name); len(reg) > 0 {
 					opts = append(opts, calico.WithImageRegistries(reg))
