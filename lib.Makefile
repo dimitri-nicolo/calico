@@ -79,6 +79,9 @@ ifeq ($(ARCH),x86_64)
 	override ARCH=amd64
 endif
 
+# The list of sub-projects which build non-cluster host RPMs
+NON_CLUSTER_HOST_SUBDIRS := selinux fluent-bit node
+
 # detect the local outbound ip address
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
