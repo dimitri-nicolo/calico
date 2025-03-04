@@ -333,6 +333,13 @@ var _ = describe("basic functionality", func(clusterNamespace string, proxyMode 
 					_ = proxyServer.ListenAndServe()
 				}()
 			})
+
+			By("should be possible to reach the proxy server", func() {
+				Eventually(func() error {
+					_, err := http.Get("http://localhost:3128")
+					return err
+				}, "10s", "1s").Should(Succeed(), "Failed to reach the proxy server")
+			})
 		}
 
 		By("starting Voltron", func() {
