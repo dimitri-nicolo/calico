@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
@@ -164,6 +165,7 @@ type WorkloadEndpoint struct {
 	GenerateName               string            `json:"generate_name,omitempty"`
 	AllowSpoofedSourcePrefixes []net.IPNet       `json:"allow_spoofed_source_ips,omitempty"`
 	Annotations                map[string]string `json:"annotations,omitempty"`
+	QoSControls                *QoSControls      `json:"qosControls,omitempty"`
 
 	// EE properties below
 	EgressSelector             string            `json:"egress_selector,omitempty"`
@@ -198,3 +200,5 @@ type ApplicationLayer struct {
 	WAF          string `json:"waf"`
 	WAFConfigMap string `json:"waf_config_map"`
 }
+
+type QoSControls = v3.QoSControls

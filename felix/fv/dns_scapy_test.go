@@ -130,7 +130,7 @@ func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrac
 		flags = conntrackv3.FlagTrustDNS
 	}
 
-	return conntrack.NewKey(17 /* UDP */, aIP, 53, bIP, 53), conntrack.NewValueNormal(now, now, flags, a2bLeg, b2aLeg)
+	return conntrack.NewKey(17 /* UDP */, aIP, 53, bIP, 53), conntrack.NewValueNormal(now, flags, a2bLeg, b2aLeg)
 }
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
@@ -563,7 +563,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// Ping should now go through.
 					Expect(workloadCanPingTarget()).NotTo(HaveOccurred())
 					Expect(workloadCanPingTargetV6()).NotTo(HaveOccurred())
-
 				})
 			})
 

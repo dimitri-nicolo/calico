@@ -2473,7 +2473,7 @@ func schema_pkg_apis_projectcalico_v3_BPFConntrackTimeouts(ref common.ReferenceC
 					},
 					"tcpResetSeen": {
 						SchemaProps: spec.SchemaProps{
-							Description: "TCPFinsSeen controls how long it takes before considering this entry for cleanup after the connection was aborted. If nil, Calico uses its own default value. [Default: 40s].",
+							Description: "TCPResetSeen controls how long it takes before considering this entry for cleanup after the connection was aborted. If nil, Calico uses its own default value. [Default: 40s].",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6220,6 +6220,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Description: "BPFMapSizePerCPUConntrack determines the size of conntrack map based on the number of CPUs. If set to a non-zero value, overrides BPFMapSizeConntrack with `BPFMapSizePerCPUConntrack * (Number of CPUs)`. This map must be large enough to hold an entry for each active connection.  Warning: changing the size of the conntrack map can cause disruption.",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"bpfMapSizeConntrackScaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFMapSizeConntrackScaling controls whether and how we scale the conntrack map size depending on its usage. 'Disabled' make the size stay at the default or whatever is set by BPFMapSizeConntrack*. 'DoubleIfFull' doubles the size when the map is pretty much full even after cleanups. [Default: DoubleIfFull]",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"bpfMapSizeConntrackCleanupQueue": {

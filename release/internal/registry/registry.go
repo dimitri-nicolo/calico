@@ -40,6 +40,8 @@ func GetRegistry(registry string) Registry {
 	default:
 		if strings.Contains(registry, GCRRegistry) {
 			return NewGCRRegistry(registry)
+		} else if strings.Contains(registry, GARSuffix) {
+			return NewGAR(registry)
 		}
 		logrus.WithField("registry", registry).Fatal("Unknown registry")
 	}

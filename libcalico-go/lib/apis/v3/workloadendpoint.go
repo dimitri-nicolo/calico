@@ -92,6 +92,8 @@ type WorkloadEndpointSpec struct {
 	ExternalNetworkNames []string `json:"externalNetworkNames,omitempty" validate:"omitempty,dive,name"`
 	// ApplicationLayer control.
 	ApplicationLayer *ApplicationLayer `json:"applicationLayer,omitempty" validate:"omitempty,dive"`
+
+	QoSControls *QoSControls `json:"qosControls,omitempty" validate:"omitempty"`
 }
 
 // WorkloadEndpointStatus contains the status for a WorkloadEndpoint resource.
@@ -146,6 +148,17 @@ type WorkloadEndpointList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []WorkloadEndpoint `json:"items"`
+}
+
+type QoSControls struct {
+	IngressBandwidth      int64 `json:"ingressBandwidth,omitempty"`
+	EgressBandwidth       int64 `json:"egressBandwidth,omitempty"`
+	IngressBurst          int64 `json:"ingressBurst,omitempty"`
+	EgressBurst           int64 `json:"egressBurst,omitempty"`
+	IngressPacketRate     int64 `json:"ingressPacketRate,omitempty"`
+	EgressPacketRate      int64 `json:"egressPacketRate,omitempty"`
+	IngressMaxConnections int64 `json:"ingressMaxConnections,omitempty"`
+	EgressMaxConnections  int64 `json:"egressMaxConnections,omitempty"`
 }
 
 // NewWorkloadEndpoint creates a new (zeroed) WorkloadEndpoint struct with the TypeMetadata initialised to the current
