@@ -21,6 +21,7 @@ SKIP_SUBDIRS = [
     "goldmane",
     "whisker",
     "whisker-backend",
+    "lib",
     "libcalico-go",
     "licensing",
     "lma",
