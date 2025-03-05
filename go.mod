@@ -443,6 +443,7 @@ replace (
 	// The fix [1] is still in the master branch as of Feb. 2025 so pin to a pre-release version.
 	// [1] https://github.com/google/cadvisor/pull/3622
 	github.com/google/cadvisor => github.com/google/cadvisor v0.51.1-0.20250126012415-5b649021c2da
+	github.com/projectcalico/calico/lib/httpmachinery => ./lib/httpmachinery
 
 	github.com/tigera/api => ./api
 
@@ -480,5 +481,3 @@ replace (
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.32.2
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.32.2
 )
-
-replace github.com/projectcalico/calico/lib/httpmachinery => ./lib/httpmachinery
