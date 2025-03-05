@@ -16,10 +16,7 @@
 # This ensures that testing of Felix in this repository is done in the same
 # userspace environment as it will be deployed in calico/node.
 
-ARG QEMU_IMAGE
 ARG BPFTOOL_IMAGE
-
-FROM ${QEMU_IMAGE} AS qemu
 
 FROM ${BPFTOOL_IMAGE} AS bpftool
 
