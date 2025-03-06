@@ -3,6 +3,7 @@ package waf
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,6 +96,10 @@ func (rs rulesets) GetRuleset(ctx context.Context, id string) (*v1.WAFRuleset, e
 		}
 
 	}
+
+	slices.SortFunc(wrs.Files, func(i v1.File, j v1.File) int {
+		return strings.Compare(i.Name, j.Name)
+	})
 
 	return &wrs, nil
 }
