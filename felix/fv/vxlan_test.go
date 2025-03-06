@@ -113,8 +113,6 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 						}
 					}
 
-					cc = &connectivity.Checker{}
-
 					// Deploy the topology.
 					tc, client := infrastructure.StartNNodeTopology(3, topologyOptions, infra)
 
@@ -136,6 +134,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					} else {
 						cs.local = clusterState
 					}
+
+					// Assign tunnel addresees in IPAM based on the topology.
+					assignTunnelAddresses(infra, tc, client)
 				}
 
 				if cs.IsRemoteSetup() {
@@ -168,8 +169,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					}
 				}
 
-				// Assign tunnel addresees in IPAM based on the topology.
-				assignTunnelAddresses(infra, tc, client)
+				cc = &connectivity.Checker{}
 			})
 
 			AfterEach(func() {
@@ -315,7 +315,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 
 						if enableIPv6 {
 							w6Name := fmt.Sprintf("w6-%d", n)
-							err := client.IPAM().ReleaseByHandle(context.TODO(), w6Name)
+							err := c.client.IPAM().ReleaseByHandle(context.TODO(), w6Name)
 							Expect(err).NotTo(HaveOccurred())
 						}
 
