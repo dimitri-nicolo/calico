@@ -168,6 +168,12 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	if fvBin == "" {
 		fvBin = fmt.Sprintf("bin/calico-felix-%s", arch)
 	}
+
+	if cwLogDir == "" {
+		var wDir, err = os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		cwLogDir = filepath.Join(wDir, "/cwlogs")
+	}
 	volumes := map[string]string{
 		path.Join(wd, "..", "bin"):        "/usr/local/bin",
 		path.Join(wd, "..", fvBin):        "/usr/local/bin/calico-felix",

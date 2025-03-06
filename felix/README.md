@@ -144,23 +144,49 @@ ginkgo watch -r
 
 Ginkgo will re-run tests as files are modified and saved.
 
-## How can I debug the Felix FV tests using goland?
+## How can I debug the Felix FV tests using Goland IDE?
 
-First, set up the necessary environment variables in goland:
+- Create Goland **GO TEST** runtime configuration
 
-- FV_CWLOGDIR: `<path-to-felix-project>/fv/cwlogs`
-- PRIVATE_KEY: `<path-to-felix-project>/fv/private.key`
-- FV_FELIXIMAGE: tigera/felix-test:latest-amd64
+    - Launch GoLand on your system.
 
-Next, build the `felix-test` image to compile and bundle up the current code on your branch into an image that will be
-run by the fv tests:
+    - Open your **calico** project.
 
-```bash
-make image-test
-```
+    - Go to the **Run menu** in the top toolbar.
 
-Lastly, set your break points and focuses in the tests you want to debug in the `fv` directory and run the
-`fv/fv_suite_test.go` file.
+    - Select `Edit Configurations...` from the dropdown.
+
+    - Click the `"+"` button at the top left of the **Run/Debug Configurations** window and select `Go Test` from the available options.
+
+        - **Name:** Provide a meaningful name for the configuration, e.g., Debug Felix FV Tests.
+
+        - **Test kind:** `package`
+
+        - **Package Path:** set to `github.com/projectcalico/calico/felix/fv`
+
+        - **Working Directory:** Set the working directory to: `/{path to the project root}/felix/fv`
+
+        - **GO tool arguments:** `-tags=fvtests`
+
+        - Check **[x]**`Use all custom build tags` checkbox.
+
+        - **Program arguments:** `-ginkgo.v`
+
+        - Add **Before Launch** instructions
+            - Scroll down to the **Before launch** section.
+            - Click on the **+ (Add)** button.
+            - Select **Run External Tool** > External Tools.
+            - Click on **+ (Add)** to create a new external tool.
+            - In the **Name** field, enter: `Build and Prepare Felix`
+            - In the **Program** field, enter: `/bin/bash`
+            - In the **Arguments** field, enter: `-lc "cd $ProjectFileDir$/felix && make build-fv-env"`
+            - In the **Working directory** field, enter: `$ProjectFileDir$`
+            - Click **OK** to save.
+            - Ensure the newly created **Build and Prepare Felix** external tool is added to the **Before launch** list.
+
+        - Click **Apply** and then click **OK**
+- If you want to run specific test(s) add **F** letter to the test(s) or test(s) context names, or you can add `-ginkgo.focus="{name of the test}"` attribute to the *Program Arguments* in the IDE Runtime configuration
+- Click **Debug** button next to the IDE Test configuration that you created before
 
 ## How do I build packages/run Felix?
 
