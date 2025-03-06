@@ -68,6 +68,8 @@ type TopologyOptions struct {
 	UseIPPools                bool
 	IPPoolCIDR                string
 	IPv6PoolCIDR              string
+	IPPoolUsages              []api.IPPoolAllowedUse
+	IPv6PoolUsages            []api.IPPoolAllowedUse
 	NeedNodeIP                bool
 	PerNodeOptions            []PerNodeOptions
 }
@@ -148,9 +150,17 @@ func CreateDefaultIPPoolFromOpts(
 		} else {
 			ipPool.Spec.IPIPMode = api.IPIPModeNever
 		}
+
+		if len(opts.IPPoolUsages) > 0 {
+			ipPool.Spec.AllowedUses = opts.IPPoolUsages
+		}
 	case 6:
 		ipPool.Name = DefaultIPv6PoolName
 		ipPool.Spec.CIDR = opts.IPv6PoolCIDR
+
+		if len(opts.IPv6PoolUsages) > 0 {
+			ipPool.Spec.AllowedUses = opts.IPv6PoolUsages
+		}
 	default:
 		log.WithField("ipVersion", ipVersion).Panic("Unknown IP version")
 	}

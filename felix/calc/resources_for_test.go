@@ -65,10 +65,12 @@ var (
 
 // Canned workload endpoints.
 
-var localWlEpKey1 = WorkloadEndpointKey{Hostname: localHostname, OrchestratorID: "orch", WorkloadID: "wl1", EndpointID: "ep1"}
-var localWlEp1Id = "orch/wl1/ep1"
-var localWlEpKey2 = WorkloadEndpointKey{Hostname: localHostname, OrchestratorID: "orch", WorkloadID: "wl2", EndpointID: "ep2"}
-var localWlEp2Id = "orch/wl2/ep2"
+var (
+	localWlEpKey1 = WorkloadEndpointKey{Hostname: localHostname, OrchestratorID: "orch", WorkloadID: "wl1", EndpointID: "ep1"}
+	localWlEp1Id  = "orch/wl1/ep1"
+	localWlEpKey2 = WorkloadEndpointKey{Hostname: localHostname, OrchestratorID: "orch", WorkloadID: "wl2", EndpointID: "ep2"}
+	localWlEp2Id  = "orch/wl2/ep2"
+)
 
 // A remote workload endpoint
 var remoteWlEpKey1 = WorkloadEndpointKey{Hostname: remoteHostname, OrchestratorID: "orch", WorkloadID: "wl1", EndpointID: "ep1"}
@@ -81,10 +83,14 @@ var localWlEp1 = WorkloadEndpoint{
 	Name:       "cali1",
 	Mac:        mustParseMac("01:02:03:04:05:06"),
 	ProfileIDs: []string{"prof-1", "prof-2", "prof-missing"},
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
-		mustParseNet("10.0.0.2/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
-		mustParseNet("fc00:fe11::2/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
@@ -155,10 +161,14 @@ var localWlEp1WithLabelsButNoProfiles = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali1",
 	Mac:   mustParseMac("01:02:03:04:05:06"),
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
-		mustParseNet("10.0.0.2/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
-		mustParseNet("fc00:fe11::2/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
@@ -176,10 +186,14 @@ var localWlEp1WithDupeNamedPorts = WorkloadEndpoint{
 	Name:       "cali1",
 	Mac:        mustParseMac("01:02:03:04:05:06"),
 	ProfileIDs: []string{"prof-1", "prof-2", "prof-missing"},
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
-		mustParseNet("10.0.0.2/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
-		mustParseNet("fc00:fe11::2/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
@@ -196,10 +210,14 @@ var localWlEp1NoProfiles = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali1",
 	Mac:   mustParseMac("01:02:03:04:05:06"),
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
-		mustParseNet("10.0.0.2/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
-		mustParseNet("fc00:fe11::2/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128"),
+	},
 }
 
 var localWlEp1DifferentIPs = WorkloadEndpoint{
@@ -207,10 +225,14 @@ var localWlEp1DifferentIPs = WorkloadEndpoint{
 	Name:       "cali1",
 	Mac:        mustParseMac("01:02:03:04:05:06"),
 	ProfileIDs: []string{"prof-1", "prof-2", "prof-missing"},
-	IPv4Nets: []net.IPNet{mustParseNet("11.0.0.1/32"),
-		mustParseNet("11.0.0.2/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe12::1/128"),
-		mustParseNet("fc00:fe12::2/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("11.0.0.1/32"),
+		mustParseNet("11.0.0.2/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe12::1/128"),
+		mustParseNet("fc00:fe12::2/128"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
@@ -229,10 +251,14 @@ var localWlEp2 = WorkloadEndpoint{
 	State:      "active",
 	Name:       "cali2",
 	ProfileIDs: []string{"prof-2", "prof-3"},
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.2/32"),
-		mustParseNet("10.0.0.3/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::2/128"),
-		mustParseNet("fc00:fe11::3/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("10.0.0.2/32"),
+		mustParseNet("10.0.0.3/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe11::2/128"),
+		mustParseNet("fc00:fe11::3/128"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-2",
 		"a":  "a",
@@ -248,10 +274,14 @@ var localWlEp2 = WorkloadEndpoint{
 var localWlEp2WithLabelsButNoProfiles = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali2",
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.2/32"),
-		mustParseNet("10.0.0.3/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::2/128"),
-		mustParseNet("fc00:fe11::3/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("10.0.0.2/32"),
+		mustParseNet("10.0.0.3/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe11::2/128"),
+		mustParseNet("fc00:fe11::3/128"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-2",
 		"a":  "a",
@@ -267,10 +297,14 @@ var localWlEp2WithLabelsButNoProfiles = WorkloadEndpoint{
 var localWlEp2NoProfiles = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali2",
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.2/32"),
-		mustParseNet("10.0.0.3/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::2/128"),
-		mustParseNet("fc00:fe11::3/128")},
+	IPv4Nets: []net.IPNet{
+		mustParseNet("10.0.0.2/32"),
+		mustParseNet("10.0.0.3/32"),
+	},
+	IPv6Nets: []net.IPNet{
+		mustParseNet("fc00:fe11::2/128"),
+		mustParseNet("fc00:fe11::3/128"),
+	},
 }
 
 var remoteWlEp1New = WorkloadEndpoint{
@@ -287,10 +321,14 @@ var remoteWlEp1New = WorkloadEndpoint{
 var hostEpWithName = HostEndpoint{
 	Name:       "eth1",
 	ProfileIDs: []string{"prof-1", "prof-2", "prof-missing"},
-	ExpectedIPv4Addrs: []net.IP{mustParseIP("10.0.0.1"),
-		mustParseIP("10.0.0.2")},
-	ExpectedIPv6Addrs: []net.IP{mustParseIP("fc00:fe11::1"),
-		mustParseIP("fc00:fe11::2")},
+	ExpectedIPv4Addrs: []net.IP{
+		mustParseIP("10.0.0.1"),
+		mustParseIP("10.0.0.2"),
+	},
+	ExpectedIPv6Addrs: []net.IP{
+		mustParseIP("fc00:fe11::1"),
+		mustParseIP("fc00:fe11::2"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
@@ -301,10 +339,14 @@ var hostEpWithName = HostEndpoint{
 var hostEpWithNamedPorts = HostEndpoint{
 	Name:       "eth1",
 	ProfileIDs: []string{"prof-1"},
-	ExpectedIPv4Addrs: []net.IP{mustParseIP("10.0.0.1"),
-		mustParseIP("10.0.0.2")},
-	ExpectedIPv6Addrs: []net.IP{mustParseIP("fc00:fe11::1"),
-		mustParseIP("fc00:fe11::2")},
+	ExpectedIPv4Addrs: []net.IP{
+		mustParseIP("10.0.0.1"),
+		mustParseIP("10.0.0.2"),
+	},
+	ExpectedIPv6Addrs: []net.IP{
+		mustParseIP("fc00:fe11::1"),
+		mustParseIP("fc00:fe11::2"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-1",
 		"a":  "a",
@@ -325,10 +367,14 @@ var hostEpWithNameId = "named"
 
 var hostEp2NoName = HostEndpoint{
 	ProfileIDs: []string{"prof-2", "prof-3"},
-	ExpectedIPv4Addrs: []net.IP{mustParseIP("10.0.0.2"),
-		mustParseIP("10.0.0.3")},
-	ExpectedIPv6Addrs: []net.IP{mustParseIP("fc00:fe11::2"),
-		mustParseIP("fc00:fe11::3")},
+	ExpectedIPv4Addrs: []net.IP{
+		mustParseIP("10.0.0.2"),
+		mustParseIP("10.0.0.3"),
+	},
+	ExpectedIPv6Addrs: []net.IP{
+		mustParseIP("fc00:fe11::2"),
+		mustParseIP("fc00:fe11::3"),
+	},
 	Labels: map[string]string{
 		"id": "loc-ep-2",
 		"a":  "a",
@@ -344,9 +390,11 @@ var hostEpNoNameId = "unnamed"
 
 // Canned tiers/policies.
 
-var order10 = float64(10)
-var order20 = float64(20)
-var order30 = float64(30)
+var (
+	order10 = float64(10)
+	order20 = float64(20)
+	order30 = float64(30)
+)
 
 var policy1_order20 = Policy{
 	Order:    &order20,
@@ -386,22 +434,24 @@ var policy1_order20_ondemand = Policy{
 	PerformanceHints: []v3.PolicyPerformanceHint{v3.PerfHintAssumeNeededOnEveryNode},
 }
 
-var protoTCP = numorstring.ProtocolFromStringV1("tcp")
-var protoUDP = numorstring.ProtocolFromStringV1("udp")
-var policy1_order20_with_named_port_tcpport = Policy{
-	Order:    &order20,
-	Selector: "a == 'a'",
-	InboundRules: []Rule{
-		{
-			Protocol: &protoTCP,
-			SrcPorts: []numorstring.Port{numorstring.NamedPort("tcpport")},
+var (
+	protoTCP                                = numorstring.ProtocolFromStringV1("tcp")
+	protoUDP                                = numorstring.ProtocolFromStringV1("udp")
+	policy1_order20_with_named_port_tcpport = Policy{
+		Order:    &order20,
+		Selector: "a == 'a'",
+		InboundRules: []Rule{
+			{
+				Protocol: &protoTCP,
+				SrcPorts: []numorstring.Port{numorstring.NamedPort("tcpport")},
+			},
 		},
-	},
-	OutboundRules: []Rule{
-		{SrcSelector: bEpBSelector},
-	},
-	Types: []string{"ingress", "egress"},
-}
+		OutboundRules: []Rule{
+			{SrcSelector: bEpBSelector},
+		},
+		Types: []string{"ingress", "egress"},
+	}
+)
 
 var policy1_order20_with_named_port_tcpport_negated = Policy{
 	Order:    &order20,
@@ -636,6 +686,7 @@ var profileLabels1Tag1 = &v3.Profile{
 		},
 	},
 }
+
 var profileLabels1 = &v3.Profile{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "prof-1",
@@ -646,6 +697,7 @@ var profileLabels1 = &v3.Profile{
 		},
 	},
 }
+
 var profileLabels2 = &v3.Profile{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "prof-2",
@@ -656,6 +708,7 @@ var profileLabels2 = &v3.Profile{
 		},
 	},
 }
+
 var profileLabelsTag1 = &v3.Profile{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "prof-1",
@@ -667,23 +720,28 @@ var profileLabelsTag1 = &v3.Profile{
 	},
 }
 
-var tag1LabelID = ipSetIDForTag("tag-1")
-var tag2LabelID = ipSetIDForTag("tag-2")
+var (
+	tag1LabelID = ipSetIDForTag("tag-1")
+	tag2LabelID = ipSetIDForTag("tag-2")
+)
 
-var netSet1Key = NetworkSetKey{Name: "netset-1"}
-var netSet1 = NetworkSet{
-	Nets: []net.IPNet{
-		mustParseNet("12.0.0.0/24"),
-		mustParseNet("12.0.0.0/24"), // A dupe, why not!
-		mustParseNet("12.1.0.0/24"),
-		mustParseNet("10.0.0.1/32"), // Overlaps with host endpoint.
-		mustParseNet("feed:beef::/32"),
-		mustParseNet("feed:beef:0::/32"), // Non-canonical dupe.
-	},
-	Labels: map[string]string{
-		"a": "b",
-	},
-}
+var (
+	netSet1Key = NetworkSetKey{Name: "netset-1"}
+	netSet1    = NetworkSet{
+		Nets: []net.IPNet{
+			mustParseNet("12.0.0.0/24"),
+			mustParseNet("12.0.0.0/24"), // A dupe, why not!
+			mustParseNet("12.1.0.0/24"),
+			mustParseNet("10.0.0.1/32"), // Overlaps with host endpoint.
+			mustParseNet("feed:beef::/32"),
+			mustParseNet("feed:beef:0::/32"), // Non-canonical dupe.
+		},
+		Labels: map[string]string{
+			"a": "b",
+		},
+	}
+)
+
 var netSet1WithBEqB = NetworkSet{
 	Nets: []net.IPNet{
 		mustParseNet("12.0.0.0/24"),
@@ -696,192 +754,67 @@ var netSet1WithBEqB = NetworkSet{
 		"b":   "b",
 	},
 }
-var netSet1WithEgressDomains = NetworkSet{
-	Nets: []net.IPNet{
-		mustParseNet("12.0.0.0/24"),
-		mustParseNet("12.0.0.0/24"), // A dupe, why not!
-		mustParseNet("12.1.0.0/24"),
-		mustParseNet("10.0.0.1/32"), // Overlaps with host endpoint.
-		mustParseNet("feed:beef::/32"),
-		mustParseNet("feed:beef:0::/32"), // Non-canonical dupe.
-	},
-	AllowedEgressDomains: []string{
-		"google.com",
-		"facebook.com",
-		"tigera.io",
-	},
-	Labels: map[string]string{
-		"a": "b",
-	},
-}
-var netSet2Key = NetworkSetKey{Name: "netset-2"}
-var netSet2 = NetworkSet{
-	Nets: []net.IPNet{
-		mustParseNet("12.0.0.0/24"), // Overlaps with netset-1
-		mustParseNet("13.1.0.0/24"),
-	},
-	Labels: map[string]string{
-		"a": "b",
-	},
-}
-var netSet2WithEgressDomains = NetworkSet{
-	Nets: []net.IPNet{
-		mustParseNet("12.0.0.0/24"), // Overlaps with netset-1
-		mustParseNet("13.1.0.0/24"),
-	},
-	Labels: map[string]string{
-		"a": "b",
-	},
-	AllowedEgressDomains: []string{
-		"google.com",
-		"facebook.com",
-		"projectcalico.org",
-	},
-}
 
-var netSet3Key = NetworkSetKey{Name: "netset-3"}
-var netSet3 = NetworkSet{
-	Nets: []net.IPNet{
-		mustParseNet("12.1.2.142/32"),
-		mustParseNet("12.1.0.0/16"),
-		mustParseNet("12.1.0.0/8"),
-	},
-	Labels: map[string]string{
-		"a": "b",
-	},
-}
-var netset3Ip1a = mustParseNet("12.1.0.130/32").IP
-var netset3Ip1b = mustParseNet("12.1.2.142/32").IP
-
-// Resources for DNS Policy unit testing. We start with a basic default-deny-egress policy that only allows UDP:53 out.
-var policyDNSBasic = Policy{
-	Selector: "name == 'dnspolicy'",
-	Order:    &order30,
-	Types:    []string{"egress"},
-	OutboundRules: []Rule{
-		{
-			Action:      "allow",
-			SrcSelector: allSelector,
-			Protocol:    &protoUDP,
-			DstPorts:    []numorstring.Port{numorstring.SinglePort(53)},
+var (
+	netSet2Key = NetworkSetKey{Name: "netset-2"}
+	netSet2    = NetworkSet{
+		Nets: []net.IPNet{
+			mustParseNet("12.0.0.0/24"), // Overlaps with netset-1
+			mustParseNet("13.1.0.0/24"),
 		},
-		{
-			Action: "deny",
+		Labels: map[string]string{
+			"a": "b",
 		},
-	},
-}
+	}
+)
 
-// A set of allowed egress domains, including names that are duplicates once normalized to
-// lowercase.  Note, this set of domain names is used both in GlobalNetworkSet definitions, and
-// directly as the DstDomains in a policy rule.
-var allowedEgressDomains = []string{"microsoft.com", "www.MicroSoft.com", "WWW.MICROSOFT.COM"}
-var allowedEgressDomainsNoDupe = []string{"microsoft.com", "WWW.MICROSOFT.COM"}
-
-// A second set of allowed domain names.
-var allowedEgressDomains2 = []string{"google.com", "www.google.com"}
-
-// Two GlobalNetworkSets, one for microsoft.com and one for google.com.
-var netSetDNSKey = NetworkSetKey{Name: "netset-domains"}
-var netSetDNSKey2 = NetworkSetKey{Name: "netset-domains-2"}
-
-var netSetDNS = NetworkSet{
-	AllowedEgressDomains: allowedEgressDomains,
-	Labels:               map[string]string{"external-service-name": "microsoft"},
-}
-
-var netSetDNSNoDupe = NetworkSet{
-	AllowedEgressDomains: allowedEgressDomainsNoDupe,
-	Labels:               map[string]string{"external-service-name": "microsoft"},
-}
-
-var netSetDNS2 = NetworkSet{
-	AllowedEgressDomains: allowedEgressDomains2,
-	Labels:               map[string]string{"external-service-name": "google"},
-}
-
-// Two GlobalNetworkPolicies, the first allows external access to microsoft.com and the second to any resource that
-// specifies a "external-service-name" label.
-var dstSelectorDNSExternal = "external-service-name == 'microsoft'"
-var dstSelectorDNSExternal2 = "has(external-service-name)"
-
-var selectorIdDNSExternal = domainSelectorID(dstSelectorDNSExternal, nil)
-var selectorIdDNSExternal2 = domainSelectorID(dstSelectorDNSExternal2, nil)
-var selectorIdDNSExternal3 = domainSelectorID("", allowedEgressDomains)
-
-var selectorIdDNSEmpty = selectorID(dstSelectorDNSExternal)
-var selectorIdDNSEmpty2 = selectorID(dstSelectorDNSExternal2)
-
-var policyDNSExternal = Policy{
-	Selector: allSelector,
-	Order:    &order20,
-	Types:    []string{"egress"},
-	OutboundRules: []Rule{
-		{
-			Action:      "allow",
-			DstSelector: dstSelectorDNSExternal,
+var (
+	netSet3Key = NetworkSetKey{Name: "netset-3"}
+	netSet3    = NetworkSet{
+		Nets: []net.IPNet{
+			mustParseNet("12.1.2.142/32"),
+			mustParseNet("12.1.0.0/16"),
+			mustParseNet("12.1.0.0/8"),
 		},
-	},
-}
-
-var policyDNSExternal2 = Policy{
-	Selector: allSelector,
-	Order:    &order20,
-	Types:    []string{"egress"},
-	OutboundRules: []Rule{
-		{
-			Action:      "allow",
-			DstSelector: dstSelectorDNSExternal2,
+		Labels: map[string]string{
+			"a": "b",
 		},
-	},
-}
+	}
+)
 
-var policyDNSExternal3 = Policy{
-	Selector: allSelector,
-	Order:    &order20,
-	Types:    []string{"egress"},
-	OutboundRules: []Rule{
-		{
-			Action:     "allow",
-			DstDomains: allowedEgressDomains,
-		},
-	},
-}
+var (
+	netset3Ip1a = mustParseNet("12.1.0.130/32").IP
+	netset3Ip1b = mustParseNet("12.1.2.142/32").IP
+)
 
-// One simple workload endpoint with v4 and v6 addresses, with a label to match on.
-var localWlEpDNS = WorkloadEndpoint{
-	State: "active",
-	Name:  "cali1",
-	Mac:   mustParseMac("01:02:03:04:05:06"),
-	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
-		mustParseNet("10.0.0.2/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
-		mustParseNet("fc00:fe11::2/128")},
-	Labels: map[string]string{
-		"name": "dnspolicy",
-	},
-}
+var (
+	localHostIP     = mustParseIP("192.168.0.1")
+	remoteHostIP    = mustParseIP("192.168.0.2")
+	remoteHostIPv6  = mustParseIP("dead:beef:0001::2")
+	remoteHost2IP   = mustParseIP("192.168.0.3")
+	remoteHost2IPv6 = mustParseIP("dead:beef:0001::3")
+)
 
-var localHostIP = mustParseIP("192.168.0.1")
-var remoteHostIP = mustParseIP("192.168.0.2")
-var remoteHostIPv6 = mustParseIP("dead:beef:0001::2")
-var remoteHost2IP = mustParseIP("192.168.0.3")
-var remoteHost2IPv6 = mustParseIP("dead:beef:0001::3")
-
-var localHostIPWithPrefix = "192.168.0.1/24"
-var remoteHostIPWithPrefix = "192.168.0.2/24"
+var (
+	localHostIPWithPrefix  = "192.168.0.1/24"
+	remoteHostIPWithPrefix = "192.168.0.2/24"
+)
 
 var localHostVXLANTunnelConfigKey = HostConfigKey{
 	Hostname: localHostname,
 	Name:     "IPv4VXLANTunnelAddr",
 }
+
 var remoteHostVXLANTunnelConfigKey = HostConfigKey{
 	Hostname: remoteHostname,
 	Name:     "IPv4VXLANTunnelAddr",
 }
+
 var remoteHostVXLANV6TunnelConfigKey = HostConfigKey{
 	Hostname: remoteHostname,
 	Name:     "IPv6VXLANTunnelAddr",
 }
+
 var remoteHost2VXLANTunnelConfigKey = HostConfigKey{
 	Hostname: remoteHostname2,
 	Name:     "IPv4VXLANTunnelAddr",
@@ -976,27 +909,32 @@ var localIPAMBlockKey = BlockKey{
 	CIDR: mustParseNet("10.0.0.0/29"),
 }
 
-var localHostAffinity = "host:" + localHostname
-var remoteHostAffinity = "host:" + remoteHostname
-var remoteHost2Affinity = "host:" + remoteHostname2
-var remoteIPAMBlock = AllocationBlock{
-	CIDR:        mustParseNet("10.0.1.0/29"),
-	Affinity:    &remoteHostAffinity,
-	Allocations: make([]*int, 8),
-	Unallocated: []int{0, 1, 2, 3, 4, 5, 6, 7},
-}
+var (
+	localHostAffinity   = "host:" + localHostname
+	remoteHostAffinity  = "host:" + remoteHostname
+	remoteHost2Affinity = "host:" + remoteHostname2
+	remoteIPAMBlock     = AllocationBlock{
+		CIDR:        mustParseNet("10.0.1.0/29"),
+		Affinity:    &remoteHostAffinity,
+		Allocations: make([]*int, 8),
+		Unallocated: []int{0, 1, 2, 3, 4, 5, 6, 7},
+	}
+)
+
 var remoteIPAMBlockSlash32 = AllocationBlock{
 	CIDR:        mustParseNet("10.0.0.0/32"),
 	Affinity:    &remoteHostAffinity,
 	Allocations: make([]*int, 1),
 	Unallocated: []int{0},
 }
+
 var remotev6IPAMBlock = AllocationBlock{
 	CIDR:        mustParseNet("feed:beef:0:0:1::/96"),
 	Affinity:    &remoteHostAffinity,
 	Allocations: make([]*int, 8),
 	Unallocated: []int{0, 1, 2, 3, 4, 5, 6, 7},
 }
+
 var remoteIPAMBlockWithBorrows = AllocationBlock{
 	CIDR:     mustParseNet("10.0.1.0/29"),
 	Affinity: &remoteHostAffinity,
@@ -1021,6 +959,7 @@ var remoteIPAMBlockWithBorrows = AllocationBlock{
 		}},
 	},
 }
+
 var remoteIPAMBlockWithBorrowsSwitched = AllocationBlock{
 	CIDR:     mustParseNet("10.0.1.0/29"),
 	Affinity: &remoteHost2Affinity,
@@ -1061,10 +1000,15 @@ var localIPAMBlockWithBorrows = AllocationBlock{
 	},
 	Unallocated: []int{3, 4, 5, 6, 7},
 	Attributes: []AllocationAttribute{
+		// 10.0.0.0
 		{},
+
+		// 10.0.0.1 - assigned locally.
 		{AttrSecondary: map[string]string{
 			IPAMBlockAttributeNode: localHostname,
 		}},
+
+		// 10.0.0.2 - assigned to remoteHostname.
 		{AttrSecondary: map[string]string{
 			IPAMBlockAttributeNode: remoteHostname,
 		}},
@@ -1187,19 +1131,22 @@ var deleteEpslcForSvcWithL7Annotation2 = KVPair{
 }
 
 // Resource for endpoint slice and service policy tests.
-var p = int32(80)
-var tcp = v1.ProtocolTCP
-var endpointSliceKey1 = model.ResourceKey{Name: "eps", Namespace: "default", Kind: "KubernetesEndpointSlice"}
-var endpointSliceKey2 = model.ResourceKey{Name: "eps-2", Namespace: "default", Kind: "KubernetesEndpointSlice"}
-var endpointSlice1 = discovery.EndpointSlice{
-	ObjectMeta: metav1.ObjectMeta{Name: "eps", Namespace: "default", Labels: map[string]string{"kubernetes.io/service-name": "svc"}},
-	Endpoints: []discovery.Endpoint{
-		{Addresses: []string{"10.0.0.1"}},
-	},
-	Ports: []discovery.EndpointPort{
-		{Port: &p, Protocol: &tcp},
-	},
-}
+var (
+	p                 = int32(80)
+	tcp               = v1.ProtocolTCP
+	endpointSliceKey1 = model.ResourceKey{Name: "eps", Namespace: "default", Kind: "KubernetesEndpointSlice"}
+	endpointSliceKey2 = model.ResourceKey{Name: "eps-2", Namespace: "default", Kind: "KubernetesEndpointSlice"}
+	endpointSlice1    = discovery.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{Name: "eps", Namespace: "default", Labels: map[string]string{"kubernetes.io/service-name": "svc"}},
+		Endpoints: []discovery.Endpoint{
+			{Addresses: []string{"10.0.0.1"}},
+		},
+		Ports: []discovery.EndpointPort{
+			{Port: &p, Protocol: &tcp},
+		},
+	}
+)
+
 var endpointSlice1NewIPs = discovery.EndpointSlice{
 	ObjectMeta: metav1.ObjectMeta{Name: "eps", Namespace: "default", Labels: map[string]string{"kubernetes.io/service-name": "svc"}},
 	Endpoints: []discovery.Endpoint{
@@ -1211,6 +1158,7 @@ var endpointSlice1NewIPs = discovery.EndpointSlice{
 		{Port: &p, Protocol: &tcp},
 	},
 }
+
 var endpointSlice1NewIPs2 = discovery.EndpointSlice{
 	ObjectMeta: metav1.ObjectMeta{Name: "eps", Namespace: "default", Labels: map[string]string{"kubernetes.io/service-name": "svc"}},
 	Endpoints: []discovery.Endpoint{
@@ -1222,6 +1170,7 @@ var endpointSlice1NewIPs2 = discovery.EndpointSlice{
 		{Port: &p, Protocol: &tcp},
 	},
 }
+
 var endpointSlice2NewIPs2 = discovery.EndpointSlice{
 	ObjectMeta: metav1.ObjectMeta{Name: "eps-2", Namespace: "default", Labels: map[string]string{"kubernetes.io/service-name": "svc"}},
 	Endpoints: []discovery.Endpoint{
@@ -1233,20 +1182,23 @@ var endpointSlice2NewIPs2 = discovery.EndpointSlice{
 		{Port: &p, Protocol: &tcp},
 	},
 }
-var servicePolicyKey = model.PolicyKey{Name: "svc-policy"}
-var servicePolicyKey2 = model.PolicyKey{Name: "svc-policy2"}
-var servicePolicy = model.Policy{
-	Namespace: "default",
-	OutboundRules: []model.Rule{
-		{
-			Action:              "Allow",
-			DstService:          "svc",
-			DstServiceNamespace: "default",
+
+var (
+	servicePolicyKey  = model.PolicyKey{Name: "svc-policy"}
+	servicePolicyKey2 = model.PolicyKey{Name: "svc-policy2"}
+	servicePolicy     = model.Policy{
+		Namespace: "default",
+		OutboundRules: []model.Rule{
+			{
+				Action:              "Allow",
+				DstService:          "svc",
+				DstServiceNamespace: "default",
+			},
 		},
-	},
-	Types:    []string{"egress"},
-	Selector: "all()",
-}
+		Types:    []string{"egress"},
+		Selector: "all()",
+	}
+)
 
 var servicePolicyNoPorts = model.Policy{
 	Namespace: "default",
@@ -1272,13 +1224,15 @@ func intPtr(i int) *int {
 	return &i
 }
 
-var localHostVXLANTunnelIP = "10.0.0.0"
-var remoteHostVXLANTunnelIP = "10.0.1.0"
-var remoteHostVXLANV6TunnelIP = "feed:beef:0:0:1::0"
-var remoteHostVXLANTunnelIP2 = "10.0.1.1"
-var remoteHost2VXLANTunnelIP = "10.0.2.0"
-var remoteHostVXLANTunnelMAC = "66:74:c5:72:3f:01"
-var remoteHostVXLANV6TunnelMAC = "10:f3:27:5c:47:66"
+var (
+	localHostVXLANTunnelIP     = "10.0.0.0"
+	remoteHostVXLANTunnelIP    = "10.0.1.0"
+	remoteHostVXLANV6TunnelIP  = "feed:beef:0:0:1::0"
+	remoteHostVXLANTunnelIP2   = "10.0.1.1"
+	remoteHost2VXLANTunnelIP   = "10.0.2.0"
+	remoteHostVXLANTunnelMAC   = "66:74:c5:72:3f:01"
+	remoteHostVXLANV6TunnelMAC = "10:f3:27:5c:47:66"
+)
 
 var netCidrs1 []string = []string{"122.10.1.2/16", "122.10.1.2/24"}
 var netCidrs1res string = "12.1.0.0/24"
@@ -1286,10 +1240,12 @@ var netCidrs2res string = "12.1.2.142/32"
 
 var t = true
 
-var wgPrivateKey1 = mustGeneratePrivateKey()
-var wgPublicKey1 = wgPrivateKey1.PublicKey()
-var wgPrivateKey2 = mustGeneratePrivateKey()
-var wgPublicKey2 = wgPrivateKey2.PublicKey()
+var (
+	wgPrivateKey1 = mustGeneratePrivateKey()
+	wgPublicKey1  = wgPrivateKey1.PublicKey()
+	wgPrivateKey2 = mustGeneratePrivateKey()
+	wgPublicKey2  = wgPrivateKey2.PublicKey()
+)
 
 func mustGeneratePrivateKey() wgtypes.Key {
 	if k, err := wgtypes.GeneratePrivateKey(); err != nil {

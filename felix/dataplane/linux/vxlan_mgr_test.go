@@ -219,7 +219,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		manager.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_WORKLOAD,
+			Types:       proto.RouteType_REMOTE_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "172.0.0.1/26",
 			DstNodeName: "node2",
@@ -228,7 +228,7 @@ var _ = Describe("VXLANManager", func() {
 		})
 
 		manager.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_WORKLOAD,
+			Types:       proto.RouteType_REMOTE_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "172.0.0.2/26",
 			DstNodeName: "node2",
@@ -236,7 +236,7 @@ var _ = Describe("VXLANManager", func() {
 		})
 
 		manager.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_LOCAL_WORKLOAD,
+			Types:       proto.RouteType_LOCAL_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "172.0.0.0/26",
 			DstNodeName: "node0",
@@ -246,7 +246,7 @@ var _ = Describe("VXLANManager", func() {
 
 		// Borrowed /32 should not be programmed as blackhole.
 		manager.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_LOCAL_WORKLOAD,
+			Types:       proto.RouteType_LOCAL_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "172.0.0.1/32",
 			DstNodeName: "node1",
@@ -307,7 +307,7 @@ var _ = Describe("VXLANManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		managerV6.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_WORKLOAD,
+			Types:       proto.RouteType_REMOTE_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "fc00:10:244::1/112",
 			DstNodeName: "node2",
@@ -316,7 +316,7 @@ var _ = Describe("VXLANManager", func() {
 		})
 
 		managerV6.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_WORKLOAD,
+			Types:       proto.RouteType_REMOTE_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "fc00:10:244::2/112",
 			DstNodeName: "node2",
@@ -324,7 +324,7 @@ var _ = Describe("VXLANManager", func() {
 		})
 
 		managerV6.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_LOCAL_WORKLOAD,
+			Types:       proto.RouteType_LOCAL_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "fc00:10:244::/112",
 			DstNodeName: "node0",
@@ -334,7 +334,7 @@ var _ = Describe("VXLANManager", func() {
 
 		// Borrowed /128 should not be programmed as blackhole.
 		managerV6.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_LOCAL_WORKLOAD,
+			Types:       proto.RouteType_LOCAL_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "fc00:10:244::1/128",
 			DstNodeName: "node1",
@@ -379,7 +379,7 @@ var _ = Describe("VXLANManager", func() {
 			ParentDeviceIp: "172.0.12.1",
 		})
 		manager.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_WORKLOAD,
+			Types:       proto.RouteType_REMOTE_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "172.0.0.1/26",
 			DstNodeName: "node2",
@@ -435,7 +435,7 @@ var _ = Describe("VXLANManager", func() {
 			ParentDeviceIpv6: "fc00:10:10::1",
 		})
 		managerV6.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_WORKLOAD,
+			Types:       proto.RouteType_REMOTE_WORKLOAD,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "fc00:10:244::1/112",
 			DstNodeName: "node2",
@@ -476,7 +476,7 @@ var _ = Describe("VXLANManager", func() {
 	It("should program directly connected routes for remote VTEPs with borrowed IP addresses", func() {
 		By("Sending a borrowed tunnel IP address")
 		manager.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_TUNNEL,
+			Types:       proto.RouteType_REMOTE_TUNNEL,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "10.0.1.1/32",
 			DstNodeName: "node2",
@@ -506,7 +506,7 @@ var _ = Describe("VXLANManager", func() {
 	It("IPv6: should program directly connected routes for remote VTEPs with borrowed IP addresses", func() {
 		By("Sending a borrowed tunnel IP address")
 		managerV6.OnUpdate(&proto.RouteUpdate{
-			Type:        proto.RouteType_REMOTE_TUNNEL,
+			Types:       proto.RouteType_REMOTE_TUNNEL,
 			IpPoolType:  proto.IPPoolType_VXLAN,
 			Dst:         "fc00:10:244::1/112",
 			DstNodeName: "node2",
