@@ -85,12 +85,15 @@ rules:
       - licensekeys
       - felixconfigurations
       - globalnetworkpolicies
+      - stagedglobalnetworkpolicies
       - globalnetworksets
       - remoteclusterconfigurations
       - ippools
       - ipreservations
       - kubecontrollersconfigurations
       - networkpolicies
+      - stagednetworkpolicies
+      - stagedkubernetesnetworkpolicies
       - networksets
       - tiers
       - hostendpoints
