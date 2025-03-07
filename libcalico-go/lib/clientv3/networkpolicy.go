@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018,2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -159,6 +159,9 @@ func (r networkPolicies) Get(ctx context.Context, namespace, name string, opts o
 				return res_out, tierErr
 			}
 			res_out.Spec.Tier = tier
+		}
+		if res_out.Name != name {
+			return nil, fmt.Errorf("resource not found NetworkPolicy(%s/%s)", namespace, name)
 		}
 		return res_out, err
 	}
