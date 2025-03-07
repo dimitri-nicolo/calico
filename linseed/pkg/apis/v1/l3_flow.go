@@ -112,8 +112,9 @@ type PolicyMatch struct {
 type PolicyType string
 
 const (
-	KNP  PolicyType = "knp"
-	KANP PolicyType = "kanp"
+	KNP   PolicyType = "knp"
+	KANP  PolicyType = "kanp"
+	KBANP PolicyType = "kbanp"
 )
 
 type MatchType string
