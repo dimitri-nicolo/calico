@@ -55,7 +55,8 @@ RUN apt-get update && apt-get install -y \
     libpcap-dev \
     netcat-openbsd \
     tcpdump \
-    wget
+    wget \
+    iperf3
 
 RUN apt-get install --no-install-recommends -y wireguard-tools
 
