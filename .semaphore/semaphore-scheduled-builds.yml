@@ -938,8 +938,6 @@ blocks:
           - env_var: ARCH
             values:
               - arm64
-              - ppc64le
-              - s390x
         commands:
           - ../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
 - name: whisker
@@ -962,8 +960,6 @@ blocks:
           - env_var: ARCH
             values:
               - arm64
-              - ppc64le
-              - s390x
         commands:
           - ../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
 - name: calicoq
