@@ -3,6 +3,7 @@
 package threatfeeds_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -316,6 +317,80 @@ func TestRetrieveMostRecentDomainNameSet(t *testing.T) {
 
 			// Assert that the logs are returned in the correct order.
 			require.Equal(t, f3, r.Items[0])
+		})
+	}
+}
+
+func TestPreserveIDsForDomainNameSet(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+
+			numLogs := 5
+			testStart := time.Unix(0, 0).UTC()
+
+			// Several dummy logs.
+			logs := []v1.DomainNameSetThreatFeed{}
+			for i := 1; i <= numLogs; i++ {
+				start := testStart.Add(time.Duration(i) * time.Second)
+				log := v1.DomainNameSetThreatFeed{
+					ID: fmt.Sprintf("feed-id-%d-%s", i, backendutils.RandStringRunes(4)),
+					Data: &v1.DomainNameSetThreatFeedData{
+						CreatedAt: start,
+						Domains:   []string{"a.b.c.d"},
+					},
+				}
+				logs = append(logs, log)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			resp, err := dMigration.Create(ctx, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Read it back and make sure generated time values are what we expect.
+			allOpts := v1.DomainNameSetThreatFeedParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: testStart.Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			}
+			first, err := dMigration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, first.Items, numLogs)
+
+			bulk, err := dMigration.Create(ctx, clusterInfo, first.Items)
+			require.NoError(t, err)
+			require.Empty(t, bulk.Errors)
+
+			second, err := dMigration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, second.Items, numLogs)
+
+			for _, log := range first.Items {
+				require.NotEmpty(t, (log.ID))
+				backendutils.AssertDomainNameSetThreatFeedGeneratedTimeAndReset(t, &log)
+			}
+			for _, log := range second.Items {
+				require.NotEmpty(t, (log.ID))
+				backendutils.AssertDomainNameSetThreatFeedGeneratedTimeAndReset(t, &log)
+			}
+
+			require.Equal(t, first.Items, second.Items)
+
+			// Refresh before cleaning up data
+			err = backendutils.RefreshIndex(ctx, client, domainsIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
 		})
 	}
 }

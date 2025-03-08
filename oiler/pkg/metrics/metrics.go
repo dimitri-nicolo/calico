@@ -56,28 +56,28 @@ var (
 		Subsystem: "oiler",
 		Name:      "last_read_generated_timestamp",
 		Help:      "Last generated timestamp read from primary.",
-	}, []string{JobName})
+	}, []string{JobName, LabelClusterID})
 
 	LastWrittenGeneratedTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "tigera",
 		Subsystem: "oiler",
 		Name:      "last_written_generated_timestamp",
 		Help:      "Last written timestamp read to secondary.",
-	}, []string{JobName})
+	}, []string{JobName, LabelClusterID})
 
 	MigrationLag = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "tigera",
 		Subsystem: "oiler",
 		Name:      "migration_lag",
 		Help:      "Difference between last written document to the secondary source and last read document from primary source in seconds",
-	}, []string{JobName})
+	}, []string{JobName, LabelClusterID})
 
 	WaitForData = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "tigera",
 		Subsystem: "oiler",
 		Name:      "wait_for_data",
 		Help:      "How much we are waiting for data.",
-	}, []string{JobName})
+	}, []string{JobName, LabelClusterID})
 
 	ReadDurationPerClusterIDAndTenantID = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: "tigera",

@@ -76,8 +76,8 @@ func TestTimeInterval_LastGeneratedTime(t *testing.T) {
 	}{
 		{
 			name:   "Last generated time from pagination",
-			Cursor: map[string]interface{}{"searchFrom": []interface{}{"1.7e+2", "2"}},
-			want:   time.Unix(170, 0).UTC(),
+			Cursor: map[string]interface{}{"searchFrom": []interface{}{1.7e+2, 2}},
+			want:   time.UnixMilli(170).UTC(),
 		},
 		{
 			name:   "Last generated time from pagination with start",

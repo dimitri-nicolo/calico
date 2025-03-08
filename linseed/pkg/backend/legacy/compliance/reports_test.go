@@ -80,13 +80,13 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 		rIndexGetter = index.ComplianceReportsIndex()
 		bIndexGetter = index.ComplianceBenchmarksIndex()
 		sIndexGetter = index.ComplianceSnapshotsIndex()
-		rb = compliance.NewSingleIndexReportsBackend(client, cache, 10000)
-		bb = compliance.NewSingleIndexBenchmarksBackend(client, cache, 10000)
-		sb = compliance.NewSingleIndexSnapshotBackend(client, cache, 10000)
+		rb = compliance.NewSingleIndexReportsBackend(client, cache, 10000, false)
+		bb = compliance.NewSingleIndexBenchmarksBackend(client, cache, 10000, false)
+		sb = compliance.NewSingleIndexSnapshotBackend(client, cache, 10000, false)
 	} else {
-		rb = compliance.NewReportsBackend(client, cache, 10000)
-		bb = compliance.NewBenchmarksBackend(client, cache, 10000)
-		sb = compliance.NewSnapshotBackend(client, cache, 10000)
+		rb = compliance.NewReportsBackend(client, cache, 10000, false)
+		bb = compliance.NewBenchmarksBackend(client, cache, 10000, false)
+		sb = compliance.NewSnapshotBackend(client, cache, 10000, false)
 		rIndexGetter = index.ComplianceReportMultiIndex
 		bIndexGetter = index.ComplianceBenchmarkMultiIndex
 		sIndexGetter = index.ComplianceSnapshotMultiIndex

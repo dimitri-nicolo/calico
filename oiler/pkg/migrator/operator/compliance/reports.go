@@ -31,6 +31,9 @@ func (f ReportsOperator) Read(ctx context.Context, current operator.TimeInterval
 	items := list.Items
 	if len(items) != 0 {
 		lastGeneratedTime = items[len(items)-1].GeneratedTime
+	} else {
+		lastGeneratedTimeFromCursor := current.LastGeneratedTime()
+		lastGeneratedTime = &lastGeneratedTimeFromCursor
 	}
 
 	return list, operator.Next(list.GetAfterKey(), lastGeneratedTime, current.Start), nil

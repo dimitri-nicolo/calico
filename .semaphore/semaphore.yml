@@ -148,6 +148,10 @@ promotions:
     pipeline_file: push-images/linseed.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push oiler images
+    pipeline_file: push-images/oiler.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push packetcapture images
     pipeline_file: push-images/packetcapture.yml
     auto_promote:

@@ -30,9 +30,12 @@ type bgpLogBackend struct {
 	queryHelper lmaindex.Helper
 	singleIndex bool
 	index       bapi.Index
+
+	// Migration knobs
+	migrationMode bool
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BGPBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.BGPBackend {
 	return &bgpLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -41,10 +44,11 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 		queryHelper:          lmaindex.MultiIndexBGPLogs(),
 		singleIndex:          false,
 		index:                index.BGPLogMultiIndex,
+		migrationMode:        migrationMode,
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.BGPBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.BGPBackend {
 	return &bgpLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -53,6 +57,7 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		queryHelper:          lmaindex.SingleIndexBGPLogs(),
 		singleIndex:          true,
 		index:                index.BGPLogIndex(options...),
+		migrationMode:        migrationMode,
 	}
 }
 
@@ -102,9 +107,20 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		// clients, and between clients and Linseed.
 		generatedTime := time.Now().UTC()
 		l.GeneratedTime = &generatedTime
+		var id string
+		if len(l.ID) != 0 {
+			id = l.ID
+			l.ID = ""
+		}
 
 		// Add this log to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, l))
+		if b.migrationMode {
+			if len(id) != 0 {
+				req.Id(id)
+			}
+		}
+
 		bulk.Add(req)
 	}
 
@@ -148,7 +164,22 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	var pitID string
+	if b.migrationMode {
+		// For migration mode, we enable deep pagination for each request
+		// instead of deciding based on number of documents stored.
+		// For the first page, we need to perform the query with a point
+		// in time configured
+		if ak := opts.GetAfterKey(); ak == nil {
+			var err error
+			pitID, err = logtools.OpenPointInTime(ctx, b.client, b.index.Index(i))
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), b.migrationMode, pitID)
 	if err != nil {
 		return nil, err
 	}
@@ -175,12 +206,13 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 			log.WithError(err).Error("Error unmarshalling BGP log")
 			continue
 		}
+		if b.migrationMode {
+			l.ID = h.Id
+		}
 		logs = append(logs, l)
 	}
 
-	// If an index has more than 10000 items or other value configured via index.max_result_window
-	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
+	afterKey, err := b.afterKey(ctx, i, opts, results, log, startFrom)
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +220,27 @@ func (b *bgpLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.BG
 	return &v1.List[v1.BGPLog]{
 		TotalHits: results.TotalHits(),
 		Items:     logs,
-		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
+		AfterKey:  afterKey,
 	}, nil
+}
+
+func (b *bgpLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.BGPLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
+	// on all requests
+	useDeepPagination := b.migrationMode
+	if !useDeepPagination {
+		// This is how we determine that an index has more items
+		// than index.max_result_window setting. TotalHits will
+		// return a value equal to index.max_result_window setting
+		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
+	}
+	nextPointInTime, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, log, useDeepPagination)
+	if err != nil {
+		return nil, err
+	}
+	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
+	return afterKey, nil
 }
 
 // buildQuery builds an elastic query using the given parameters.

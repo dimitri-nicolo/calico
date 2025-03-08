@@ -28,9 +28,12 @@ type wafLogBackend struct {
 	queryHelper          lmaindex.Helper
 	singleIndex          bool
 	index                bapi.Index
+
+	// Migration knobs
+	migrationMode bool
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.WAFBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.WAFBackend {
 	return &wafLogBackend{
 		client:               c.Backend(),
 		queryHelper:          lmaindex.MultiIndexWAFLogs(),
@@ -39,10 +42,11 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          false,
 		index:                index.WAFLogMultiIndex,
+		migrationMode:        migrationMode,
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.WAFBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.WAFBackend {
 	return &wafLogBackend{
 		client:               c.Backend(),
 		queryHelper:          lmaindex.SingleIndexWAFLogs(),
@@ -51,6 +55,7 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
 		index:                index.WAFLogIndex(options...),
+		migrationMode:        migrationMode,
 	}
 }
 
@@ -100,9 +105,19 @@ func (b *wafLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		// clients, and between clients and Linseed.
 		generatedTime := time.Now().UTC()
 		f.GeneratedTime = &generatedTime
+		var id string
+		if len(f.ID) != 0 {
+			id = f.ID
+			f.ID = ""
+		}
 
 		// Add this log to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f))
+		if b.migrationMode {
+			if len(id) != 0 {
+				req.Id(id)
+			}
+		}
 		bulk.Add(req)
 	}
 
@@ -131,7 +146,7 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	log := bapi.ContextLogger(i)
 
 	// Get the base query.
-	search, startFrom, err := b.getSearch(i, opts)
+	search, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +164,13 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 			log.WithError(err).Error("Error unmarshalling WAF log")
 			continue
 		}
+		if b.migrationMode {
+			l.ID = h.Id
+		}
 		logs = append(logs, l)
 	}
 
-	// If an index has more than 10000 items or other value configured via index.max_result_window
-	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
+	afterKey, err := b.afterKey(ctx, i, opts, results, log, startFrom)
 	if err != nil {
 		return nil, err
 	}
@@ -162,13 +178,36 @@ func (b *wafLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.WA
 	return &v1.List[v1.WAFLog]{
 		TotalHits: results.TotalHits(),
 		Items:     logs,
-		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
+		AfterKey:  afterKey,
 	}, nil
 }
 
+func (b *wafLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.WAFLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
+	// on all requests
+	useDeepPagination := b.migrationMode
+	if !useDeepPagination {
+		// This is how we determine that an index has more items
+		// than index.max_result_window setting. TotalHits will
+		// return a value equal to index.max_result_window setting
+		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
+	}
+	nextPointInTime, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, log, useDeepPagination)
+	if err != nil {
+		return nil, err
+	}
+	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
+	return afterKey, nil
+}
+
 func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.WAFLogAggregationParams) (*elastic.Aggregations, error) {
+	if b.migrationMode {
+		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
+	}
+
 	// Get the base query.
-	search, _, err := b.getSearch(i, &opts.WAFLogParams)
+	search, _, err := b.getSearch(ctx, i, &opts.WAFLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +239,7 @@ func (b *wafLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 	return &results.Aggregations, nil
 }
 
-func (b *wafLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
+func (b *wafLogBackend) getSearch(ctx context.Context, i bapi.ClusterInfo, opts *v1.WAFLogParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
 		return nil, 0, err
 	}
@@ -216,7 +255,22 @@ func (b *wafLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.WAFLogParams) (*e
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	var pitID string
+	if b.migrationMode {
+		// For migration mode, we enable deep pagination for each request
+		// instead of deciding based on number of documents stored.
+		// For the first page, we need to perform the query with a point
+		// in time configured
+		if ak := opts.GetAfterKey(); ak == nil {
+			var err error
+			pitID, err = logtools.OpenPointInTime(ctx, b.client, b.index.Index(i))
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+	}
+
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), b.migrationMode, pitID)
 	if err != nil {
 		return nil, 0, err
 	}

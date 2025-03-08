@@ -25,41 +25,44 @@ type Config struct {
 	sleepTime       time.Duration
 	timeOut         time.Duration
 	name            string
+	cluster         string
 }
 
-func NewConfig(cfg config.Config) *Config {
+func NewConfig(cluster string, cfg config.Config) *Config {
 	return &Config{
-		primaryLabels:   primaryLabels(cfg),
-		secondaryLabels: secondaryLabels(cfg),
-		jobLabels:       jobLabels(cfg),
+		primaryLabels:   primaryLabels(cluster, cfg),
+		secondaryLabels: secondaryLabels(cluster, cfg),
+		jobLabels:       jobLabels(cluster, cfg),
 		pageSize:        cfg.ElasticPageSize,
 		sleepTime:       cfg.WaitForNewData,
 		timeOut:         cfg.ElasticTimeOut,
 		name:            cfg.JobName,
+		cluster:         cluster,
 	}
 }
 
-func secondaryLabels(cfg config.Config) prometheus.Labels {
+func secondaryLabels(cluster string, cfg config.Config) prometheus.Labels {
 	return prometheus.Labels{
 		metrics.LabelTenantID:  cfg.SecondaryTenantID,
-		metrics.LabelClusterID: cfg.SecondaryClusterID,
+		metrics.LabelClusterID: cluster,
 		metrics.JobName:        cfg.JobName,
 		metrics.Source:         "secondary",
 	}
 }
 
-func primaryLabels(cfg config.Config) prometheus.Labels {
+func primaryLabels(cluster string, cfg config.Config) prometheus.Labels {
 	return prometheus.Labels{
 		metrics.LabelTenantID:  cfg.PrimaryTenantID,
-		metrics.LabelClusterID: cfg.PrimaryClusterID,
+		metrics.LabelClusterID: cluster,
 		metrics.JobName:        cfg.JobName,
 		metrics.Source:         "primary",
 	}
 }
 
-func jobLabels(cfg config.Config) prometheus.Labels {
+func jobLabels(cluster string, cfg config.Config) prometheus.Labels {
 	return prometheus.Labels{
-		metrics.JobName: cfg.JobName,
+		metrics.LabelClusterID: cluster,
+		metrics.JobName:        cfg.JobName,
 	}
 }
 
@@ -73,33 +76,35 @@ type Migrator[T any] struct {
 }
 
 func (m Migrator[T]) Run(ctx context.Context, current operator.TimeInterval, checkpoints chan operator.TimeInterval) {
+	log := logrus.WithFields(logrus.Fields{"cluster": m.Cfg.cluster})
+
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Info("Context canceled. Will stop migration")
+			log.Info("Context canceled. Will stop migration")
 			return
 		default:
 			// Reading data from primary location
-			list, next, err := m.Read(ctx, current, m.Cfg.pageSize)
+			list, next, err := m.Read(ctx, current, m.Cfg.pageSize, log)
 			if err != nil {
-				logrus.WithError(err).Fatalf("Failed to read data for interval %#v", current)
+				log.WithError(err).Fatalf("Failed to read data for interval %#v", current)
 			}
 
 			// Writing data to secondary location
-			err = m.Write(ctx, list.Items)
+			err = m.Write(ctx, list.Items, log)
 			if err != nil {
-				logrus.WithError(err).Fatal("Failed to write data")
+				log.WithError(err).Fatal("Failed to write data")
 			}
 
 			// Tracking migration metrics
-			m.trackMigrationMetrics(next)
+			m.trackMigrationMetrics(current, log)
 
 			// Store periodical checkpoints in case of failure
 			select {
 			case checkpoints <- current:
-				logrus.Debugf("Store last known time interval as a checkpoint: %v", current)
+				log.Infof("Store last known time interval as a checkpoint: %v", current)
 			default:
-				logrus.Info("Skipping storing checkpoint because channel is full")
+				log.Info("Skipping storing checkpoint because channel is full")
 			}
 
 			// Advance to next interval
@@ -109,7 +114,7 @@ func (m Migrator[T]) Run(ctx context.Context, current operator.TimeInterval, che
 
 			// Waiting for new data to be generated
 			if next.HasReachedEnd() {
-				logrus.Infof("Will sleep as we need to wait for more data to be generated")
+				log.Infof("Will sleep as we need to wait for more data to be generated")
 				metrics.WaitForData.With(m.Cfg.jobLabels).Set(1)
 				time.Sleep(m.Cfg.sleepTime)
 			}
@@ -117,24 +122,24 @@ func (m Migrator[T]) Run(ctx context.Context, current operator.TimeInterval, che
 	}
 }
 
-func (m Migrator[T]) trackMigrationMetrics(next *operator.TimeInterval) {
-	lag := next.Lag(time.Now().UTC())
-	lastGeneratedTime := next.LastGeneratedTime()
+func (m Migrator[T]) trackMigrationMetrics(current operator.TimeInterval, log *logrus.Entry) {
+	lag := current.Lag(time.Now().UTC())
+	lastGeneratedTime := current.LastGeneratedTime()
 	metrics.MigrationLag.With(m.Cfg.jobLabels).Set(lag.Round(time.Second).Seconds())
 	metrics.LastReadGeneratedTimestamp.With(m.Cfg.jobLabels).Set(float64(lastGeneratedTime.UnixMilli()))
-	logrus.Infof("Migration is behind current time with %s with %s", lag, lastGeneratedTime)
+	log.Infof("Migration is behind current time with %s with %s from current %v", lag, lastGeneratedTime, current)
 }
 
-func (m Migrator[T]) Write(ctx context.Context, items []T) error {
+func (m Migrator[T]) Write(ctx context.Context, items []T, log *logrus.Entry) error {
 	timeOutContext, cancel := context.WithTimeout(ctx, m.Cfg.timeOut)
 	defer cancel()
 
 	if len(items) == 0 {
-		logrus.Infof("Will skip write to as there are no items to write")
+		log.Infof("Will skip write to as there are no items to write")
 		return nil
 	}
 
-	logrus.Infof("Writing %d items", len(items))
+	log.Infof("Writing %d items", len(items))
 	startWrite := time.Now().UTC()
 	response, err := m.Secondary.Write(timeOutContext, items)
 	if err != nil {
@@ -147,17 +152,17 @@ func (m Migrator[T]) Write(ctx context.Context, items []T) error {
 	metrics.FailedDocsWrittenPerClusterIDAndTenantID.With(m.Cfg.secondaryLabels).Add(float64(response.Failed))
 	metrics.LastWrittenGeneratedTimestamp.With(m.Cfg.jobLabels).Set(float64(time.Now().UTC().UnixMilli()))
 
-	logrus.Infof("Finished writing. total=%d, success=%d, failed=%d in %v seconds", response.Total, response.Succeeded, response.Failed, endWrite)
+	log.Infof("Finished writing. total=%d, success=%d, failed=%d in %v seconds", response.Total, response.Succeeded, response.Failed, endWrite)
 
 	return nil
 }
 
-func (m Migrator[T]) Read(ctx context.Context, current operator.TimeInterval, pageSize int) (*v1.List[T], *operator.TimeInterval, error) {
+func (m Migrator[T]) Read(ctx context.Context, current operator.TimeInterval, pageSize int, log *logrus.Entry) (*v1.List[T], *operator.TimeInterval, error) {
 	timeOutContext, cancel := context.WithTimeout(ctx, m.Cfg.timeOut)
 	defer cancel()
 
 	startRead := time.Now().UTC()
-	logrus.Info("Reading data")
+	log.Infof("Reading data for current=%v", current)
 	list, next, err := m.Primary.Read(timeOutContext, current, pageSize)
 
 	if err != nil {
@@ -165,7 +170,8 @@ func (m Migrator[T]) Read(ctx context.Context, current operator.TimeInterval, pa
 	}
 
 	endReadTime := time.Since(startRead).Seconds()
-	logrus.Infof("Read %d items in %v seconds", len(list.Items), endReadTime)
+	log.Infof("Read %d items in %v seconds", len(list.Items), endReadTime)
+	log.Infof("Next interval is set to %v", next)
 	metrics.ReadDurationPerClusterIDAndTenantID.With(m.Cfg.primaryLabels).Observe(endReadTime)
 	metrics.DocsReadPerClusterIDAndTenantID.With(m.Cfg.primaryLabels).Add(float64(len(list.Items)))
 

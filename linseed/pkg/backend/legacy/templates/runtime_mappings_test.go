@@ -12,6 +12,10 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
+var excludeRuntimeReportsField = map[string]bool{
+	"id": true,
+}
+
 func TestCompareRuntimeReportStructAndTemplate(t *testing.T) {
 
 	t.Run("Check for RuntimeReport api and template matches", func(t *testing.T) {
@@ -22,7 +26,7 @@ func TestCompareRuntimeReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]interface{}), nil))
+		require.True(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]interface{}), excludeRuntimeReportsField))
 	})
 	t.Run("Check for RuntimeReport api and template not matches", func(t *testing.T) {
 		runtimeMap := testutils.MustUnmarshalToMap(t, RuntimeReportsMappings)
@@ -35,6 +39,6 @@ func TestCompareRuntimeReportStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.False(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]interface{}), nil))
+		require.False(t, utils.CheckFieldsInJSON(t, m, runtimeMap["properties"].(map[string]interface{}), excludeRuntimeReportsField))
 	})
 }

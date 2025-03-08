@@ -31,6 +31,9 @@ func (f SnapshotsOperator) Read(ctx context.Context, current operator.TimeInterv
 	items := list.Items
 	if len(items) != 0 {
 		lastGeneratedTime = items[len(items)-1].ResourceList.GeneratedTime
+	} else {
+		lastGeneratedTimeFromCursor := current.LastGeneratedTime()
+		lastGeneratedTime = &lastGeneratedTimeFromCursor
 	}
 
 	return list, operator.Next(list.GetAfterKey(), lastGeneratedTime, current.Start), nil

@@ -30,6 +30,7 @@ var (
 	cache       bapi.IndexInitializer
 	b           bapi.L7FlowBackend
 	lb          bapi.L7LogBackend
+	migration   bapi.L7LogBackend
 	ctx         context.Context
 	cluster1    string
 	cluster2    string
@@ -72,10 +73,12 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	if singleIndex {
 		indexGetter = index.L7LogIndex()
 		b = l7.NewSingleIndexL7FlowBackend(client)
-		lb = l7.NewSingleIndexL7LogBackend(client, cache, 10000)
+		lb = l7.NewSingleIndexL7LogBackend(client, cache, 10000, false)
+		migration = l7.NewSingleIndexL7LogBackend(client, cache, 10000, true)
 	} else {
 		b = l7.NewL7FlowBackend(client)
-		lb = l7.NewL7LogBackend(client, cache, 10000)
+		lb = l7.NewL7LogBackend(client, cache, 10000, false)
+		migration = l7.NewL7LogBackend(client, cache, 10000, true)
 		indexGetter = index.L7LogMultiIndex
 	}
 

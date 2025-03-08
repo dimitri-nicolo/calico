@@ -21,7 +21,7 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-func NewBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.BenchmarksBackend {
+func NewBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.BenchmarksBackend {
 	return &benchmarksBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -30,10 +30,11 @@ func NewBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deep
 		singleIndex:          false,
 		index:                index.ComplianceBenchmarkMultiIndex,
 		queryHelper:          lmaindex.MultiIndexBenchmarks(),
+		migrationMode:        migrationMode,
 	}
 }
 
-func NewSingleIndexBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.BenchmarksBackend {
+func NewSingleIndexBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.BenchmarksBackend {
 	return &benchmarksBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -42,6 +43,7 @@ func NewSingleIndexBenchmarksBackend(c lmaelastic.Client, cache bapi.IndexInitia
 		singleIndex:          true,
 		index:                index.ComplianceBenchmarksIndex(options...),
 		queryHelper:          lmaindex.SingleIndexBenchmarks(),
+		migrationMode:        migrationMode,
 	}
 }
 
@@ -53,6 +55,9 @@ type benchmarksBackend struct {
 	queryHelper          lmaindex.Helper
 	singleIndex          bool
 	index                api.Index
+
+	// Migration knobs
+	migrationMode bool
 }
 
 type benchmarkWithExtras struct {
@@ -77,7 +82,7 @@ func (b *benchmarksBackend) prepareForWrite(i bapi.ClusterInfo, l v1.Benchmarks)
 func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *v1.BenchmarksParams) (*v1.List[v1.Benchmarks], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(i, opts)
+	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +104,7 @@ func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *
 		logs = append(logs, l)
 	}
 
-	// If an index has more than 10000 items or other value configured via index.max_result_window
-	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
+	afterKey, err := b.afterKey(ctx, i, opts, results, log, startFrom)
 	if err != nil {
 		return nil, err
 	}
@@ -109,8 +112,27 @@ func (b *benchmarksBackend) List(ctx context.Context, i bapi.ClusterInfo, opts *
 	return &v1.List[v1.Benchmarks]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
+		AfterKey:  afterKey,
 	}, nil
+}
+
+func (b *benchmarksBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.BenchmarksParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
+	// on all requests
+	useDeepPagination := b.migrationMode
+	if !useDeepPagination {
+		// This is how we determine that an index has more items
+		// than index.max_result_window setting. TotalHits will
+		// return a value equal to index.max_result_window setting
+		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
+	}
+	nextPointInTime, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, log, useDeepPagination)
+	if err != nil {
+		return nil, err
+	}
+	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
+	return afterKey, nil
 }
 
 func (b *benchmarksBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []v1.Benchmarks) (*v1.BulkResponse, error) {
@@ -168,7 +190,7 @@ func (b *benchmarksBackend) Create(ctx context.Context, i bapi.ClusterInfo, l []
 	}, nil
 }
 
-func (b *benchmarksBackend) getSearch(i bapi.ClusterInfo, opts *v1.BenchmarksParams) (*elastic.SearchService, int, error) {
+func (b *benchmarksBackend) getSearch(ctx context.Context, i bapi.ClusterInfo, opts *v1.BenchmarksParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
 		return nil, 0, err
 	}
@@ -185,7 +207,22 @@ func (b *benchmarksBackend) getSearch(i bapi.ClusterInfo, opts *v1.BenchmarksPar
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	var pitID string
+	if b.migrationMode {
+		// For migration mode, we enable deep pagination for each request
+		// instead of deciding based on number of documents stored.
+		// For the first page, we need to perform the query with a point
+		// in time configured
+		if ak := opts.GetAfterKey(); ak == nil {
+			var err error
+			pitID, err = logtools.OpenPointInTime(ctx, b.client, b.index.Index(i))
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+	}
+
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), b.migrationMode, pitID)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -64,14 +64,12 @@ func TestMigrator_Run(t *testing.T) {
 		fakeSecondary := fake.Operator{}
 		anyLogMigrator := migrator.Migrator[fake.AnyLog]{
 			Primary: &fakePrimary,
-			Cfg: migrator.NewConfig(config.Config{
-				PrimaryClusterID:   "primary",
-				PrimaryTenantID:    "primary",
-				SecondaryClusterID: "secondary",
-				SecondaryTenantID:  "secondary",
-				JobName:            "jobName",
-				WaitForNewData:     5 * time.Millisecond,
-				ElasticTimeOut:     5 * time.Minute,
+			Cfg: migrator.NewConfig("cluster", config.Config{
+				PrimaryTenantID:   "primary",
+				SecondaryTenantID: "secondary",
+				JobName:           "jobName",
+				WaitForNewData:    5 * time.Millisecond,
+				ElasticTimeOut:    5 * time.Minute,
 			}),
 			Secondary: &fakeSecondary,
 		}
@@ -124,14 +122,12 @@ func TestMigrator_Run(t *testing.T) {
 		fakeSecondary := fake.Operator{}
 		anyLogMigrator := migrator.Migrator[fake.AnyLog]{
 			Primary: &fakePrimary,
-			Cfg: migrator.NewConfig(config.Config{
-				PrimaryClusterID:   "primary",
-				PrimaryTenantID:    "primary",
-				SecondaryClusterID: "secondary",
-				SecondaryTenantID:  "secondary",
-				JobName:            "jobName",
-				WaitForNewData:     5 * time.Millisecond,
-				ElasticTimeOut:     5 * time.Minute,
+			Cfg: migrator.NewConfig("cluster", config.Config{
+				PrimaryTenantID:   "primary",
+				SecondaryTenantID: "secondary",
+				JobName:           "jobName",
+				WaitForNewData:    5 * time.Millisecond,
+				ElasticTimeOut:    5 * time.Minute,
 			}),
 			Secondary: &fakeSecondary,
 		}

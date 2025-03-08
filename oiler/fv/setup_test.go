@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,11 +38,12 @@ var (
 )
 
 type TestSpec struct {
-	name      string
-	primary   bapi.ClusterInfo
-	secondary bapi.ClusterInfo
-	backend   linseedconfig.BackendType
-	idx       bapi.Index
+	name            string
+	clusters        []string
+	primaryTenant   string
+	secondaryTenant string
+	backend         linseedconfig.BackendType
+	idx             bapi.Index
 }
 
 func Run(t *testing.T, name string, specs []TestSpec, testFn func(t *testing.T, spec TestSpec)) {
@@ -54,16 +56,15 @@ func Run(t *testing.T, name string, specs []TestSpec, testFn func(t *testing.T, 
 }
 
 type OilerArgs struct {
-	PrimaryClusterID string
-	PrimaryTenantID  string
-	PrimaryBackend   linseedconfig.BackendType
+	PrimaryTenantID string
+	PrimaryBackend  linseedconfig.BackendType
 
-	SecondClusterID  string
 	SecondTenantID   string
 	SecondaryBackend linseedconfig.BackendType
 
 	DataType bapi.DataType
 	JobName  string
+	Clusters []string
 }
 
 func RunOiler(t *testing.T, args OilerArgs) *containers.Container {
@@ -78,8 +79,7 @@ func RunOiler(t *testing.T, args OilerArgs) *containers.Container {
 		"-e", "OILER_SECONDARY_ELASTIC_HOST=localhost",
 		"-e", "OILER_PRIMARY_ELASTIC_SCHEME=http",
 		"-e", "OILER_SECONDARY_ELASTIC_SCHEME=http",
-		"-e", fmt.Sprintf("OILER_PRIMARY_CLUSTER_ID=%s", args.PrimaryClusterID),
-		"-e", fmt.Sprintf("OILER_SECONDARY_CLUSTER_ID=%s", args.SecondClusterID),
+		"-e", fmt.Sprintf("OILER_CLUSTERS=%s", strings.Join(args.Clusters, ",")),
 		"-e", fmt.Sprintf("OILER_PRIMARY_TENANT_ID=%s", args.PrimaryTenantID),
 		"-e", fmt.Sprintf("OILER_SECONDARY_TENANT_ID=%s", args.SecondTenantID),
 		"-e", fmt.Sprintf("OILER_PRIMARY_BACKEND=%s", args.PrimaryBackend),
@@ -90,7 +90,7 @@ func RunOiler(t *testing.T, args OilerArgs) *containers.Container {
 		"-e", fmt.Sprintf("OILER_WAIT_FOR_NEW_DATA=%s", "1s"),
 		"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
 		"-e", "KUBERNETES_SERVICE_PORT=6443",
-		"-e", "OILER_LOG_LEVEL=TRACE",
+		"-e", "OILER_LOG_LEVEL=INFO",
 		"-e", "OILER_NAMESPACE=default",
 		"tigera/oiler:latest",
 	}

@@ -2,10 +2,7 @@ package operator
 
 import (
 	"context"
-	"strconv"
 	"time"
-
-	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -85,15 +82,10 @@ func (it *TimeInterval) generatedTimeFromCursor() (*time.Time, error) {
 	if len(searchFromVals.([]interface{})) > 0 {
 		searchFromVal := searchFromVals.([]interface{})[0]
 		switch searchFromVal := searchFromVal.(type) {
-		case string:
+		case float64:
 			// Values for generated_time are stored as floating number
 			// representing unix milliseconds since epoch time
-			val, err := strconv.ParseFloat(searchFromVal, 64)
-			if err != nil {
-				logrus.Warnf("Couldn't parse value from search from string %s", searchFromVal)
-				return nil, err
-			}
-			last := time.Unix(int64(val), 0).UTC()
+			last := time.UnixMilli(int64(searchFromVal)).UTC()
 			return &last, nil
 		}
 	}

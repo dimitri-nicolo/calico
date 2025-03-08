@@ -23,20 +23,23 @@ func NewCoordinator(checkpoints <-chan operator.TimeInterval, storage Storage) *
 	return &Coordinator{checkpoints: checkpoints, storage: storage}
 }
 
-func (w *Coordinator) Run(ctx context.Context) {
+func (w *Coordinator) Run(ctx context.Context, cluster string) {
+	log := logrus.WithFields(logrus.Fields{"cluster": cluster})
+
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Infof("Stopping coordinator")
+			log.Infof("Stopping coordinator")
 			return
 		case checkpoint, ok := <-w.checkpoints:
 			if ok {
 				last := checkpoint.LastGeneratedTime()
-				if !last.Equal(w.lastWritten) {
-					logrus.Infof("Storing checkpoint for %s", last.String())
+				log.Infof("Last checkpoint %s vs %s", last.String(), w.lastWritten)
+				if !last.IsZero() && !last.Equal(w.lastWritten) {
+					log.Infof("Storing checkpoint for %s", last.String())
 					err := w.storage.Write(ctx, last)
 					if err != nil {
-						logrus.WithError(err).Errorf("Error storing checkpoint for %s", last.String())
+						log.WithError(err).Errorf("Error storing checkpoint for %s", last.String())
 						continue
 					}
 					w.lastWritten = last
