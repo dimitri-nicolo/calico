@@ -134,6 +134,9 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 					} else {
 						cs.local = clusterState
 					}
+
+					// Assign tunnel addresees in IPAM based on the topology.
+					assignTunnelAddresses(infra, tc, client)
 				}
 
 				if cs.IsRemoteSetup() {
