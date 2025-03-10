@@ -116,6 +116,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("NATOutgoing remote cluster r
 		for i, infraFactory := range factories.AllFactories() {
 			topologyOptions := infrastructure.DefaultTopologyOptions()
 			topologyOptions.VXLANMode = api.VXLANModeAlways
+			topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 			topologyOptions.WithTypha = true
 			topologyOptions.IPIPEnabled = false
 			if i == 1 {
