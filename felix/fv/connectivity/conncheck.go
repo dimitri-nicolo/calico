@@ -122,7 +122,9 @@ func (c *Checker) ExpectNone(from ConnectionSource, to ConnectionTarget, explici
 // Expect asserts existing connectivity between a ConnectionSource
 // and ConnectionTarget with details configurable with ExpectationOption(s).
 // This is a super set of ExpectSome()
-func (c *Checker) Expect(expected Expected, from ConnectionSource, to ConnectionTarget, opts ...ExpectationOption) {
+func (c *Checker) Expect(expected Expected,
+	from ConnectionSource, to ConnectionTarget, opts ...ExpectationOption,
+) {
 	c.expect(expected, from, to, opts...)
 }
 
