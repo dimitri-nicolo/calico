@@ -19,7 +19,7 @@ func main() {
 	http.Handle("/sidecar-webhook", sidecar.NewSidecarHandler(cfg))
 	http.HandleFunc("/live", liveHandler)
 
-	if err := http.ListenAndServeTLS(":6443", cfg.TLSCert, cfg.TLSKey, nil); err != nil {
+	if err := http.ListenAndServeTLS(cfg.ListenAddr, cfg.TLSCert, cfg.TLSKey, nil); err != nil {
 		log.Fatal("Server stopped unexpected: ", err)
 	}
 }
