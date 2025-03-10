@@ -72,7 +72,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 		enableIPv6 := testConfig.EnableIPv6
 		overlap := testConfig.Overlap
 
-		Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s, brokenXSum: %v, enableIPv6: %v, overlap: %v", vxlanMode, routeSource, brokenXSum, enableIPv6, overlap), func() {
+		Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s, brokenXSum: %v, enableIPv6: %v, overlap: %v, isRemote: %v", vxlanMode, routeSource, brokenXSum, enableIPv6, overlap, infraFactories.IsRemoteSetup()), func() {
 			var (
 				cs *VXLANClusters
 				cc *connectivity.Checker
@@ -106,6 +106,7 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 							// Change CIDR for the second datastore to prevent overlap.
 							topologyOptions.IPPoolCIDR = "10.75.0.0/16"
 							topologyOptions.IPv6PoolCIDR = "dead:cafe::/64"
+							topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
 						} else if overlap == OverlapTestType_Connect {
 							logrus.Info("OverlapTestType_Connect: local and remote clusters share IP pool CIDRs.")
 						} else if overlap == OverlapTestType_ConnectDisconnect {
