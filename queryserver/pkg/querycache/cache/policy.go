@@ -2,6 +2,7 @@
 package cache
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -704,8 +705,27 @@ func (d *policyData) GetResourceType() api.Resource {
 	}
 }
 
-func (d *policyData) IsKubernetesType() bool {
-	return strings.ContainsAny(d.GetResource().GetObjectKind().GroupVersionKind().Kind, "kubernetes")
+func (d *policyData) IsKubernetesType() (bool, error) {
+	nameParts := strings.Split(d.GetResource().GetObjectMeta().GetName(), ".")
+
+	switch len(nameParts) {
+	case 2:
+		return false, nil // calico policies' name consists of two parts: "tier.policyName"
+	case 3:
+		// we should check for contains since staged policies have "staged" tag as well: staged:knp
+		if strings.Contains(nameParts[0], "knp") || /* kubernetes network policies*/
+			strings.Contains(nameParts[0], "kanp") || /*kubernetes admin network policies*/
+			strings.Contains(nameParts[0], "kbanp") /* kubernetes baseline admin network policies*/ {
+			return true, nil
+		} else {
+			// policy type is unknown
+			log.Errorf("Unknown policy format: %s", nameParts[0])
+			return false, fmt.Errorf("unknown policy type: %s", nameParts[0])
+		}
+	default:
+		log.Errorf("Unknown policy name structure: %s", d.GetResource().GetObjectMeta().GetName())
+		return false, fmt.Errorf("unknown policy name structure")
+	}
 }
 
 // tierData is used to hold policy data in the cache, and also implements the Policy interface
