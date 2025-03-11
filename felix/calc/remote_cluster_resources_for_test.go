@@ -72,7 +72,7 @@ func StateWithPool(state State, cluster string, cidr string, flush bool) State {
 	}
 
 	routeUpdate := types.RouteUpdate{
-		Type:       proto.RouteType_CIDR_INFO,
+		Types:      proto.RouteType_CIDR_INFO,
 		IpPoolType: proto.IPPoolType_VXLAN,
 		Dst:        cidr,
 	}
@@ -131,7 +131,7 @@ func StateWithBlock(state State, cluster string, cidr string, flush bool, poolTy
 	}
 
 	routeUpdate := types.RouteUpdate{
-		Type:        proto.RouteType_REMOTE_WORKLOAD,
+		Types:       proto.RouteType_REMOTE_WORKLOAD,
 		IpPoolType:  poolType,
 		Dst:         cidr,
 		DstNodeName: keyName,
@@ -177,7 +177,7 @@ func StateWithNode(state State, cluster string, host string, hostIP string, vxla
 	}
 
 	routeUpdate := types.RouteUpdate{
-		Type:        routeType,
+		Types:       routeType,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         hostIP + "/32",
 		DstNodeName: keyName,
@@ -222,7 +222,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 	}
 
 	routeUpdate := types.RouteUpdate{
-		Type:        proto.RouteType_REMOTE_WORKLOAD,
+		Types:       proto.RouteType_REMOTE_WORKLOAD,
 		IpPoolType:  poolType,
 		Dst:         ip + "/32",
 		DstNodeName: hostKeyName,
@@ -230,7 +230,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 		Borrowed:    borrowed,
 	}
 	if host == localHostname {
-		routeUpdate.Type = proto.RouteType_LOCAL_WORKLOAD
+		routeUpdate.Types |= proto.RouteType_LOCAL_WORKLOAD
 		routeUpdate.LocalWorkload = true
 	}
 
@@ -270,7 +270,7 @@ func StateWithVTEP(state State, cluster string, ip string, flush bool, mac strin
 		ParentDeviceIp: hostIP,
 	}
 	tunnelRouteUpdate := types.RouteUpdate{
-		Type:        proto.RouteType_REMOTE_TUNNEL,
+		Types:       proto.RouteType_REMOTE_TUNNEL,
 		IpPoolType:  proto.IPPoolType_VXLAN,
 		Dst:         ip + "/32",
 		DstNodeName: keyName,

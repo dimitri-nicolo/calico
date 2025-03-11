@@ -244,7 +244,7 @@ var routelocalWlTenDotThree = types.RouteUpdate{
 }
 
 var routelocalWlTenDotOneWithNodeIP = types.RouteUpdate{
-	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Types:         proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.1/32",
 	DstNodeName:   localHostname,
 	DstNodeIp:     "192.168.0.1",
@@ -252,7 +252,7 @@ var routelocalWlTenDotOneWithNodeIP = types.RouteUpdate{
 }
 
 var routelocalWlTenDotTwoWithNodeIP = types.RouteUpdate{
-	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Types:         proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.2/32",
 	DstNodeName:   localHostname,
 	DstNodeIp:     "192.168.0.1",
@@ -260,7 +260,7 @@ var routelocalWlTenDotTwoWithNodeIP = types.RouteUpdate{
 }
 
 var routelocalWlTenDotThreeWithNodeIP = types.RouteUpdate{
-	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Types:         proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.3/32",
 	DstNodeName:   localHostname,
 	DstNodeIp:     "192.168.0.1",
@@ -268,7 +268,7 @@ var routelocalWlTenDotThreeWithNodeIP = types.RouteUpdate{
 }
 
 var routelocalWlTenDotFourWithNodeIP = types.RouteUpdate{
-	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Types:         proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.4/32",
 	DstNodeName:   localHostname,
 	DstNodeIp:     "192.168.0.1",
@@ -276,7 +276,7 @@ var routelocalWlTenDotFourWithNodeIP = types.RouteUpdate{
 }
 
 var routelocalWlTenDotOneWithNodeIPTwo = types.RouteUpdate{
-	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Types:         proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.1/32",
 	DstNodeName:   localHostname,
 	DstNodeIp:     "192.168.0.2",
@@ -284,7 +284,7 @@ var routelocalWlTenDotOneWithNodeIPTwo = types.RouteUpdate{
 }
 
 var routelocalWlTenDotTwoWithNodeIPTwo = types.RouteUpdate{
-	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Types:         proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.2/32",
 	DstNodeName:   localHostname,
 	DstNodeIp:     "192.168.0.2",
@@ -292,7 +292,7 @@ var routelocalWlTenDotTwoWithNodeIPTwo = types.RouteUpdate{
 }
 
 var routelocalWlTenDotThreeWithNodeIPTwo = types.RouteUpdate{
-	Type:          proto.RouteType_LOCAL_WORKLOAD,
+	Types:         proto.RouteType_LOCAL_WORKLOAD,
 	Dst:           "10.0.0.3/32",
 	DstNodeName:   localHostname,
 	DstNodeIp:     "192.168.0.2",
@@ -3086,13 +3086,13 @@ var tproxyTwoLocalWEPsOneNewIPs = tproxyTwoLocalWEPs.withKVUpdates(
 ).withRoutes(
 	// Routes for the local WEPs.
 	types.RouteUpdate{
-		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Types:         proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "11.0.0.1/32",
 		DstNodeName:   localHostname,
 		LocalWorkload: true,
 	},
 	types.RouteUpdate{
-		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Types:         proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "11.0.0.2/32",
 		DstNodeName:   localHostname,
 		LocalWorkload: true,
@@ -3100,13 +3100,13 @@ var tproxyTwoLocalWEPsOneNewIPs = tproxyTwoLocalWEPs.withKVUpdates(
 	routelocalWlTenDotTwo,
 	routelocalWlTenDotThree,
 	types.RouteUpdate{
-		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Types:         proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "fc00:fe12::1/128",
 		DstNodeName:   localHostname,
 		LocalWorkload: true,
 	},
 	types.RouteUpdate{
-		Type:          proto.RouteType_LOCAL_WORKLOAD,
+		Types:         proto.RouteType_LOCAL_WORKLOAD,
 		Dst:           "fc00:fe12::2/128",
 		DstNodeName:   localHostname,
 		LocalWorkload: true,

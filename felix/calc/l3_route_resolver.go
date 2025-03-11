@@ -877,7 +877,7 @@ func (c *L3RouteResolver) flush() {
 
 				// With multiple clusters in the trie, it's possible that this Pool was enclosed by another Pool or Block.
 				// We reset some fields in case we are enclosed by a block.
-				rt.Type = proto.RouteType_CIDR_INFO
+				rt.Types |= proto.RouteType_CIDR_INFO
 				rt.DstNodeName = ""
 			}
 			borrowed := false
