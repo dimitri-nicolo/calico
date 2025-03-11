@@ -1250,6 +1250,10 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 			)
 
 			BeforeEach(func() {
+				if infraFactories.IsRemoteSetup() || overlap != OverlapTestType_None {
+					Skip("Test only requires single-cluster coverage")
+				}
+
 				// We should always have access to the local InfraFactory instance
 				iFactories := infraFactories.AllFactories()
 				localFactory := iFactories[0]
@@ -1350,7 +1354,14 @@ var _ = infrastructure.DatastoreDescribeWithRemote("_BPF-SAFE_ VXLAN topology be
 			)
 
 			BeforeEach(func() {
-				infra = getInfra()
+				if infraFactories.IsRemoteSetup() || overlap != OverlapTestType_None {
+					Skip("Test only requires single-cluster coverage")
+				}
+
+				// We should always have access to the local InfraFactory instance
+				iFactories := infraFactories.AllFactories()
+				localFactory := iFactories[0]
+				infra = localFactory()
 
 				if (NFTMode() || BPFMode()) && getDataStoreType(infra) == "etcdv3" {
 					Skip("Skipping NFT / BPF tests for etcdv3 backend.")
