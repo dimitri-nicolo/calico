@@ -230,7 +230,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 		Borrowed:    borrowed,
 	}
 	if host == localHostname {
-		routeUpdate.Types |= proto.RouteType_LOCAL_WORKLOAD
+		routeUpdate.Types = proto.RouteType_LOCAL_WORKLOAD
 		routeUpdate.LocalWorkload = true
 	}
 
