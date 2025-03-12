@@ -32,6 +32,7 @@ type ActionFactory interface {
 	Masq(toPorts string) Action
 	SetConnmark(mark, mask uint32) Action
 	Reject(with RejectWith) Action
+	LimitPacketRate(rate int64, mark uint32) Action
 
 	// Enterprise only actions.
 	Nflog(group uint16, prefix string, size int) Action

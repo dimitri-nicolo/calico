@@ -983,6 +983,7 @@ func (m *endpointManager) updateWorkloadEndpointChains(
 		adminUp,
 		tierGroups,
 		workload.ProfileIds,
+		workload.QosControls,
 		workload.IsEgressGateway,
 		uint16(workload.EgressGatewayHealthPort),
 		m.ipVersion,
