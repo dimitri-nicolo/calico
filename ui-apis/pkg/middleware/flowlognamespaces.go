@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
@@ -44,12 +44,12 @@ type Namespace struct {
 	Name string `json:"name"`
 }
 
-func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lsclient client.Client) http.Handler {
+func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lsclient client.Client, impersonationEnabled bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// validate request
 		params, err := validateFlowLogNamespacesRequest(req)
 		if err != nil {
-			log.WithError(err).Info("Error validating request")
+			logrus.WithError(err).Info("Error validating request")
 			switch err {
 			case ErrInvalidMethod:
 				http.Error(w, err.Error(), http.StatusMethodNotAllowed)
@@ -63,23 +63,28 @@ func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFacto
 
 		k8sCli, err := k8sClientFactory.ClientSetForCluster(params.ClusterName)
 		if err != nil {
-			log.WithError(err).Error("failed to get k8s cli")
+			logrus.WithError(err).Error("failed to get k8s cli")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		user, ok := k8srequest.UserFrom(req.Context())
 		if !ok {
-			log.WithError(err).Error("user not found in context")
+			logrus.WithError(err).Error("user not found in context")
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
-		flowHelper := rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
+		var flowHelper rbac.FlowHelper
+		if impersonationEnabled {
+			// We only check the user's RBAC permissions if impersonation is enabled in the
+			// managed cluster. Otherwise, per-user RBAC permissions are not propagated to the managed cluster.
+			flowHelper = rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
+		}
 
 		response, err := getNamespacesFromLinseed(params, lsclient, flowHelper)
 		if err != nil {
-			log.WithError(err).Info("Error getting namespaces from linseed")
+			logrus.WithError(err).Info("Error getting namespaces from linseed")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
 		}
 
@@ -87,7 +92,7 @@ func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFacto
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(response)
 		if err != nil {
-			log.WithError(err).Info("Encoding namespaces array failed")
+			logrus.WithError(err).Info("Encoding namespaces array failed")
 			http.Error(w, errGeneric.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -123,12 +128,12 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	now := time.Now()
 	startDateTimeParm, _, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
-		log.WithError(err).Info("Error extracting start date time")
+		logrus.WithError(err).Info("Error extracting start date time")
 		return nil, ErrParseRequest
 	}
 	endDateTimeParm, _, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
-		log.WithError(err).Info("Error extracting end date time")
+		logrus.WithError(err).Info("Error extracting end date time")
 		return nil, ErrParseRequest
 	}
 	strict := false
@@ -271,7 +276,7 @@ func getNamespacesFromLinseed(params *FlowLogNamespaceParams, lsclient client.Cl
 	// Check for an error after all the namespaces have been processed. This should be fine
 	// since an error should stop pages from being received.
 	if err, ok := <-errors; ok {
-		log.WithError(err).Warning("Error processing the flow logs for finding valid namespaces")
+		logrus.WithError(err).Warning("Error processing the flow logs for finding valid namespaces")
 		return namespaces, err
 	}
 
@@ -279,6 +284,11 @@ func getNamespacesFromLinseed(params *FlowLogNamespaceParams, lsclient client.Cl
 }
 
 func allowedNamespace(params *FlowLogNamespaceParams, namespace string, rbacHelper rbac.FlowHelper) bool {
+	if rbacHelper == nil {
+		logrus.Debug("No RBAC helper provided, allowing all namespaces")
+		return true
+	}
+
 	if params.Prefix != "" && !strings.HasPrefix(namespace, params.Prefix) {
 		return false
 	}
@@ -287,6 +297,11 @@ func allowedNamespace(params *FlowLogNamespaceParams, namespace string, rbacHelp
 }
 
 func checkNamespaceRBAC(rbacHelper rbac.FlowHelper, namespace string) bool {
+	if rbacHelper == nil {
+		logrus.Debug("No RBAC helper provided, allowing all namespaces")
+		return true
+	}
+
 	var allowed bool
 	var err error
 
@@ -294,12 +309,12 @@ func checkNamespaceRBAC(rbacHelper rbac.FlowHelper, namespace string) bool {
 		// Check the global namespace permissions
 		allowed, err = rbacHelper.IncludeGlobalNamespace()
 		if err != nil {
-			log.WithError(err).Info("Error checking RBAC permissions for the cluster scope")
+			logrus.WithError(err).Info("Error checking RBAC permissions for the cluster scope")
 		}
 	} else {
 		// Check if the user has access to all namespaces first
 		if allowed, err = rbacHelper.IncludeNamespace(""); err != nil {
-			log.WithError(err).Info("Error checking namespace RBAC permissions for all namespaces")
+			logrus.WithError(err).Info("Error checking namespace RBAC permissions for all namespaces")
 			return false
 		} else if allowed {
 			return true
@@ -308,7 +323,7 @@ func checkNamespaceRBAC(rbacHelper rbac.FlowHelper, namespace string) bool {
 		// Check the namespace permissions
 		allowed, err = rbacHelper.IncludeNamespace(namespace)
 		if err != nil {
-			log.WithError(err).Info("Error checking namespace RBAC permissions")
+			logrus.WithError(err).Info("Error checking namespace RBAC permissions")
 		}
 	}
 	return allowed

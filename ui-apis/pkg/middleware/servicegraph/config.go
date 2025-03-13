@@ -43,4 +43,8 @@ type Config struct {
 
 	// TenantNamespace is the namespace of the tenant this instance is serving, or empty if this is a single-tenant cluster.
 	TenantNamespace string
+
+	// Whether or not to enable fine-grained RBAC on ServiceGraph queries. If set to false, then per-use RBAC will
+	// not be enforced. This is primarily used for free-tier clusters that do not support per-user RBAC.
+	FineGrainedRBAC bool
 }

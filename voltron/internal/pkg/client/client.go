@@ -170,7 +170,7 @@ func (c *Client) ServeTunnelHTTP() error {
 		log.Infof("serving HTTP/2 enabled")
 	}
 
-	log.Infof("starting to server tunneled HTTP")
+	log.Infof("starting to serve tunneled HTTP")
 	return c.http.Serve(listener)
 }
 

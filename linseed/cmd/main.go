@@ -393,6 +393,7 @@ func run() {
 	// for authorization.
 	handlers := []handler.Handler{
 		l3.New(flowBackend, flowLogBackend),
+		l3.NewGoldmane(flowLogBackend),
 		l7.New(l7FlowBackend, l7LogBackend),
 		dns.New(dnsFlowBackend, dnsLogBackend),
 		events.New(eventBackend),

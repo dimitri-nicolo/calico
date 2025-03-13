@@ -52,14 +52,13 @@ const (
 )
 
 type ListFlowsParams struct {
-	Watch       bool            `urlQuery:"watch"`
-	StartTimeGt time.Time       `urlQuery:"startTimeGt"`
-	StartTimeLt time.Time       `urlQuery:"startTimeLt"`
-	SortBy      listFlowsSortBy `urlQuery:"sortBy"`
+	Watch        bool            `urlQuery:"watch"`
+	StartTimeGte time.Time       `urlQuery:"startTimeGte"`
+	StartTimeLt  time.Time       `urlQuery:"startTimeLt"`
+	SortBy       listFlowsSortBy `urlQuery:"sortBy"`
 }
 
-type StreamFlowsParams struct {
-}
+type StreamFlowsParams struct{}
 
 type FlowResponse struct {
 	StartTime       time.Time `json:"start_time"`

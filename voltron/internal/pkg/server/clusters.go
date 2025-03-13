@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/http2"
+	"golang.org/x/time/rate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
@@ -163,6 +164,16 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 	logrus.Infof("Appended certificate for cluster %s to client certificate pool", mc.ID)
 
 	if cs.forwardingEnabled {
+		var opts []InnerHandlerOption
+		if cs.voltronCfg.GoldmaneEnabled {
+			opts = append(opts, WithTokenPath(voltronToken))
+
+			// A simple rate limited to prevent abuse of the tunnel. We know that Goldmane will only publish flows every 5 minutes
+			// during normal operation. This may occur slightly more frequently if we hit retry / restart scenarios, so set a limit of
+			// one request every 30 seconds, with a burst of 10 requests.
+			opts = append(opts, WithRateLimiter(rate.NewLimiter(rate.Every(30*time.Second), 10)))
+		}
+
 		// Create a proxy to use for connections received over the tunnel that aren't
 		// directed via SNI. This is just used for Linseed connections from managed clusters.
 		// We use the same TLS configuration as the main tunnel. We will proxy the connection
@@ -171,7 +182,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 		// This handler will only be used for requests from managed clusters over the mTLS tunnel
 		// with a server name of "tigera-linseed.tigera-elasticsearch".
 		innerServer := &http.Server{
-			Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc, cs.innerProxy).Handler(),
+			Handler:     NewInnerHandler(cs.voltronCfg.TenantID, mc, cs.innerProxy, opts...).Handler(),
 			TLSConfig:   cs.tlsConfig,
 			ReadTimeout: DefaultReadTimeout,
 			ErrorLog:    log.New(logutils.NewLogrusWriter(logrus.WithFields(logrus.Fields{"server": "innerServer"})), "", log.LstdFlags),

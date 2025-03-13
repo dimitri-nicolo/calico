@@ -30,8 +30,34 @@ func (h *PolicyHit) ToString() string {
 	tmpl := "%d|%s|%s|%s|%d"
 
 	var namePart string
+	if h.Kind == PolicyKind_EndOfTier {
+		namePart = makeNamePart(h.Trigger)
+	} else {
+		namePart = makeNamePart(h)
+	}
+
+	// Convert action from enum to string.
+	action := strings.ToLower(Action_name[int32(h.Action)])
+
+	return fmt.Sprintf(tmpl, h.PolicyIndex, h.Tier, namePart, action, h.RuleIndex)
+}
+
+func (h *PolicyHit) fields() logrus.Fields {
+	return logrus.Fields{
+		"PolicyIndex": h.PolicyIndex,
+		"Tier":        h.Tier,
+		"Name":        h.Name,
+		"Namespace":   h.Namespace,
+		"Action":      h.Action,
+		"RuleIndex":   h.RuleIndex,
+		"Kind":        h.Kind,
+	}
+}
+
+func makeNamePart(h *PolicyHit) string {
+	var namePart string
 	switch h.Kind {
-	case PolicyKind_CalicoGlobalNetworkPolicy:
+	case PolicyKind_GlobalNetworkPolicy:
 		namePart = fmt.Sprintf("%s.%s", h.Tier, h.Name)
 	case PolicyKind_CalicoNetworkPolicy:
 		namePart = fmt.Sprintf("%s/%s.%s", h.Namespace, h.Tier, h.Name)
@@ -39,19 +65,23 @@ func (h *PolicyHit) ToString() string {
 		namePart = fmt.Sprintf("%s/knp.default.%s", h.Namespace, h.Name)
 	case PolicyKind_StagedKubernetesNetworkPolicy:
 		namePart = fmt.Sprintf("%s/staged:knp.default.%s", h.Namespace, h.Name)
-	case PolicyKind_CalicoStagedGlobalNetworkPolicy:
+	case PolicyKind_StagedGlobalNetworkPolicy:
 		namePart = fmt.Sprintf("staged:%s.%s", h.Tier, h.Name)
-	case PolicyKind_CalicoStagedNetworkPolicy:
+	case PolicyKind_StagedNetworkPolicy:
 		namePart = fmt.Sprintf("%s/staged:%s.%s", h.Namespace, h.Tier, h.Name)
 	case PolicyKind_AdminNetworkPolicy:
-		namePart = fmt.Sprintf("anp.adminnetworkpolicy.%s", h.Name)
+		namePart = fmt.Sprintf("kanp.adminnetworkpolicy.%s", h.Name)
+	case PolicyKind_BaselineAdminNetworkPolicy:
+		namePart = fmt.Sprintf("kbanp.baselineadminnetworkpolicy.%s", h.Name)
 	case PolicyKind_Profile:
+		// Profile names are __PROFILE__.name. The name part may include indicators of the kind of
+		// profile - e.g., __PROFILE__.kns.default, __PROFILE__.ksa.svcacct.
 		namePart = fmt.Sprintf("__PROFILE__.%s", h.Name)
 	default:
-		logrus.WithField("kind", h.Kind).Panic("Unexpected policy kind")
+		logrus.WithFields(h.fields()).Panic("Unexpected policy kind")
 	}
-
-	return fmt.Sprintf(tmpl, h.PolicyIndex, h.Tier, namePart, h.Action, h.RuleIndex)
+	logrus.WithFields(h.fields()).WithField("namePart", namePart).Debug("Generated name part")
+	return namePart
 }
 
 // HitFromString parses a policy hit label string into a PolicyHit struct.
@@ -70,7 +100,20 @@ func HitFromString(s string) (*PolicyHit, error) {
 
 	tier := parts[1]
 	namePart := parts[2]
-	action := parts[3]
+	a := parts[3]
+
+	// Translate the action string into an Action value.
+	var action Action
+	switch strings.ToLower(a) {
+	case "allow":
+		action = Action_Allow
+	case "deny":
+		action = Action_Deny
+	case "pass":
+		action = Action_Pass
+	default:
+		return nil, fmt.Errorf("unexpected action: %s", a)
+	}
 
 	ruleIdx, err := strconv.ParseInt(parts[4], 10, 64)
 	if err != nil {
@@ -87,15 +130,18 @@ func HitFromString(s string) (*PolicyHit, error) {
 		n := nameParts[0]
 
 		if strings.HasPrefix(n, "staged:") {
-			kind = PolicyKind_CalicoStagedGlobalNetworkPolicy
+			kind = PolicyKind_StagedGlobalNetworkPolicy
 			n = strings.TrimPrefix(n, "staged:")
-		} else if strings.HasPrefix(n, "anp.") {
+		} else if strings.HasPrefix(n, "kanp.") {
 			kind = PolicyKind_AdminNetworkPolicy
-			n = strings.TrimPrefix(n, "anp.")
+			n = strings.TrimPrefix(n, "kanp.")
+		} else if strings.HasPrefix(n, "kbanp.") {
+			kind = PolicyKind_BaselineAdminNetworkPolicy
+			n = strings.TrimPrefix(n, "kbanp.")
 		} else if strings.HasPrefix(n, "__PROFILE__.") {
 			kind = PolicyKind_Profile
 		} else {
-			kind = PolicyKind_CalicoGlobalNetworkPolicy
+			kind = PolicyKind_GlobalNetworkPolicy
 		}
 
 		// At this point, n is "tier.name". The name may of dots in it, so
@@ -112,7 +158,7 @@ func HitFromString(s string) (*PolicyHit, error) {
 				kind = PolicyKind_StagedKubernetesNetworkPolicy
 				n = strings.TrimPrefix(n, "knp.")
 			} else {
-				kind = PolicyKind_CalicoStagedNetworkPolicy
+				kind = PolicyKind_StagedNetworkPolicy
 			}
 		} else {
 			if strings.HasPrefix(n, "knp.") {
@@ -128,7 +174,26 @@ func HitFromString(s string) (*PolicyHit, error) {
 		name = strings.Join(strings.Split(n, ".")[1:], ".")
 	}
 
-	return &PolicyHit{
+	if ruleIdx == -1 {
+		// This is an EndOfTier rule, which recontextualizes the values we learned above.
+		// The policy information indicates the triggering policy that caused the end of the tier
+		// to be activated.
+		return &PolicyHit{
+			Kind:        PolicyKind_EndOfTier,
+			Tier:        tier,
+			Action:      action,
+			RuleIndex:   ruleIdx,
+			PolicyIndex: polIdx,
+			Trigger: &PolicyHit{
+				Kind:      kind,
+				Name:      name,
+				Namespace: ns,
+				Tier:      tier,
+			},
+		}, nil
+	}
+
+	hit := &PolicyHit{
 		PolicyIndex: polIdx,
 		Tier:        tier,
 		Name:        name,
@@ -136,5 +201,7 @@ func HitFromString(s string) (*PolicyHit, error) {
 		Action:      action,
 		RuleIndex:   ruleIdx,
 		Kind:        kind,
-	}, nil
+	}
+	logrus.WithFields(hit.fields()).Debug("Parsed policy hit")
+	return hit, nil
 }

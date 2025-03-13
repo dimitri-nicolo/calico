@@ -118,7 +118,6 @@ func TestFV_FlowLogs(t *testing.T) {
 				require.Truef(t, testutils.MatchIn(resp.Items, testutils.FlowLogClusterEquals(cluster)), "expected result for cluster %s", cluster)
 			}
 		})
-
 	})
 
 	RunFlowLogTest(t, "should support pagination", func(t *testing.T, idx bapi.Index) {

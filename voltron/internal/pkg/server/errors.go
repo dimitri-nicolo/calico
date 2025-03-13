@@ -70,6 +70,24 @@ func unexpectedTenantIDError(tenantID string) *httpError {
 	}
 }
 
+func serverError(msg string) *httpError {
+	return &httpError{
+		Err:      errors.New(msg),
+		ErrMsg:   msg,
+		ErrCode:  "voltron-server-error",
+		HTTPCode: 500,
+	}
+}
+
+func rateLimitExceededError() *httpError {
+	return &httpError{
+		Err:      errors.New("rate limit exceeded"),
+		ErrMsg:   "Rate limit exceeded",
+		ErrCode:  "rate-limit-exceeded",
+		HTTPCode: 429,
+	}
+}
+
 // writeHTTPError replies to the request with the specified HTTP error and its corresponding
 // HTTP code. It does not otherwise end the request; the caller should ensure no further
 // writes are done to w. The HTTP error will be encoded as JSON in the response body.

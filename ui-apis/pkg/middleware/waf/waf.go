@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/projectcalico/calico/linseed/pkg/client"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	v1 "github.com/projectcalico/calico/ui-apis/pkg/apis/v1"
@@ -17,8 +16,7 @@ import (
 )
 
 // WAFRulesetsHandler handles requests related to WAF Rulesets.
-func WAFRulesetsHandler(authReview middleware.AuthorizationReview, k8sClientSetFactory lmak8s.ClientSetFactory, lsclient client.Client) http.Handler {
-
+func WAFRulesetsHandler(k8sClientSetFactory lmak8s.ClientSetFactory) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the request user
 		user, ok := request.UserFrom(r.Context())
@@ -47,12 +45,10 @@ func WAFRulesetsHandler(authReview middleware.AuthorizationReview, k8sClientSetF
 		}
 
 		handleWAFRulesetsRequest(w, r, rs)
-
 	})
 }
 
 func handleWAFRulesetsRequest(w http.ResponseWriter, r *http.Request, rulesets Rulesets) {
-
 	// Create a context with timeout to ensure we don't block for too long with this query.
 	// This releases timer resources if the operation completes before the timeout.
 	ctx, cancel := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
@@ -76,8 +72,7 @@ func handleWAFRulesetsRequest(w http.ResponseWriter, r *http.Request, rulesets R
 }
 
 // WAFRulesetHandler handles requests related to a specific WAF Ruleset.
-func WAFRulesetHandler(authReview middleware.AuthorizationReview, k8sClientSetFactory lmak8s.ClientSetFactory, lsclient client.Client) http.Handler {
-
+func WAFRulesetHandler(k8sClientSetFactory lmak8s.ClientSetFactory) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the request user
 		user, ok := request.UserFrom(r.Context())
@@ -106,12 +101,10 @@ func WAFRulesetHandler(authReview middleware.AuthorizationReview, k8sClientSetFa
 		}
 
 		handleWAFRulesetRequest(w, r, rs)
-
 	})
 }
 
 func handleWAFRulesetRequest(w http.ResponseWriter, r *http.Request, rulesets Rulesets) {
-
 	rulesetID := r.PathValue("rulesetID")
 
 	// Create a context with timeout to ensure we don't block for too long with this query.
@@ -137,8 +130,7 @@ func handleWAFRulesetRequest(w http.ResponseWriter, r *http.Request, rulesets Ru
 }
 
 // WAFRulesetHandler handles requests related to WAF Rulesets.
-func WAFRuleDetailsHandler(authReview middleware.AuthorizationReview, k8sClientSetFactory lmak8s.ClientSetFactory, lsclient client.Client) http.Handler {
-
+func WAFRuleDetailsHandler(k8sClientSetFactory lmak8s.ClientSetFactory) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the request user
 		user, ok := request.UserFrom(r.Context())
@@ -167,12 +159,10 @@ func WAFRuleDetailsHandler(authReview middleware.AuthorizationReview, k8sClientS
 		}
 
 		handleWAFRuleDetails(w, r, rs)
-
 	})
 }
 
 func handleWAFRuleDetails(w http.ResponseWriter, r *http.Request, ruleset Rulesets) {
-
 	rulesetID := r.PathValue("rulesetID")
 	ruleID := r.PathValue("ruleID")
 
