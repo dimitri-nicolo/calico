@@ -175,6 +175,7 @@ SRC_FILES=$(shell find ./pkg -name '*.go') \
 	  $(shell find ../felix -name '*.go') \
 	  $(shell find ../felix -name '*.[ch]') \
 	  $(shell find ../libcalico-go -name '*.go') \
+	  $(shell find ../goldmane -name '*.go') \
 	  $(shell find ../confd -name '*.go')
 
 ## Clean enough that a new release build will be clean

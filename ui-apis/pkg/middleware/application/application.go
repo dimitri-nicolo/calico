@@ -141,11 +141,13 @@ func processServiceRequest(
 	params.TimeRange = reqParams.TimeRange
 	params.Selector = reqParams.Selector
 
-	verbs, err := authReview.PerformReview(ctx, reqParams.ClusterName)
-	if err != nil {
-		return nil, err
+	if authReview != nil {
+		verbs, err := authReview.PerformReview(ctx, reqParams.ClusterName)
+		if err != nil {
+			return nil, err
+		}
+		params.Permissions = verbs
 	}
-	params.Permissions = verbs
 	params.MaxPageSize = middleware.MaxResultsPerPage
 	params.Timeout = &metav1.Duration{Duration: middleware.DefaultRequestTimeout}
 
@@ -245,11 +247,13 @@ func processURLRequest(
 	params.TimeRange = reqParams.TimeRange
 	params.Selector = reqParams.Selector
 
-	verbs, err := authReview.PerformReview(ctx, reqParams.ClusterName)
-	if err != nil {
-		return nil, err
+	if authReview != nil {
+		verbs, err := authReview.PerformReview(ctx, reqParams.ClusterName)
+		if err != nil {
+			return nil, err
+		}
+		params.Permissions = verbs
 	}
-	params.Permissions = verbs
 	params.MaxPageSize = middleware.MaxResultsPerPage
 	params.Timeout = &metav1.Duration{Duration: middleware.DefaultRequestTimeout}
 

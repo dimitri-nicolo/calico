@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/goldmane/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -399,13 +400,98 @@ func TestFV_WAFIngestion(t *testing.T) {
 		for _, log := range resultList.Items {
 			testutils.AssertWAFLogClusterAndReset(t, cluster, &log)
 			testutils.AssertGeneratedTimeAndReset(t, &log)
-			//testutils.AssertWAFLogGeneratedTimeAndReset(t, &log)
+			// testutils.AssertWAFLogGeneratedTimeAndReset(t, &log)
 			logStr, err := json.Marshal(log)
 			require.NoError(t, err)
 			esLogs = append(esLogs, string(logStr))
 		}
 
 		assert.Equal(t, wafLogs, strings.Join(esLogs, "\n"))
+	})
+}
+
+func TestFV_GoldmaneFlowIngestion(t *testing.T) {
+	cluster := cluster1
+	clusterInfo := cluster1Info
+	addr := "https://localhost:8443/api/v1/flows/bulk"
+	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
+
+	flo := proto.Flow{
+		Key: &proto.FlowKey{
+			SourceName:      "sourcename",
+			SourceNamespace: "sourcenamespace",
+			SourceType:      proto.EndpointType_WorkloadEndpoint,
+			DestName:        "destname",
+			DestNamespace:   "destnamespace",
+			DestType:        proto.EndpointType_WorkloadEndpoint,
+			Reporter:        proto.Reporter_Src,
+			Action:          proto.Action_Allow,
+			DestServiceName: "destservice",
+			DestServicePort: int64(80),
+			DestPort:        int64(80),
+			Proto:           "14",
+			Policies: &proto.PolicyTrace{
+				EnforcedPolicies: []*proto.PolicyHit{
+					{
+						Kind:   proto.PolicyKind_AdminNetworkPolicy,
+						Name:   "pol",
+						Tier:   "tier",
+						Action: proto.Action_Allow,
+					},
+				},
+				PendingPolicies: []*proto.PolicyHit{
+					{
+						Kind:   proto.PolicyKind_AdminNetworkPolicy,
+						Name:   "pol",
+						Tier:   "tier",
+						Action: proto.Action_Allow,
+					},
+				},
+			},
+		},
+		BytesIn:                 int64(100),
+		BytesOut:                int64(100),
+		PacketsIn:               int64(10),
+		PacketsOut:              int64(10),
+		NumConnectionsStarted:   int64(1),
+		NumConnectionsCompleted: int64(1),
+		NumConnectionsLive:      int64(1),
+		StartTime:               100,
+		EndTime:                 115,
+	}
+
+	RunFlowLogTest(t, "ingest Goldmane flow logs via bulk API", func(t *testing.T, idx bapi.Index) {
+		defer ingestionSetupAndTeardown(t, idx)()
+
+		b, err := json.Marshal(flo)
+		require.NoError(t, err)
+
+		// setup HTTP httpClient and HTTP request
+		httpClient := mTLSClient(t)
+		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, b)
+
+		// make the request to ingest flows
+		res, resBody := doRequest(t, httpClient, spec)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		assert.JSONEq(t, expectedResponse, strings.Trim(string(resBody), "\n"))
+
+		// Force a refresh in order to read the newly ingested data
+		err = testutils.RefreshIndex(ctx, lmaClient, idx.Index(clusterInfo))
+		require.NoError(t, err)
+
+		params := v1.FlowLogParams{
+			QueryParams: v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Unix(0, 0),
+					To:   time.Unix(1675469001, 0),
+				},
+			},
+		}
+
+		resultList, err := cli.FlowLogs(cluster).List(ctx, &params)
+		require.NoError(t, err)
+		require.NotNil(t, resultList)
+		require.Equal(t, int64(1), resultList.TotalHits)
 	})
 }
 

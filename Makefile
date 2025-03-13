@@ -111,6 +111,7 @@ generate:
 	$(MAKE) -C felix gen-files
 	$(MAKE) -C goldmane gen-files
 	$(MAKE) gen-manifests
+	$(MAKE) fix-changed
 
 gen-manifests: bin/helm bin/yq
 	# TODO: Ideally we don't need to do this, but the sub-charts
@@ -135,6 +136,7 @@ get-operator-crds: var-require-all-OPERATOR_BRANCH
 		echo "Update CRD $$file to be Namespaced"; \
 		sed -i 's/scope: Cluster/scope: Namespaced/g' $$file; \
 	done
+	$(MAKE) fix-changed
 
 gen-semaphore-yaml:
 	cd .semaphore && ./generate-semaphore-yaml.sh
