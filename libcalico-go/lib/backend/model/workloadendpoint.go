@@ -38,9 +38,7 @@ type WorkloadEndpointKey struct {
 	EndpointID     string `json:"-"`
 }
 
-func (key WorkloadEndpointKey) WorkloadOrHostEndpointKey() {
-	return
-}
+func (key WorkloadEndpointKey) WorkloadOrHostEndpointKey() {}
 
 func (key WorkloadEndpointKey) Host() string {
 	return key.Hostname
@@ -187,9 +185,7 @@ type WorkloadEndpoint struct {
 	ApplicationLayer           *ApplicationLayer `json:"application_layer,omitempty"`
 }
 
-func (e *WorkloadEndpoint) WorkloadOrHostEndpoint() {
-	return
-}
+func (e *WorkloadEndpoint) WorkloadOrHostEndpoint() {}
 
 func (e *WorkloadEndpoint) GetLabels() map[string]string {
 	return e.Labels
