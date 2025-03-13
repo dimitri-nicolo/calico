@@ -149,14 +149,14 @@ func (s *routeStore) SyncForever(ctx context.Context) {
 				switch payload := update.Payload.(type) {
 				case *proto.ToDataplane_RouteUpdate:
 					ru := payload.RouteUpdate
-					if ru.Type == proto.RouteType_REMOTE_WORKLOAD {
+					if protoutil.IsRouteType(ru, proto.RouteType_REMOTE_WORKLOAD) {
 						log.Debugf("received RouteUpdate for a remote workload: %+v", ru)
 						s.write(func(rs *routeStore) {
 							rs.remoteWorkloadUpdatesByDst[ru.Dst] = ru
 							s.maybeNotifyResync()
 						})
 
-					} else if ru.Type == proto.RouteType_LOCAL_WORKLOAD {
+					} else if protoutil.IsRouteType(ru, proto.RouteType_LOCAL_WORKLOAD) {
 						// we only care about local workloads describing this gateway, check if that's what we have
 						_, dstCIDR, err := net.ParseCIDR(ru.Dst)
 						if err != nil {
