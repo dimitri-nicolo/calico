@@ -23,8 +23,8 @@ var remoteClusterVXLANBlocksBase = func() State {
 
 	state = StateWithPool(state, local, "11.0.0.0/16", true)
 	state = StateWithBlock(state, local, "11.0.1.0/29", true, proto.IPPoolType_VXLAN, localClusterHost2, localClusterHost2IPAddr)
-	state = StateWithVTEP(state, local, "11.0.1.1", true, localClusterHost2MAC, localClusterHost2, localClusterHost2IPAddr)
-	state = StateWithNode(state, local, localClusterHost2, localClusterHost2IPAddr, "11.0.1.1")
+	state = StateWithVTEP(state, local, "11.0.1.1", true, localClusterHost2MAC, proto.IPPoolType_VXLAN, localClusterHost2IPAddr, localClusterHost2)
+	state = StateWithNode(state, local, localClusterHost2, localClusterHost2IPAddr, "11.0.1.1", "", "")
 
 	return state
 }()
@@ -68,8 +68,8 @@ var remoteClusterVXLANWEPsBase = func() State {
 
 	state = StateWithPool(state, local, "11.0.0.0/16", true)
 	state = StateWithWEP(state, local, "11.0.0.5", true, proto.IPPoolType_VXLAN, "base-wep", localClusterHost2, localClusterHost2IPAddr, false)
-	state = StateWithVTEP(state, local, "11.0.1.1", true, localClusterHost2MAC, localClusterHost2, localClusterHost2IPAddr)
-	state = StateWithNode(state, local, localClusterHost2, localClusterHost2IPAddr, "11.0.1.1")
+	state = StateWithVTEP(state, local, "11.0.1.1", true, localClusterHost2MAC, proto.IPPoolType_VXLAN, localClusterHost2IPAddr, localClusterHost2)
+	state = StateWithNode(state, local, localClusterHost2, localClusterHost2IPAddr, "11.0.1.1", "", "")
 
 	return state
 }()
@@ -115,8 +115,8 @@ var remoteClusterBlockEnclosesLocalBlock = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/28", true, proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, local, "10.0.0.0/29", true, proto.IPPoolType_NONE, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -128,8 +128,8 @@ var remoteClusterBlockEnclosesLocalWEP = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/28", true, proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithWEP(state, local, "10.0.0.0", true, proto.IPPoolType_NONE, "wep", localHostname, localClusterHostIPAddr, true)
 
-	state = StateWithNode(state, local, localHostname, localClusterHostIPAddr, "")
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
+	state = StateWithNode(state, local, localHostname, localClusterHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -141,8 +141,8 @@ var remoteClusterBlockEnclosesRemoteBlock = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/28", true, proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, remoteB, "10.0.0.0/29", true, proto.IPPoolType_NONE, remoteClusterBHost, remoteClusterBHostIPAddr)
 
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -156,8 +156,8 @@ var localClusterOrphanBlockContainsRemotePoolAndBlock = func() State {
 	state = StateWithPool(state, remoteA, "10.0.0.0/24", true)
 	state = StateWithBlock(state, remoteA, "10.0.0.0/29", true, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -171,8 +171,8 @@ var remoteClusterOrphanBlockContainsLocalPoolAndBlock = func() State {
 	state = StateWithPool(state, local, "10.0.0.0/18", true)
 	state = StateWithBlock(state, local, "10.0.0.0/20", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -190,8 +190,8 @@ var remoteClusterPoolAndBlockContainLocalOrphanBlock = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/24", true, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, local, "10.0.0.0/26", false, proto.IPPoolType_NONE, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -205,8 +205,8 @@ var localClusterPoolAndBlockContainRemoteOrphanBlock = func() State {
 	state = StateWithBlock(state, local, "10.0.0.0/26", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 	state = StateWithBlock(state, remoteB, "10.0.0.0/29", false, proto.IPPoolType_NONE, remoteClusterBHost, remoteClusterBHostIPAddr)
 
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -223,8 +223,8 @@ var remoteClusterPoolWithLargerBlockSizeContainsLocalPoolWithBlocks = func() Sta
 	state = StateWithBlock(state, remoteA, "10.0.0.0/26", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, local, "10.0.0.0/29", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -239,8 +239,8 @@ var localClusterPoolWithLargerBlockSizeContainsRemotePoolWithBlocks = func() Sta
 	state = StateWithBlock(state, local, "10.0.0.0/26", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 	state = StateWithBlock(state, remoteA, "10.0.0.0/29", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -255,8 +255,8 @@ var remoteClusterAPoolWithLargerBlockSizeContainsRemoteBPoolWithBlocks = func() 
 	state = StateWithBlock(state, remoteA, "10.0.0.0/26", true, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, remoteB, "10.0.0.0/29", false, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -272,8 +272,8 @@ var remoteClusterPoolContainsLocalPoolWithOverlappedBlocks = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/26", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, local, "10.0.0.0/26", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -289,8 +289,8 @@ var localClusterPoolContainsRemotePoolWithOverlappedBlocks = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/26", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, local, "10.0.0.0/26", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -302,8 +302,8 @@ var remoteClusterAPoolWithOverlappedBlocks = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/26", true, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, remoteB, "10.0.0.0/26", false, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -328,8 +328,8 @@ var remoteClusterBPoolContainsRemoteAPoolWithOverlappedBlocks = func() State {
 	state = StateWithBlock(state, remoteA, "10.0.0.0/26", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithBlock(state, remoteB, "10.0.0.0/26", false, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -342,11 +342,11 @@ var remoteClusterPoolWithLargerBlockSizeContainsLocalPoolWithTunnels = func() St
 
 	state = StateWithPool(state, remoteA, "10.0.0.0/16", true)
 	state = StateWithPool(state, local, "10.0.0.0/24", true)
-	state = StateWithVTEP(state, remoteA, "10.0.0.2", false, remoteClusterAHostMAC, remoteClusterAHost, remoteClusterAHostIPAddr)
-	state = StateWithVTEP(state, local, "10.0.0.1", true, localClusterHostMAC, localClusterHost, localClusterHostIPAddr)
+	state = StateWithVTEP(state, remoteA, "10.0.0.2", false, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithVTEP(state, local, "10.0.0.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHostIPAddr, localClusterHost)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.0.2")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.0.1")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.0.2", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.0.1", "", "")
 
 	return state
 }()
@@ -358,11 +358,11 @@ var localClusterPoolWithLargerBlockSizeContainsRemotePoolWithTunnels = func() St
 
 	state = StateWithPool(state, local, "10.0.0.0/16", true)
 	state = StateWithPool(state, remoteA, "10.0.0.0/24", false)
-	state = StateWithVTEP(state, remoteA, "10.0.0.2", false, remoteClusterAHostMAC, remoteClusterAHost, remoteClusterAHostIPAddr)
-	state = StateWithVTEP(state, local, "10.0.0.1", true, localClusterHostMAC, localClusterHost, localClusterHostIPAddr)
+	state = StateWithVTEP(state, remoteA, "10.0.0.2", false, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithVTEP(state, local, "10.0.0.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHostIPAddr, localClusterHost)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.0.2")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.0.1")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.0.2", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.0.1", "", "")
 
 	return state
 }()
@@ -374,11 +374,11 @@ var remoteClusterAPoolWithLargerBlockSizeContainsRemoteBPoolWithTunnels = func()
 
 	state = StateWithPool(state, remoteA, "10.0.0.0/16", true)
 	state = StateWithPool(state, remoteB, "10.0.0.0/24", false)
-	state = StateWithVTEP(state, remoteA, "10.0.0.2", true, remoteClusterAHostMAC, remoteClusterAHost, remoteClusterAHostIPAddr)
-	state = StateWithVTEP(state, remoteB, "10.0.0.3", false, remoteClusterBHostMAC, remoteClusterBHost, remoteClusterBHostIPAddr)
+	state = StateWithVTEP(state, remoteA, "10.0.0.2", true, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithVTEP(state, remoteB, "10.0.0.3", false, remoteClusterBHostMAC, proto.IPPoolType_VXLAN, remoteClusterBHostIPAddr, remoteClusterBHost)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.0.2")
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "10.0.0.3")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.0.2", "", "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "10.0.0.3", "", "")
 
 	return state
 }()
@@ -394,8 +394,8 @@ var remoteClusterPoolAndBlocksContainLocalPoolWithBlocks = func() State {
 	state = StateWithPool(state, local, "10.0.0.0/24", true)
 	state = StateWithBlock(state, local, "10.0.0.0/29", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -411,8 +411,8 @@ var localClusterPoolAndBlocksContainRemotePoolWithBlocks = func() State {
 	state = StateWithPool(state, remoteA, "10.0.0.0/24", false)
 	state = StateWithBlock(state, remoteA, "10.0.0.0/29", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -428,8 +428,8 @@ var remoteClusterAPoolAndBlocksContainRemoteBPoolWithBlock = func() State {
 	state = StateWithPool(state, remoteB, "10.0.0.0/24", false)
 	state = StateWithBlock(state, remoteB, "10.0.0.0/29", false, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -443,7 +443,7 @@ var overlappedRemoteAndLocalClusterPoolContainsRemoteBlock = func() State {
 	state = StateWithPool(state, local, "10.0.0.0/16", true)
 	state = StateWithBlock(state, remoteA, "10.0.0.0/22", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -457,7 +457,7 @@ var overlappedRemoteAndLocalClusterPoolContainsLocalBlock = func() State {
 	state = StateWithPool(state, local, "10.0.0.0/16", true)
 	state = StateWithBlock(state, local, "10.0.0.0/22", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 
-	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "")
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -471,7 +471,7 @@ var remoteOverlappedPoolsContainRemoteABlock = func() State {
 	state = StateWithPool(state, remoteB, "10.0.0.0/16", false)
 	state = StateWithBlock(state, remoteA, "10.0.0.0/22", true, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 
-	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "", "", "")
 
 	return state
 }()
@@ -485,7 +485,85 @@ var remoteOverlappedPoolsContainRemoteBBlock = func() State {
 	state = StateWithPool(state, remoteB, "10.0.0.0/16", false)
 	state = StateWithBlock(state, remoteB, "10.0.0.0/22", false, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
 
-	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "")
+	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "", "", "")
+
+	return state
+}()
+
+var multipleTunnelEndpointsOverlapBetweenLocalAndRemoteA = func() State {
+	state := empty.withName("multipleTunnelEndpointsOverlapBetweenLocalAndRemoteA")
+
+	state = StateWithPool(state, local, "10.0.0.0/16", true)
+	state = StateWithBlock(state, local, "10.0.1.0/29", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
+	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHostIPAddr, localClusterHost)
+	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey1.String())
+
+	state = StateWithPool(state, remoteA, "10.0.0.0/16", false)
+	state = StateWithBlock(state, remoteA, "10.0.1.0/29", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithVTEP(state, remoteA, "10.0.1.1", false, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithWGEP(state, remoteA, "10.0.1.2", false, wgPublicKey2.String(), proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey2.String())
+
+	return state
+}()
+
+var multipleTunnelEndpointsOverlapIndirectlyBetweenLocalAndRemoteA = func() State {
+	state := empty.withName("multipleTunnelEndpointsOverlapIndirectlyBetweenLocalAndRemoteA")
+
+	state = StateWithPool(state, local, "10.0.0.0/16", true)
+	state = StateWithBlock(state, local, "10.0.1.0/29", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
+	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHostIPAddr, localClusterHost)
+	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey1.String())
+
+	state = StateWithPool(state, remoteA, "10.0.0.0/16", false)
+	state = StateWithBlock(state, remoteA, "10.0.1.0/29", false, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithVTEP(state, remoteA, "10.0.1.5", false, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithWGEP(state, remoteA, "10.0.1.6", false, wgPublicKey2.String(), proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.5", "10.0.1.6", wgPublicKey2.String())
+
+	return state
+}()
+
+var multipleTunnelEndpointsOverlapWithoutPoolsBetweenLocalAndRemoteA = func() State {
+	state := empty.withName("multipleTunnelEndpointsOverlapWithoutPoolsBetweenLocalAndRemoteA")
+
+	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_NONE, localClusterHostIPAddr, localClusterHost)
+	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_NONE, localClusterHost, localClusterHostIPAddr)
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey1.String())
+
+	state = StateWithVTEP(state, remoteA, "10.0.1.1", false, remoteClusterAHostMAC, proto.IPPoolType_NONE, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithWGEP(state, remoteA, "10.0.1.2", false, wgPublicKey2.String(), proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey2.String())
+
+	return state
+}()
+
+var multipleTunnelEndpointsOverlapAcrossTypesWithoutPoolsBetweenLocalAndRemoteA = func() State {
+	state := empty.withName("multipleTunnelEndpointsOverlapAcrossTypesWithoutPoolsBetweenLocalAndRemoteA")
+
+	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_NONE, localClusterHostIPAddr, localClusterHost)
+	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_NONE, localClusterHost, localClusterHostIPAddr)
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey1.String())
+
+	state = StateWithVTEP(state, remoteA, "10.0.1.2", false, remoteClusterAHostMAC, proto.IPPoolType_NONE, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithWGEP(state, remoteA, "10.0.1.1", false, wgPublicKey2.String(), proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.2", "10.0.1.1", wgPublicKey2.String())
+
+	return state
+}()
+
+var multipleTunnelEndpointsDisjointWithoutPoolsBetweenLocalAndRemoteA = func() State {
+	state := empty.withName("multipleTunnelEndpointsDisjointWithoutPoolsBetweenLocalAndRemoteA")
+
+	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_NONE, localClusterHostIPAddr, localClusterHost)
+	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_NONE, localClusterHost, localClusterHostIPAddr)
+	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey1.String())
+
+	state = StateWithVTEP(state, remoteA, "10.0.1.3", true, remoteClusterAHostMAC, proto.IPPoolType_NONE, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithWGEP(state, remoteA, "10.0.1.4", true, wgPublicKey2.String(), proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
+	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.3", "10.0.1.4", wgPublicKey2.String())
 
 	return state
 }()

@@ -1492,7 +1492,7 @@ type VXLANClusters struct {
 type OverlapTestType string
 
 const (
-	OverlapTestType_None              OverlapTestType = "None"
+	OverlapTestType_None              OverlapTestType = ""
 	OverlapTestType_Connect           OverlapTestType = "Connect"
 	OverlapTestType_ConnectDisconnect OverlapTestType = "ConnectDisconnect"
 )

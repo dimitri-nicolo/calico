@@ -155,6 +155,14 @@ func DatastoreDescribeWithRemote(description string, localDatastores []apiconfig
 		})
 	}
 
+	DatastoreDescribeRemoteOnly(description, body)
+
+	return true
+}
+
+// DatastoreDescribeRemoteOnly invokes Describe, providing a factory that provides remote and local datastores. It creates just
+// one Describe invocation - use DatastoreDescribeWithRemote to get both local and local/remote describes.
+func DatastoreDescribeRemoteOnly(description string, body func(factories LocalRemoteInfraFactories)) bool {
 	Describe(fmt.Sprintf("%s (local kubernetes, remote kubernetes)", description),
 		func() {
 			body(LocalRemoteInfraFactories{Local: createK8sDatastoreInfra, Remote: createRemoteK8sDatastoreInfra})
