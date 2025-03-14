@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/cache/fake"
 )
 
-var _ = Describe("Test Caching Authorizer", func() {
+var _ = Describe("Test Caching Token Reviewer", func() {
 
 	var (
 		fakeReviewer *fakeTokenReviewer
