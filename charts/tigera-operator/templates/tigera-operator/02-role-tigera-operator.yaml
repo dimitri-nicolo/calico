@@ -649,6 +649,14 @@ rules:
       - list
       - get
       - watch
+  - apiGroups:
+      - projectcalico.org
+    resources:
+      - hostendpoints
+    verbs:
+      - list
+      - get
+      - watch
   # Add the permissions to monitor the status of certificate signing requests when certificate management is enabled.
   - apiGroups:
       - certificates.k8s.io

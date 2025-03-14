@@ -203,6 +203,24 @@ configRetry:
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
+
+		// For non-cluster host Felix, the Typha address and port will be obtained from the
+		// NonClusterHost resource created within the cluster. The separate Typha deployment
+		// responsible for handling non-cluster host Felix traffic should be exposed via an
+		// Ingress or a LoadBalancer service. We need to set the TyphaAddr field in fileConfig
+		// to ensure the subsequent UpdateFrom calls properly merges and validates configuration
+		// from different source. This also important for the handleConfigUpdate function to
+		// correctly calculate the changed fields.
+		if !isRunningInK8s(k8sServiceAccountTokenFile) {
+			if addr, err := bootstrapNonClusterHostTyphaAddress(ctx); err != nil {
+				log.WithError(err).Error("Failed to get Typha address for non-cluster hosts")
+				time.Sleep(1 * time.Second)
+				continue configRetry
+			} else {
+				fileConfig["TyphaAddr"] = addr
+			}
+		}
+
 		// Parse and merge the local config.
 		_, err = configParams.UpdateFrom(envConfig, config.EnvironmentVariable)
 		if err != nil {
