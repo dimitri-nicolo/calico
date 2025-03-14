@@ -40,6 +40,7 @@ rules:
       - felixconfigurations.crd.projectcalico.org
       - globalnetworkpolicies.crd.projectcalico.org
       - globalnetworksets.crd.projectcalico.org
+      - goldmanes.operator.tigera.io
       - hostendpoints.crd.projectcalico.org
       - ipamblocks.crd.projectcalico.org
       - ipamconfigs.crd.projectcalico.org
@@ -217,6 +218,7 @@ rules:
       - egressgateways/status
       - gatewayapis
       - gatewayapis/finalizers
+      - goldmanes
       - imagesets
       - whiskers
       - installations
