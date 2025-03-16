@@ -4,7 +4,6 @@ package daemon
 
 import (
 	"context"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -19,35 +18,6 @@ import (
 )
 
 var _ = Describe("Felix daemon NonClusterHost bootstrap tests", func() {
-	Context("Detect Kubernetes environment", func() {
-		It("should return true when service account token file exists", func() {
-			err := os.MkdirAll("/tmp/secrets/kubernetes.io/serviceaccount", 0755)
-			Expect(err).NotTo(HaveOccurred())
-			err = os.WriteFile("/tmp/secrets/kubernetes.io/serviceaccount/token", []byte("some-token"), 0644)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(isRunningInK8s("/tmp/secrets/kubernetes.io/serviceaccount/token")).To(BeTrue())
-		})
-
-		It("should return true when KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are set", func() {
-			err := os.Setenv("KUBERNETES_SERVICE_HOST", "some-host")
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Setenv("KUBERNETES_SERVICE_PORT", "some-port")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(isRunningInK8s(k8sServiceAccountTokenFile)).To(BeTrue())
-
-			err = os.Unsetenv("KUBERNETES_SERVICE_HOST")
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Unsetenv("KUBERNETES_SERVICE_PORT")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return false when neither service account token file exists nor KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are set", func() {
-			Expect(isRunningInK8s(k8sServiceAccountTokenFile)).To(BeFalse())
-		})
-	})
-
 	Context("Retrieve Typha endpoint", func() {
 		var (
 			fakeDynamicClient *fake.FakeDynamicClient

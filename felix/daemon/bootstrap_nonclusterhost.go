@@ -15,10 +15,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/nonclusterhost"
 )
 
-const (
-	k8sServiceAccountTokenFile = "/run/secrets/kubernetes.io/serviceaccount/token"
-)
-
 func bootstrapNonClusterHostTyphaAddress(ctx context.Context) (string, error) {
 	extractor, err := newTyphaAddressExtractor(ctx)
 	if err != nil {
@@ -32,18 +28,6 @@ func bootstrapNonClusterHostTyphaAddress(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return addr, nil
-}
-
-func isRunningInK8s(tokenFile string) bool {
-	if _, err := os.Stat(tokenFile); err == nil {
-		return true
-	}
-
-	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
-		return true
-	}
-
-	return false
 }
 
 type typhaAddressExtractor struct {
