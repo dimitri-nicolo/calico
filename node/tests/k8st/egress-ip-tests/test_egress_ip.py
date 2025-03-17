@@ -254,7 +254,7 @@ EOF
             # Break one of the gateway's ICMP probes, it should be taken out of service.
             self.server_del_route(servers[0], gw)
             gw.wait_not_ready()
-
+ 
             def check_routes(expected):
                 tables = self.read_client_hops_for_node(client.nodename)
                 hops = tables[client.ip]["hops"]
@@ -407,7 +407,7 @@ spec:
 EOF
 """ % (server2.ip, server1.ip))
             self.add_cleanup(lambda: calicoctl("delete egressgatewaypolicy egw-policy"))
-
+            
             client = NetcatClientTCP("default", "test-blue", node="kind-worker3", annotations={
                 "egress.projectcalico.org/egressGatewayPolicy": "egw-policy",
             })
@@ -452,12 +452,12 @@ EOF
             server2 = NetcatServerTCP(8089)
             for s in [server1, server2]:
                 s.wait_running()
-                #self.add_cleanup(s.kill)
+                self.add_cleanup(s.kill)
             client_node = "kind-worker3"
             client = NetcatClientTCP("default", "test-blue", node=client_node, annotations={
                 "egress.projectcalico.org/egressGatewayPolicy": "egw-policy",
             })
-            #self.add_cleanup(client.delete)
+            self.add_cleanup(client.delete)
             client.wait_ready()
             self.server_add_route(server1, gw_red)
             self.server_add_route(server2, gw_red)
@@ -481,10 +481,8 @@ spec:
 EOF
 """ % (server2.ip, server1.ip))
 
-            #self.add_cleanup(lambda: calicoctl("delete egressgatewaypolicy egw-policy"))
+            self.add_cleanup(lambda: calicoctl("delete egressgatewaypolicy egw-policy"))
             self.validate_node_name(client, server2, client_node)
-            ##_log.info("pepper here")
-            ##time.sleep(3600)
             self.validate_egress_ip(client, server1, gw_red.ip)
 
 
@@ -1386,7 +1384,7 @@ EOF
         """
         validate server seen expected ip as source ip
         """
-        _log.info("pepper Client IP: %s Server IP: %s Port: %d", client.ip, server.ip, server.port)
+        _log.info("Client IP: %s Server IP: %s Port: %d", client.ip, server.ip, server.port)
         retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
 
         # Check the source IP accessing external server is gateway ip.

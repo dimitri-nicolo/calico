@@ -334,8 +334,8 @@ spec:
       value: "30s"
     # Port that the egress gateway serves its health reports.  Must match the readiness probe and health
     # port defined below.
-    #- name: HEALTH_PORT
-    #  value: "8080"
+    - name: HEALTH_PORT
+      value: "8080"
     - name: LOG_SEVERITY
       value: "Info"
     - name: EGRESS_VXLAN_VNI
@@ -369,7 +369,7 @@ spec:
           driver: nodeagent/uds
         name: policysync
 """ % (egress_pool_cidr, ext_net_annotation, color, name, ns, icmp_probes, probe_url, host, termgraceperiod))
-        #self.add_cleanup(gateway.delete)
+        self.add_cleanup(gateway.delete)
 
         return gateway
 
