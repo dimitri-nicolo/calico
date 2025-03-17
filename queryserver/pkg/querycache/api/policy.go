@@ -16,7 +16,7 @@ type Policy interface {
 	GetNamespaceSelector() *string
 	GetServiceAccountSelector() *string
 	GetResourceType() Resource
-	IsKubernetesType() bool
+	IsKubernetesType() (bool, error)
 }
 
 type PolicyCounts struct {

@@ -231,7 +231,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 // Remote resource updates that Felix can NOT treat equivalently have their keys wrapped in a RemoteClusterResourceKey.
 type felixRemoteClusterProcessor struct{}
 
-func (_ felixRemoteClusterProcessor) CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode) []watchersyncer.ResourceType {
+func (_ felixRemoteClusterProcessor) CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode, usePodCIDR bool) []watchersyncer.ResourceType {
 	resourceTypes := []watchersyncer.ResourceType{
 		{
 			ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindWorkloadEndpoint},
@@ -250,10 +250,8 @@ func (_ felixRemoteClusterProcessor) CreateResourceTypes(overlayRoutingMode apiv
 	if overlayRoutingMode == apiv3.OverlayRoutingModeEnabled {
 		resourceTypes = append(resourceTypes, []watchersyncer.ResourceType{
 			{
-				ListInterface: model.ResourceListOptions{Kind: libapiv3.KindNode},
-				// We set usePodCIDR to false as currently the Node object is synced purely for federated VXLAN.
-				// Host-local IPAM is not supported for VXLAN, since a tunnel IP is not allocated (see resources.K8sNodeToCalico).
-				UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(false),
+				ListInterface:   model.ResourceListOptions{Kind: libapiv3.KindNode},
+				UpdateProcessor: updateprocessors.NewFelixNodeUpdateProcessor(usePodCIDR),
 			},
 			// Remote IP pool updates should not utilize the same update as local, as this would remove the updates guarantee of disjoint CIDRs.
 			{
@@ -307,9 +305,8 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				t.Hostname = clusterName + "/" + t.Hostname
 				updates[i].Key = t
 			case model.WireguardKey:
-				// WireguardKey is not propagated to prevent establishment of Wireguard overlay via federation before
-				// it is investigated and validated.
-				continue
+				t.NodeName = clusterName + "/" + t.NodeName
+				updates[i].Key = t
 			case model.ResourceKey:
 				switch t.Kind {
 				case apiv3.KindProfile:
@@ -323,11 +320,6 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				case libapiv3.KindNode:
 					t.Name = clusterName + "/" + t.Name
 					updates[i].Key = t
-					// Wireguard values are stripped from updates to prevent establishment of Wireguard overlay via federation
-					// before it is investigated and validated.
-					updates[i].Value.(*libapiv3.Node).Spec.Wireguard = nil
-					updates[i].Value.(*libapiv3.Node).Status.WireguardPublicKey = ""
-					updates[i].Value.(*libapiv3.Node).Status.WireguardPublicKeyV6 = ""
 				case apiv3.KindIPPool:
 					rk := updates[i].Key.(model.ResourceKey)
 					rcrk := model.RemoteClusterResourceKey{
@@ -385,9 +377,8 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				t.Hostname = clusterName + "/" + t.Hostname
 				updates[i].Key = t
 			case model.WireguardKey:
-				// WireguardKey is not propagated to prevent establishment of Wireguard overlay via federation before
-				// it is investigated and validated.
-				continue
+				t.NodeName = clusterName + "/" + t.NodeName
+				updates[i].Key = t
 			case model.ResourceKey:
 				switch t.Kind {
 				case apiv3.KindProfile:

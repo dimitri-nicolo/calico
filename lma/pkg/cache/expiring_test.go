@@ -39,7 +39,7 @@ var _ = Describe("Test Expiring", func() {
 		Expect(err).ToNot(HaveOccurred())
 	})
 
-	AfterSuite(func() {
+	AfterEach(func() {
 		cancelFunc()
 	})
 

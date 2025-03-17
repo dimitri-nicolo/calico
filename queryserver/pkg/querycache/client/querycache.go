@@ -423,10 +423,14 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 			}
 		}
 
+		queryPolicy, err := c.apiPolicyToQueryPolicy(p, 0, req.FieldSelector)
+		if err != nil {
+			return nil, err
+		}
 		return &QueryPoliciesResp{
 			Count: 1,
 			Items: []Policy{
-				*c.apiPolicyToQueryPolicy(p, 0, req.FieldSelector),
+				*queryPolicy,
 			},
 		}, nil
 	}
@@ -508,7 +512,11 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 			// check authorization to the policy resource.
 			resource, tier := utils.GetActualResourceAndTierFromCachedPolicyForRBAC(p)
 			if req.Permissions.IsAuthorized(resource, &tier, []rbac.Verb{rbac.VerbGet}) {
-				items = append(items, *c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector))
+				queryPolicy, err := c.apiPolicyToQueryPolicy(p, len(items), req.FieldSelector)
+				if err != nil {
+					return nil, err
+				}
+				items = append(items, *queryPolicy)
 			}
 		}
 	}
@@ -534,7 +542,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}, nil
 }
 
-func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelector map[string]bool) *Policy {
+func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelector map[string]bool) (*Policy, error) {
 	ep := p.GetEndpointCounts()
 	res := p.GetResource()
 
@@ -562,7 +570,11 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 	// Kubernetes network policies go through are converted to Calico network policies and in this process the UUID is getting converted
 	// in libcalico-go/lib/backend/k8s/conversion/conversion.go:K8sNetworkPolicyToCalico
 	// Since the UUID conversion is reversable, we run the ConvertUID here again to get the original UUID in the api resource.
-	if p.IsKubernetesType() {
+	isKubeType, err := p.IsKubernetesType()
+	if err != nil {
+		return nil, err
+	}
+	if isKubeType {
 		policy.UID, _ = conversion.ConvertUID(policy.UID)
 	}
 	if fieldSelector != nil {
@@ -595,7 +607,7 @@ func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int, fieldSelecto
 		policy = *updatedPolicy
 	}
 
-	return &policy
+	return &policy, nil
 }
 
 func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection {

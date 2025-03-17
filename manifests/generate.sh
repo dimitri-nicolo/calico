@@ -11,12 +11,12 @@ HELM=${HELM:-../bin/helm}
 YQ=${YQ:-../bin/yq}
 
 if [[ ! -f $HELM ]]; then
-	echo "[ERROR] Helm binary ${HELM} not found."
-	exit 1
+  echo "[ERROR] Helm binary ${HELM} not found."
+  exit 1
 fi
 if [[ ! -f $YQ ]]; then
-	echo "[ERROR] yq binary ${YQ} not found."
-	exit 1
+  echo "[ERROR] yq binary ${YQ} not found."
+  exit 1
 fi
 
 # Get versions to install.
@@ -31,7 +31,7 @@ defaultOperatorVersion=$($YQ .tigeraOperator.version <../charts/tigera-operator/
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
 
 defaultOperatorRegistry=$($YQ .tigeraOperator.registry <../charts/tigera-operator/values.yaml)
-OPERATOR_REGISTRY=${OPERATOR_REGISTRY:-$defaultOperatorRegistry}
+OPERATOR_REGISTRY=${REGISTRY_OPERATOR:-$defaultOperatorRegistry}
 
 # Images used in manifests that are not rendered by Helm.
 NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi calico/node-driver-registrar calico/mock-node calico/dikastes"
@@ -65,20 +65,20 @@ mkdir -p ../charts/tigera-operator/charts/tigera-prometheus-operator
 cp ../charts/tigera-prometheus-operator/Chart.yaml ../charts/tigera-operator/charts/tigera-prometheus-operator/
 
 ${HELM} -n tigera-operator template \
-	--no-hooks \
-	--set installation.enabled=false \
-	--set apiServer.enabled=false \
-	--set apiServer.enabled=false \
-	--set intrusionDetection.enabled=false \
-	--set logCollector.enabled=false \
-	--set logStorage.enabled=false \
-	--set manager.enabled=false \
-	--set monitor.enabled=false \
-	--set policyRecommendation.enabled=false \
-	--set tigeraOperator.version=$OPERATOR_VERSION \
-	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
-	--set calicoctl.tag=$CALICO_VERSION \
-	../charts/tigera-operator >>tigera-operator.yaml
+  --no-hooks \
+  --set installation.enabled=false \
+  --set apiServer.enabled=false \
+  --set apiServer.enabled=false \
+  --set intrusionDetection.enabled=false \
+  --set logCollector.enabled=false \
+  --set logStorage.enabled=false \
+  --set manager.enabled=false \
+  --set monitor.enabled=false \
+  --set policyRecommendation.enabled=false \
+  --set tigeraOperator.version=$OPERATOR_VERSION \
+  --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+  --set calicoctl.tag=$CALICO_VERSION \
+  ../charts/tigera-operator >>tigera-operator.yaml
 
 ##########################################################################
 
@@ -90,20 +90,20 @@ ${HELM} -n tigera-operator template \
 VALUES_FILES=$(cd ../charts/values && find . -type f -name "*.yaml")
 
 for FILE in $VALUES_FILES; do
-	echo "Generating manifest from charts/values/$FILE"
-	# Default to using tigera-operator. However, some manifests use other namespaces instead,
-	# as indicated by a comment at the top of the values file of the following form:
-	# NS: <namespace-to-use>
-	ns=$(cat ../charts/values/$FILE | grep -Po '# NS: \K(.*)')
-	${HELM} -n ${ns:-"tigera-operator"} template \
-		../charts/tigera-operator \
-		--set policyRecommendation.enabled=false \
-		--set tigeraOperator.version=$OPERATOR_VERSION \
-		--set tigeraOperator.registry=$OPERATOR_REGISTRY \
-		--set calicoctl.tag=$CALICO_VERSION \
-		--include-crds \
-		--no-hooks \
-		-f ../charts/values/$FILE >$FILE
+  echo "Generating manifest from charts/values/$FILE"
+  # Default to using tigera-operator. However, some manifests use other namespaces instead,
+  # as indicated by a comment at the top of the values file of the following form:
+  # NS: <namespace-to-use>
+  ns=$(cat ../charts/values/$FILE | grep -Po '# NS: \K(.*)')
+  ${HELM} -n ${ns:-"tigera-operator"} template \
+    ../charts/tigera-operator \
+    --set policyRecommendation.enabled=false \
+    --set tigeraOperator.version=$OPERATOR_VERSION \
+    --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+    --set calicoctl.tag=$CALICO_VERSION \
+    --include-crds \
+    --no-hooks \
+    -f ../charts/values/$FILE >$FILE
 done
 
 ##########################################################################
@@ -111,14 +111,14 @@ done
 ##########################################################################
 echo "# Tigera Operator and Calico Enterprise CRDs" >operator-crds.yaml
 (for file in ../charts/tigera-operator/crds/*.yaml; do
-	echo "---"
-	echo "# Source: tigera-operator/crds/$(basename $file)"
-	cat $file
+  echo "---"
+  echo "# Source: tigera-operator/crds/$(basename $file)"
+  cat $file
 done) >>operator-crds.yaml
 (for file in ../charts/tigera-operator/crds/calico/*.yaml; do
-	echo "---"
-	echo "# Source: tigera-operator/crds/calico/$(basename $file)"
-	cat $file
+  echo "---"
+  echo "# Source: tigera-operator/crds/calico/$(basename $file)"
+  cat $file
 done) >>operator-crds.yaml
 
 ##########################################################################
@@ -126,16 +126,16 @@ done) >>operator-crds.yaml
 ##########################################################################
 echo "# ECK operator CRDs." >eck-operator-crds.yaml
 (for file in ../charts/tigera-operator/crds/eck/*.yaml; do
-	echo "---"
-	echo "# Source: tigera-operator/crds/eck/$(basename $file)"
-	cat $file
+  echo "---"
+  echo "# Source: tigera-operator/crds/eck/$(basename $file)"
+  cat $file
 done) >>eck-operator-crds.yaml
 
 echo "# Prometheus operator CRDs." >prometheus-operator-crds.yaml
 (for file in ../charts/tigera-prometheus-operator/crds/*.yaml; do
-	echo "---"
-	echo "# Source: tigera-prometheus-operator/crds/$(basename $file)"
-	cat $file
+  echo "---"
+  echo "# Source: tigera-prometheus-operator/crds/$(basename $file)"
+  cat $file
 done) >>prometheus-operator-crds.yaml
 
 ##########################################################################
@@ -143,14 +143,14 @@ done) >>prometheus-operator-crds.yaml
 ##########################################################################
 : >tigera-prometheus-operator.yaml
 ${HELM} -n tigera-operator template \
-	--set policyRecommendation.enabled=false \
-	--set imagePullSecrets.tigera-pull-secret="\{}" \
-	--set tigeraOperator.version=$OPERATOR_VERSION \
-	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
-	--set calicoctl.tag=$CALICO_VERSION \
-	--include-crds \
-	--no-hooks \
-	../charts/tigera-prometheus-operator >>tigera-prometheus-operator.yaml
+  --set policyRecommendation.enabled=false \
+  --set imagePullSecrets.tigera-pull-secret="\{}" \
+  --set tigeraOperator.version=$OPERATOR_VERSION \
+  --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+  --set calicoctl.tag=$CALICO_VERSION \
+  --include-crds \
+  --no-hooks \
+  ../charts/tigera-prometheus-operator >>tigera-prometheus-operator.yaml
 
 ##########################################################################
 # Build tigera-operator manifests for OCP.
@@ -159,25 +159,25 @@ ${HELM} -n tigera-operator template \
 # Then do a bit of cleanup to reduce the directory depth to 1.
 ##########################################################################
 ${HELM} template \
-	-n tigera-operator \
-	../charts/tigera-operator/ \
-	--output-dir ocp \
-	--no-hooks \
-	--set installation.kubernetesProvider=OpenShift \
-	--set installation.enabled=false \
-	--set apiServer.enabled=false \
-	--set apiServer.enabled=false \
-	--set intrusionDetection.enabled=false \
-	--set logCollector.enabled=false \
-	--set logStorage.enabled=false \
-	--set manager.enabled=false \
-	--set monitor.enabled=false \
-	--set policyRecommendation.enabled=false \
-	--set tigeraOperator.version=$OPERATOR_VERSION \
-	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
-	--set imagePullSecrets.tigera-pull-secret=SECRET \
-	--set calicoctl.image=$REGISTRY/tigera/calicoctl \
-	--set calicoctl.tag=$CALICO_VERSION
+  -n tigera-operator \
+  ../charts/tigera-operator/ \
+  --output-dir ocp \
+  --no-hooks \
+  --set installation.kubernetesProvider=OpenShift \
+  --set installation.enabled=false \
+  --set apiServer.enabled=false \
+  --set apiServer.enabled=false \
+  --set intrusionDetection.enabled=false \
+  --set logCollector.enabled=false \
+  --set logStorage.enabled=false \
+  --set manager.enabled=false \
+  --set monitor.enabled=false \
+  --set policyRecommendation.enabled=false \
+  --set tigeraOperator.version=$OPERATOR_VERSION \
+  --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+  --set imagePullSecrets.tigera-pull-secret=SECRET \
+  --set calicoctl.image=$REGISTRY/tigera/calicoctl \
+  --set calicoctl.tag=$CALICO_VERSION
 # The first two lines are a newline and a yaml separator - remove them.
 find ocp/tigera-operator -name "*.yaml" | xargs sed -i -e 1,2d
 mv $(find ocp/tigera-operator -name "*.yaml") ocp/ && rm -r ocp/tigera-operator
@@ -188,16 +188,16 @@ sed -i "s/U0VDUkVU/SECRET/g" ocp/02-pull-secret.yaml
 # Replace versions for "static" Calico Enterprise manifests.
 ##########################################################################
 if [[ $CALICO_VERSION != master ]]; then
-	echo "Replacing image tags for static enterprise manifests"
-	for img in $NON_HELM_MANIFEST_IMAGES; do
-		echo $img
-		if [[ $VERSIONS_FILE ]]; then
-			ver=$(cat $VERSIONS_FILE | $YQ '.[0].components.* | select(.image == "'$img'").version')
-		else
-			ver=$CALICO_VERSION
-		fi
-		find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/$img:[A-Za-z0-9_.-]*;$REGISTRY/$img:$ver;g" {} \;
-	done
+  echo "Replacing image tags for static enterprise manifests"
+  for img in $NON_HELM_MANIFEST_IMAGES; do
+    echo $img
+    if [[ $VERSIONS_FILE ]]; then
+      ver=$(cat $VERSIONS_FILE | $YQ '.[0].components.* | select(.image == "'$img'").version')
+    else
+      ver=$CALICO_VERSION
+    fi
+    find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/$img:[A-Za-z0-9_.-]*;$REGISTRY/$img:$ver;g" {} \;
+  done
 fi
 
 # Remove the dummy sub chart again.

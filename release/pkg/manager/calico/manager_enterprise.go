@@ -260,7 +260,7 @@ func (m *EnterpriseManager) generateManifests() error {
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("CALICO_VERSION=%s", m.calicoVersion))
 	env = append(env, fmt.Sprintf("OPERATOR_VERSION=%s", m.operatorVersion))
-	env = append(env, fmt.Sprintf("OPERATOR_REGISTRY=%s", m.operatorRegistry))
+	env = append(env, fmt.Sprintf("REGISTRY_OPERATOR=%s", m.operatorRegistry))
 	env = append(env, fmt.Sprintf("REGISTRY=%s", reg))
 	if m.isHashRelease {
 		env = append(env, fmt.Sprintf("VERSIONS_FILE=%s", pinnedversion.PinnedVersionFilePath(m.tmpDir)))

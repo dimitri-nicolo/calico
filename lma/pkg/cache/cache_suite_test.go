@@ -11,5 +11,5 @@ import (
 
 func TestCache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "expiring Suite")
+	RunSpecs(t, "Cache Suite")
 }
