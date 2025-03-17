@@ -16,11 +16,6 @@ package calc_test
 
 import "github.com/projectcalico/calico/felix/proto"
 
-var (
-	localRemote     = []proto.RouteType{proto.RouteType_LOCAL_WORKLOAD, proto.RouteType_REMOTE_WORKLOAD}
-	remoteTunnelWep = []proto.RouteType{proto.RouteType_REMOTE_TUNNEL, proto.RouteType_REMOTE_WORKLOAD}
-)
-
 // Base state for remote cluster VXLAN block tests. This base ensures that there is always local VXLAN encap, which is useful
 // for cases like validating when two remote clusters overlap. The pool here is referred to as "pool 1".
 var remoteClusterVXLANBlocksBase = func() State {
@@ -28,7 +23,7 @@ var remoteClusterVXLANBlocksBase = func() State {
 
 	state = StateWithPool(state, local, "11.0.0.0/16", true)
 	state = StateWithBlock(state, local, "11.0.1.0/29", true, proto.IPPoolType_VXLAN, localClusterHost2, localClusterHost2IPAddr)
-	state = StateWithVTEP(state, local, "11.0.1.1", true, localClusterHost2MAC, localClusterHost2, localClusterHost2IPAddr, remoteTunnelWep...)
+	state = StateWithVTEP(state, local, "11.0.1.1", true, localClusterHost2MAC, localClusterHost2, localClusterHost2IPAddr)
 	state = StateWithNode(state, local, localClusterHost2, localClusterHost2IPAddr, "11.0.1.1")
 
 	return state
@@ -131,7 +126,7 @@ var remoteClusterBlockEnclosesLocalWEP = func() State {
 	state := empty.withName("remoteClusterBlockEnclosesLocalWEP")
 
 	state = StateWithBlock(state, remoteA, "10.0.0.0/28", true, proto.IPPoolType_NONE, remoteClusterAHost, remoteClusterAHostIPAddr)
-	state = StateWithWEP(state, local, "10.0.0.0", true, proto.IPPoolType_NONE, "wep", localHostname, localClusterHostIPAddr, true, localRemote...)
+	state = StateWithWEP(state, local, "10.0.0.0", true, proto.IPPoolType_NONE, "wep", localHostname, localClusterHostIPAddr, true)
 
 	state = StateWithNode(state, local, localHostname, localClusterHostIPAddr, "")
 	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "")
