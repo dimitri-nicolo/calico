@@ -294,8 +294,9 @@ func main() {
 		// We need to add a Target to the default proxy so that these requests don't fallthrough to
 		// the default "/" target.
 		targetList = append(targetList, bootstrap.Target{
-			Path: "/goldmane.Statistics/List",
-			Dest: cfg.GoldmaneEndpoint,
+			Path:         "/goldmane.Statistics/List",
+			Dest:         cfg.GoldmaneEndpoint,
+			CABundlePath: cfg.GoldmaneCABundlePath,
 		})
 	}
 

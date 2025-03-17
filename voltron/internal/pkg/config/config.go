@@ -164,10 +164,11 @@ type Config struct {
 	// GoldmaneEnabled indicates whether or not the connected managed cluster is running Goldmane. If true, Voltron
 	// will enable forwarding of requests to Goldmane. Additionally, Voltron will use its own serviceacocunt when forwarding
 	// requests from managed cluster goldmane instances to Linseed.
-	GoldmaneEnabled bool `default:"true" split_words:"true"`
+	GoldmaneEnabled bool `default:"false" split_words:"true"`
 
 	// GoldmaneEndpoint is the endpoint for the Goldmane service in the local cluster.
-	GoldmaneEndpoint string `default:"https://goldmane.calico-system.svc.cluster.local" split_words:"true"`
+	GoldmaneEndpoint     string `default:"https://goldmane.calico-system.svc.cluster.local" split_words:"true"`
+	GoldmaneCABundlePath string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
 	// Whether or not the managed cluster supports impersonation. If not, Voltron will strip impersonation headers
 	// from requests before forwarding them to the managed cluster.
