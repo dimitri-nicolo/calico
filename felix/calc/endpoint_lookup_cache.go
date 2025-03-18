@@ -19,6 +19,7 @@ import (
 	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -216,7 +217,7 @@ func (ec *EndpointLookupsCache) CreateEndpointData(key model.Key, ep interface{}
 		tdEgress := &TierData{}
 		var hasIngress, hasEgress bool
 		for _, pol := range ti.OrderedPolicies {
-			namespace, tier, name, err := deconstructPolicyName(pol.Key.Name)
+			namespace, tier, name, err := names.DeconstructPolicyName(pol.Key.Name)
 			if err != nil {
 				log.WithError(err).Error("Unable to parse policy name")
 				continue
