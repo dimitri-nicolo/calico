@@ -18,122 +18,122 @@ import (
 	"github.com/projectcalico/calico/oiler/pkg/migrator/operator/waf"
 )
 
-func NewAuditEEMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.AuditLog] {
-	return newAuditMigrator(cfg, v1.AuditLogTypeEE, primary, secondary)
+func NewAuditEEMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.AuditLog] {
+	return newAuditMigrator(cluster, cfg, v1.AuditLogTypeEE, primary, secondary)
 }
 
-func newAuditMigrator(cfg config.Config, auditType v1.AuditLogType, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.AuditLog] {
+func newAuditMigrator(cluster string, cfg config.Config, auditType v1.AuditLogType, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.AuditLog] {
 	return Migrator[v1.AuditLog]{
-		Primary:   audit.NewOperator(auditType, primary.AuditBackend, primaryClusterInfo(cfg)),
-		Secondary: audit.NewOperator(auditType, secondary.AuditBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   audit.NewOperator(auditType, primary.AuditBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: audit.NewOperator(auditType, secondary.AuditBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func primaryClusterInfo(cfg config.Config) bapi.ClusterInfo {
-	return bapi.ClusterInfo{Cluster: cfg.PrimaryClusterID, Tenant: cfg.PrimaryTenantID}
+func primaryClusterInfo(cluster string, cfg config.Config) bapi.ClusterInfo {
+	return bapi.ClusterInfo{Cluster: cluster, Tenant: cfg.PrimaryTenantID}
 }
 
-func secondaryClusterInfo(cfg config.Config) bapi.ClusterInfo {
-	return bapi.ClusterInfo{Cluster: cfg.SecondaryClusterID, Tenant: cfg.SecondaryTenantID}
+func secondaryClusterInfo(cluster string, cfg config.Config) bapi.ClusterInfo {
+	return bapi.ClusterInfo{Cluster: cluster, Tenant: cfg.SecondaryTenantID}
 }
 
-func NewAuditKubeMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.AuditLog] {
-	return newAuditMigrator(cfg, v1.AuditLogTypeKube, primary, secondary)
+func NewAuditKubeMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.AuditLog] {
+	return newAuditMigrator(cluster, cfg, v1.AuditLogTypeKube, primary, secondary)
 }
 
-func NewBGPMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.BGPLog] {
+func NewBGPMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.BGPLog] {
 	return Migrator[v1.BGPLog]{
-		Primary:   bgp.NewOperator(primary.BGPBackend, primaryClusterInfo(cfg)),
-		Secondary: bgp.NewOperator(secondary.BGPBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   bgp.NewOperator(primary.BGPBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: bgp.NewOperator(secondary.BGPBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewBenchmarksMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.Benchmarks] {
+func NewBenchmarksMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.Benchmarks] {
 	return Migrator[v1.Benchmarks]{
-		Primary:   compliance.NewBenchmarksOperator(primary.BenchmarksBackend, primaryClusterInfo(cfg)),
-		Secondary: compliance.NewBenchmarksOperator(secondary.BenchmarksBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   compliance.NewBenchmarksOperator(primary.BenchmarksBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: compliance.NewBenchmarksOperator(secondary.BenchmarksBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewReportsMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.ReportData] {
+func NewReportsMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.ReportData] {
 	return Migrator[v1.ReportData]{
-		Primary:   compliance.NewReportsOperator(primary.ReportsBackend, primaryClusterInfo(cfg)),
-		Secondary: compliance.NewReportsOperator(secondary.ReportsBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   compliance.NewReportsOperator(primary.ReportsBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: compliance.NewReportsOperator(secondary.ReportsBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewSnapshotsMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.Snapshot] {
+func NewSnapshotsMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.Snapshot] {
 	return Migrator[v1.Snapshot]{
-		Primary:   compliance.NewSnapshotsOperator(primary.SnapshotsBackend, primaryClusterInfo(cfg)),
-		Secondary: compliance.NewSnapshotsOperator(secondary.SnapshotsBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   compliance.NewSnapshotsOperator(primary.SnapshotsBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: compliance.NewSnapshotsOperator(secondary.SnapshotsBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewDNSMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.DNSLog] {
+func NewDNSMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.DNSLog] {
 	return Migrator[v1.DNSLog]{
-		Primary:   dns.NewOperator(primary.DNSLogBackend, primaryClusterInfo(cfg)),
-		Secondary: dns.NewOperator(secondary.DNSLogBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   dns.NewOperator(primary.DNSLogBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: dns.NewOperator(secondary.DNSLogBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewEventsMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.Event] {
+func NewEventsMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.Event] {
 	return Migrator[v1.Event]{
-		Primary:   events.NewOperator(primary.EventBackend, primaryClusterInfo(cfg)),
-		Secondary: events.NewOperator(secondary.EventBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   events.NewOperator(primary.EventBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: events.NewOperator(secondary.EventBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewFlowMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.FlowLog] {
+func NewFlowMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.FlowLog] {
 	return Migrator[v1.FlowLog]{
-		Primary:   flow.NewOperator(primary.FlowLogBackend, primaryClusterInfo(cfg)),
-		Secondary: flow.NewOperator(secondary.FlowLogBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   flow.NewOperator(primary.FlowLogBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: flow.NewOperator(secondary.FlowLogBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewL7Migrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.L7Log] {
+func NewL7Migrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.L7Log] {
 	return Migrator[v1.L7Log]{
-		Primary:   l7.NewOperator(primary.L7LogBackend, primaryClusterInfo(cfg)),
-		Secondary: l7.NewOperator(secondary.L7LogBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   l7.NewOperator(primary.L7LogBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: l7.NewOperator(secondary.L7LogBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewRuntimeMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.RuntimeReport] {
+func NewRuntimeMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.RuntimeReport] {
 	return Migrator[v1.RuntimeReport]{
-		Primary:   runtime.NewOperator(primary.RuntimeBackend, primaryClusterInfo(cfg)),
-		Secondary: runtime.NewOperator(secondary.RuntimeBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   runtime.NewOperator(primary.RuntimeBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: runtime.NewOperator(secondary.RuntimeBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewWAFMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.WAFLog] {
+func NewWAFMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.WAFLog] {
 	return Migrator[v1.WAFLog]{
-		Primary:   waf.NewOperator(primary.WAFBackend, primaryClusterInfo(cfg)),
-		Secondary: waf.NewOperator(secondary.WAFBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   waf.NewOperator(primary.WAFBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: waf.NewOperator(secondary.WAFBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewDomainNameSetMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.DomainNameSetThreatFeed] {
+func NewDomainNameSetMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.DomainNameSetThreatFeed] {
 	return Migrator[v1.DomainNameSetThreatFeed]{
-		Primary:   threatfeeds.NewDomainNameSetOperator(primary.DomainNameSetBackend, primaryClusterInfo(cfg)),
-		Secondary: threatfeeds.NewDomainNameSetOperator(secondary.DomainNameSetBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   threatfeeds.NewDomainNameSetOperator(primary.DomainNameSetBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: threatfeeds.NewDomainNameSetOperator(secondary.DomainNameSetBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }
 
-func NewIPSetMigrator(cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.IPSetThreatFeed] {
+func NewIPSetMigrator(cluster string, cfg config.Config, primary BackendCatalogue, secondary BackendCatalogue) Migrator[v1.IPSetThreatFeed] {
 	return Migrator[v1.IPSetThreatFeed]{
-		Primary:   threatfeeds.NewIPSetOperator(primary.IPSetBackend, primaryClusterInfo(cfg)),
-		Secondary: threatfeeds.NewIPSetOperator(secondary.IPSetBackend, secondaryClusterInfo(cfg)),
-		Cfg:       NewConfig(cfg),
+		Primary:   threatfeeds.NewIPSetOperator(primary.IPSetBackend, primaryClusterInfo(cluster, cfg)),
+		Secondary: threatfeeds.NewIPSetOperator(secondary.IPSetBackend, secondaryClusterInfo(cluster, cfg)),
+		Cfg:       NewConfig(cluster, cfg),
 	}
 }

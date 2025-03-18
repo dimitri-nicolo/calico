@@ -57,6 +57,7 @@ type WAFLog struct {
 	Cluster string `json:"cluster,omitempty"`
 	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
 	GeneratedTime *time.Time `json:"generated_time,omitempty"`
+	ID            string     `json:"id,omitempty"`
 }
 
 type WAFEndpoint struct {

@@ -59,14 +59,14 @@ func main() {
 		}
 	}()
 
+	// Listen for OS signals (Ctrl+C)
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
 	// Create the primary backend catalogue
 	primary := migrator.MustGetCatalogue(*cfg.PrimaryElasticClient, cfg.PrimaryBackend, cfg.LogLevel, "primary")
 	//Create the secondary backend catalogue
 	secondary := migrator.MustGetCatalogue(*cfg.SecondaryElasticClient, cfg.SecondaryBackend, cfg.LogLevel, "secondary")
-
-	// Listen for OS signals (Ctrl+C)
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -74,8 +74,12 @@ func main() {
 	go func() {
 		switch cfg.Mode {
 		case config.OilerMigrateMode:
-			logrus.Infof("Starting migration process")
-			migrate(ctx, *cfg, primary, secondary)
+			for _, cluster := range cfg.Clusters {
+				go func() {
+					logrus.Infof("Starting migration process for cluster %s", cluster)
+					migrate(ctx, cluster, *cfg, primary, secondary)
+				}()
+			}
 		default:
 			logrus.Fatal("Unrecognized mode")
 		}
@@ -91,12 +95,12 @@ func main() {
 	ctx.Done()
 }
 
-func migrate(ctx context.Context, cfg config.Config, primary migrator.BackendCatalogue, secondary migrator.BackendCatalogue) {
+func migrate(ctx context.Context, cluster string, cfg config.Config, primary migrator.BackendCatalogue, secondary migrator.BackendCatalogue) {
 	k8sClient, err := checkpoint.NewRealK8sClient(cfg.KubeConfig)
 	if err != nil {
 		logrus.WithError(err).Fatal("Error getting kubernetes client")
 	}
-	storage := checkpoint.NewConfigMapStorage(k8sClient, cfg.Namespace, checkpoint.ConfigMapName(cfg.DataType, cfg.PrimaryTenantID, cfg.PrimaryClusterID))
+	storage := checkpoint.NewConfigMapStorage(k8sClient, cfg.Namespace, checkpoint.ConfigMapName(cfg.DataType, cfg.PrimaryTenantID, cluster))
 	start, err := storage.Read(ctx)
 	if err != nil {
 		logrus.WithError(err).Fatal("Error reading checkpoint")
@@ -105,38 +109,38 @@ func migrate(ctx context.Context, cfg config.Config, primary migrator.BackendCat
 	coordinator := checkpoint.NewCoordinator(checkpoints, storage)
 	go func() {
 		defer close(checkpoints)
-		coordinator.Run(ctx)
+		coordinator.Run(ctx, cluster)
 	}()
 
 	switch cfg.DataType {
 	case bapi.AuditEELogs:
-		migrator.NewAuditEEMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewAuditEEMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.AuditKubeLogs:
-		migrator.NewAuditKubeMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewAuditKubeMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.BGPLogs:
-		migrator.NewBGPMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewBGPMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.Benchmarks:
-		migrator.NewBenchmarksMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewBenchmarksMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.ReportData:
-		migrator.NewReportsMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewReportsMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.Snapshots:
-		migrator.NewSnapshotsMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewSnapshotsMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.DNSLogs:
-		migrator.NewDNSMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewDNSMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.Events:
-		migrator.NewEventsMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewEventsMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.FlowLogs:
-		migrator.NewFlowMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewFlowMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.L7Logs:
-		migrator.NewL7Migrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewL7Migrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.RuntimeReports:
-		migrator.NewRuntimeMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewRuntimeMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.DomainNameSet:
-		migrator.NewDomainNameSetMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewDomainNameSetMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.IPSet:
-		migrator.NewIPSetMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewIPSetMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 	case bapi.WAFLogs:
-		migrator.NewWAFMigrator(cfg, primary, secondary).Run(ctx, start, checkpoints)
+		migrator.NewWAFMigrator(cluster, cfg, primary, secondary).Run(ctx, start, checkpoints)
 
 	default:
 		logrus.Fatal("Unrecognized data type")

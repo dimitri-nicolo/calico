@@ -68,9 +68,12 @@ type eventsBackend struct {
 	queryHelper          lmaindex.Helper
 	singleIndex          bool
 	index                bapi.Index
+
+	// Migration knobs
+	migrationMode bool
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.EventsBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.EventsBackend {
 	return &eventsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -78,10 +81,11 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 		queryHelper:          lmaindex.MultiIndexAlerts(),
 		deepPaginationCutOff: deepPaginationCutOff,
 		index:                index.EventsMultiIndex,
+		migrationMode:        migrationMode,
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.EventsBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.EventsBackend {
 	return &eventsBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -90,6 +94,7 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		deepPaginationCutOff: deepPaginationCutOff,
 		index:                index.AlertsIndex(options...),
 		singleIndex:          true,
+		migrationMode:        migrationMode,
 	}
 }
 
@@ -195,7 +200,22 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	var pitID string
+	if b.migrationMode {
+		// For migration mode, we enable deep pagination for each request
+		// instead of deciding based on number of documents stored.
+		// For the first page, we need to perform the query with a point
+		// in time configured
+		if ak := opts.GetAfterKey(); ak == nil {
+			var err error
+			pitID, err = logtools.OpenPointInTime(ctx, b.client, b.index.Index(i))
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), b.migrationMode, pitID)
 	if err != nil {
 		return nil, err
 	}
@@ -226,18 +246,35 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.Ev
 		events = append(events, event)
 	}
 
-	// If an index has more than 10000 items or other value configured via index.max_result_window
-	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
+	afterKey, err := b.afterKey(ctx, i, opts, results, log, startFrom)
 	if err != nil {
 		return nil, err
 	}
 
 	return &v1.List[v1.Event]{
 		Items:     events,
-		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
+		AfterKey:  afterKey,
 		TotalHits: results.TotalHits(),
 	}, nil
+}
+
+func (b *eventsBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.EventParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
+	// on all requests
+	useDeepPagination := b.migrationMode
+	if !useDeepPagination {
+		// This is how we determine that an index has more items
+		// than index.max_result_window setting. TotalHits will
+		// return a value equal to index.max_result_window setting
+		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
+	}
+	nextPointInTime, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, log, useDeepPagination)
+	if err != nil {
+		return nil, err
+	}
+	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
+	return afterKey, nil
 }
 
 func (b *eventsBackend) UpdateDismissFlag(ctx context.Context, i api.ClusterInfo, events []v1.Event) (*v1.BulkResponse, error) {
@@ -481,6 +518,10 @@ func (b *eventsBackend) Delete(ctx context.Context, i api.ClusterInfo, events []
 }
 
 func (b *eventsBackend) Statistics(ctx context.Context, i api.ClusterInfo, opts *v1.EventStatisticsParams) (*v1.EventStatistics, error) {
+	if b.migrationMode {
+		return nil, fmt.Errorf("statistics queries are not allowed in migration mode")
+	}
+
 	// We cannot sort by time for statistics.
 	// This does not really make sense anyway.
 	// TODO: Do we want to tighten up the types used?
@@ -591,7 +632,7 @@ func (b *eventsBackend) getStatisticsSearch(i bapi.ClusterInfo, opts *v1.EventPa
 		Query(q)
 
 	// Configure pagination options
-	query, _, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	query, _, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), false, "")
 	if err != nil {
 		return nil, err
 	}

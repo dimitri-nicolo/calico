@@ -12,6 +12,11 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
+var excludeWAFLogsField = map[string]bool{
+	"id":        true,
+	"rule_info": true,
+}
+
 func TestCompareWAFStructAndTemplate(t *testing.T) {
 
 	t.Run("Check for WAF api and template matches", func(t *testing.T) {
@@ -22,7 +27,7 @@ func TestCompareWAFStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, wafMap["properties"].(map[string]interface{}), map[string]bool{"rule_info": true}))
+		require.True(t, utils.CheckFieldsInJSON(t, m, wafMap["properties"].(map[string]interface{}), excludeWAFLogsField))
 	})
 	t.Run("Check for WAF api and template not matches", func(t *testing.T) {
 		wafMap := testutils.MustUnmarshalToMap(t, WAFMappings)

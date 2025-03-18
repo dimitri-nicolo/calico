@@ -178,6 +178,8 @@ func AssertWAFLogClusterAndReset(t *testing.T, expectedCluster string, item *v1.
 }
 
 func AssertGeneratedTimeAndReset[T any](t *testing.T, item *T) {
+	t.Helper()
+
 	val := reflect.ValueOf(item).Elem()
 	generatedTime := val.FieldByName("GeneratedTime")
 	require.False(t, generatedTime.IsZero())

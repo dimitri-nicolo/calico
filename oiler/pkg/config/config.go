@@ -43,14 +43,15 @@ type Config struct {
 	PrimaryElasticClient *linseed.ElasticClientConfig
 	PrimaryBackend       linseed.BackendType `envconfig:"PRIMARY_BACKEND" default:"elastic-multi-index"`
 	PrimaryTenantID      string              `envconfig:"PRIMARY_TENANT_ID" default:""`
-	PrimaryClusterID     string              `envconfig:"PRIMARY_CLUSTER_ID" default:""`
+	//PrimaryClusterID     string              `envconfig:"PRIMARY_CLUSTER_ID" default:""`
+	Clusters []string `split_words:"true"`
 
 	// Secondary Elastic configuration. These configurations will be prefixed with SECONDARY
 	// Example: OILER_SECONDARY_ELASTIC_HOST=localhost or SECONDARY_ELASTIC_HOST=localhost
 	SecondaryElasticClient *linseed.ElasticClientConfig
 	SecondaryBackend       linseed.BackendType `envconfig:"SECONDARY_BACKEND" default:"elastic-multi-index"`
 	SecondaryTenantID      string              `envconfig:"SECONDARY_TENANT_ID" default:""`
-	SecondaryClusterID     string              `envconfig:"SECONDARY_CLUSTER_ID" default:""`
+	//SecondaryClusterID     string              `envconfig:"SECONDARY_CLUSTER_ID" default:""`
 }
 
 func LoadConfig() (*Config, error) {

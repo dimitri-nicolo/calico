@@ -44,13 +44,30 @@ func TestCoordinator_Run(t *testing.T) {
 		coordinator := checkpoint.NewCoordinator(checkpointsChan, storage)
 
 		go func() {
-			coordinator.Run(ctx)
+			coordinator.Run(ctx, "any")
 		}()
 		checkpointsChan <- operator.TimeInterval{Start: ptrTime(time.Unix(1, 0))}
 		checkpointsChan <- operator.TimeInterval{Start: ptrTime(time.Unix(1, 0))}
 
 		ctx.Done()
 		require.Equal(t, 1, storage.GetNumberOfWrites())
+	})
+
+	t.Run("Do not store zero", func(t *testing.T) {
+		defer setupAndTeardown(t)()
+
+		checkpointsChan := make(chan operator.TimeInterval)
+		defer close(checkpointsChan)
+		storage := fake.NewStorage()
+		coordinator := checkpoint.NewCoordinator(checkpointsChan, storage)
+
+		go func() {
+			coordinator.Run(ctx, "any")
+		}()
+		checkpointsChan <- operator.TimeInterval{Start: ptrTime(time.Time{})}
+
+		ctx.Done()
+		require.Equal(t, 0, storage.GetNumberOfWrites())
 	})
 
 	t.Run("Store only new value even we encounter an error", func(t *testing.T) {
@@ -62,7 +79,7 @@ func TestCoordinator_Run(t *testing.T) {
 		coordinator := checkpoint.NewCoordinator(checkpointsChan, storage)
 
 		go func() {
-			coordinator.Run(ctx)
+			coordinator.Run(ctx, "any")
 		}()
 		checkpointsChan <- operator.TimeInterval{Start: ptrTime(time.Unix(1, 0))}
 		checkpointsChan <- operator.TimeInterval{Start: ptrTime(fake.ErrorCheckPoint)}

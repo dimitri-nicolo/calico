@@ -75,10 +75,10 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	if singleIndex {
 		indexGetter = index.FlowLogIndex()
 		fb = flows.NewSingleIndexFlowBackend(client)
-		flb = flows.NewSingleIndexFlowLogBackend(client, cache, 10000)
+		flb = flows.NewSingleIndexFlowLogBackend(client, cache, 10000, false)
 	} else {
 		fb = flows.NewFlowBackend(client)
-		flb = flows.NewFlowLogBackend(client, cache, 10000)
+		flb = flows.NewFlowLogBackend(client, cache, 10000, false)
 		indexGetter = index.FlowLogMultiIndex
 	}
 

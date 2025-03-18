@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -23,8 +24,8 @@ import (
 )
 
 const (
-	lastGeneratedReadMetric    = `tigera_oiler_last_read_generated_timestamp{job_name="%s"}`
-	lastGeneratedWrittenMetric = `tigera_oiler_last_written_generated_timestamp{job_name="%s"}`
+	lastGeneratedReadMetric    = `tigera_oiler_last_read_generated_timestamp{cluster_id="%s",job_name="%s"}`
+	lastGeneratedWrittenMetric = `tigera_oiler_last_written_generated_timestamp{cluster_id="%s",job_name="%s"}`
 	docsReadMetric             = `tigera_oiler_docs_read{cluster_id="%s",job_name="%s",source="primary",tenant_id="%s"}`
 	docsWrittenMetric          = `tigera_oiler_docs_writes_successful{cluster_id="%s",job_name="%s",source="secondary",tenant_id="%s"}`
 	eNotationFloatingPoint     = "[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?"
@@ -54,8 +55,8 @@ func getValue(t *testing.T, allMetrics []byte, name string) float64 {
 func validateMetrics(t *testing.T, jobName string, primary api.ClusterInfo, secondary api.ClusterInfo, numberOfLogs, last int64) {
 	metrics := readMetrics(t)
 
-	lastGeneratedRead := getValue(t, metrics, fmt.Sprintf(lastGeneratedReadMetric, jobName))
-	lastGeneratedWritten := getValue(t, metrics, fmt.Sprintf(lastGeneratedWrittenMetric, jobName))
+	lastGeneratedRead := getValue(t, metrics, fmt.Sprintf(lastGeneratedReadMetric, primary.Cluster, jobName))
+	lastGeneratedWritten := getValue(t, metrics, fmt.Sprintf(lastGeneratedWrittenMetric, primary.Cluster, jobName))
 	docsRead := getValue(t, metrics, fmt.Sprintf(docsReadMetric, primary.Cluster, jobName, primary.Tenant))
 	docsWritten := getValue(t, metrics, fmt.Sprintf(docsWrittenMetric, secondary.Cluster, jobName, secondary.Tenant))
 
@@ -65,8 +66,8 @@ func validateMetrics(t *testing.T, jobName string, primary api.ClusterInfo, seco
 	require.InDelta(t, float64(last), lastGeneratedWritten, 5000)
 }
 
-func cleanUpData(t *testing.T, primary api.ClusterInfo, secondary api.ClusterInfo, idx api.Index) {
-	for _, clusterInfo := range []api.ClusterInfo{primary, secondary} {
+func cleanUpData(t *testing.T, idx api.Index, clusters ...api.ClusterInfo) {
+	for _, clusterInfo := range clusters {
 		err := backendutils.CleanupIndices(context.Background(), esClient.Backend(), idx.IsSingleIndex(), idx, clusterInfo)
 		require.NoError(t, err)
 	}
@@ -85,9 +86,12 @@ func validateCheckpoints(t *testing.T, dataType api.DataType, primary api.Cluste
 	require.InDelta(t, last.UnixMilli(), val.UnixMilli(), 1000)
 }
 
-func cleanUpCheckPoints(t *testing.T, dataType api.DataType, primary api.ClusterInfo) {
-	configMapName := checkpoint.ConfigMapName(dataType, primary.Tenant, primary.Cluster)
-	err := k8sClient.CoreV1().ConfigMaps("default").Delete(ctx, configMapName, metav1.DeleteOptions{})
-	require.NoError(t, err)
-
+func cleanUpCheckPoints(dataType api.DataType, primaries ...api.ClusterInfo) {
+	for _, primary := range primaries {
+		configMapName := checkpoint.ConfigMapName(dataType, primary.Tenant, primary.Cluster)
+		err := k8sClient.CoreV1().ConfigMaps("default").Delete(ctx, configMapName, metav1.DeleteOptions{})
+		if err != nil {
+			logrus.WithError(err).Warn("Failed to clean up checkpoint configmap")
+		}
+	}
 }
