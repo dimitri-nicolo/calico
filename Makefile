@@ -50,6 +50,7 @@ clean:
 	rm -f manifests/ocp.tgz
 
 ci-preflight-checks:
+	$(MAKE) check-go-mod
 	$(MAKE) check-dockerfiles
 	$(MAKE) check-gotchas
 	$(MAKE) check-language || true # Enterprise hasn't been cleaned up yet.
@@ -79,6 +80,9 @@ check-gotchas:
 		echo; \
 		exit 1; \
 	fi
+
+check-go-mod:
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ./hack/check-go-mod.sh'
 
 check-dockerfiles:
 	./hack/check-dockerfiles.sh

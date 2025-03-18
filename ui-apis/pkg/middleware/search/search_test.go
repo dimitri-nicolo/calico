@@ -669,8 +669,7 @@ var _ = Describe("SearchElasticHits", func() {
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
 			Expect(se.Status).To(Equal(400))
-			Expect(se.Msg).To(Equal("Request body contains an invalid value for the \"time_range\" "+
-				"field (at position 20)"), se.Msg)
+			Expect(se.Msg).To(Equal("Request body contains an invalid value for the \"time_range.from\" field (at position 20)"), se.Msg)
 		})
 
 		It("Should parse & validate request that have only from", func() {
