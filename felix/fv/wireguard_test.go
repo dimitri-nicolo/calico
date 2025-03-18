@@ -38,6 +38,7 @@ import (
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
+	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/tcpdump"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
@@ -1755,6 +1756,485 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ WireGuard-Supported 3-node 
 	})
 })
 
+var _ = infrastructure.DatastoreDescribeRemoteOnly("_BPF-SAFE_ WireGuard-Supported Cluster Mesh", func(getInfras infrastructure.LocalRemoteInfraFactories) {
+	const nodeCount, wlPerNode = 3, 2
+	const localCluster, remoteCluster = 0, 1
+	const v4Pool1CIDR, v4Pool2CIDR = "10.65.0.0/16", "10.85.0.0/16"
+	const v4Pool1Prefix, v4Pool2Prefix = "10.65", "10.85"
+	const v6Pool1CIDR, v6Pool2CIDR = "dead:beef::/64", "dead:cafe::/64"
+	const v6Pool1Prefix, v6Pool2Prefix = "dead:beef", "dead:cafe"
+
+	type fvState struct {
+		infra  infrastructure.DatastoreInfra
+		tc     infrastructure.TopologyContainers
+		client clientv3.Interface
+
+		// simulated host workloads
+		wlsByHost        [nodeCount][wlPerNode]*workload.Workload
+		hostNetworkedWls [nodeCount]*workload.Workload
+		tcpdumps         []*tcpdump.TCPDump
+	}
+
+	var (
+		state  [2]fvState
+		cc     *connectivity.Checker
+		ifName string
+	)
+
+	var poolAndPrefix = func(cluster int, ipVersion int, overlap OverlapTestType) (string, string) {
+		if overlap != OverlapTestType_None || cluster == localCluster {
+			if ipVersion == 4 {
+				return v4Pool1CIDR, v4Pool1Prefix
+			} else {
+				return v6Pool1CIDR, v6Pool1Prefix
+			}
+		} else {
+			if ipVersion == 4 {
+				return v4Pool2CIDR, v4Pool2Prefix
+			} else {
+				return v6Pool2CIDR, v6Pool2Prefix
+			}
+		}
+	}
+
+	for _, ipVersion := range []int{4, 6} {
+		for _, calicoIPAM := range []bool{false, true} {
+			for _, vxlan := range []bool{false, true} {
+				for _, overlap := range []OverlapTestType{OverlapTestType_None, OverlapTestType_Connect, OverlapTestType_ConnectDisconnect} {
+					Describe(fmt.Sprintf("ipVersion: %d, calicoIPAM: %v, vxlan: %v, overlap: %v", ipVersion, calicoIPAM, vxlan, overlap), func() {
+						BeforeEach(func() {
+							// Run these tests only when the Host has Wireguard kernel module available.
+							if os.Getenv("FELIX_FV_WIREGUARD_AVAILABLE") != "true" {
+								Skip("Skipping Wireguard supported tests.")
+							}
+
+							infras := getInfras.AllFactories()
+							for cluster := range []int{localCluster, remoteCluster} {
+								state[cluster].infra = infras[cluster]()
+								routeSource := "WorkloadIPs"
+								if calicoIPAM {
+									routeSource = "CalicoIPAM"
+								}
+
+								topologyOptions := wireguardTopologyOptions(routeSource, false, ipVersion == 4, ipVersion == 6, false)
+								topologyOptions.WithTypha = true
+
+								ipPoolCIDR, ipPoolPrefix := poolAndPrefix(cluster, ipVersion, overlap)
+								if ipVersion == 4 {
+									topologyOptions.IPPoolCIDR = ipPoolCIDR
+								} else {
+									topologyOptions.IPv6PoolCIDR = ipPoolCIDR
+								}
+
+								if vxlan {
+									topologyOptions.VXLANMode = api.VXLANModeAlways
+									topologyOptions.VXLANStrategy = infrastructure.NewDefaultVXLANStrategy(topologyOptions.IPPoolCIDR, topologyOptions.IPv6PoolCIDR)
+								}
+
+								if !calicoIPAM {
+									// Enable host encryption (else host-to-pod communication is not possible)
+									hostEncryptionEnabled := true
+									topologyOptions.InitialFelixConfiguration.Spec.WireguardHostEncryptionEnabled = &hostEncryptionEnabled
+
+									// Disable the allocation of an interface IP by the topology tooling.
+									topologyOptions.WireguardEnabled = false
+									topologyOptions.WireguardEnabledV6 = false
+								}
+
+								state[cluster].tc, state[cluster].client = infrastructure.StartNNodeTopology(nodeCount, topologyOptions, state[cluster].infra)
+
+								// To allow all ingress and egress, in absence of any Policy.
+								state[cluster].infra.AddDefaultAllow()
+
+								// Initialise pods
+								for felixIdx, felixWls := range state[cluster].wlsByHost {
+									for wlIdx := range felixWls {
+										var ip string
+										if ipVersion == 4 {
+											ip = fmt.Sprintf("%s.%d.%d", ipPoolPrefix, felixIdx, 2+wlIdx)
+										} else {
+											ip = fmt.Sprintf("%s::%d:%d", ipPoolPrefix, 1+felixIdx, 2+wlIdx)
+										}
+										state[cluster].wlsByHost[felixIdx][wlIdx] = createWorkloadWithAssignedIP(
+											&state[cluster].infra,
+											&topologyOptions,
+											&state[cluster].client,
+											ip,
+											fmt.Sprintf("wl-f%d-%d", felixIdx, wlIdx),
+											state[cluster].tc.Felixes[felixIdx])
+									}
+								}
+
+								// Initialise host-networked pods
+								for i := range state[cluster].hostNetworkedWls {
+									state[cluster].hostNetworkedWls[i] = createHostNetworkedWorkload(fmt.Sprintf("wl-f%d-hn-0", i), state[cluster].tc.Felixes[i], ipVersion)
+								}
+
+								for i := range state[cluster].tc.Felixes {
+									state[cluster].tc.Felixes[i].TriggerDelayedStart()
+								}
+
+								// Check Felix Wireguard links are ready.
+								ifName = wireguardInterfaceNameDefault
+								if ipVersion == 6 {
+									ifName = wireguardInterfaceNameV6Default
+								}
+								for i := range state[cluster].tc.Felixes {
+									Eventually(func() string {
+										out, _ := state[cluster].tc.Felixes[i].ExecOutput("ip", "link", "show", ifName)
+										return out
+									}, "10s", "100ms").Should(Not(BeEmpty()))
+								}
+							}
+
+							cc = &connectivity.Checker{
+								// If two nodes send their first packet within a few milliseconds then any on-demand Wireguard
+								// handshake can fail and back off if the handshakes cross on the wire.
+								StaggerStartBy: 100 * time.Millisecond,
+							}
+
+							// Setup expressions for the local host client 0 > local host workload 1 flow.
+							tcpdumpProto := "IP"
+							if ipVersion == 6 {
+								tcpdumpProto = "IP6"
+							}
+							localHost0WorkloadSendsToLocalHost1Workload := "localHost0WorkloadSendsToLocalHost1Workload"
+							localHost0WorkloadSendsToLocalHost1WorkloadRegex := fmt.Sprintf("%s %s\\.\\d+ > %s\\.%s:", tcpdumpProto, state[localCluster].wlsByHost[0][0].IP, state[localCluster].wlsByHost[1][0].IP, defaultWorkloadPort)
+							log.Infof("%s: %s", localHost0WorkloadSendsToLocalHost1Workload, localHost0WorkloadSendsToLocalHost1WorkloadRegex)
+							localHost1WorkloadSendsToLocalHost0Workload := "localHost1WorkloadSendsToLocalHost0Workload"
+							localHost1WorkloadSendsToLocalHost0WorkloadRegex := fmt.Sprintf("%s %s\\.%s > %s\\.\\d+:", tcpdumpProto, state[localCluster].wlsByHost[1][0].IP, defaultWorkloadPort, state[localCluster].wlsByHost[0][0].IP)
+							log.Infof("%s: %s", localHost1WorkloadSendsToLocalHost0Workload, localHost1WorkloadSendsToLocalHost0WorkloadRegex)
+
+							// Setup expressions for the local host client 0 > remote host workload 1 flow.
+							localHost0WorkloadSendsToRemoteHost1Workload := "localHost0WorkloadSendsToRemoteHost1Workload"
+							localHost0WorkloadSendsToRemoteHost1WorkloadRegex := fmt.Sprintf("%s %s\\.\\d+ > %s\\.%s:", tcpdumpProto, state[localCluster].wlsByHost[0][0].IP, state[remoteCluster].wlsByHost[1][0].IP, defaultWorkloadPort)
+							log.Infof("%s: %s", localHost0WorkloadSendsToRemoteHost1Workload, localHost0WorkloadSendsToRemoteHost1WorkloadRegex)
+							remoteHost1WorkloadToLocalHost0Workload := "remoteHost1WorkloadToLocalHost0Workload"
+							remoteHost1WorkloadToLocalHost0WorkloadRegex := fmt.Sprintf("%s %s\\.%s > %s\\.\\d+:", tcpdumpProto, state[remoteCluster].wlsByHost[1][0].IP, defaultWorkloadPort, state[localCluster].wlsByHost[0][0].IP)
+							log.Infof("%s: %s", remoteHost1WorkloadToLocalHost0Workload, remoteHost1WorkloadToLocalHost0WorkloadRegex)
+
+							// Setup expressions for the local host client 0 > local host 1 flow.
+							localHost0SendsToLocalHost1 := "localHost0SendsToLocalHost1"
+							localHost0SendsToLocalHost1Regex := fmt.Sprintf("%s %s\\.\\d+ > %s\\.%s:", tcpdumpProto, state[localCluster].hostNetworkedWls[0].IP, state[localCluster].hostNetworkedWls[1].IP, defaultWorkloadPort)
+							log.Infof("%s: %s", localHost0SendsToLocalHost1, localHost0SendsToLocalHost1Regex)
+							localHost1SendsToLocalHost0 := "localHost1SendsToLocalHost0"
+							localHost1SendsToLocalHost0Regex := fmt.Sprintf("%s %s\\.%s > %s\\.\\d+:", tcpdumpProto, state[localCluster].hostNetworkedWls[1].IP, defaultWorkloadPort, state[localCluster].hostNetworkedWls[0].IP)
+							log.Infof("%s: %s", localHost1SendsToLocalHost0, localHost1SendsToLocalHost0Regex)
+
+							// Setup expressions for the local host client 0 > remote host 1 flow.
+							localHost0SendsToRemoteHost1 := "localHost0SendsToRemoteHost1"
+							localHost0SendsToRemoteHost1Regex := fmt.Sprintf("%s %s\\.\\d+ > %s\\.%s:", tcpdumpProto, state[localCluster].hostNetworkedWls[0].IP, state[remoteCluster].hostNetworkedWls[1].IP, defaultWorkloadPort)
+							log.Infof("%s: %s", localHost0SendsToRemoteHost1, localHost0SendsToRemoteHost1Regex)
+							remoteHost1SendsToLocalHost0 := "remoteHost1SendsToLocalHost0"
+							remoteHost1SendsToLocalHost0Regex := fmt.Sprintf("%s %s\\.%s > %s\\.\\d+:", tcpdumpProto, state[remoteCluster].hostNetworkedWls[1].IP, defaultWorkloadPort, state[localCluster].hostNetworkedWls[0].IP)
+							log.Infof("%s: %s", remoteHost1SendsToLocalHost0, remoteHost1SendsToLocalHost0Regex)
+
+							// Setup tcpdump expectations for local felix 0.
+							localHost0Tcpdump := state[localCluster].tc.Felixes[0].AttachTCPDump(ifName)
+							localHost0Tcpdump.AddMatcher(localHost0WorkloadSendsToLocalHost1Workload, regexp.MustCompile(localHost0WorkloadSendsToLocalHost1WorkloadRegex))
+							localHost0Tcpdump.AddMatcher(localHost1WorkloadSendsToLocalHost0Workload, regexp.MustCompile(localHost1WorkloadSendsToLocalHost0WorkloadRegex))
+							localHost0Tcpdump.AddMatcher(localHost0WorkloadSendsToRemoteHost1Workload, regexp.MustCompile(localHost0WorkloadSendsToRemoteHost1WorkloadRegex))
+							localHost0Tcpdump.AddMatcher(remoteHost1WorkloadToLocalHost0Workload, regexp.MustCompile(remoteHost1WorkloadToLocalHost0WorkloadRegex))
+							localHost0Tcpdump.AddMatcher(localHost0SendsToLocalHost1, regexp.MustCompile(localHost0SendsToLocalHost1Regex))
+							localHost0Tcpdump.AddMatcher(localHost1SendsToLocalHost0, regexp.MustCompile(localHost1SendsToLocalHost0Regex))
+							localHost0Tcpdump.AddMatcher(localHost0SendsToRemoteHost1, regexp.MustCompile(localHost0SendsToRemoteHost1Regex))
+							localHost0Tcpdump.AddMatcher(remoteHost1SendsToLocalHost0, regexp.MustCompile(remoteHost1SendsToLocalHost0Regex))
+							localHost0Tcpdump.Start()
+
+							localHostEth0Tcpdump := state[localCluster].tc.Felixes[0].AttachTCPDump("eth0")
+							localHostEth0Tcpdump.Start()
+
+							// Setup tcpdump expectations for local felix 1.
+							localHost1Tcpdump := state[localCluster].tc.Felixes[1].AttachTCPDump(ifName)
+							localHost1Tcpdump.AddMatcher(localHost0WorkloadSendsToLocalHost1Workload, regexp.MustCompile(localHost0WorkloadSendsToLocalHost1WorkloadRegex))
+							localHost1Tcpdump.AddMatcher(localHost1WorkloadSendsToLocalHost0Workload, regexp.MustCompile(localHost1WorkloadSendsToLocalHost0WorkloadRegex))
+							localHost1Tcpdump.AddMatcher(localHost0SendsToLocalHost1, regexp.MustCompile(localHost0SendsToLocalHost1Regex))
+							localHost1Tcpdump.AddMatcher(localHost1SendsToLocalHost0, regexp.MustCompile(localHost1SendsToLocalHost0Regex))
+							localHost1Tcpdump.Start()
+
+							// Setup tcpdump expectations for remote felix 1.
+							remoteHost1Tcpdump := state[remoteCluster].tc.Felixes[1].AttachTCPDump(ifName)
+							remoteHost1Tcpdump.AddMatcher(localHost0WorkloadSendsToRemoteHost1Workload, regexp.MustCompile(localHost0WorkloadSendsToRemoteHost1WorkloadRegex))
+							remoteHost1Tcpdump.AddMatcher(remoteHost1WorkloadToLocalHost0Workload, regexp.MustCompile(remoteHost1WorkloadToLocalHost0WorkloadRegex))
+							remoteHost1Tcpdump.AddMatcher(localHost0SendsToRemoteHost1, regexp.MustCompile(localHost0SendsToRemoteHost1Regex))
+							remoteHost1Tcpdump.AddMatcher(remoteHost1SendsToLocalHost0, regexp.MustCompile(remoteHost1SendsToLocalHost0Regex))
+							remoteHost1Tcpdump.Start()
+
+							// Store tcpdumps in state.
+							state[localCluster].tcpdumps = []*tcpdump.TCPDump{localHost0Tcpdump, localHost1Tcpdump}
+							state[remoteCluster].tcpdumps = []*tcpdump.TCPDump{nil, remoteHost1Tcpdump}
+
+							// Setup local with an RCC for remote.
+							remoteRCC := state[remoteCluster].infra.GetRemoteClusterConfig()
+							remoteRCC.Spec.SyncOptions.OverlayRoutingMode = api.OverlayRoutingModeEnabled
+							_, err := state[localCluster].infra.GetCalicoClient().RemoteClusterConfigurations().Create(context.Background(), remoteRCC, options.SetOptions{})
+							Expect(err).To(BeNil())
+
+							// Setup remote with an RCC for local.
+							localRCC := state[localCluster].infra.GetRemoteClusterConfig()
+							localRCC.Spec.SyncOptions.OverlayRoutingMode = api.OverlayRoutingModeEnabled
+							_, err = state[remoteCluster].infra.GetCalicoClient().RemoteClusterConfigurations().Create(context.Background(), localRCC, options.SetOptions{})
+							Expect(err).To(BeNil())
+
+							// Wait for the remotes to sync to reduce flakes. We expect routes and IP sets to only reflect
+							// the local cluster as part of overlap handling, so we check the number of nodes seen by Felix
+							// to determine the status.
+							expectedNumHosts := len(state[localCluster].tc.Felixes) + len(state[remoteCluster].tc.Felixes)
+							for _, localFelix := range state[localCluster].tc.Felixes {
+								Eventually(metrics.GetFelixMetricIntFn(localFelix.IP, "felix_cluster_num_hosts"), "60s", "200ms").Should(Equal(expectedNumHosts))
+							}
+							for _, remoteFelix := range state[remoteCluster].tc.Felixes {
+								Eventually(metrics.GetFelixMetricIntFn(remoteFelix.IP, "felix_cluster_num_hosts"), "60s", "200ms").Should(Equal(expectedNumHosts))
+							}
+
+							if overlap == OverlapTestType_ConnectDisconnect {
+								_, err = state[localCluster].infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), remoteRCC.Name, options.DeleteOptions{})
+								_, err = state[remoteCluster].infra.GetCalicoClient().RemoteClusterConfigurations().Delete(context.Background(), localRCC.Name, options.DeleteOptions{})
+							}
+						})
+
+						AfterEach(func() {
+							for cluster := range []int{localCluster, remoteCluster} {
+								for felixIdx, felixWls := range state[cluster].wlsByHost {
+									for i := range felixWls {
+										state[cluster].wlsByHost[felixIdx][i].Stop()
+									}
+								}
+
+								for _, tcpdump := range state[cluster].tcpdumps {
+									if tcpdump != nil {
+										tcpdump.Stop()
+									}
+								}
+
+								state[cluster].tc.Stop()
+
+								if CurrentGinkgoTestDescription().Failed {
+									state[cluster].infra.DumpErrorData()
+								}
+								state[cluster].infra.Stop()
+							}
+						})
+
+						It("should pass basic connectivity scenarios", func() {
+							// Validate static configuration on each node.
+							for cluster := range []int{localCluster, remoteCluster} {
+								By(fmt.Sprintf("Checking the interface exists for the %s cluster", clusterTypeFromIndex(cluster)))
+								Eventually(func() error {
+									for _, felix := range state[cluster].tc.Felixes {
+										out, err := felix.ExecOutput("ip", "link")
+										if err != nil {
+											return err
+										}
+										if strings.Contains(out, ifName) {
+											continue
+										}
+										return fmt.Errorf("felix %v has no wireguard device", felix.Name)
+									}
+									return nil
+								}, "10s", "100ms").ShouldNot(HaveOccurred())
+
+								By(fmt.Sprintf("Checking the ip rule exists for the %s cluster", clusterTypeFromIndex(cluster)))
+								for _, felix := range state[cluster].tc.Felixes {
+									Eventually(func() string {
+										return getWireguardRoutingRule(felix, ipVersion)
+									}, "10s", "100ms").Should(MatchRegexp(fmt.Sprintf("\\d+:\\s+not from all fwmark 0x\\d+/0x\\d+ lookup \\d+")))
+								}
+							}
+
+							// Validate workload-specific configuration on each node.
+							for cluster := range []int{localCluster, remoteCluster} {
+								var foreignCluster int
+								var ipPoolPrefix string
+								var foreignIPPoolPrefix string
+								if cluster == localCluster {
+									foreignCluster = remoteCluster
+								} else {
+									foreignCluster = localCluster
+								}
+								_, ipPoolPrefix = poolAndPrefix(cluster, ipVersion, overlap)
+								_, foreignIPPoolPrefix = poolAndPrefix(foreignCluster, ipVersion, overlap)
+
+								By(fmt.Sprintf("Checking the route table entries exist for the %s cluster", clusterTypeFromIndex(cluster)))
+								for host := range state[cluster].wlsByHost {
+									var matchers []types.GomegaMatcher
+
+									// Compute expected allowed IPs from other hosts in the same cluster.
+									for otherHost, wls := range state[cluster].wlsByHost {
+										if host != otherHost {
+											if calicoIPAM {
+												if ipVersion == 4 {
+													matchers = append(matchers, ContainSubstring(
+														fmt.Sprintf("%s.%d.0/26 dev %s", ipPoolPrefix, otherHost, ifName)))
+												} else {
+													matchers = append(matchers, ContainSubstring(
+														fmt.Sprintf("%s::%d:0/122 dev %s", ipPoolPrefix, 1+otherHost, ifName)))
+												}
+											} else {
+												for _, wl := range wls {
+													matchers = append(matchers, ContainSubstring(
+														fmt.Sprintf("%s dev %s", wl.IP, ifName)))
+												}
+
+												// Add host entry since host encryption is enabled.
+												matchers = append(matchers, ContainSubstring(
+													fmt.Sprintf("%s dev %s", getFelixIPForVersion(state[cluster].tc.Felixes[otherHost], ipVersion), ifName)))
+											}
+										}
+									}
+
+									// If there is no overlap, compute expected allowed IPs from hosts in the foreign cluster.
+									if overlap == OverlapTestType_None {
+										for foreignHost, wls := range state[foreignCluster].wlsByHost {
+											if calicoIPAM {
+												if ipVersion == 4 {
+													matchers = append(matchers, ContainSubstring(
+														fmt.Sprintf("%s.%d.0/26 dev %s", foreignIPPoolPrefix, foreignHost, ifName)))
+												} else {
+													matchers = append(matchers, ContainSubstring(
+														fmt.Sprintf("%s::%d:0/122 dev %s", foreignIPPoolPrefix, 1+foreignHost, ifName)))
+												}
+											} else {
+												for _, wl := range wls {
+													matchers = append(matchers, ContainSubstring(
+														fmt.Sprintf("%s dev %s", wl.IP, ifName)))
+												}
+
+												// Add host entry since host encryption is enabled
+												matchers = append(matchers, ContainSubstring(
+													fmt.Sprintf("%s dev %s", getFelixIPForVersion(state[foreignCluster].tc.Felixes[foreignHost], ipVersion), ifName)))
+											}
+										}
+									}
+
+									Eventually(func() []string {
+										return strings.Split(getWireguardRouteEntry(state[cluster].tc.Felixes[host], ipVersion), "\n")
+									}, "10s", "100ms").Should(ContainElements(matchers), fmt.Sprintf("Felix %d (%s) on %s cluster had incorrect routes", host, state[cluster].tc.Felixes[host].Name, clusterTypeFromIndex(cluster)))
+								}
+
+								By("Checking wireguard allowed ips")
+								singleIPMask := 32
+								if ipVersion == 6 {
+									singleIPMask = 128
+								}
+								for host := range state[cluster].wlsByHost {
+									var matchers []types.GomegaMatcher
+
+									// Compute expected allowed IPs from other hosts in the same cluster.
+									for otherHost, wls := range state[cluster].wlsByHost {
+										var allowedIPMatchers []types.GomegaMatcher
+										if host != otherHost {
+											if calicoIPAM {
+												if ipVersion == 4 {
+													allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(fmt.Sprintf("%s.%d.0/26", ipPoolPrefix, otherHost)))
+												} else {
+													allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(fmt.Sprintf("%s::%d:0/122", ipPoolPrefix, 1+otherHost)))
+												}
+											} else {
+												for _, wl := range wls {
+													allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(wl.IP))
+												}
+
+												// Add host entry since host encryption is enabled.
+												allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(fmt.Sprintf("%s/%d", getFelixIPForVersion(state[cluster].tc.Felixes[otherHost], ipVersion), singleIPMask)))
+											}
+											matchers = append(matchers, And(allowedIPMatchers...))
+										}
+									}
+
+									// If there is no overlap, compute expected allowed IPs from hosts in the foreign cluster.
+									if overlap == OverlapTestType_None {
+										for foreignHost, wls := range state[foreignCluster].wlsByHost {
+											var allowedIPMatchers []types.GomegaMatcher
+											if calicoIPAM {
+												if ipVersion == 4 {
+													allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(fmt.Sprintf("%s.%d.0/26", foreignIPPoolPrefix, foreignHost)))
+												} else {
+													allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(fmt.Sprintf("%s::%d:0/122", foreignIPPoolPrefix, 1+foreignHost)))
+												}
+											} else {
+												for _, wl := range wls {
+													allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(wl.IP))
+												}
+
+												// Add host entry since host encryption is enabled.
+												allowedIPMatchers = append(allowedIPMatchers, ContainSubstring(fmt.Sprintf("%s/%d", getFelixIPForVersion(state[foreignCluster].tc.Felixes[foreignHost], ipVersion), singleIPMask)))
+											}
+											matchers = append(matchers, And(allowedIPMatchers...))
+										}
+									}
+									Eventually(func() []string {
+										s, _ := state[cluster].tc.Felixes[host].ExecCombinedOutput("wg", "show", ifName, "allowed-ips")
+										return strings.Split(s, "\n")
+									}, "10s", "100ms").Should(ContainElements(matchers))
+								}
+							}
+
+							// Validate connectivity and routing via the wireguard interface.
+							By("Verifying packets between local host 0 workload and local host 1 workload are encrypted")
+							cc.ExpectSome(state[localCluster].wlsByHost[0][0], state[localCluster].wlsByHost[1][0])
+							cc.CheckConnectivity()
+							Eventually(state[localCluster].tcpdumps[0].MatchCountFn("localHost0WorkloadSendsToLocalHost1Workload"), "30s", "100ms").
+								Should(BeNumerically(">", 0))
+							Eventually(state[localCluster].tcpdumps[0].MatchCountFn("localHost1WorkloadSendsToLocalHost0Workload"), "30s", "100ms").
+								Should(BeNumerically(">", 0))
+							Eventually(state[localCluster].tcpdumps[1].MatchCountFn("localHost0WorkloadSendsToLocalHost1Workload"), "30s", "100ms").
+								Should(BeNumerically(">", 0))
+							Eventually(state[localCluster].tcpdumps[1].MatchCountFn("localHost1WorkloadSendsToLocalHost0Workload"), "30s", "100ms").
+								Should(BeNumerically(">", 0))
+							cc.ResetExpectations()
+
+							if overlap == OverlapTestType_None {
+								By("Verifying packets between local host 0 workload and remote host 1 workload are encrypted")
+								cc.ExpectSome(state[localCluster].wlsByHost[0][0], state[remoteCluster].wlsByHost[1][0])
+								cc.CheckConnectivity()
+								Eventually(state[localCluster].tcpdumps[0].MatchCountFn("localHost0WorkloadSendsToRemoteHost1Workload"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								Eventually(state[localCluster].tcpdumps[0].MatchCountFn("remoteHost1WorkloadToLocalHost0Workload"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								Eventually(state[remoteCluster].tcpdumps[1].MatchCountFn("localHost0WorkloadSendsToRemoteHost1Workload"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								Eventually(state[remoteCluster].tcpdumps[1].MatchCountFn("remoteHost1WorkloadToLocalHost0Workload"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								cc.ResetExpectations()
+							}
+
+							if !calicoIPAM {
+								By("Verifying packets between local host 0 and local host 1 are encrypted")
+								cc.ExpectSome(state[localCluster].hostNetworkedWls[0], state[localCluster].hostNetworkedWls[1])
+								cc.CheckConnectivity()
+								Eventually(state[localCluster].tcpdumps[0].MatchCountFn("localHost0SendsToLocalHost1"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								Eventually(state[localCluster].tcpdumps[0].MatchCountFn("localHost1SendsToLocalHost0"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								Eventually(state[localCluster].tcpdumps[1].MatchCountFn("localHost0SendsToLocalHost1"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								Eventually(state[localCluster].tcpdumps[1].MatchCountFn("localHost1SendsToLocalHost0"), "10s", "100ms").
+									Should(BeNumerically(">", 0))
+								cc.ResetExpectations()
+
+								if overlap == OverlapTestType_None {
+									By("Verifying packets between local host 0 and remote host 1 are encrypted")
+									cc.ExpectSome(state[localCluster].hostNetworkedWls[0], state[remoteCluster].hostNetworkedWls[1])
+									cc.CheckConnectivity()
+									Eventually(state[localCluster].tcpdumps[0].MatchCountFn("localHost0SendsToRemoteHost1"), "10s", "100ms").
+										Should(BeNumerically(">", 0))
+									Eventually(state[localCluster].tcpdumps[0].MatchCountFn("remoteHost1SendsToLocalHost0"), "10s", "100ms").
+										Should(BeNumerically(">", 0))
+									Eventually(state[remoteCluster].tcpdumps[1].MatchCountFn("localHost0SendsToRemoteHost1"), "10s", "100ms").
+										Should(BeNumerically(">", 0))
+									Eventually(state[remoteCluster].tcpdumps[1].MatchCountFn("remoteHost1SendsToLocalHost0"), "10s", "100ms").
+										Should(BeNumerically(">", 0))
+								}
+							}
+						})
+					})
+				}
+			}
+		}
+	}
+})
+
 // Setup cluster topology options.
 // mainly, enable Wireguard with delayed start option.
 func wireguardTopologyOptions(routeSource string, ipipEnabled, wireguardIPv4Enabled, wireguardIPv6Enabled, wireguardThreadingEnabled bool, extraEnvs ...map[string]string) infrastructure.TopologyOptions {
@@ -1912,4 +2392,23 @@ func createHostNetworkedWorkload(wlName string, felix *infrastructure.Felix, ipV
 		mtu = wireguardMTUV6Default
 	}
 	return workload.Run(felix, wlName, "default", ip, defaultWorkloadPort, "tcp", workload.WithMTU(mtu))
+}
+
+func clusterTypeFromIndex(i int) string {
+	switch i {
+	case 0:
+		return "local"
+	case 1:
+		return "remote"
+	default:
+		panic(fmt.Sprintf("Unexpected cluster index %d", i))
+	}
+}
+
+func getFelixIPForVersion(felix *infrastructure.Felix, ipVersion int) string {
+	if ipVersion == 4 {
+		return felix.IP
+	} else {
+		return felix.IPv6
+	}
 }

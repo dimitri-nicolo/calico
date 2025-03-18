@@ -24,7 +24,7 @@ import (
 
 // MustGetElasticClient will create an elastic client or stop execution
 // if configurations like certificate paths are invalid
-func MustGetElasticClient(cfg config.Config) lmaelastic.Client {
+func MustGetElasticClient(cfg config.ElasticClientConfig, logLevel string, source string) lmaelastic.Client {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(fmt.Sprintf("%s://%s:%s", cfg.ElasticScheme, cfg.ElasticHost, cfg.ElasticPort)),
 		elastic.SetScheme(cfg.ElasticScheme),
@@ -41,7 +41,7 @@ func MustGetElasticClient(cfg config.Config) lmaelastic.Client {
 	// Use the standard logger to inherit configuration.
 	log := logrus.StandardLogger()
 
-	switch strings.ToLower(cfg.LogLevel) {
+	switch strings.ToLower(logLevel) {
 	case "error":
 		options = append(options, elastic.SetErrorLog(log))
 	case "info", "debug", "warning":
@@ -50,7 +50,7 @@ func MustGetElasticClient(cfg config.Config) lmaelastic.Client {
 		options = append(options, elastic.SetTraceLog(log))
 	}
 
-	options = append(options, elastic.SetHttpClient(mustGetHTTPClient(cfg)))
+	options = append(options, elastic.SetHttpClient(mustGetHTTPClient(cfg, source)))
 	esClient, err := elastic.NewClient(options...)
 	if err != nil {
 		logrus.WithError(err).Fatal("Failed to create Elastic client")
@@ -59,10 +59,10 @@ func MustGetElasticClient(cfg config.Config) lmaelastic.Client {
 	return lmaelastic.NewWithClient(esClient)
 }
 
-func mustGetHTTPClient(config config.Config) *http.Client {
+func mustGetHTTPClient(config config.ElasticClientConfig, source string) *http.Client {
 	if config.ElasticScheme == "http" {
 		logrus.Warn("SSL verification is disabled for Elastic communication. Will use a default HTTP client")
-		return &http.Client{Transport: &metricsRoundTripper{defaultTransport: http.DefaultTransport}}
+		return &http.Client{Transport: &metricsRoundTripper{defaultTransport: http.DefaultTransport, source: source}}
 	}
 
 	// Configure TLS
@@ -80,10 +80,10 @@ func mustGetHTTPClient(config config.Config) *http.Client {
 
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 
-	return &http.Client{Transport: &metricsRoundTripper{defaultTransport: transport}}
+	return &http.Client{Transport: &metricsRoundTripper{defaultTransport: transport, source: source}}
 }
 
-func mustGetClientCert(config config.Config) tls.Certificate {
+func mustGetClientCert(config config.ElasticClientConfig) tls.Certificate {
 	// Read client certificate
 	clientCert, err := tls.LoadX509KeyPair(config.ElasticClientCert, config.ElasticClientKey)
 	if err != nil {
@@ -92,7 +92,7 @@ func mustGetClientCert(config config.Config) tls.Certificate {
 	return clientCert
 }
 
-func mustGetCACertPool(config config.Config) *x509.CertPool {
+func mustGetCACertPool(config config.ElasticClientConfig) *x509.CertPool {
 	// Read CA cert file
 	caCert, err := os.ReadFile(config.ElasticCA)
 	if err != nil {
@@ -109,6 +109,7 @@ func mustGetCACertPool(config config.Config) *x509.CertPool {
 }
 
 type metricsRoundTripper struct {
+	source           string
 	defaultTransport http.RoundTripper
 }
 
@@ -130,6 +131,7 @@ func (t *metricsRoundTripper) methodPathLabels(req *http.Request) prometheus.Lab
 	return prometheus.Labels{
 		metrics.LabelPath:   t.minifiedPath(req),
 		metrics.LabelMethod: req.Method,
+		metrics.Source:      t.source,
 	}
 }
 
@@ -138,6 +140,7 @@ func (t *metricsRoundTripper) methodCodePathLabels(req *http.Request, resp *http
 		metrics.LabelMethod: req.Method,
 		metrics.LabelCode:   t.responseCode(resp),
 		metrics.LabelPath:   t.minifiedPath(req),
+		metrics.Source:      t.source,
 	}
 }
 

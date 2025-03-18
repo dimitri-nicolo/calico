@@ -29,7 +29,10 @@ func MarshalBulkParams[T any](bulkParams []T) string {
 	var logs []string
 
 	for _, p := range bulkParams {
-		newData, _ := json.Marshal(p)
+		newData, err := json.Marshal(p)
+		if err != nil {
+			panic(err)
+		}
 		logs = append(logs, string(newData))
 	}
 

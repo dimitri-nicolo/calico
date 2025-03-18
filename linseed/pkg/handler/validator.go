@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/goldmane/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -51,7 +52,7 @@ type RequestParams interface {
 // BulkRequestParams is the collection of request parameters types
 // for bulk requests that will be decoded and validated from an HTTP request
 type BulkRequestParams interface {
-	v1.FlowLog | v1.Event |
+	v1.FlowLog | v1.Event | *proto.Flow |
 		v1.L7Log | v1.DNSLog |
 		v1.AuditLog | v1.BGPLog |
 		v1.WAFLog | v1.ReportData |

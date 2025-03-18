@@ -29,14 +29,11 @@ func TestProtoToVXLANTunnelEndpointUpdate(t *testing.T) {
 		want VXLANTunnelEndpointUpdate
 	}{
 		{"empty", &proto.VXLANTunnelEndpointUpdate{}, VXLANTunnelEndpointUpdate{}},
-		{
-			"non-empty",
+		{"non-empty",
 			&proto.VXLANTunnelEndpointUpdate{
-				Node: "node", Mac: "mac", Ipv4Addr: "ipv4", ParentDeviceIp: "parent", MacV6: "macv6", Ipv6Addr: "ipv6", ParentDeviceIpv6: "parentv6",
-			},
+				Node: "node", Mac: "mac", Ipv4Addr: "ipv4", ParentDeviceIp: "parent", MacV6: "macv6", Ipv6Addr: "ipv6", ParentDeviceIpv6: "parentv6"},
 			VXLANTunnelEndpointUpdate{
-				Node: "node", Mac: "mac", Ipv4Addr: "ipv4", ParentDeviceIp: "parent", MacV6: "macv6", Ipv6Addr: "ipv6", ParentDeviceIpv6: "parentv6",
-			},
+				Node: "node", Mac: "mac", Ipv4Addr: "ipv4", ParentDeviceIp: "parent", MacV6: "macv6", Ipv6Addr: "ipv6", ParentDeviceIpv6: "parentv6"},
 		},
 	}
 	for _, tt := range tests {
@@ -55,14 +52,11 @@ func TestProtoToWireguardEndpointUpdate(t *testing.T) {
 		want WireguardEndpointUpdate
 	}{
 		{"empty", &proto.WireguardEndpointUpdate{}, WireguardEndpointUpdate{}},
-		{
-			"non-empty",
+		{"non-empty",
 			&proto.WireguardEndpointUpdate{
-				Hostname: "hostname", PublicKey: "public", InterfaceIpv4Addr: "ipv4",
-			},
+				Hostname: "hostname", PublicKey: "public", InterfaceIpv4Addr: "ipv4"},
 			WireguardEndpointUpdate{
-				Hostname: "hostname", PublicKey: "public", InterfaceIpv4Addr: "ipv4",
-			},
+				Hostname: "hostname", PublicKey: "public", InterfaceIpv4Addr: "ipv4"},
 		},
 	}
 	for _, tt := range tests {
@@ -81,14 +75,11 @@ func TestProtoToWireguardEndpointV6Update(t *testing.T) {
 		want WireguardEndpointV6Update
 	}{
 		{"empty", &proto.WireguardEndpointV6Update{}, WireguardEndpointV6Update{}},
-		{
-			"non-empty",
+		{"non-empty",
 			&proto.WireguardEndpointV6Update{
-				Hostname: "hostname", PublicKeyV6: "public", InterfaceIpv6Addr: "ipv6",
-			},
+				Hostname: "hostname", PublicKeyV6: "public", InterfaceIpv6Addr: "ipv6"},
 			WireguardEndpointV6Update{
-				Hostname: "hostname", PublicKeyV6: "public", InterfaceIpv6Addr: "ipv6",
-			},
+				Hostname: "hostname", PublicKeyV6: "public", InterfaceIpv6Addr: "ipv6"},
 		},
 	}
 	for _, tt := range tests {
@@ -107,10 +98,9 @@ func TestProtoToRouteUpdate(t *testing.T) {
 		want RouteUpdate
 	}{
 		{"empty", &proto.RouteUpdate{}, RouteUpdate{}},
-		{
-			"non-empty",
+		{"non-empty",
 			&proto.RouteUpdate{
-				Types:         proto.RouteType_CIDR_INFO,
+				Type:          proto.RouteType_CIDR_INFO,
 				IpPoolType:    proto.IPPoolType_VXLAN,
 				Dst:           "dst",
 				DstNodeName:   "node",
@@ -118,10 +108,9 @@ func TestProtoToRouteUpdate(t *testing.T) {
 				SameSubnet:    true,
 				NatOutgoing:   true,
 				LocalWorkload: true,
-				TunnelType:    &proto.TunnelType{Vxlan: true},
-			},
+				TunnelType:    &proto.TunnelType{Vxlan: true}},
 			RouteUpdate{
-				Types:         proto.RouteType_CIDR_INFO,
+				Type:          proto.RouteType_CIDR_INFO,
 				IpPoolType:    proto.IPPoolType_VXLAN,
 				Dst:           "dst",
 				DstNodeName:   "node",
@@ -129,15 +118,14 @@ func TestProtoToRouteUpdate(t *testing.T) {
 				SameSubnet:    true,
 				NatOutgoing:   true,
 				LocalWorkload: true,
-				TunnelType:    &proto.TunnelType{Vxlan: true},
-			},
+				TunnelType:    &proto.TunnelType{Vxlan: true}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := require.New(t)
 			got := ProtoToRouteUpdate(tt.msg)
-			assert.Equal(tt.want.Types, got.Types)
+			assert.Equal(tt.want.Type, got.Type)
 			assert.Equal(tt.want.IpPoolType, got.IpPoolType)
 			assert.Equal(tt.want.Dst, got.Dst)
 			assert.Equal(tt.want.DstNodeName, got.DstNodeName)

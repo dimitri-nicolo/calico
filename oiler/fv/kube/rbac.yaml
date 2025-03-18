@@ -1,0 +1,29 @@
+# This Role provides Oiler the necessary permissions
+# required for executing FV tests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tigera-oiler
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create", "update", "get"]
+
+---
+
+# This ClusterRoleBinding binds the above ClusterRole to the service account
+# created as part of FV setup.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tigera-oiler
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: tigera-oiler
+  namespace: default
+roleRef:
+  kind: Role
+  name: tigera-oiler
+  apiGroup: rbac.authorization.k8s.io

@@ -201,6 +201,17 @@ func mockBulk(response *v1.BulkResponse, err error) *Flows {
 	return b
 }
 
+func mockGoldmaneBulk(response *v1.BulkResponse, err error) *GoldmaneFlows {
+	mockLogBackend := &api.MockFlowLogBackend{}
+	b := NewGoldmane(mockLogBackend)
+
+	// mock backend to return the required backendFlowLogs
+	mockLogBackend.On("Create", mock.Anything,
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("[]v1.FlowLog")).Return(response, err)
+
+	return b
+}
+
 func marshalResponse(t *testing.T, flows []v1.L3Flow) string {
 	response := v1.List[v1.L3Flow]{}
 	response.Items = flows

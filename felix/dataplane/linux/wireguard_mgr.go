@@ -102,23 +102,24 @@ func (m *wireguardManager) OnUpdate(protoBufMsg interface{}) {
 			logCtx.WithField("CIDR", msg.Dst).Debugf("ignore update for mismatched IP version")
 			return
 		}
-		if msg.Types&proto.RouteType_REMOTE_HOST != 0 {
+		switch msg.Type {
+		case proto.RouteType_REMOTE_HOST:
 			logCtx.Debug("RouteUpdate is a remote host update")
 			// This can only be done in WorkloadIPs mode, because this breaks networking during upgrade in CalicoIPAM
 			// mode.
 			if m.dpConfig.Wireguard.EncryptHostTraffic {
 				m.wireguardRouteTable.RouteUpdate(msg.DstNodeName, cidr)
 			}
-		} else if msg.Types&proto.RouteType_LOCAL_WORKLOAD != 0 || msg.Types&proto.RouteType_REMOTE_WORKLOAD != 0 {
+		case proto.RouteType_LOCAL_WORKLOAD, proto.RouteType_REMOTE_WORKLOAD:
 			// CIDR is for a workload.
 			logCtx.Debug("RouteUpdate is a workload update")
 			m.wireguardRouteTable.RouteUpdate(msg.DstNodeName, cidr)
-		} else if msg.Types&proto.RouteType_REMOTE_TUNNEL != 0 || msg.Types&proto.RouteType_LOCAL_TUNNEL != 0 {
+		case proto.RouteType_LOCAL_TUNNEL, proto.RouteType_REMOTE_TUNNEL:
 			// CIDR is for a tunnel address. We treat tunnel addresses like workloads (in that we route over wireguard
 			// to and from these addresses when both nodes support wireguard).
 			logCtx.Debug("RouteUpdate is a tunnel update")
 			m.wireguardRouteTable.RouteUpdate(msg.DstNodeName, cidr)
-		} else {
+		default:
 			// It is not a workload CIDR - treat this as a route deletion.
 			logCtx.Debug("RouteUpdate is not a workload, remote host or tunnel update, treating as a deletion")
 			m.wireguardRouteTable.RouteRemove(cidr)

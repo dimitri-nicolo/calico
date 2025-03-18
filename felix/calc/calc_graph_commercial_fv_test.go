@@ -819,6 +819,8 @@ var commercialTests = []StateList{
 	// Select all states
 	{withCaptureSelectAll, withCaptureSelectA, withCaptureSelectTwice},
 
+	// The following tests are validating IP conflict resolution in cross-cluster overlay scenarios. The majority of the
+	// cases involve VXLAN as the encapsulation method.
 	// Cross-cluster VXLAN: scenarios involving clusters with the same pool CIDR and block size.
 	{
 		// All tests in this scenario are based on a disjoint local VXLAN pool (pool 1).
@@ -919,6 +921,35 @@ var commercialTests = []StateList{
 		// Test the inverse of the above state by providing a parent pool to local block,
 		// and having the block enclose a remote orphan.
 		localClusterPoolAndBlockContainRemoteOrphanBlock,
+	},
+
+	// The following cross-cluster tests are Wireguard specific. The majority of IP conflict handling in cross-cluster
+	// scenarios has already been handled by the VXLAN tests, so we need not re-implement them for Wireguard:
+	// * Block conflicts: The Block inputs into the calc graph are the same between VXLAN/Wireguard modes, so we have coverage via VXLAN tests.
+	// * WEP conflicts: The WorkloadEndpoint inputs into the calc graph are the same between VXLAN/Wireguard modes, so we have coverage via VXLAN tests.
+	// * Singular tunnel conflicts: The handling of VTEP IP conflict is identical to the handling of WG tunnel IP conflicts, so we have coverage via VXLAN tests.
+	//
+	// Where Wireguard differs is the fact that multiple tunnel IPs and multiple tunnel types can reside on a single host
+	// if Wireguard is enabled on top of VXLAN. The following cases validate IP conflict handling scenarios with multiple
+	// tunnel IPs and types on a host.
+	{
+		multipleTunnelEndpointsOverlapBetweenLocalAndRemoteA,
+	},
+
+	{
+		multipleTunnelEndpointsOverlapIndirectlyBetweenLocalAndRemoteA,
+	},
+
+	{
+		multipleTunnelEndpointsOverlapWithoutPoolsBetweenLocalAndRemoteA,
+	},
+
+	{
+		multipleTunnelEndpointsOverlapAcrossTypesWithoutPoolsBetweenLocalAndRemoteA,
+	},
+
+	{
+		multipleTunnelEndpointsDisjointWithoutPoolsBetweenLocalAndRemoteA,
 	},
 
 	// TODO(smc): Test config calculation

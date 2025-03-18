@@ -68,6 +68,18 @@ type Config struct {
 	HealthPort int `default:"8080" split_words:"true"`
 
 	// Elastic configuration
+	ElasticClientConfig *ElasticClientConfig
+
+	// Configures which backend mode to use.
+	Backend BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
+
+	// SingleIndexIndicesCreationEnabled will configure index templates, write aliases and
+	// create boostrap indices at runtime from the request received
+	SingleIndexIndicesCreationEnabled bool `envconfig:"ELASTIC_SINGLE_INDEX_INDICES_CREATION_ENABLED"`
+}
+
+// ElasticClientConfig represents the elastic configuration
+type ElasticClientConfig struct {
 	ElasticScheme               string `envconfig:"ELASTIC_SCHEME" default:"https"`
 	ElasticHost                 string `envconfig:"ELASTIC_HOST" default:"tigera-secure-es-http.tigera-elasticsearch.svc"`
 	ElasticPort                 string `envconfig:"ELASTIC_PORT" default:"9200"`
@@ -112,13 +124,6 @@ type Config struct {
 	// Replicas and flows for Runtime
 	ElasticRuntimeReplicas int `envconfig:"ELASTIC_RUNTIME_INDEX_REPLICAS" default:"0"`
 	ElasticRuntimeShards   int `envconfig:"ELASTIC_RUNTIME_INDEX_SHARDS" default:"1"`
-
-	// Configures which backend mode to use.
-	Backend BackendType `envconfig:"BACKEND" default:"elastic-multi-index"`
-
-	// SingleIndexIndicesCreationEnabled will configure index templates, write aliases and
-	// create boostrap indices at runtime from the request received
-	SingleIndexIndicesCreationEnabled bool `envconfig:"ELASTIC_SINGLE_INDEX_INDICES_CREATION_ENABLED"`
 
 	// These environment variables allow overriding the index names to use for this Linseed.
 	// They are only supported when running in single-index mode. If unset, defaults will be used instead

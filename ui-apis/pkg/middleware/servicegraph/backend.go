@@ -179,6 +179,9 @@ func (r *realServiceGraphBackend) GetEvents(
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
+	if !r.config.FineGrainedRBAC {
+		return NewAllowAllRBACFilter(), nil
+	}
 	return NewRBACFilter(ctx, r.authz, r.clientSetFactory, rd.ServiceGraphRequest.Cluster)
 }
 

@@ -22,7 +22,8 @@ include ../lib.Makefile
 SRC_FILES = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../api/pkg -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
-		$(shell find ../lma/pkg -name '*.go')
+		$(shell find ../lma/pkg -name '*.go') \
+		$(shell find ../goldmane/proto/ '*.go')
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
@@ -107,7 +108,6 @@ MOCKERY_FILE_PATHS= \
 ## Run only Unit Tests.
 ut: stop-elastic run-elastic ut-fast
 ut-fast:
-	# We run the tests 5 times to try and weed out test flakes.
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
 
 st:

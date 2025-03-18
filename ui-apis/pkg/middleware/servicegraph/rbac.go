@@ -55,10 +55,12 @@ type RBACFilter interface {
 	IncludePods(namespace string) bool
 }
 
+func NewAllowAllRBACFilter() RBACFilter {
+	return &allowAllRBACFilter{}
+}
+
 // NewRBACFilter performs an authorization review and uses the response to construct an RBAC filter.
-func NewRBACFilter(
-	ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory k8s.ClientSetFactory, cluster string,
-) (RBACFilter, error) {
+func NewRBACFilter(ctx context.Context, authz lmaauth.RBACAuthorizer, csFactory k8s.ClientSetFactory, cluster string) (RBACFilter, error) {
 	var verbs []v3.AuthorizedResourceVerbs
 	var l7Permitted, dnsPermitted, alertsPermitted bool
 	var verbsErr, l7Err, dnsErr, alertsErr error
@@ -145,6 +147,53 @@ func NewRBACFilter(
 	}
 
 	return f, nil
+}
+
+type allowAllRBACFilter struct{}
+
+// IncludeL7Logs returns true if the user is permitted to view L7 logs.
+func (a *allowAllRBACFilter) IncludeL7Logs() bool {
+	return true
+}
+
+// IncludeDNSLogs returns true if the user is permitted to view DNS logs.
+func (a *allowAllRBACFilter) IncludeDNSLogs() bool {
+	return true
+}
+
+// IncludeAlerts returns true if the user is permitted to view alerts.
+func (a *allowAllRBACFilter) IncludeAlerts() bool {
+	return true
+}
+
+// IncludeFlow returns true if the user is permitted a specific flow
+func (a *allowAllRBACFilter) IncludeFlow(f FlowEdge) bool {
+	return true
+}
+
+// IncludeEndpoint returns true if the user is permitted to list a specific endpoint.
+func (a *allowAllRBACFilter) IncludeEndpoint(f FlowEndpoint) bool {
+	return true
+}
+
+// IncludeHostEndpoints returns true if the user is permitted to list host endpoints.
+func (a *allowAllRBACFilter) IncludeHostEndpoints() bool {
+	return true
+}
+
+// IncludeGlobalNetworkSets returns true if the user is permitted to list global network sets.
+func (a *allowAllRBACFilter) IncludeGlobalNetworkSets() bool {
+	return true
+}
+
+// IncludeNetworkSets returns true if the user is permitted to list network sets in the specified namespace.
+func (a *allowAllRBACFilter) IncludeNetworkSets(namespace string) bool {
+	return true
+}
+
+// IncludePods returns true if the user is permitted to list pods in the specific namespace.
+func (a *allowAllRBACFilter) IncludePods(namespace string) bool {
+	return true
 }
 
 // rbacFilter implements the RBACFilter interface.

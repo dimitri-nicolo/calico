@@ -216,6 +216,7 @@ rules:
       - egressgateways/finalizers
       - egressgateways/status
       - gatewayapis
+      - gatewayapis/finalizers
       - imagesets
       - installations
       - installations/finalizers

@@ -400,7 +400,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			})
 
 			It("should not be able to proxy to a cluster without a tunnel", func() {
-
 				Expect(fakeClient.Create(context.Background(), &v3.ManagedCluster{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       v3.KindManagedCluster,
@@ -491,7 +490,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 
 					clusterATLSCert, err = test.X509CertToTLSCert(clusterACert, clusterAPrivKey)
 					Expect(err).NotTo(HaveOccurred())
-
 				})
 
 				It("can send requests from the server to the cluster", func() {
@@ -759,11 +757,9 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 				})
 			})
 		})
-
 	})
 
 	Context("with logging, metrics & auth caching enabled", func() {
-
 		var (
 			cancelFunc    context.CancelFunc
 			srvWg         *sync.WaitGroup
@@ -969,7 +965,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 		})
 
 		It("should cache token requests", func() {
-
 			closeCluster1 := createAndStartManagedCluster(managedCluster1, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, fakeClient, newEchoHandler(managedCluster1))
 			closeCluster2 := createAndStartManagedCluster(managedCluster2, clusterNS, tunnelAddr, voltronTunnelCAs, voltronTunnelCert, voltronTunnelPrivKey, k8sAPI, fakeClient, newEchoHandler(managedCluster2))
 			defer closeCluster1()
@@ -1087,7 +1082,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 					}
 				}, 3*authCacheTTL, 100*time.Millisecond).Should(Equal(result{authnMisses: 4, authzMisses: 5}))
 			})
-
 		})
 	})
 
@@ -1115,7 +1109,6 @@ var _ = describe("Server Proxy to tunnel", func(clusterNS string) {
 			)
 			Expect(err).To(MatchError(MatchRegexp("configured cacheTTL of 42s exceeds maximum permitted of 20s")))
 		})
-
 	})
 
 	Context("A managed cluster connects to voltron and the current active fingerprint is in the md5 format", func() {
@@ -1403,8 +1396,7 @@ func clientHelloReq(addr string, target string, expectStatus int) (resp *http.Re
 func createAndStartServer(k8sAPI bootstrap.K8sClient, fakeClient ctrlclient.WithWatch, config *rest.Config, authenticator auth.JWTAuth, clusterNS string,
 	options ...server.Option,
 ) (*server.Server, string, string, string, *sync.WaitGroup) {
-
-	vcfg := &voltronconfig.Config{TenantNamespace: clusterNS}
+	vcfg := &voltronconfig.Config{TenantNamespace: clusterNS, ManagedClusterSupportsImpersonation: true}
 	srv, err := server.New(k8sAPI, fakeClient, config, *vcfg, authenticator, options...)
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -1464,7 +1456,6 @@ func createAndStartManagedCluster(
 	fakeClient ctrlclient.WithWatch,
 	handler http.Handler,
 ) (closer func()) {
-
 	certTemplate := test.CreateClientCertificateTemplate(clusterName, "localhost")
 	clusterKey, clusterCert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -1530,5 +1521,4 @@ func newEchoHandler(name string) http.Handler {
 
 		_, _ = w.Write(reqBody)
 	})
-
 }

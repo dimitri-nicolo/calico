@@ -129,6 +129,8 @@ func calculateTierAndNameMatch(policyType v1.PolicyType, name, namespace, tier s
 		tier, nameMatch, err = calculateKNPTierAndName(staged, nameMatch, namespace, tier)
 	case v1.KANP:
 		tier, nameMatch, err = calculateKANPTierAndName(staged, nameMatch, namespace, tier)
+	case v1.KBANP:
+		tier, nameMatch, err = calculateKBANPTierAndName(staged, nameMatch, namespace, tier)
 	default:
 		tier, nameMatch, err = calculateCalicoPolicyTierAndName(staged, nameMatch, namespace, tier)
 	}
@@ -182,12 +184,36 @@ func calculateKANPTierAndName(staged bool, name, namespace, tier string) (string
 
 	nameMatch := name
 
-	// staged kubernetes admin network policies:
-	// "<index>|adminnetworkpolicy|adminnetworkpolicy.staged:<name>|<action>|<rule>"
+	// staged  is not supported for kubernetes admin network policies:
+	// "<index>|adminnetworkpolicy|adminnetworkpolicy.<name>|<action>|<rule>"
 	if staged {
-		nameMatch = fmt.Sprintf("staged:%s", nameMatch)
+		return "", "", errors.New("staged is not supported for adminnetworkpolicy")
 	}
 	nameMatch = fmt.Sprintf("%s%s", names.K8sAdminNetworkPolicyNamePrefix, nameMatch)
+
+	return tier, nameMatch, nil
+}
+
+// CalculateKANPTierAndName calculates the string match for admin network policies
+// returns tier, nameMatch, err
+func calculateKBANPTierAndName(staged bool, name, namespace, tier string) (string, string, error) {
+	if tier != "" && tier != names.BaselineAdminNetworkPolicyTierName {
+		return "", "", fmt.Errorf("tier cannot be set to %s for baselineadminnetworkpolicy", tier)
+	}
+	tier = names.BaselineAdminNetworkPolicyTierName
+
+	if namespace != "" {
+		return "", "", errors.New("namespace cannot be set for baselineadminnetworkpolicy")
+	}
+
+	nameMatch := name
+
+	// staged is not supported for kubernetes admin network policies:
+	// "<index>|baselineadminnetworkpolicy|baselineadminnetworkpolicy.<name>|<action>|<rule>"
+	if staged {
+		return "", "", errors.New("staged is not supported for baselineadminnetworkpolicy")
+	}
+	nameMatch = fmt.Sprintf("%s%s", names.K8sBaselineAdminNetworkPolicyNamePrefix, nameMatch)
 
 	return tier, nameMatch, nil
 }

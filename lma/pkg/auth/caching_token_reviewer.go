@@ -13,13 +13,13 @@ import (
 
 type cachingTokenReviewer struct {
 	delegate tokenReviewer
-	cache    cache.Cache[string, authnv1.TokenReviewStatus]
+	cache    cache.LoadingCache[string, authnv1.TokenReviewStatus]
 }
 
-func newCachingTokenReviewer(cache cache.Cache[string, authnv1.TokenReviewStatus], delegate tokenReviewer) *cachingTokenReviewer {
+func newCachingTokenReviewer(backingCache cache.Cache[string, authnv1.TokenReviewStatus], delegate tokenReviewer) *cachingTokenReviewer {
 	return &cachingTokenReviewer{
 		delegate: delegate,
-		cache:    cache,
+		cache:    cache.NewLoadingCache(backingCache),
 	}
 }
 
@@ -30,19 +30,9 @@ func newCachingTokenReviewer(cache cache.Cache[string, authnv1.TokenReviewStatus
 // gain, so we will avoid that complexity until production metrics tell us otherwise.
 func (r *cachingTokenReviewer) Review(ctx context.Context, spec authnv1.TokenReviewSpec) (authnv1.TokenReviewStatus, error) {
 	key := toTokenReviewerCacheKey(spec)
-
-	if result, ok := r.cache.Get(key); ok {
-		return result, nil
-	}
-
-	result, err := r.delegate.Review(ctx, spec)
-	if err != nil {
-		return authnv1.TokenReviewStatus{}, err
-	}
-
-	r.cache.Set(key, result)
-
-	return result, nil
+	return r.cache.GetOrLoad(key, func() (authnv1.TokenReviewStatus, error) {
+		return r.delegate.Review(ctx, spec)
+	})
 }
 
 func toTokenReviewerCacheKey(spec authnv1.TokenReviewSpec) string {

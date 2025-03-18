@@ -321,6 +321,72 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			Expect(err).ToNot(HaveOccurred())
 			Expect(out.Spec.SyncOptions.OverlayRoutingMode).To(Equal(apiv3.OverlayRoutingModeDisabled))
 		})
+
+		// Note: the above tests also validate that there is no error if FelixConfiguration is not found.
+		// The remaining tests set up a FelixConfiguration for Wireguard enablement.
+		It("should default to Enabled when Wireguard v4 is enabled and VXLAN pool is not present", func() {
+			t := true
+			_, err := c.FelixConfigurations().Create(ctx, &apiv3.FelixConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				Spec: apiv3.FelixConfigurationSpec{
+					WireguardEnabled: &t,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			specWithoutRoutingMode := spec2
+			specWithoutRoutingMode.SyncOptions.OverlayRoutingMode = ""
+			out, err := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: name2},
+				Spec:       specWithoutRoutingMode,
+			}, options.SetOptions{})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(out.Spec.SyncOptions.OverlayRoutingMode).To(Equal(apiv3.OverlayRoutingModeEnabled))
+		})
+
+		It("should default to Enabled when Wireguard v6 is enabled and VXLAN pool is not present", func() {
+			t := true
+			_, err := c.FelixConfigurations().Create(ctx, &apiv3.FelixConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				Spec: apiv3.FelixConfigurationSpec{
+					WireguardEnabledV6: &t,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			specWithoutRoutingMode := spec2
+			specWithoutRoutingMode.SyncOptions.OverlayRoutingMode = ""
+			out, err := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: name2},
+				Spec:       specWithoutRoutingMode,
+			}, options.SetOptions{})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(out.Spec.SyncOptions.OverlayRoutingMode).To(Equal(apiv3.OverlayRoutingModeEnabled))
+		})
+
+		It("should default to Enabled when Wireguard v4 and v6 enabled and VXLAN pool is not present", func() {
+			t := true
+			_, err := c.FelixConfigurations().Create(ctx, &apiv3.FelixConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				Spec: apiv3.FelixConfigurationSpec{
+					WireguardEnabled:   &t,
+					WireguardEnabledV6: &t,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			specWithoutRoutingMode := spec2
+			specWithoutRoutingMode.SyncOptions.OverlayRoutingMode = ""
+			out, err := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: name2},
+				Spec:       specWithoutRoutingMode,
+			}, options.SetOptions{})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(out.Spec.SyncOptions.OverlayRoutingMode).To(Equal(apiv3.OverlayRoutingModeEnabled))
+		})
 	})
 
 	Describe("RemoteClusterConfiguration watch functionality", func() {

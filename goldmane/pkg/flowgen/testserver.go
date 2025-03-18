@@ -87,13 +87,13 @@ func (t *flowGenerator) generateFlogs() {
 		2: "server-aggr-3",
 		3: "server-aggr-4",
 	}
-	actions := map[int]string{
-		0: "allow",
-		1: "deny",
+	actions := map[int]proto.Action{
+		0: proto.Action_Allow,
+		1: proto.Action_Deny,
 	}
-	reporters := map[int]string{
-		0: "src",
-		1: "dst",
+	reporters := map[int]proto.Reporter{
+		0: proto.Reporter_Src,
+		1: proto.Reporter_Dst,
 	}
 	services := map[int]string{
 		0: "frontend-service",
@@ -111,7 +111,7 @@ func (t *flowGenerator) generateFlogs() {
 		wait := time.After(15 * time.Second)
 
 		// Generate Several flows during this interval.
-		num := rand.Intn(30)
+		num := rand.IntN(30)
 		for i := 0; i < num; i++ {
 			t.Lock()
 			// Use some randomness to simulate different flows.
@@ -120,10 +120,10 @@ func (t *flowGenerator) generateFlogs() {
 					Proto:                "TCP",
 					SourceName:           randomFrommap(srcNames),
 					SourceNamespace:      "default",
-					SourceType:           "wep",
+					SourceType:           proto.EndpointType_WorkloadEndpoint,
 					DestName:             randomFrommap(dstNames),
 					DestNamespace:        "default",
-					DestType:             "wep",
+					DestType:             proto.EndpointType_WorkloadEndpoint,
 					DestServiceName:      randomFrommap(services),
 					DestServicePort:      443,
 					DestServicePortName:  "https",
@@ -133,10 +133,10 @@ func (t *flowGenerator) generateFlogs() {
 				},
 				StartTime:  int64(startTime.Unix()),
 				EndTime:    int64(endTime.Unix()),
-				BytesIn:    int64(rand.Intn(1000)),
-				BytesOut:   int64(rand.Intn(1000)),
-				PacketsIn:  int64(rand.Intn(100)),
-				PacketsOut: int64(rand.Intn(100)),
+				BytesIn:    int64(rand.IntN(1000)),
+				BytesOut:   int64(rand.IntN(1000)),
+				PacketsIn:  int64(rand.IntN(100)),
+				PacketsOut: int64(rand.IntN(100)),
 			}
 			index++
 			t.Unlock()
@@ -149,7 +149,7 @@ func (t *flowGenerator) generateFlogs() {
 	}
 }
 
-func randomFrommap(m map[int]string) string {
+func randomFrommap[E any](m map[int]E) E {
 	// Generate a random number within the size of the map.
-	return m[rand.Intn(len(m))]
+	return m[rand.IntN(len(m))]
 }
