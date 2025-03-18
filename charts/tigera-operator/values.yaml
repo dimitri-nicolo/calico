@@ -56,11 +56,11 @@ amazonCloudIntegration:
 
 # goldmane configures the Calico Goldmane flow aggregator.
 goldmane:
-  enabled: true
+  enabled: false
 
 # whisker configures the Calico Whisker observability UI.
 whisker:
-  enabled: true
+  enabled: false
 
 defaultFelixConfiguration:
   enabled: false
