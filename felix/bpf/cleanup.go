@@ -17,10 +17,10 @@ package bpf
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 
 	"github.com/projectcalico/calico/felix/bpf/bpfdefs"
 )

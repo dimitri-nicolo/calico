@@ -1,6 +1,6 @@
 module github.com/projectcalico/calico/lib/httpmachinery
 
-go 1.23.6
+go 1.23.7
 
 require (
 	github.com/go-playground/form v3.1.4+incompatible
@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/onsi/gomega v1.36.2
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
@@ -20,7 +20,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
