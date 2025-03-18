@@ -101,18 +101,3 @@ metadata:
 # metadata:
 #   name: tigera-secure
 
----
-
-# Configures the Calico Goldmane flow aggregator.
-apiVersion: operator.tigera.io/v1
-kind: Goldmane
-metadata:
-  name: default
-
----
-
-# Configures the Calico Whisker observability UI.
-apiVersion: operator.tigera.io/v1
-kind: Whisker
-metadata:
-  name: default

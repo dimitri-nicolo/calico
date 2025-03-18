@@ -27,4 +27,3 @@ metadata:
 spec:
 {{ $apiServerSpec | toYaml | indent 2 }}
 {{ end }}
-
