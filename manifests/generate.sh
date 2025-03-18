@@ -68,8 +68,6 @@ ${HELM} -n tigera-operator template \
   --no-hooks \
   --set installation.enabled=false \
   --set apiServer.enabled=false \
-  --set whisker.enabled=false \
-  --set goldmane.enabled=false \
   --set intrusionDetection.enabled=false \
   --set logCollector.enabled=false \
   --set logStorage.enabled=false \

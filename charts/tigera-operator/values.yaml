@@ -54,14 +54,6 @@ applicationLayer:
 amazonCloudIntegration:
   enabled: false
 
-# goldmane configures the Calico Goldmane flow aggregator.
-goldmane:
-  enabled: false
-
-# whisker configures the Calico Whisker observability UI.
-whisker:
-  enabled: false
-
 defaultFelixConfiguration:
   enabled: false
 # MCM configuration options.
