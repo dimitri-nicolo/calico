@@ -26,6 +26,13 @@ import (
 // Time to wait before retry failed connections to datastores.
 const retrySeconds = 10 * time.Second
 
+// WatchRetryTimeout is the timeout (between successful connections) that we
+// consider a remote connection to have failed.  The watcher cache will retry
+// internally for this long before it signals a failure to the syncer client
+// (or takes other action, such as signalling deletions for all resources, if
+// configured to do so).
+const WatchRetryTimeout = 60 * time.Second
+
 // Metrics for remote cluster config status.
 var (
 	statusToGaugeValue = map[model.RemoteClusterStatusType]float64{
@@ -466,7 +473,12 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Res
 			},
 		}
 
-		remoteWatcher := watchersyncer.New(backendClient, remoteResources, &remoteEndpointCallbacks)
+		remoteWatcher := watchersyncer.New(
+			backendClient,
+			remoteResources,
+			&remoteEndpointCallbacks,
+			watchersyncer.WithWatchRetryTimeout(WatchRetryTimeout),
+		)
 		a.remotes[key].syncer = remoteWatcher
 		a.remotes[key].client = backendClient
 		remoteWatcher.Start()
