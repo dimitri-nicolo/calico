@@ -88,11 +88,13 @@ func processProcessRequest(
 	params.TimeRange = request.TimeRange
 	params.Selector = request.Selector
 
-	verbs, err := authReview.PerformReview(ctx, request.ClusterName)
-	if err != nil {
-		return nil, err
+	if authReview != nil {
+		verbs, err := authReview.PerformReview(ctx, request.ClusterName)
+		if err != nil {
+			return nil, err
+		}
+		params.Permissions = verbs
 	}
-	params.Permissions = verbs
 
 	// Perform paginated list.
 	pager := client.NewListPager[lapi.ProcessInfo](&params)

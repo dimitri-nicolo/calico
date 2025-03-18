@@ -12,6 +12,10 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
+var excludeL7LogsField = map[string]bool{
+	"id": true,
+}
+
 func TestCompareL7logStructAndTemplate(t *testing.T) {
 
 	t.Run("Check for L7log api and template matches", func(t *testing.T) {
@@ -22,7 +26,7 @@ func TestCompareL7logStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, l7logMap["properties"].(map[string]interface{}), nil))
+		require.True(t, utils.CheckFieldsInJSON(t, m, l7logMap["properties"].(map[string]interface{}), excludeL7LogsField))
 	})
 	t.Run("Check for L7Log api and template not matches", func(t *testing.T) {
 		l7logMap := testutils.MustUnmarshalToMap(t, L7LogMappings)

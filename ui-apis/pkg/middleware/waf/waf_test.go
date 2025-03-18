@@ -105,6 +105,24 @@ var _ = Describe("WAF middleware tests", func() {
 				if file.Name == "REQUEST-911-METHOD-ENFORCEMENT.conf" {
 					Expect(len(file.Rules)).To(Equal(1))
 				}
+
+			}
+		})
+
+		It("Test Ordering WAF Ruleset", func() {
+			rs := rulesets{
+				client: mockClientSet,
+			}
+			ctx := context.Background()
+			ruleset, err := rs.GetRuleset(ctx, defaultRuleset)
+			Expect(err).To(BeNil())
+
+			Expect(ruleset.ID).To(Equal("coreruleset-default"))
+			Expect(ruleset.Name).To(Equal("OWASP Top 10"))
+			Expect(ruleset.Files).NotTo(BeEmpty())
+
+			for i := 0; i < (len(ruleset.Files) - 2); i++ {
+				Expect(strings.Compare(ruleset.Files[i].Name, ruleset.Files[i+1].Name)).To(Equal(-1))
 			}
 		})
 

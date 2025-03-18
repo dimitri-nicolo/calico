@@ -390,7 +390,7 @@ var _ = Describe("SearchElasticHits", func() {
 				PolicyMatches: []lapi.PolicyMatch{},
 			}
 
-			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.TotalHits).To(Equal(2))
@@ -534,7 +534,7 @@ var _ = Describe("SearchElasticHits", func() {
 				},
 			}
 
-			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results.NumPages).To(Equal(1))
 			Expect(results.Took.Milliseconds()).To(BeNumerically(">", (int64(0))))
@@ -568,7 +568,7 @@ var _ = Describe("SearchElasticHits", func() {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
 			defer cancel()
 
-			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview)
 			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
@@ -597,7 +597,7 @@ var _ = Describe("SearchElasticHits", func() {
 				},
 			}
 
-			results, err := searchFlowLogs(ctx, client, params, userAuthReview, fakeClientSet)
+			results, err := searchFlowLogs(ctx, client, params, userAuthReview)
 			Expect(err).To(HaveOccurred())
 
 			var httpErr *httputils.HttpStatusError
@@ -669,8 +669,7 @@ var _ = Describe("SearchElasticHits", func() {
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
 			Expect(se.Status).To(Equal(400))
-			Expect(se.Msg).To(Equal("Request body contains an invalid value for the \"time_range\" "+
-				"field (at position 20)"), se.Msg)
+			Expect(se.Msg).To(Equal("Request body contains an invalid value for the \"time_range.from\" field (at position 20)"), se.Msg)
 		})
 
 		It("Should parse & validate request that have only from", func() {
@@ -759,7 +758,6 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("should skip invalid alert exceptions selector", func() {
-
 			alertExceptions := v3.AlertExceptionList{
 				Items: []v3.AlertException{
 					// valid selector

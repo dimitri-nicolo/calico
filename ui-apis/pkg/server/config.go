@@ -52,6 +52,9 @@ type Config struct {
 	TenantID        string `envconfig:"TENANT_ID"`
 	TenantNamespace string `envconfig:"TENANT_NAMESPACE"`
 
+	// Whether or not Guardian in managed clusters supports impersonation.
+	Impersonate bool `envconfig:"IMPERSONATE" default:"true"`
+
 	// Configuration for connection to Kibana.
 	ElasticLicenseType    string `envconfig:"ELASTIC_LICENSE_TYPE"`
 	ElasticKibanaEndpoint string `envconfig:"ELASTIC_KIBANA_ENDPOINT" default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601"`
@@ -64,6 +67,9 @@ type Config struct {
 
 	// Location of the Voltron service.
 	VoltronURL string `envconfig:"VOLTRON_URL" default:"https://localhost:9443"`
+
+	// Whether or not Goldmane is enabled in managed clusters.
+	GoldmaneEnabled bool `envconfig:"GOLDMANE_ENABLED" default:"false"`
 
 	// Dex settings for authentication.
 	OIDCAuthEnabled        bool   `envconfig:"OIDC_AUTH_ENABLED" default:"false"`

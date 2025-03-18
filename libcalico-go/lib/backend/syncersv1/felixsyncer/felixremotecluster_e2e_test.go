@@ -936,11 +936,8 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 			Expect(err).NotTo(HaveOccurred())
 
 			if mode == apiv3.OverlayRoutingModeEnabled {
-				// Wireguard is expected to be stripped from the update.
-				node.Spec.Wireguard = nil
-				node.Status.WireguardPublicKey = ""
-
 				nodeIP := net.MustParseIP("1.2.3.4")
+				wgIP := net.MustParseIP("192.168.12.34")
 				expected := []api.Update{
 					{
 						KVPair: model.KVPair{
@@ -961,16 +958,18 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - datastore 
 						},
 						UpdateType: api.UpdateTypeKVNew,
 					},
-					// We do not expect a WireguardKey, as it should be stripped.
-					//{
-					//	KVPair: model.KVPair{
-					//		Key: model.WireguardKey{
-					//			NodeName: "remote-cluster/test-node",
-					//		},
-					//		Value: &model.Wireguard{},
-					//	},
-					//	UpdateType: api.UpdateTypeKVNew,
-					//},
+					{
+						KVPair: model.KVPair{
+							Key: model.WireguardKey{
+								NodeName: "remote-cluster/test-node",
+							},
+							Value: &model.Wireguard{
+								InterfaceIPv4Addr: &wgIP,
+								PublicKey:         node.Status.WireguardPublicKey,
+							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					},
 					{
 						KVPair: model.KVPair{
 							Key: model.HostConfigKey{

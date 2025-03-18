@@ -28,7 +28,7 @@ var (
 	operatorExcludedComponents = []string{
 		"coreos-config-reloader",
 		"coreos-dex",
-		"coreos-fluentd",
+		"upstream-fluentd",
 		"coreos-prometheus-operator",
 	}
 	noEntepriseImageComponents = []string{
@@ -37,7 +37,7 @@ var (
 		"coreos-alertmanager",
 		"coreos-config-reloader",
 		"coreos-dex",
-		"coreos-fluentd",
+		"upstream-fluentd",
 		"coreos-prometheus",
 		"coreos-prometheus-operator",
 		"eck-elasticsearch",

@@ -300,9 +300,9 @@ func TestCompileStringMatch(t *testing.T) {
 				Staged: true,
 			},
 			testResult: testResult{
-				error:       false,
-				errorMsg:    "",
-				stringMatch: "*|adminnetworkpolicy|kanp.adminnetworkpolicy.staged:*|*|*",
+				error:       true,
+				errorMsg:    "staged is not supported for adminnetworkpolicy",
+				stringMatch: "",
 			},
 		},
 		{
@@ -314,6 +314,54 @@ func TestCompileStringMatch(t *testing.T) {
 			testResult: testResult{
 				error:       true,
 				errorMsg:    "tier cannot be set to tier1 for adminnetworkpolicy",
+				stringMatch: "",
+			},
+		},
+		{
+			name: "baseline admin network policy with name",
+			policyMatch: v1.PolicyMatch{
+				Type: "kbanp",
+				Name: testutils.StringPtr("test"),
+			},
+			testResult: testResult{
+				error:       false,
+				errorMsg:    "",
+				stringMatch: "*|baselineadminnetworkpolicy|kbanp.baselineadminnetworkpolicy.test|*|*",
+			},
+		},
+		{
+			name: "baseline admin network policy with namespace",
+			policyMatch: v1.PolicyMatch{
+				Type:      "kbanp",
+				Namespace: testutils.StringPtr("ns"),
+			},
+			testResult: testResult{
+				error:       true,
+				errorMsg:    "namespace cannot be set for baselineadminnetworkpolicy",
+				stringMatch: "",
+			},
+		},
+		{
+			name: "staged baseline admin network policy not supported",
+			policyMatch: v1.PolicyMatch{
+				Type:   "kbanp",
+				Staged: true,
+			},
+			testResult: testResult{
+				error:       true,
+				errorMsg:    "staged is not supported for baselineadminnetworkpolicy",
+				stringMatch: "",
+			},
+		},
+		{
+			name: "baseline admin network policy with incorrect tier",
+			policyMatch: v1.PolicyMatch{
+				Type: "kbanp",
+				Tier: "tier1",
+			},
+			testResult: testResult{
+				error:       true,
+				errorMsg:    "tier cannot be set to tier1 for baselineadminnetworkpolicy",
 				stringMatch: "",
 			},
 		},
@@ -418,6 +466,7 @@ func TestCompileStringMatch(t *testing.T) {
 		stringMatch, err := flows.CompileStringMatch(tt.policyMatch)
 		if tt.testResult.error {
 			assert.Error(t, err)
+			assert.Equal(t, tt.testResult.errorMsg, err.Error())
 		} else {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.testResult.stringMatch, stringMatch)

@@ -12,6 +12,10 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/testutils"
 )
 
+var excludeBGPFields = map[string]bool{
+	"id": true,
+}
+
 func TestCompareBGPStructAndTemplate(t *testing.T) {
 
 	t.Run("Check for BGP api and template matches", func(t *testing.T) {
@@ -22,7 +26,7 @@ func TestCompareBGPStructAndTemplate(t *testing.T) {
 		jsonLog, err := json.Marshal(val)
 		require.NoError(t, err)
 		m := utils.MustUnmarshalStructToMap(t, jsonLog)
-		require.True(t, utils.CheckFieldsInJSON(t, m, bgpMap["properties"].(map[string]interface{}), nil))
+		require.True(t, utils.CheckFieldsInJSON(t, m, bgpMap["properties"].(map[string]interface{}), excludeBGPFields))
 	})
 	t.Run("Check for BGP api and template not matches", func(t *testing.T) {
 		bgpMap := testutils.MustUnmarshalToMap(t, BGPMappings)

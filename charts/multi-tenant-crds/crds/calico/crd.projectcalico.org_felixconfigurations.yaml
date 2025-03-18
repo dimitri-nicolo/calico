@@ -128,6 +128,80 @@ spec:
                 - Userspace
                 - BPFProgram
                 type: string
+              bpfConntrackTimeouts:
+                description: |-
+                  BPFConntrackTimers overrides the default values for the specified conntrack timer if
+                  set. Each value can be either a duration or `Auto` to pick the value from
+                  a Linux conntrack timeout.
+
+                  Configurable timers are: CreationGracePeriod, TCPSynSent,
+                  TCPEstablished, TCPFinsSeen, TCPResetSeen, UDPTimeout, GenericTimeout,
+                  ICMPTimeout.
+
+                  Unset values are replaced by the default values with a warning log for
+                  incorrect values.
+                properties:
+                  creationGracePeriod:
+                    description: |2-
+                       CreationGracePeriod gives a generic grace period to new connection
+                       before they are considered for cleanup [Default: 10s].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                  genericTimeout:
+                    description: |-
+                      GenericTimeout controls how long it takes before considering this
+                      entry for cleanup after the connection became idle. If set to 'Auto', the
+                      value from nf_conntrack_generic_timeout is used. If nil, Calico uses its
+                      own default value. [Default: 10m].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                  icmpTimeout:
+                    description: |-
+                      ICMPTimeout controls how long it takes before considering this
+                      entry for cleanup after the connection became idle. If set to 'Auto', the
+                      value from nf_conntrack_icmp_timeout is used. If nil, Calico uses its
+                      own default value. [Default: 5s].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                  tcpEstablished:
+                    description: |-
+                      TCPEstablished controls how long it takes before considering this entry for
+                      cleanup after the connection became idle. If set to 'Auto', the
+                      value from nf_conntrack_tcp_timeout_established is used. If nil, Calico uses
+                      its own default value. [Default: 1h].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                  tcpFinsSeen:
+                    description: |-
+                      TCPFinsSeen controls how long it takes before considering this entry for
+                      cleanup after the connection was closed gracefully. If set to 'Auto', the
+                      value from nf_conntrack_tcp_timeout_time_wait is used. If nil, Calico uses
+                      its own default value. [Default: Auto].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                  tcpResetSeen:
+                    description: |-
+                      TCPResetSeen controls how long it takes before considering this entry for
+                      cleanup after the connection was aborted. If nil, Calico uses its own
+                      default value. [Default: 40s].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                  tcpSynSent:
+                    description: |-
+                      TCPSynSent controls how long it takes before considering this entry for
+                      cleanup after the last SYN without a response. If set to 'Auto', the
+                      value from nf_conntrack_tcp_timeout_syn_sent is used. If nil, Calico uses
+                      its own default value. [Default: 20s].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                  udpTimeout:
+                    description: |-
+                      UDPTimeout controls how long it takes before considering this entry for
+                      cleanup after the connection became idle. If nil, Calico uses its own
+                      default value. [Default: 60s].
+                    pattern: ^(([0-9]*(\.[0-9]*)?(ms|s|h|m|us)+)+|Auto)$
+                    type: string
+                type: object
               bpfDNSPolicyMode:
                 description: |-
                   BPFDNSPolicyMode specifies how DNS policy programming will be handled.
@@ -279,6 +353,14 @@ spec:
                   for cleanup.  This should be big enough to hold all the NAT entries that expire within one cleanup interval.
                 minimum: 1
                 type: integer
+              bpfMapSizeConntrackScaling:
+                description: |-
+                  BPFMapSizeConntrackScaling controls whether and how we scale the conntrack map size depending
+                  on its usage. 'Disabled' make the size stay at the default or whatever is set by
+                  BPFMapSizeConntrack*. 'DoubleIfFull' doubles the size when the map is pretty much full even
+                  after cleanups. [Default: DoubleIfFull]
+                pattern: ^(?i)(Disabled|DoubleIfFull)?$
+                type: string
               bpfMapSizeIPSets:
                 description: |-
                   BPFMapSizeIPSets sets the size for ipsets map.  The IP sets map must be large enough to hold an entry
@@ -307,6 +389,13 @@ spec:
                   FrontendMap should be large enough to hold an entry for each nodeport,
                   external IP and each port in each service.
                 type: integer
+              bpfMapSizePerCpuConntrack:
+                description: |-
+                  BPFMapSizePerCPUConntrack determines the size of conntrack map based on the number of CPUs. If set to a
+                  non-zero value, overrides BPFMapSizeConntrack with `BPFMapSizePerCPUConntrack * (Number of CPUs)`.
+                  This map must be large enough to hold an entry for each active connection.  Warning: changing the size of the
+                  conntrack map can cause disruption.
+                type: integer
               bpfMapSizeRoute:
                 description: |-
                   BPFMapSizeRoute sets the size for the routes map.  The routes map should be large enough
@@ -331,6 +420,14 @@ spec:
                   BPFPolicyDebugEnabled when true, Felix records detailed information
                   about the BPF policy programs, which can be examined with the calico-bpf command-line tool.
                 type: boolean
+              bpfProfiling:
+                description: |-
+                  BPFProfiling controls profiling of BPF programs. At the monent, it can be
+                  Disabled or Enabled. [Default: Disabled]
+                enum:
+                - Enabled
+                - Disabled
+                type: string
               bpfRedirectToPeer:
                 description: |-
                   BPFRedirectToPeer controls which whether it is allowed to forward straight to the
@@ -570,8 +667,8 @@ spec:
 
                   This setting is ignored by eBPF and BPFDNSPolicyMode is used instead.
 
-                  Inline policy mode is not supported in NFTables mode. Default mode in DelayDeniedPacket in case of NFTables.
-                  [Default: DelayDeniedPacket]
+                  This field has no effect in NFTables mode. Please use NFTablesDNSPolicyMode instead.
+                  [Default: Inline]
                 enum:
                 - NoDelay
                 - DelayDeniedPacket
@@ -657,7 +754,7 @@ spec:
                   file reporting is disabled if field is left empty.
 
                   Chosen directory should match the directory used by the CNI plugin for PodStartupDelay.
-                  [Default: ""]
+                  [Default: /var/run/calico]
                 type: string
               externalNetworkRoutingRulePriority:
                 description: 'ExternalNetworkRoutingRulePriority controls the priority
@@ -890,6 +987,17 @@ spec:
                   unique IP addresses (if relevant) that should be included in Flow
                   logs.
                 type: integer
+              flowLogsPolicyEvaluationMode:
+                description: |-
+                  FlowLogsPolicyEvaluationMode defines how policies are evaluated and reflected in flow logs.
+                  OnNewConnection - In this mode, staged policies are only evaluated when new connections are
+                  made in the dataplane. Staged/active policy changes will not be reflected in the
+                  `pending_policies` field of flow logs for long lived connections.
+                  Continuous - Felix evaluates active flows on a regular basis to determine the rule
+                  traces in the flow logs. Any policy updates that impact a flow will be reflected in the
+                  pending_policies field, offering a near-real-time view of policy changes across flows.
+                  [Default: Continuous]
+                type: string
               flowLogsPositionFilePath:
                 description: |-
                   FlowLogsPositionFilePath is used specify the position of the external pipeline that reads flow logs. Default is /var/log/calico/flows.log.pos.
@@ -1343,6 +1451,24 @@ spec:
                   are used to report flow verdicts from the kernel.  Warning: currently increasing the value may cause errors
                   due to a bug in the netlink library.
                 type: string
+              nftablesDNSPolicyMode:
+                description: |-
+                  NFTablesDNSPolicyMode specifies how DNS policy programming will be handled for NFTables.
+                  DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches,
+                  but did not match. The packet is released after a fixed time, or after the destination IP address was programmed.
+                  DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some
+                  latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics
+                  are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit
+                  statistics.
+                  NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time
+                  the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
+                  connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
+                  [Default: DelayDeniedPacket]
+                enum:
+                - NoDelay
+                - DelayDeniedPacket
+                - DelayDNSResponse
+                type: string
               nftablesFilterAllowAction:
                 description: |-
                   NftablesFilterAllowAction controls the nftables action that Felix uses to represent the "allow" policy verdict
@@ -1615,25 +1741,29 @@ spec:
                   in use on your system. [Default: 4096]
                 type: integer
               wafEventLogsFileDirectory:
-                description: 'WAFEventLogsFileDirectory sets the directory where WAFEvent
-                  log files are stored. [Default: /var/log/calico/waf]'
+                description: |-
+                  WAFEventLogsFileDirectory sets the directory where WAFEvent log files are stored.
+                  [Default: /var/log/calico/waf]
                 type: string
               wafEventLogsFileEnabled:
-                description: 'WAFEventLogsFileEnabled controls logging WAFEvent logs
-                  to a file. If false no WAFEvent logging to file will occur. [Default:
-                  false]'
+                description: |-
+                  WAFEventLogsFileEnabled controls logging WAFEvent logs to a file. If false no WAFEvent logging to file will occur.
+                  [Default: false]
                 type: boolean
               wafEventLogsFileMaxFileSizeMB:
-                description: 'WAFEventLogsFileMaxFileSizeMB sets the max size in MB
-                  of WAFEvent log files before rotation. [Default: 100]'
+                description: |-
+                  WAFEventLogsFileMaxFileSizeMB sets the max size in MB of WAFEvent log files before rotation.
+                  [Default: 100]
                 type: integer
               wafEventLogsFileMaxFiles:
-                description: 'WAFEventLogsFileMaxFiles sets the number of WAFEvent
-                  log files to keep. [Default: 5]'
+                description: |-
+                  WAFEventLogsFileMaxFiles sets the number of WAFEvent log files to keep.
+                  [Default: 5]
                 type: integer
               wafEventLogsFlushInterval:
-                description: 'WAFEventLogsFlushInterval configures the interval at
-                  which Felix exports WAFEvent logs. [Default: 15s]'
+                description: |-
+                  WAFEventLogsFlushInterval configures the interval at which Felix exports WAFEvent logs.
+                  [Default: 15s]
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
                 type: string
               windowsDnsCacheFile:
@@ -1723,8 +1853,13 @@ spec:
                   to use for the Wireguard routing rule. [Default: 99]'
                 type: integer
               wireguardThreadingEnabled:
-                description: 'WireguardThreadingEnabled controls whether Wireguard
-                  has NAPI threading enabled. [Default: false]'
+                description: |-
+                  WireguardThreadingEnabled controls whether Wireguard has Threaded NAPI enabled. [Default: false]
+                  This increases the maximum number of packets a Wireguard interface can process.
+                  Consider threaded NAPI only if you have high packets per second workloads that are causing dropping packets due to a saturated `softirq` CPU core.
+                  There is a [known issue](https://lore.kernel.org/netdev/CALrw=nEoT2emQ0OAYCjM1d_6Xe_kNLSZ6dhjb5FxrLFYh4kozA@mail.gmail.com/T/) with this setting
+                  that may cause NAPI to get stuck holding the global `rtnl_mutex` when a peer is removed.
+                  Workaround: Make sure your Linux kernel [includes this patch](https://github.com/torvalds/linux/commit/56364c910691f6d10ba88c964c9041b9ab777bd6) to unwedge NAPI.
                 type: boolean
               workloadSourceSpoofing:
                 description: |-

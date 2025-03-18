@@ -63,7 +63,7 @@ var (
 //     naming conflicts across the clusters).
 type RemoteClusterInterface interface {
 	GetCalicoAPIConfig(*apiv3.RemoteClusterConfiguration) *apiconfig.CalicoAPIConfig
-	CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode) []watchersyncer.ResourceType
+	CreateResourceTypes(overlayRoutingMode apiv3.OverlayRoutingMode, usePodCIDR bool) []watchersyncer.ResourceType
 	ConvertUpdates(clusterName string, updates []api.Update) []api.Update
 }
 
@@ -450,7 +450,11 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Res
 		// Resources that are fetched from remote clusters.  We call into the RemoteClusterInterface to obtain
 		// this as it is dependent on the specific syncer.
 		overlayRoutingMode := a.remotes[key].remoteClusterConfig.Spec.SyncOptions.OverlayRoutingMode
-		remoteResources := a.rci.CreateResourceTypes(overlayRoutingMode)
+		usePodCIDR := false
+		if datastoreConfig != nil {
+			usePodCIDR = datastoreConfig.Spec.K8sUsePodCIDR
+		}
+		remoteResources := a.rci.CreateResourceTypes(overlayRoutingMode, usePodCIDR)
 
 		remoteEndpointCallbacks := remoteEndpointCallbacks{
 			wrappedCallbacks: a.callbacks,

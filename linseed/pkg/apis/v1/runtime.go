@@ -32,6 +32,8 @@ type Report struct {
 	Cluster string `json:"cluster,omitempty"`
 	// GeneratedTime is populated by Linseed when ingesting data to Elasticsearch
 	GeneratedTime *time.Time `json:"generated_time,omitempty"`
+	// ID is populated by Linseed at read time and it is not stored in Elasticsearch at document level
+	ID string `json:"id,omitempty"`
 }
 
 // RuntimeReportParams define querying parameters to retrieve runtime reports

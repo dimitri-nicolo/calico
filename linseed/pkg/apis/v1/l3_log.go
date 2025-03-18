@@ -26,7 +26,7 @@ type FlowLogParams struct {
 	// by the provided tier, in the enforced trace.
 	// For example, return flowlogs which are allowed by the default tier.
 	// If multiple EnforcedPolicyMatches are provided, they are combined with a logical OR.
-	EnforcedPolicyMatches []PolicyMatch `json:"enforce_policy_matches" validate:"dive"`
+	EnforcedPolicyMatches []PolicyMatch `json:"enforced_policy_matches" validate:"dive"`
 
 	// PendingPolicyMatches selects flowlogs based on whether an action is taken on the flowlog
 	// by the provided tier, in the pending trace.

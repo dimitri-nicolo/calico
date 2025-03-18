@@ -1,10 +1,13 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server/metrics"
@@ -15,18 +18,48 @@ type InnerHandler interface {
 	Handler() http.Handler
 }
 
-func NewInnerHandler(t string, c *jclust.ManagedCluster, proxy http.Handler) InnerHandler {
-	return &handlerHelper{
+// tokenPath is the path to the serviceaccount token provided to Voltron.
+const voltronToken = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+type InnerHandlerOption func(*handlerHelper)
+
+func WithTokenPath(tokenPath string) InnerHandlerOption {
+	return func(h *handlerHelper) {
+		log.WithField("tokenPath", tokenPath).Debug("Using token path for inner handler")
+		h.tokenPath = tokenPath
+	}
+}
+
+func WithRateLimiter(rl *rate.Limiter) InnerHandlerOption {
+	return func(h *handlerHelper) {
+		log.Debug("Using rate limiter for inner handler")
+		h.rl = rl
+	}
+}
+
+func NewInnerHandler(t string, c *jclust.ManagedCluster, proxy http.Handler, opts ...InnerHandlerOption) InnerHandler {
+	h := &handlerHelper{
 		ManagedCluster: c,
 		proxy:          proxy,
 		tenantID:       t,
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 type handlerHelper struct {
 	ManagedCluster *jclust.ManagedCluster
 	proxy          http.Handler
 	tenantID       string
+
+	// If specified, this tokenPath will be inserted for use when forwarding requests to Linseed.
+	// This is used for OSS clusters that don't have their own tokenPath.
+	tokenPath string
+
+	// If specified, use this rate limited to limit the number of requests to Linseed.
+	rl *rate.Limiter
 }
 
 func (h *handlerHelper) Handler() http.Handler {
@@ -54,6 +87,13 @@ func (h *handlerHelper) Handler() http.Handler {
 			logCtx.WithError(err).Warn("Failed to get total requests metric")
 		} else {
 			totalRequestsMetrics.Inc()
+		}
+
+		// Enforce rate limiting if configured to do so.
+		if h.rl != nil && !h.rl.Allow() {
+			logCtx.Warn("Rate limit exceeded")
+			writeHTTPError(w, rateLimitExceededError())
+			return
 		}
 
 		if clusterID != "" {
@@ -90,6 +130,20 @@ func (h *handlerHelper) Handler() http.Handler {
 
 			// Set the tenant ID before forwarding to indicate the originating tenant.
 			r.Header.Set(utils.TenantHeaderField, h.tenantID)
+		}
+
+		if h.tokenPath != "" {
+			// Get token from the path on disk.  We load this each time as the token may change.
+			token, err := os.ReadFile(h.tokenPath)
+			if err != nil {
+				logCtx.WithError(err).Warn("Failed to read token file")
+				writeHTTPError(w, serverError("Failed to read token file"))
+				return
+			}
+
+			// If a token is specified, set it in the requests authorization header.
+			logCtx.Info("Inserting Linseed authorization token into request")
+			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", string(token)))
 		}
 
 		// Headers have been set properly. Now, proxy the connection

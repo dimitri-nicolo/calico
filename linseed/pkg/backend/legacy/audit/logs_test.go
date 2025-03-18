@@ -37,6 +37,7 @@ import (
 var (
 	client          lmaelastic.Client
 	b               bapi.AuditBackend
+	migration       bapi.AuditBackend
 	ctx             context.Context
 	cluster1        string
 	cluster2        string
@@ -79,9 +80,11 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	if singleIndex {
 		kubeIndexGetter = index.AuditLogIndex()
 		eeIndexGetter = index.AuditLogIndex()
-		b = audit.NewSingleIndexBackend(client, cache, 10000)
+		b = audit.NewSingleIndexBackend(client, cache, 10000, false)
+		migration = audit.NewSingleIndexBackend(client, cache, 10000, true)
 	} else {
-		b = audit.NewBackend(client, cache, 10000)
+		b = audit.NewBackend(client, cache, 10000, false)
+		migration = audit.NewBackend(client, cache, 10000, true)
 		kubeIndexGetter = index.AuditLogKubeMultiIndex
 		eeIndexGetter = index.AuditLogEEMultiIndex
 	}
@@ -1348,6 +1351,198 @@ func TestRetrieveMostRecentAuditLogs(t *testing.T) {
 
 			// Assert that the logs are returned in the correct order.
 			require.Equal(t, log3, r.Items[0])
+		})
+	}
+}
+
+func TestPreserveAuditEEIDs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+
+			numLogs := 5
+			testStart := time.Unix(0, 0).UTC()
+
+			// Several dummy logs.
+			logs := []v1.AuditLog{}
+			for i := 1; i <= numLogs; i++ {
+				start := testStart.Add(time.Duration(i) * time.Second)
+				log := v1.AuditLog{Event: kaudit.Event{
+					TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+					Stage:    kaudit.StageResponseComplete,
+					Level:    kaudit.LevelRequestResponse,
+					User: authnv1.UserInfo{
+						Username: "jasmin",
+						UID:      "uid",
+						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"strong"})},
+					},
+					ImpersonatedUser: &authnv1.UserInfo{
+						Username: "impuser",
+						UID:      "impuid",
+						Groups:   []string{"g1"},
+					},
+					SourceIPs: []string{"1.2.3.4"},
+					ObjectRef: &kaudit.ObjectReference{
+						Resource:   "deployments",
+						Name:       "linseed",
+						Namespace:  "tigera-elasticsearch",
+						APIGroup:   "apps",
+						APIVersion: "v1",
+					},
+					RequestReceivedTimestamp: metav1.NewMicroTime(start),
+					StageTimestamp:           metav1.NewMicroTime(start),
+					Annotations:              map[string]string{"brick": "red"},
+				},
+					Name: testutils.StringPtr("log-any"),
+				}
+				logs = append(logs, log)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			resp, err := migration.Create(ctx, v1.AuditLogTypeEE, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Read it back and make sure generated time values are what we expect.
+			allOpts := v1.AuditLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: testStart.Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				Type: v1.AuditLogTypeEE,
+			}
+			first, err := migration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, first.Items, numLogs)
+
+			bulk, err := migration.Create(ctx, v1.AuditLogTypeEE, clusterInfo, first.Items)
+			require.NoError(t, err)
+			require.Empty(t, bulk.Errors)
+
+			second, err := migration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, second.Items, numLogs)
+
+			for _, log := range first.Items {
+				require.NotEmpty(t, log.ID)
+				backendutils.AssertGeneratedTimeAndReset[v1.AuditLog](t, &log)
+			}
+			for _, log := range second.Items {
+				require.NotEmpty(t, log.ID)
+				backendutils.AssertGeneratedTimeAndReset[v1.AuditLog](t, &log)
+			}
+
+			require.Equal(t, first.Items, second.Items)
+
+			// Refresh before cleaning up data
+			err = backendutils.RefreshIndex(ctx, client, eeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+		})
+	}
+}
+
+func TestPreserveAuditKubeIDs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+
+			numLogs := 5
+			testStart := time.Unix(0, 0).UTC()
+
+			// Several dummy logs.
+			logs := []v1.AuditLog{}
+			for i := 1; i <= numLogs; i++ {
+				start := testStart.Add(time.Duration(i) * time.Second)
+				log := v1.AuditLog{Event: kaudit.Event{
+					TypeMeta: metav1.TypeMeta{Kind: "Event", APIVersion: "audit.k8s.io/v1"},
+					Stage:    kaudit.StageResponseComplete,
+					Level:    kaudit.LevelRequestResponse,
+					User: authnv1.UserInfo{
+						Username: "jasmin",
+						UID:      "uid",
+						Extra:    map[string]authnv1.ExtraValue{"extra": authnv1.ExtraValue([]string{"strong"})},
+					},
+					ImpersonatedUser: &authnv1.UserInfo{
+						Username: "impuser",
+						UID:      "impuid",
+						Groups:   []string{"g1"},
+					},
+					SourceIPs: []string{"1.2.3.4"},
+					ObjectRef: &kaudit.ObjectReference{
+						Resource:   "deployments",
+						Name:       "linseed",
+						Namespace:  "tigera-elasticsearch",
+						APIGroup:   "apps",
+						APIVersion: "v1",
+					},
+					RequestReceivedTimestamp: metav1.NewMicroTime(start),
+					StageTimestamp:           metav1.NewMicroTime(start),
+					Annotations:              map[string]string{"brick": "red"},
+				},
+					Name: testutils.StringPtr("log-any"),
+				}
+				logs = append(logs, log)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			resp, err := migration.Create(ctx, v1.AuditLogTypeKube, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Read it back and make sure generated time values are what we expect.
+			allOpts := v1.AuditLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: testStart.Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+				Type: v1.AuditLogTypeKube,
+			}
+			first, err := migration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, first.Items, numLogs)
+
+			bulk, err := migration.Create(ctx, v1.AuditLogTypeKube, clusterInfo, first.Items)
+			require.NoError(t, err)
+			require.Empty(t, bulk.Errors)
+
+			second, err := migration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, second.Items, numLogs)
+
+			for _, log := range first.Items {
+				require.NotEmpty(t, log.ID)
+				backendutils.AssertGeneratedTimeAndReset[v1.AuditLog](t, &log)
+			}
+			for _, log := range second.Items {
+				require.NotEmpty(t, log.ID)
+				backendutils.AssertGeneratedTimeAndReset[v1.AuditLog](t, &log)
+			}
+
+			require.Equal(t, first.Items, second.Items)
+
+			// Refresh before cleaning up data
+			err = backendutils.RefreshIndex(ctx, client, kubeIndexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
 		})
 	}
 }

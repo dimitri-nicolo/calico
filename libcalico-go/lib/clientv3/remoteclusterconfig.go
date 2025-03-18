@@ -7,6 +7,7 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
@@ -101,6 +102,21 @@ func (r remoteClusterConfiguration) defaultOverlayRoutingMode(ctx context.Contex
 		return nil
 	}
 
+	// Check if Wireguard is globally enabled.
+	out, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv3.KindFelixConfiguration, noNamespace, "default")
+	if err != nil {
+		if _, ok := err.(errors.ErrorResourceDoesNotExist); !ok {
+			return err
+		}
+	} else {
+		cfg := out.(*apiv3.FelixConfiguration)
+		if (cfg.Spec.WireguardEnabled != nil && *cfg.Spec.WireguardEnabled) || (cfg.Spec.WireguardEnabledV6 != nil && *cfg.Spec.WireguardEnabledV6) {
+			res.Spec.SyncOptions.OverlayRoutingMode = apiv3.OverlayRoutingModeEnabled
+			return nil
+		}
+	}
+
+	// Check if VXLAN is enabled.
 	ipPoolList := &apiv3.IPPoolList{}
 	if err := r.client.resources.List(ctx, options.ListOptions{}, apiv3.KindIPPool, apiv3.KindIPPoolList, ipPoolList); err != nil {
 		return err

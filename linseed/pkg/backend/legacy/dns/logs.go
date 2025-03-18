@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -27,9 +28,12 @@ type dnsLogBackend struct {
 	deepPaginationCutOff int64
 	singleIndex          bool
 	index                bapi.Index
+
+	// Migration knobs
+	migrationMode bool
 }
 
-func NewDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.DNSLogBackend {
+func NewDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.DNSLogBackend {
 	return &dnsLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -38,10 +42,11 @@ func NewDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagi
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          false,
 		index:                index.DNSLogMultiIndex,
+		migrationMode:        migrationMode,
 	}
 }
 
-func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.DNSLogBackend {
+func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.DNSLogBackend {
 	return &dnsLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -50,6 +55,7 @@ func NewSingleIndexDNSLogBackend(c lmaelastic.Client, cache bapi.IndexInitialize
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
 		index:                index.DNSLogIndex(options...),
+		migrationMode:        migrationMode,
 	}
 }
 
@@ -104,7 +110,11 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		// LatestSeenGeneratedTime` will return fewer previously seen results.
 		generatedTime := time.Now().UTC()
 		f.GeneratedTime = &generatedTime
-
+		var id string
+		if len(f.ID) != 0 {
+			id = f.ID
+			f.ID = ""
+		}
 		// Add this log to the bulk request.
 		dnsLog, err := json.Marshal(b.prepareForWrite(i, f))
 		if err != nil {
@@ -112,6 +122,12 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 			continue
 		}
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(string(dnsLog))
+		if b.migrationMode {
+			if len(id) != 0 {
+				req.Id(id)
+			}
+		}
+
 		bulk.Add(req)
 	}
 
@@ -132,8 +148,12 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 }
 
 func (b *dnsLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.DNSAggregationParams) (*elastic.Aggregations, error) {
+	if b.migrationMode {
+		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
+	}
+
 	// Get the base query.
-	search, _, err := b.getSearch(i, &opts.DNSLogParams)
+	search, _, err := b.getSearch(ctx, i, &opts.DNSLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +189,7 @@ func (b *dnsLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opt
 func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DNSLogParams) (*v1.List[v1.DNSLog], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(i, opts)
+	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -191,9 +211,7 @@ func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DN
 		logs = append(logs, l)
 	}
 
-	// If an index has more than 10000 items or other value configured via index.max_result_window
-	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
+	afterKey, err := b.afterKey(ctx, i, opts, results, log, startFrom)
 	if err != nil {
 		return nil, err
 	}
@@ -201,11 +219,30 @@ func (b *dnsLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.DN
 	return &v1.List[v1.DNSLog]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
+		AfterKey:  afterKey,
 	}, nil
 }
 
-func (b *dnsLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.DNSLogParams) (*elastic.SearchService, int, error) {
+func (b *dnsLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
+	// on all requests
+	useDeepPagination := b.migrationMode
+	if !useDeepPagination {
+		// This is how we determine that an index has more items
+		// than index.max_result_window setting. TotalHits will
+		// return a value equal to index.max_result_window setting
+		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
+	}
+	nextPointInTime, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, log, useDeepPagination)
+	if err != nil {
+		return nil, err
+	}
+	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
+	return afterKey, nil
+}
+
+func (b *dnsLogBackend) getSearch(ctx context.Context, i bapi.ClusterInfo, opts *v1.DNSLogParams) (*elastic.SearchService, int, error) {
 	if i.Cluster == "" {
 		return nil, 0, fmt.Errorf("no cluster ID on request")
 	}
@@ -222,7 +259,22 @@ func (b *dnsLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.DNSLogParams) (*e
 
 	// Configure pagination options
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	var pitID string
+	if b.migrationMode {
+		// For migration mode, we enable deep pagination for each request
+		// instead of deciding based on number of documents stored.
+		// For the first page, we need to perform the query with a point
+		// in time configured
+		if ak := opts.GetAfterKey(); ak == nil {
+			var err error
+			pitID, err = logtools.OpenPointInTime(ctx, b.client, b.index.Index(i))
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+	}
+
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), b.migrationMode, pitID)
 	if err != nil {
 		return nil, 0, err
 	}

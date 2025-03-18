@@ -78,6 +78,7 @@ rules:
       - felixconfigurations.crd.projectcalico.org
       - globalnetworkpolicies.crd.projectcalico.org
       - globalnetworksets.crd.projectcalico.org
+      - goldmanes.operator.tigera.io
       - hostendpoints.crd.projectcalico.org
       - ipamblocks.crd.projectcalico.org
       - ipamconfigs.crd.projectcalico.org
@@ -88,7 +89,7 @@ rules:
       - networkpolicies.crd.projectcalico.org
       - networksets.crd.projectcalico.org
       - tiers.crd.projectcalico.org
-      - whiskers.crd.projectcalico.org
+      - whiskers.operator.tigera.io
        # Enterprise/Cloud Resources
       - alertexceptions.crd.projectcalico.org
       - bfdconfigurations.crd.projectcalico.org
@@ -254,7 +255,10 @@ rules:
       - egressgateways/finalizers
       - egressgateways/status
       - gatewayapis
+      - gatewayapis/finalizers
+      - goldmanes
       - imagesets
+      - whiskers
       - installations
       - installations/finalizers
       - installations/status

@@ -122,7 +122,12 @@ func (c *PolicyPreview) UnmarshalJSON(b []byte) error {
 
 // A handler for the /flowLogs endpoint, uses url parameters to build an elasticsearch query,
 // executes it and returns the results.
-func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lsclient client.Client, pip pippkg.PIP) http.Handler {
+func FlowLogsHandler(
+	k8sClientFactory datastore.ClusterCtxK8sClientFactory,
+	lsclient client.Client,
+	pip pippkg.PIP,
+	impersonate bool,
+) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// Validate Request
 		params, err := validateFlowLogsRequest(req)
@@ -163,8 +168,14 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, lscl
 			return
 		}
 
+		// If impersonation in managed clusters is enabled, we can use the original user's identity to
+		// perform the RBAC checks.
 		flowHelper := rbac.NewCachedFlowHelper(user, lmaauth.NewRBACAuthorizer(k8sCli))
 		flowFilter := lmaelastic.NewFlowFilterUserRBAC(flowHelper)
+		if !impersonate {
+			// Otherwise, we cannot perform the RBAC checks, so we will include all flows.
+			flowFilter = lmaelastic.NewFlowFilterIncludeAll()
+		}
 
 		var response interface{}
 		var stat int

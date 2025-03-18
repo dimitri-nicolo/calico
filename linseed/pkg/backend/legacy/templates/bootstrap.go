@@ -73,7 +73,7 @@ func (index IndexInfo) HasSettingsUpToDate(config *TemplateConfig) bool {
 	}
 
 	logrus.Debugf("Actual Settings, shard:%d , replica:%d, ILMPolicyName:%s", index.Shards, index.Replicas, index.ILMPolicy)
-	logrus.Debugf("Expected Settings, shard:%s , replica:%s, ILMPolicyName:%s", expectedShards, expectedReplicas, expectedILMPolicyName)
+	logrus.Debugf("Expected Settings, shard:%d , replica:%d, ILMPolicyName:%s", expectedShards, expectedReplicas, expectedILMPolicyName)
 
 	// Config does not have shards but the latest index have shards or
 	// Config have shards, and it does not match the current index setting

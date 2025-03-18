@@ -18,17 +18,17 @@ const (
 
 type cachingAuthorizer struct {
 	delegate RBACAuthorizer
-	cache    cache.Cache[string, bool]
+	cache    cache.LoadingCache[string, bool]
 }
 
 func NewCachingAuthorizer(cache cache.Cache[string, bool], delegate RBACAuthorizer) RBACAuthorizer {
 	return newCachingAuthorizer(cache, delegate)
 }
 
-func newCachingAuthorizer(cache cache.Cache[string, bool], delegate RBACAuthorizer) *cachingAuthorizer {
+func newCachingAuthorizer(backingCache cache.Cache[string, bool], delegate RBACAuthorizer) *cachingAuthorizer {
 	return &cachingAuthorizer{
 		delegate: delegate,
-		cache:    cache,
+		cache:    cache.NewLoadingCache(backingCache),
 	}
 }
 
@@ -43,19 +43,9 @@ func (a *cachingAuthorizer) Authorize(usr user.Info, resources *authzv1.Resource
 	}
 
 	key := toAuthorizeCacheKey(usr, resources)
-
-	if cachedResult, ok := a.cache.Get(key); ok {
-		return cachedResult, nil
-	}
-
-	delegateResult, err := a.delegate.Authorize(usr, resources, nonResources)
-	if err != nil {
-		return false, err
-	}
-
-	a.cache.Set(key, delegateResult)
-
-	return delegateResult, nil
+	return a.cache.GetOrLoad(key, func() (bool, error) {
+		return a.delegate.Authorize(usr, resources, nonResources)
+	})
 }
 
 func toAuthorizeCacheKey(uer user.Info, resources *authzv1.ResourceAttributes) string {

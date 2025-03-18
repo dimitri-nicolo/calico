@@ -71,9 +71,9 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	// Instantiate a backend.
 	if singleIndex {
 		indexGetter = index.RuntimeReportsIndex()
-		b = runtime.NewSingleIndexBackend(client, cache, 10000)
+		b = runtime.NewSingleIndexBackend(client, cache, 10000, false)
 	} else {
-		b = runtime.NewBackend(client, cache, 10000)
+		b = runtime.NewBackend(client, cache, 10000, false)
 		indexGetter = index.RuntimeReportMultiIndex
 	}
 
@@ -419,6 +419,75 @@ func TestRuntimeSelection(t *testing.T) {
 		name := fmt.Sprintf("TestReportSelection: %s", tt.selector)
 		RunAllModes(t, name, func(t *testing.T) {
 			testSelection(t, tt.selector, tt.expectedReports)
+		})
+	}
+}
+
+func TestPreserveIDs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+
+			numLogs := 5
+			testStart := time.Unix(0, 0).UTC()
+
+			// Several dummy logs.
+			logs := []v1.Report{}
+			for i := 1; i <= numLogs; i++ {
+				start := testStart.Add(time.Duration(i) * time.Second)
+				log := v1.Report{
+					StartTime: start,
+					EndTime:   start.Add(time.Duration(5) * time.Second),
+				}
+				logs = append(logs, log)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			resp, err := b.Create(ctx, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Read it back and make sure generated time values are what we expect.
+			allOpts := v1.RuntimeReportParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: testStart.Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			}
+			first, err := b.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, first.Items, numLogs)
+
+			bulk, err := b.Create(ctx, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, bulk.Errors)
+
+			second, err := b.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, second.Items, numLogs)
+
+			for _, log := range first.Items {
+				backendutils.AssertGeneratedTimeAndReset[v1.Report](t, &log.Report)
+			}
+			for _, log := range second.Items {
+				backendutils.AssertGeneratedTimeAndReset[v1.Report](t, &log.Report)
+			}
+
+			require.Equal(t, first.Items, second.Items)
+
+			// Refresh before cleaning up data
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
 		})
 	}
 }

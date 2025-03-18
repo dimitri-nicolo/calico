@@ -32,9 +32,7 @@ func NewAuthorizationReview(csFactory lmak8s.ClientSetFactory) AuthorizationRevi
 // the HTTP request.
 //
 // This function wraps lma's PerformUserAuthorizationReviewForElasticLogs.
-func (a userAuthorizationReview) PerformReview(
-	ctx context.Context, cluster string,
-) ([]libcalv3.AuthorizedResourceVerbs, error) {
+func (a userAuthorizationReview) PerformReview(ctx context.Context, cluster string) ([]libcalv3.AuthorizedResourceVerbs, error) {
 	user, ok := request.UserFrom(ctx)
 	if !ok {
 		// There should be user info on the request context. If not this is is server error since an earlier handler

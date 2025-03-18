@@ -28,6 +28,7 @@ import (
 var (
 	client      lmaelastic.Client
 	b           bapi.BGPBackend
+	migration   bapi.BGPBackend
 	ctx         context.Context
 	cluster1    string
 	cluster2    string
@@ -69,9 +70,11 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	// Instantiate a backend.
 	if singleIndex {
 		indexGetter = index.BGPLogIndex()
-		b = bgp.NewSingleIndexBackend(client, cache, 1000)
+		b = bgp.NewSingleIndexBackend(client, cache, 1000, false)
+		migration = bgp.NewSingleIndexBackend(client, cache, 1000, true)
 	} else {
-		b = bgp.NewBackend(client, cache, 10000)
+		b = bgp.NewBackend(client, cache, 10000, false)
+		migration = bgp.NewBackend(client, cache, 10000, true)
 		indexGetter = index.BGPLogMultiIndex
 	}
 
@@ -303,6 +306,76 @@ func TestRetrieveMostRecentBGPLogs(t *testing.T) {
 
 			// Assert that the logs are returned in the correct order.
 			require.Equal(t, log3, r.Items[0])
+		})
+	}
+}
+
+func TestPreserveIDs(t *testing.T) {
+	// Run each testcase both as a multi-tenant scenario, as well as a single-tenant case.
+	for _, tenant := range []string{backendutils.RandomTenantName(), ""} {
+		RunAllModes(t, fmt.Sprintf("should preserve IDs across bulk ingestion requests (tenant=%s)", tenant), func(t *testing.T) {
+			clusterInfo := bapi.ClusterInfo{Cluster: cluster1, Tenant: tenant}
+
+			numLogs := 5
+			testStart := time.Unix(0, 0).UTC()
+
+			// Several dummy logs.
+			logs := []v1.BGPLog{}
+			for i := 1; i <= numLogs; i++ {
+				start := testStart.Add(time.Duration(i) * time.Second)
+				log := v1.BGPLog{
+					LogTime: start.Format(v1.BGPLogTimeFormat),
+				}
+				logs = append(logs, log)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			resp, err := migration.Create(ctx, clusterInfo, logs)
+			require.NoError(t, err)
+			require.Empty(t, resp.Errors)
+
+			// Refresh.
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
+			// Read it back and make sure generated time values are what we expect.
+			allOpts := v1.BGPLogParams{
+				QueryParams: v1.QueryParams{
+					TimeRange: &lmav1.TimeRange{
+						From: testStart.Add(-5 * time.Second),
+						To:   time.Now().Add(5 * time.Minute),
+					},
+				},
+			}
+			first, err := migration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, first.Items, numLogs)
+
+			bulk, err := migration.Create(ctx, clusterInfo, first.Items)
+			require.NoError(t, err)
+			require.Empty(t, bulk.Errors)
+
+			second, err := migration.List(ctx, clusterInfo, &allOpts)
+			require.NoError(t, err)
+			require.Len(t, second.Items, numLogs)
+
+			for _, log := range first.Items {
+				require.NotEmpty(t, log.ID)
+				backendutils.AssertGeneratedTimeAndReset[v1.BGPLog](t, &log)
+			}
+			for _, log := range second.Items {
+				require.NotEmpty(t, log.ID)
+				backendutils.AssertGeneratedTimeAndReset[v1.BGPLog](t, &log)
+			}
+
+			require.Equal(t, first.Items, second.Items)
+
+			// Refresh before cleaning up data
+			err = backendutils.RefreshIndex(ctx, client, indexGetter.Index(clusterInfo))
+			require.NoError(t, err)
+
 		})
 	}
 }

@@ -148,6 +148,10 @@ promotions:
     pipeline_file: push-images/linseed.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+  - name: Push oiler images
+    pipeline_file: push-images/oiler.yml
+    auto_promote:
+      when: "branch =~ 'master|release-'"
   - name: Push packetcapture images
     pipeline_file: push-images/packetcapture.yml
     auto_promote:
@@ -938,8 +942,6 @@ blocks:
           - env_var: ARCH
             values:
               - arm64
-              - ppc64le
-              - s390x
         commands:
           - ../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
 - name: whisker
@@ -962,8 +964,6 @@ blocks:
           - env_var: ARCH
             values:
               - arm64
-              - ppc64le
-              - s390x
         commands:
           - ../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
 - name: calicoq
@@ -1661,7 +1661,7 @@ blocks:
           - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: linseed
   run:
-    when: "false or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/*', '/linseed/', '/api/', '/libcalico-go/', '/lma/', '/goldmane/proto'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
     - Prerequisites
   task:
@@ -1692,6 +1692,26 @@ blocks:
       - name: lma tests
         commands:
           - ../.semaphore/run-and-monitor ci.log make ci
+- name: oiler
+  run:
+    when: "false or change_in(['/*', '/linseed/', '/oiler/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies:
+    - Prerequisites
+  task:
+    prologue:
+      commands:
+        - cd oiler
+    jobs:
+      - name: oiler tests
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+      - name: Build binary
+        matrix:
+          - env_var: ARCH
+            values:
+              - arm64
+        commands:
+          - ../.semaphore/run-and-monitor build-$ARCH.log make build ARCH=$ARCH
 - name: packetcapture
   run:
     when: "false or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

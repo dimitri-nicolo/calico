@@ -28,9 +28,12 @@ type flowLogBackend struct {
 	deepPaginationCutOff int64
 	singleIndex          bool
 	index                bapi.Index
+
+	// Migration knobs
+	migrationMode bool
 }
 
-func NewFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.FlowLogBackend {
+func NewFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.FlowLogBackend {
 	return &flowLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -38,11 +41,12 @@ func NewFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPag
 		queryHelper:          lmaindex.MultiIndexFlowLogs(),
 		deepPaginationCutOff: deepPaginationCutOff,
 		index:                index.FlowLogMultiIndex,
+		migrationMode:        migrationMode,
 	}
 }
 
 // NewSingleIndexFlowLogBackend returns a new flow log backend that writes to a single index.
-func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.FlowLogBackend {
+func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.FlowLogBackend {
 	return &flowLogBackend{
 		client:               c.Backend(),
 		lmaclient:            c,
@@ -51,6 +55,7 @@ func NewSingleIndexFlowLogBackend(c lmaelastic.Client, cache bapi.IndexInitializ
 		deepPaginationCutOff: deepPaginationCutOff,
 		singleIndex:          true,
 		index:                index.FlowLogIndex(options...),
+		migrationMode:        migrationMode,
 	}
 }
 
@@ -105,8 +110,22 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 		// LatestSeenGeneratedTime` will return fewer previously seen results.
 		generatedTime := time.Now().UTC()
 		f.GeneratedTime = &generatedTime
+
+		// Set the ID, and remove it from the
+		// body of the document.
+		var id string
+		if len(f.ID) != 0 {
+			id = f.ID
+			f.ID = ""
+		}
+
 		// Add this log to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(b.prepareForWrite(i, f))
+		if b.migrationMode {
+			if len(id) != 0 {
+				req.Id(id)
+			}
+		}
 		bulk.Add(req)
 	}
 
@@ -138,7 +157,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 		return nil, err
 	}
 
-	query, startFrom, err := b.getSearch(i, opts)
+	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -160,9 +179,7 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 		logs = append(logs, l)
 	}
 
-	// If an index has more than 10000 items or other value configured via index.max_result_window
-	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, b.deepPaginationCutOff, log)
+	afterKey, err := b.afterKey(ctx, i, opts, results, log, startFrom)
 	if err != nil {
 		return nil, err
 	}
@@ -170,13 +187,35 @@ func (b *flowLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.F
 	return &v1.List[v1.FlowLog]{
 		Items:     logs,
 		TotalHits: results.TotalHits(),
-		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
+		AfterKey:  afterKey,
 	}, nil
 }
 
+func (b *flowLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination
+	useDeepPagination := b.migrationMode
+	if !useDeepPagination {
+		// This is how we determine that an index has more items
+		// than index.max_result_window setting. TotalHits will
+		// return a value equal to index.max_result_window setting
+		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
+	}
+	nextPointInTime, err := logtools.NextPointInTime(ctx, b.client, b.index.Index(i), results, log, useDeepPagination)
+	if err != nil {
+		return nil, err
+	}
+	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
+	return afterKey, nil
+}
+
 func (b *flowLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.FlowLogAggregationParams) (*elastic.Aggregations, error) {
+	if b.migrationMode {
+		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
+	}
+
 	// Get the base query.
-	search, _, err := b.getSearch(i, &opts.FlowLogParams)
+	search, _, err := b.getSearch(ctx, i, &opts.FlowLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +247,7 @@ func (b *flowLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, op
 	return &results.Aggregations, nil
 }
 
-func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (*elastic.SearchService, int, error) {
+func (b *flowLogBackend) getSearch(ctx context.Context, i bapi.ClusterInfo, opts *v1.FlowLogParams) (*elastic.SearchService, int, error) {
 	if i.Cluster == "" {
 		return nil, 0, fmt.Errorf("no cluster ID on request")
 	}
@@ -224,8 +263,23 @@ func (b *flowLogBackend) getSearch(i bapi.ClusterInfo, opts *v1.FlowLogParams) (
 		Query(q)
 
 	// Configure pagination options
+	var pitID string
+	if b.migrationMode {
+		// For migration mode, we enable deep pagination for each request
+		// instead of deciding based on number of documents stored.
+		// For the first page, we need to perform the query with a point
+		// in time configured
+		if ak := opts.GetAfterKey(); ak == nil {
+			var err error
+			pitID, err = logtools.OpenPointInTime(ctx, b.client, b.index.Index(i))
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+	}
+
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index.Index(i), b.migrationMode, pitID)
 	if err != nil {
 		return nil, 0, err
 	}

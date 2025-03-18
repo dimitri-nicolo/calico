@@ -31,9 +31,12 @@ type auditLogBackend struct {
 	eeIndex              bapi.Index
 	kubeIndex            bapi.Index
 	anyIndex             bapi.Index
+
+	// Migration knobs
+	migrationMode bool
 }
 
-func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64) bapi.AuditBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool) bapi.AuditBackend {
 	return &auditLogBackend{
 		client:               c.Backend(),
 		queryHelper:          lmaindex.MultiIndexAuditLogs(),
@@ -43,6 +46,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 		singleIndex:          false,
 		eeIndex:              index.AuditLogEEMultiIndex,
 		kubeIndex:            index.AuditLogKubeMultiIndex,
+		migrationMode:        migrationMode,
 
 		// For multi-index, the log type is encoded into the index name, and so we need to return a wildcard index
 		// name that matches all audit log types.
@@ -50,7 +54,7 @@ func NewBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPagination
 	}
 }
 
-func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, options ...index.Option) bapi.AuditBackend {
+func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, deepPaginationCutOff int64, migrationMode bool, options ...index.Option) bapi.AuditBackend {
 	return &auditLogBackend{
 		client:               c.Backend(),
 		queryHelper:          lmaindex.SingleIndexAuditLogs(),
@@ -63,6 +67,8 @@ func NewSingleIndexBackend(c lmaelastic.Client, cache bapi.IndexInitializer, dee
 		eeIndex:   index.AuditLogIndex(options...),
 		kubeIndex: index.AuditLogIndex(options...),
 		anyIndex:  index.AuditLogIndex(options...),
+
+		migrationMode: migrationMode,
 	}
 }
 
@@ -128,6 +134,11 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 		// clients, and between clients and Linseed.
 		generatedTime := time.Now().UTC()
 		f.GeneratedTime = &generatedTime
+		var id string
+		if len(f.ID) != 0 {
+			id = f.ID
+			f.ID = ""
+		}
 
 		doc, err := b.prepareForWrite(i, kind, f)
 		if err != nil {
@@ -137,6 +148,12 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 
 		// Add this log to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(alias).Doc(doc)
+		if b.migrationMode {
+			if len(id) == 0 {
+				req.Id(id)
+			}
+		}
+
 		bulk.Add(req)
 	}
 
@@ -164,7 +181,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogParams) (*v1.List[v1.AuditLog], error) {
 	log := bapi.ContextLogger(i)
 
-	query, startFrom, err := b.getSearch(i, opts)
+	query, startFrom, err := b.getSearch(ctx, i, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -182,12 +199,13 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 			log.WithError(err).Error("Error unmarshalling audit log")
 			continue
 		}
+		if b.migrationMode {
+			e.ID = h.Id
+		}
 		auditLogs = append(auditLogs, e)
 	}
 
-	// If an index has more than 10000 items or other value configured via index.max_result_window
-	// setting in Elastic, we need to perform deep pagination
-	pitID, err := logtools.NextPointInTime(ctx, b.client, b.index(opts.Type, i), results, b.deepPaginationCutOff, log)
+	afterKey, err := b.afterKey(ctx, i, opts, results, log, startFrom)
 	if err != nil {
 		return nil, err
 	}
@@ -195,13 +213,35 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts *v1.
 	return &v1.List[v1.AuditLog]{
 		TotalHits: results.TotalHits(),
 		Items:     auditLogs,
-		AfterKey:  logtools.NextAfterKey(opts, startFrom, pitID, results, b.deepPaginationCutOff),
+		AfterKey:  afterKey,
 	}, nil
 }
 
+func (b *auditLogBackend) afterKey(ctx context.Context, i bapi.ClusterInfo, opts *v1.AuditLogParams, results *elastic.SearchResult, log *logrus.Entry, startFrom int) (map[string]interface{}, error) {
+	// If an index has more than 10000 items or other value configured via index.max_result_window
+	// setting in Elastic, we need to perform deep pagination. Migration mode will use deep pagination
+	// on all requests
+	useDeepPagination := b.migrationMode
+	if !useDeepPagination {
+		// This is how we determine that an index has more items
+		// than index.max_result_window setting. TotalHits will
+		// return a value equal to index.max_result_window setting
+		useDeepPagination = results.TotalHits() >= b.deepPaginationCutOff
+	}
+	nextPointInTime, err := logtools.NextPointInTime(ctx, b.client, b.index(opts.Type, i), results, log, useDeepPagination)
+	if err != nil {
+		return nil, err
+	}
+	afterKey := logtools.NextAfterKey(opts, startFrom, nextPointInTime, results, useDeepPagination)
+	return afterKey, nil
+}
+
 func (b *auditLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, opts *v1.AuditLogAggregationParams) (*elastic.Aggregations, error) {
+	if b.migrationMode {
+		return nil, fmt.Errorf("aggregation queries are not allowed in migration mode")
+	}
 	// Get the base query.
-	search, _, err := b.getSearch(i, &opts.AuditLogParams)
+	search, _, err := b.getSearch(ctx, i, &opts.AuditLogParams)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +273,7 @@ func (b *auditLogBackend) Aggregations(ctx context.Context, i api.ClusterInfo, o
 	return &results.Aggregations, nil
 }
 
-func (b *auditLogBackend) getSearch(i api.ClusterInfo, opts *v1.AuditLogParams) (*elastic.SearchService, int, error) {
+func (b *auditLogBackend) getSearch(ctx context.Context, i bapi.ClusterInfo, opts *v1.AuditLogParams) (*elastic.SearchService, int, error) {
 	if err := i.Valid(); err != nil {
 		return nil, 0, err
 	}
@@ -259,8 +299,23 @@ func (b *auditLogBackend) getSearch(i api.ClusterInfo, opts *v1.AuditLogParams) 
 		Query(q)
 
 	// Configure pagination options
+	var pitID string
+	if b.migrationMode {
+		// For migration mode, we enable deep pagination for each request
+		// instead of deciding based on number of documents stored.
+		// For the first page, we need to perform the query with a point
+		// in time configured
+		if ak := opts.GetAfterKey(); ak == nil {
+			var err error
+			pitID, err = logtools.OpenPointInTime(ctx, b.client, b.index(opts.Type, i))
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+	}
+
 	var startFrom int
-	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(opts.Type, i))
+	query, startFrom, err = logtools.ConfigureCurrentPage(query, opts, b.index(opts.Type, i), b.migrationMode, pitID)
 	if err != nil {
 		return nil, 0, err
 	}

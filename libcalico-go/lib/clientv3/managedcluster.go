@@ -117,18 +117,6 @@ func (r managedClusters) Delete(ctx context.Context, namespace, name string, opt
 // Get takes name of the ManagedCluster, and returns the corresponding ManagedCluster object,
 // and an error if there is any.
 func (r managedClusters) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.ManagedCluster, error) {
-
-	// In multitenant mode, namespace should not be empty
-	if r.client.config.Spec.MultiTenantEnabled && len(namespace) == 0 {
-		return nil, cerrors.ErrorValidation{
-			ErroredFields: []cerrors.ErroredField{{
-				Name:   "Metadata.Name",
-				Reason: ErrMsgEmptyTenantNamespace,
-				Value:  name,
-			}},
-		}
-	}
-
 	out, err := r.client.resources.Get(ctx, opts, apiv3.KindManagedCluster, namespace, name)
 	if out != nil {
 		return out.(*apiv3.ManagedCluster), err
@@ -138,17 +126,6 @@ func (r managedClusters) Get(ctx context.Context, namespace, name string, opts o
 
 // List returns the list of ManagedCluster objects that match the supplied options.
 func (r managedClusters) List(ctx context.Context, opts options.ListOptions) (*apiv3.ManagedClusterList, error) {
-
-	// In multitenant mode, namespace should not be empty
-	if r.client.config.Spec.MultiTenantEnabled && len(opts.Namespace) == 0 {
-		return nil, cerrors.ErrorValidation{
-			ErroredFields: []cerrors.ErroredField{{
-				Name:   "Metadata.Namespace",
-				Reason: ErrMsgEmptyTenantNamespace,
-			}},
-		}
-	}
-
 	res := &apiv3.ManagedClusterList{}
 	if err := r.client.resources.List(ctx, opts, apiv3.KindManagedCluster, apiv3.KindManagedClusterList, res); err != nil {
 		return nil, err

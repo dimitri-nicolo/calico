@@ -32,6 +32,7 @@ var (
 	cache       bapi.IndexInitializer
 	b           bapi.DNSFlowBackend
 	lb          bapi.DNSLogBackend
+	migration   bapi.DNSLogBackend
 	ctx         context.Context
 	cluster1    string
 	cluster2    string
@@ -76,10 +77,12 @@ func setupTest(t *testing.T, singleIndex bool) func() {
 	if singleIndex {
 		indexGetter = index.DNSLogIndex()
 		b = dns.NewSingleIndexDNSFlowBackend(client)
-		lb = dns.NewSingleIndexDNSLogBackend(client, cache, 10000)
+		lb = dns.NewSingleIndexDNSLogBackend(client, cache, 10000, false)
+		migration = dns.NewSingleIndexDNSLogBackend(client, cache, 10000, true)
 	} else {
 		b = dns.NewDNSFlowBackend(client)
-		lb = dns.NewDNSLogBackend(client, cache, 10000)
+		lb = dns.NewDNSLogBackend(client, cache, 10000, false)
+		migration = dns.NewDNSLogBackend(client, cache, 10000, true)
 		indexGetter = index.DNSLogMultiIndex
 	}
 

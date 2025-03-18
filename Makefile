@@ -82,7 +82,7 @@ check-gotchas:
 	fi
 
 check-go-mod:
-	$(DOCKER_GO_BUILD) ./hack/check-go-mod.sh
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ./hack/check-go-mod.sh'
 
 check-dockerfiles:
 	./hack/check-dockerfiles.sh
