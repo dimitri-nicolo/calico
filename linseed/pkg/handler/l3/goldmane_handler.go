@@ -132,13 +132,24 @@ func convertType(t proto.EndpointType) (string, error) {
 }
 
 func convertPolicies(p *proto.PolicyTrace) (*v1.FlowLogPolicy, error) {
-	// TODO: enforced / pending.
-	var ap []string
+	var ep, pp []string
 	for _, p := range p.EnforcedPolicies {
-		ap = append(ap, p.ToString())
+		ps, err := p.ToString()
+		if err != nil {
+			return nil, err
+		}
+		ep = append(ep, ps)
+	}
+	for _, p := range p.PendingPolicies {
+		ps, err := p.ToString()
+		if err != nil {
+			return nil, err
+		}
+		pp = append(pp, ps)
 	}
 	return &v1.FlowLogPolicy{
-		AllPolicies: ap,
+		EnforcedPolicies: ep,
+		PendingPolicies:  pp,
 	}, nil
 }
 
