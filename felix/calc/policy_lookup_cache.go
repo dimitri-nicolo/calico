@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -397,7 +398,7 @@ func (pc *PolicyLookupsCache) updateTierDefaultAction(key model.TierKey, tier *m
 		}
 
 		policyName := polKey.Name
-		namespace, tier, name, err := deconstructPolicyName(policyName)
+		namespace, tier, name, err := names.DeconstructPolicyName(policyName)
 		if err != nil {
 			log.WithError(err).Error("Unable to parse policy name")
 			return
