@@ -136,7 +136,8 @@ type StatusClient interface {
 }
 
 type WatchOptions struct {
-	Revision string
+	Revision            string
+	AllowWatchBookmarks bool
 }
 
 type Syncer interface {
@@ -218,6 +219,7 @@ const (
 	WatchModified WatchEventType = "MODIFIED"
 	WatchDeleted  WatchEventType = "DELETED"
 	WatchError    WatchEventType = "ERROR"
+	WatchBookmark WatchEventType = "BOOKMARK"
 )
 
 // Event represents a single event to a watched resource.
@@ -235,6 +237,34 @@ type WatchEvent struct {
 
 	// The error, if EventType is Error.
 	Error error
+}
+
+func (w WatchEvent) String() string {
+	switch w.Type {
+	case WatchAdded:
+		if w.New == nil {
+			break // Malformed event, but still want to be able to print it!
+		}
+		return fmt.Sprintf("Added:%v@%v", w.New.Key, w.New.Revision)
+	case WatchModified:
+		if w.New == nil {
+			break
+		}
+		return fmt.Sprintf("Modified:%v@%v", w.New.Key, w.New.Revision)
+	case WatchDeleted:
+		if w.Old == nil {
+			break
+		}
+		return fmt.Sprintf("Deleted:%v@%v", w.Old.Key, w.Old.Revision)
+	case WatchBookmark:
+		if w.New == nil {
+			break
+		}
+		return fmt.Sprintf("Bookmark:%v", w.New.Revision)
+	case WatchError:
+		return fmt.Sprintf("Error:%v", w.Error)
+	}
+	return fmt.Sprintf("WatchEvent{Type: %s, Old: %v, New: %v, Error: %v}", w.Type, w.Old, w.New, w.Error)
 }
 
 // FakeWatcher is inspired by apimachinery (watch) FakeWatcher
