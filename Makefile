@@ -393,7 +393,7 @@ release/bin/release: $(shell find ./release -type f -name '*.go')
 release/metadata: release/bin/release var-require-all-METADATA_DIR
 	@release/bin/release release metadata
 
-update-pins: update-go-build-pin
+update-pins: update-go-build-pin update-calico-base-pin
 
 ###############################################################################
 # Post-release validation
