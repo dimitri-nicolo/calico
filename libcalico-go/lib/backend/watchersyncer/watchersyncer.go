@@ -17,6 +17,7 @@ package watchersyncer
 import (
 	"context"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -79,21 +80,33 @@ type SyncerUpdateProcessor interface {
 	OnSyncerStarting()
 }
 
+type Option func(*watcherSyncer)
+
+func WithWatchRetryTimeout(t time.Duration) Option {
+	return func(ws *watcherSyncer) {
+		ws.watchRetryTimeout = t
+	}
+}
+
 // New creates a new multiple Watcher-backed api.Syncer.
-func New(client api.Client, resourceTypes []ResourceType, callbacks api.SyncerCallbacks) api.Syncer {
+func New(client api.Client, resourceTypes []ResourceType, callbacks api.SyncerCallbacks, options ...Option) api.Syncer {
 	return NewMultiClient(map[string]api.Client{"": client}, resourceTypes, callbacks)
 }
 
 // NewMultiClient creates a new multiple Watcher-backed api.Syncer with multiple backing clients.
-func NewMultiClient(clients map[string]api.Client, resourceTypes []ResourceType, callbacks api.SyncerCallbacks) api.Syncer {
+func NewMultiClient(clients map[string]api.Client, resourceTypes []ResourceType, callbacks api.SyncerCallbacks, options ...Option) api.Syncer {
 	rs := &watcherSyncer{
-		watcherCaches: make([]*watcherCache, 0, len(resourceTypes)),
-		results:       make(chan interface{}, 2000),
-		callbacks:     callbacks,
+		watcherCaches:     make([]*watcherCache, 0, len(resourceTypes)),
+		results:           make(chan interface{}, 2000),
+		callbacks:         callbacks,
+		watchRetryTimeout: DefaultWatchRetryTimeout,
+	}
+	for _, o := range options {
+		o(rs)
 	}
 	for _, r := range resourceTypes {
 		if client, ok := clients[r.ClientID]; ok {
-			rs.watcherCaches = append(rs.watcherCaches, newWatcherCache(client, r, rs.results))
+			rs.watcherCaches = append(rs.watcherCaches, newWatcherCache(client, r, rs.results, rs.watchRetryTimeout))
 		} else {
 			log.WithFields(log.Fields{
 				"ClientID":      r.ClientID,
@@ -106,14 +119,15 @@ func NewMultiClient(clients map[string]api.Client, resourceTypes []ResourceType,
 
 // watcherSyncer implements the api.Syncer interface.
 type watcherSyncer struct {
-	status        api.SyncStatus
-	watcherCaches []*watcherCache
-	results       chan interface{}
-	numSynced     int
-	callbacks     api.SyncerCallbacks
-	wgwc          *sync.WaitGroup
-	wgws          *sync.WaitGroup
-	cancel        context.CancelFunc
+	status            api.SyncStatus
+	watcherCaches     []*watcherCache
+	results           chan interface{}
+	numSynced         int
+	callbacks         api.SyncerCallbacks
+	wgwc              *sync.WaitGroup
+	wgws              *sync.WaitGroup
+	cancel            context.CancelFunc
+	watchRetryTimeout time.Duration
 }
 
 func (ws *watcherSyncer) Start() {
