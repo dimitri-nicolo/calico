@@ -19,24 +19,32 @@ import (
 )
 
 // Values used in remote cluster testing.
-var local = ""
-var remoteA = "remote-a"
-var remoteB = "remote-b"
+var (
+	local   = ""
+	remoteA = "remote-a"
+	remoteB = "remote-b"
+)
 
-var localClusterHost = "local-host"
-var localClusterHost2 = "local-host-2"
-var remoteClusterAHost = "remote-a-host"
-var remoteClusterBHost = "remote-b-host"
+var (
+	localClusterHost   = "local-host"
+	localClusterHost2  = "local-host-2"
+	remoteClusterAHost = "remote-a-host"
+	remoteClusterBHost = "remote-b-host"
+)
 
-var localClusterHostIPAddr = "192.168.0.1"
-var localClusterHost2IPAddr = "192.168.1.1"
-var remoteClusterAHostIPAddr = "192.168.0.2"
-var remoteClusterBHostIPAddr = "192.168.0.3"
+var (
+	localClusterHostIPAddr   = "192.168.0.1"
+	localClusterHost2IPAddr  = "192.168.1.1"
+	remoteClusterAHostIPAddr = "192.168.0.2"
+	remoteClusterBHostIPAddr = "192.168.0.3"
+)
 
-var localClusterHostMAC = "66:05:91:0f:93:57"
-var localClusterHost2MAC = "66:67:b3:72:12:71"
-var remoteClusterAHostMAC = "66:0b:75:83:64:51"
-var remoteClusterBHostMAC = "66:ac:b1:ca:37:70"
+var (
+	localClusterHostMAC   = "66:05:91:0f:93:57"
+	localClusterHost2MAC  = "66:67:b3:72:12:71"
+	remoteClusterAHostMAC = "66:0b:75:83:64:51"
+	remoteClusterBHostMAC = "66:ac:b1:ca:37:70"
+)
 
 // StateWithPool is a convenience function to help compose remote cluster testing states.
 func StateWithPool(state State, cluster string, cidr string, flush bool) State {
@@ -72,7 +80,7 @@ func StateWithPool(state State, cluster string, cidr string, flush bool) State {
 	}
 
 	routeUpdate := types.RouteUpdate{
-		Type:       proto.RouteType_CIDR_INFO,
+		Types:      proto.RouteType_CIDR_INFO,
 		IpPoolType: proto.IPPoolType_VXLAN,
 		Dst:        cidr,
 	}
@@ -90,7 +98,7 @@ func StateWithPool(state State, cluster string, cidr string, flush bool) State {
 }
 
 // StateWithBlock is a convenience function to help compose remote cluster testing states.
-func StateWithBlock(state State, cluster string, cidr string, flush bool, poolType proto.IPPoolType, host string, hostIP string) State {
+func StateWithBlock(state State, cluster string, cidr string, flush bool, poolType proto.IPPoolType, host string, hostIP string, rts ...proto.RouteType) State {
 	keyName := host
 	if cluster != "" {
 		keyName = cluster + "/" + keyName
@@ -105,7 +113,8 @@ func StateWithBlock(state State, cluster string, cidr string, flush bool, poolTy
 				Affinity:    &affinity,
 				Allocations: createAllocationsArray(cidr),
 				Unallocated: createUnallocatedArray(cidr),
-			}}
+			},
+		}
 	} else {
 		kvp = KVPair{
 			Key: RemoteClusterResourceKey{
@@ -130,8 +139,17 @@ func StateWithBlock(state State, cluster string, cidr string, flush bool, poolTy
 		}
 	}
 
+	var updateTypes proto.RouteType
+	if len(rts) > 0 {
+		for _, rt := range rts {
+			updateTypes |= rt
+		}
+	} else {
+		updateTypes = proto.RouteType_REMOTE_WORKLOAD
+	}
+
 	routeUpdate := types.RouteUpdate{
-		Type:        proto.RouteType_REMOTE_WORKLOAD,
+		Types:       updateTypes,
 		IpPoolType:  poolType,
 		Dst:         cidr,
 		DstNodeName: keyName,
@@ -194,7 +212,7 @@ func StateWithNode(state State, cluster string, host string, hostIP string, vxla
 	}
 
 	routeUpdate := types.RouteUpdate{
-		Type:        routeType,
+		Types:       routeType,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         hostIP + "/32",
 		DstNodeName: keyName,
@@ -214,7 +232,7 @@ func StateWithNode(state State, cluster string, host string, hostIP string, vxla
 }
 
 // StateWithWEP is a convenience function to help compose remote cluster testing states.
-func StateWithWEP(state State, cluster string, ip string, flush bool, poolType proto.IPPoolType, name string, host string, hostIP string, borrowed bool) State {
+func StateWithWEP(state State, cluster string, ip string, flush bool, poolType proto.IPPoolType, name string, host string, hostIP string, borrowed bool, rts ...proto.RouteType) State {
 	hostKeyName := host
 	if cluster != "" {
 		hostKeyName = cluster + "/" + host
@@ -238,17 +256,25 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 		Endpoint: kvp.Value,
 	}
 
-	routeUpdate := types.RouteUpdate{
-		Type:        proto.RouteType_REMOTE_WORKLOAD,
-		IpPoolType:  poolType,
-		Dst:         ip + "/32",
-		DstNodeName: hostKeyName,
-		DstNodeIp:   hostIP,
-		Borrowed:    borrowed,
-	}
+	updTypes := proto.RouteType_REMOTE_WORKLOAD
 	if host == localHostname {
-		routeUpdate.Type = proto.RouteType_LOCAL_WORKLOAD
-		routeUpdate.LocalWorkload = true
+		updTypes = proto.RouteType_LOCAL_WORKLOAD
+	}
+	if len(rts) > 0 {
+		updTypes = 0
+		for _, rt := range rts {
+			updTypes |= rt
+		}
+	}
+
+	routeUpdate := types.RouteUpdate{
+		Types:         updTypes,
+		IpPoolType:    poolType,
+		Dst:           ip + "/32",
+		DstNodeName:   hostKeyName,
+		DstNodeIp:     hostIP,
+		Borrowed:      borrowed,
+		LocalWorkload: host == localHostname,
 	}
 
 	newState := state.Copy()
@@ -270,7 +296,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 }
 
 // StateWithVTEP is a convenience function to help compose remote cluster testing states.
-func StateWithVTEP(state State, cluster string, ip string, flush bool, mac string, poolType proto.IPPoolType, hostIP string, host string) State {
+func StateWithVTEP(state State, cluster string, ip string, flush bool, mac string, poolType proto.IPPoolType, host string, hostIP string, rts ...proto.RouteType) State {
 	keyName := host
 	if cluster != "" {
 		keyName = cluster + "/" + host
@@ -286,8 +312,18 @@ func StateWithVTEP(state State, cluster string, ip string, flush bool, mac strin
 		Ipv4Addr:       ip,
 		ParentDeviceIp: hostIP,
 	}
+
+	var updateTypes proto.RouteType
+	if len(rts) > 0 {
+		for _, rt := range rts {
+			updateTypes |= rt
+		}
+	} else {
+		updateTypes = proto.RouteType_REMOTE_TUNNEL
+	}
+
 	tunnelRouteUpdate := types.RouteUpdate{
-		Type:        proto.RouteType_REMOTE_TUNNEL,
+		Types:       updateTypes,
 		IpPoolType:  poolType,
 		Dst:         ip + "/32",
 		DstNodeName: keyName,
@@ -323,7 +359,7 @@ func StateWithWGEP(state State, cluster string, ip string, flush bool, publicKey
 	}
 
 	tunnelRouteUpdate := types.RouteUpdate{
-		Type:        proto.RouteType_REMOTE_TUNNEL,
+		Types:       proto.RouteType_REMOTE_TUNNEL,
 		IpPoolType:  poolType,
 		Dst:         ip + "/32",
 		DstNodeName: keyName,
@@ -351,7 +387,7 @@ func StateWithWGEP(state State, cluster string, ip string, flush bool, publicKey
 func StateWithVXLANBlockForLocal(state State, shouldFlush bool) State {
 	state = StateWithPool(state, local, "10.0.0.0/16", shouldFlush)
 	state = StateWithBlock(state, local, "10.0.1.0/29", shouldFlush, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
-	state = StateWithVTEP(state, local, "10.0.1.1", shouldFlush, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHostIPAddr, localClusterHost)
+	state = StateWithVTEP(state, local, "10.0.1.1", shouldFlush, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr, remoteTunnelWep...)
 	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "", "")
 	return state
 }
@@ -360,7 +396,7 @@ func StateWithVXLANBlockForLocal(state State, shouldFlush bool) State {
 func StateWithVXLANBlockForRemoteA(state State, shouldFlush bool) State {
 	state = StateWithPool(state, remoteA, "10.0.0.0/16", shouldFlush)
 	state = StateWithBlock(state, remoteA, "10.0.1.0/29", shouldFlush, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
-	state = StateWithVTEP(state, remoteA, "10.0.1.1", shouldFlush, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithVTEP(state, remoteA, "10.0.1.1", shouldFlush, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr, remoteTunnelWep...)
 	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.1", "", "")
 	return state
 }
