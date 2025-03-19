@@ -112,6 +112,11 @@ func (wc *watcherCache) run(ctx context.Context) {
 func (wc *watcherCache) resyncAndLoopReadingFromWatcher(ctx context.Context) {
 	defer wc.cleanExistingWatcher()
 	wc.maybeResyncAndCreateWatcher(ctx)
+	if ctx.Err() != nil {
+		// maybeResyncAndCreateWatcher may have returned early with no watcher,
+		// in which case it's not safe to call loopReadingFromWatcher.
+		return
+	}
 	wc.loopReadingFromWatcher(ctx)
 }
 
