@@ -33,6 +33,7 @@ type ActionFactory interface {
 	SetConnmark(mark, mask uint32) Action
 	Reject(with RejectWith) Action
 	LimitPacketRate(rate int64, mark uint32) Action
+	LimitNumConnections(num int64, rejectWith RejectWith) Action
 
 	// Enterprise only actions.
 	Nflog(group uint16, prefix string, size int) Action

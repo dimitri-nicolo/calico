@@ -44,7 +44,7 @@ import (
 
 type EnvConfig struct {
 	// Note: These are overridden in the Makefile!
-	FelixImage   string `default:"tigera/felix:latest"`
+	FelixImage   string `default:"tigera/felix-test:latest"`
 	EtcdImage    string `default:"quay.io/coreos/etcd"`
 	K8sImage     string `default:"calico/go-build:latest"`
 	TyphaImage   string `default:"tigera/typha:latest"`
