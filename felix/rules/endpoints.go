@@ -85,7 +85,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			alwaysAllowIPIPEncap,
 			qosControls,
 			isEgressGateway,
-			0,
+			egwHealthPort,
 			ipVersion,
 		),
 		// Chain for traffic _from_ the endpoint.
