@@ -28,15 +28,6 @@ const (
 	SourcePortIsNotIncluded = 0
 )
 
-var (
-	NoDestService = flowlog.FlowService{
-		Namespace: "-",
-		Name:      "-",
-		PortName:  "-",
-		PortNum:   0,
-	}
-)
-
 type FlowLogReader interface {
 	FlowLogDir() string
 }
