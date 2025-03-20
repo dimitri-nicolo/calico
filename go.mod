@@ -33,7 +33,7 @@ require (
 	github.com/containernetworking/cni v1.2.3
 	github.com/containernetworking/plugins v1.6.2
 	github.com/corazawaf/coraza-coreruleset/v4 v4.7.0
-	github.com/corazawaf/coraza/v3 v3.3.2
+	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc v2.3.0+incompatible
 	github.com/coreos/go-semver v0.3.1
