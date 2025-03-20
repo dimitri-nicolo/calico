@@ -416,7 +416,7 @@ func chainsForIfaces(ipVersion uint8,
 				outRules = append(outRules, generictables.Rule{
 					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(16),
 					Action:  iptables.NfqueueAction{QueueNum: 100},
-					Comment: []string{"Drop if no policies passed packet"},
+					Comment: []string{fmt.Sprintf("End of tier %v. Drop if no policies passed packet", tierName)},
 				})
 				if flowlogs {
 					outRules = append(outRules, generictables.Rule{
@@ -430,7 +430,7 @@ func chainsForIfaces(ipVersion uint8,
 				outRules = append(outRules, generictables.Rule{
 					Match:   iptables.Match().MarkClear(16),
 					Action:  iptables.DropAction{},
-					Comment: []string{"Drop if no policies passed packet"},
+					Comment: []string{fmt.Sprintf("End of tier %v. Drop if no policies passed packet", tierName)},
 				})
 			}
 
@@ -534,7 +534,7 @@ func chainsForIfaces(ipVersion uint8,
 				inRules = append(inRules, generictables.Rule{
 					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(16),
 					Action:  iptables.NfqueueAction{QueueNum: 100},
-					Comment: []string{"Drop if no policies passed packet"},
+					Comment: []string{fmt.Sprintf("End of tier %v. Drop if no policies passed packet", tierName)},
 				})
 				if flowlogs {
 					inRules = append(inRules, generictables.Rule{
@@ -545,13 +545,11 @@ func chainsForIfaces(ipVersion uint8,
 						},
 					})
 				}
-				inRules = append(inRules, []generictables.Rule{
-					{
-						Match:   iptables.Match().MarkClear(16),
-						Action:  iptables.DropAction{},
-						Comment: []string{"Drop if no policies passed packet"},
-					},
-				}...)
+				inRules = append(inRules, generictables.Rule{
+					Match:   iptables.Match().MarkClear(16),
+					Action:  iptables.DropAction{},
+					Comment: []string{fmt.Sprintf("End of tier %v. Drop if no policies passed packet", tierName)},
+				})
 			}
 
 		} else if tableKind == "applyOnForward" {

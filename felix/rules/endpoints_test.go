@@ -255,11 +255,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"},
@@ -278,12 +274,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -319,11 +311,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -342,12 +330,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -444,11 +428,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: polGrpInABC.ChainName()},
@@ -467,12 +447,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -508,11 +484,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: polGrpOutAB.ChainName()},
@@ -531,12 +503,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -598,11 +566,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/staged:ai"},
@@ -616,12 +580,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -657,11 +617,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -675,12 +631,8 @@ var _ = Describe("Endpoints", func() {
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/staged:be"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -742,11 +694,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/staged:ai"},
@@ -790,11 +738,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/staged:ae"},
@@ -876,11 +820,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-gi-HSctAbeg5SPOCTqXywv3"},
@@ -920,11 +860,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-go-Yzgack0Da6LjbAhZ1OEM"},
@@ -991,11 +927,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"},
@@ -1049,12 +981,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -1139,11 +1066,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-out"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -1162,12 +1085,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -1206,11 +1125,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"},
@@ -1229,12 +1144,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -1268,11 +1179,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/afe"},
@@ -1291,12 +1198,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 						},
 					},
 					{
@@ -1306,11 +1209,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/afi"},
@@ -1329,12 +1228,8 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierNfqueuePolicy(denyActionString),
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 						},
 					},
 					{
@@ -1367,11 +1262,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-out"},
 							},
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/c"},
@@ -1398,11 +1289,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"},
@@ -1450,11 +1337,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"},
@@ -1601,11 +1484,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"},
@@ -1624,14 +1503,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierIngress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
-
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -1668,12 +1542,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -1692,14 +1561,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierEgress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
-
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -1795,11 +1659,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: polGrpInABC.ChainName()},
@@ -1818,13 +1678,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierIngress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -1861,12 +1717,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: polGrpOutAB.ChainName()},
@@ -1885,13 +1736,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierEgress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -1954,11 +1801,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/staged:ai"},
@@ -1972,13 +1815,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierIngress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -2015,12 +1854,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -2034,13 +1868,9 @@ var _ = Describe("Endpoints", func() {
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/staged:be"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierEgress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -2103,11 +1933,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/staged:ai"},
@@ -2153,11 +1979,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/staged:ae"},
@@ -2241,11 +2063,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-gi-HSctAbeg5SPOCTqXywv3"},
@@ -2287,11 +2105,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-go-Yzgack0Da6LjbAhZ1OEM"},
@@ -2360,11 +2174,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"},
@@ -2420,11 +2230,7 @@ var _ = Describe("Endpoints", func() {
 							clearMarkRule(),
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -2512,11 +2318,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-out"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -2535,13 +2337,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierEgress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -2582,11 +2380,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/ai"},
@@ -2605,13 +2399,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierIngress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pri-prof1"},
@@ -2646,11 +2436,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/afe"},
@@ -2669,13 +2455,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierEgress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 						},
 					},
 					{
@@ -2685,11 +2467,7 @@ var _ = Describe("Endpoints", func() {
 							conntrackAcceptRule(),
 							conntrackDenyRule(denyAction),
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/afi"},
@@ -2708,13 +2486,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierIngress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 						},
 					},
 					{
@@ -2747,11 +2521,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-out"},
 							},
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/c"},
@@ -2778,11 +2548,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"},
@@ -2831,11 +2597,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"},
@@ -3119,11 +2881,7 @@ var _ = Describe("Endpoints", func() {
 							},
 							dropVXLANRule,
 							dropIPIPRule,
-							{
-								Match:   Match(),
-								Comment: []string{"Start of tier default"},
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-po-default/ae"},
@@ -3142,13 +2900,9 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if policy accepted"},
 							},
-							nfqueuePolicy(denyActionString),
+							defaultTierNfqueuePolicy(denyActionString),
 							nflogDefaultTierEgress(),
-							{
-								Match:   Match().MarkClear(0x10),
-								Action:  denyAction,
-								Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-							},
+							defaultTierDefaultDropRule(denyAction, denyActionString),
 							{
 								Match:  Match(),
 								Action: JumpAction{Target: "cali-pro-prof1"},
@@ -3284,11 +3038,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"},
@@ -3402,11 +3152,7 @@ var _ = Describe("Endpoints", func() {
 								Action: JumpAction{Target: "cali-failsafe-in"},
 							},
 							clearMarkRule(),
-							{
-								Comment: []string{"Start of tier default"},
-								Match:   Match(),
-								Action:  ClearMarkAction{Mark: 0x10},
-							},
+							startOfTierDefault(),
 							{
 								Match:  Match().MarkClear(0x10),
 								Action: JumpAction{Target: "cali-pi-default/c"},
@@ -3841,11 +3587,7 @@ var _ = Describe("Endpoints", func() {
 								conntrackAcceptRule(),
 								conntrackDenyRule(denyAction),
 								clearMarkRule(),
-								{
-									Comment: []string{"Start of tier default"},
-									Match:   Match(),
-									Action:  ClearMarkAction{Mark: 0x10},
-								},
+								startOfTierDefault(),
 								{
 									Match:  Match().MarkClear(0x10),
 									Action: JumpAction{Target: "cali-pi-default/staged:ai"},
@@ -3860,11 +3602,7 @@ var _ = Describe("Endpoints", func() {
 									Comment: []string{"Return if policy accepted"},
 								},
 								nflogDefaultTierIngress(),
-								{
-									Match:   Match().MarkClear(0x10),
-									Action:  denyAction,
-									Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-								},
+								defaultTierDefaultDropRule(denyAction, denyActionString),
 								{
 									Match:  Match(),
 									Action: JumpAction{Target: "cali-pri-prof1"},
@@ -3900,11 +3638,7 @@ var _ = Describe("Endpoints", func() {
 								clearMarkRule(),
 								dropVXLANRule,
 								dropIPIPRule,
-								{
-									Match:   Match(),
-									Comment: []string{"Start of tier default"},
-									Action:  ClearMarkAction{Mark: 0x10},
-								},
+								startOfTierDefault(),
 								{
 									Match:  Match().MarkClear(0x10),
 									Action: JumpAction{Target: "cali-po-default/ae"},
@@ -3919,11 +3653,7 @@ var _ = Describe("Endpoints", func() {
 									Action: JumpAction{Target: "cali-po-default/staged:be"},
 								},
 								nflogDefaultTierEgress(),
-								{
-									Match:   Match().MarkClear(0x10),
-									Action:  denyAction,
-									Comment: []string{fmt.Sprintf("%s if no policies passed packet", denyActionString)},
-								},
+								defaultTierDefaultDropRule(denyAction, denyActionString),
 								{
 									Match:  Match(),
 									Action: JumpAction{Target: "cali-pro-prof1"},
@@ -4510,6 +4240,33 @@ func nflogDefaultTierEgressWithPassAction() generictables.Rule {
 	return nflogActionDefaultTier(2, "PPE|default")
 }
 
+func startOfTierDefault() generictables.Rule {
+	return generictables.Rule{
+		Comment: []string{"Start of tier default"},
+		Match:   Match(),
+		Action:  ClearMarkAction{Mark: 0x10},
+	}
+}
+
+func defaultTierDefaultDropRule(action generictables.Action, actionStr string) generictables.Rule {
+	return tierDefaultActionRule(action, actionStr, "default")
+}
+
+func tierDefaultActionRule(
+	action generictables.Action,
+	actionStr string,
+	tier string,
+) generictables.Rule {
+	return generictables.Rule{
+		Match:  Match().MarkClear(0x10),
+		Action: action,
+		Comment: []string{fmt.Sprintf("End of tier %s. %s if no policies passed packet",
+			tier,
+			actionStr,
+		)},
+	}
+}
+
 func nfqueueProfile(action string) generictables.Rule {
 	return generictables.Rule{
 		Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
@@ -4518,10 +4275,10 @@ func nfqueueProfile(action string) generictables.Rule {
 	}
 }
 
-func nfqueuePolicy(action string) generictables.Rule {
+func defaultTierNfqueuePolicy(action string) generictables.Rule {
 	return generictables.Rule{
 		Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
 		Action:  NfqueueAction{QueueNum: 100},
-		Comment: []string{fmt.Sprintf("%s if no policies passed packet", action)},
+		Comment: []string{fmt.Sprintf("End of tier default. %s if no policies passed packet", action)},
 	}
 }
