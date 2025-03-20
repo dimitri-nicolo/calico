@@ -84,6 +84,9 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			qosControls,
+			isEgressGateway,
+			0,
+			ipVersion,
 		),
 		// Chain for traffic _from_ the endpoint.
 		// Encap traffic is blocked by default from workload endpoints

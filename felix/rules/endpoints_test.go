@@ -1994,6 +1994,15 @@ var _ = Describe("Endpoints", func() {
 								Action: ClearMarkAction{Mark: 0x98},
 							},
 							{
+								Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{
+								Match:  Match(),
+								Action: NflogAction{Group: 1, Prefix: "DRI"},
+							},
+							{
 								Match:   Match(),
 								Action:  denyAction,
 								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
@@ -2041,6 +2050,15 @@ var _ = Describe("Endpoints", func() {
 							dropVXLANRule,
 							dropIPIPRule,
 							{
+								Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{
+								Match:  Match(),
+								Action: NflogAction{Group: 2, Prefix: "DRE"},
+							},
+							{
 								Match:   Match(),
 								Action:  denyAction,
 								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
@@ -2069,6 +2087,9 @@ var _ = Describe("Endpoints", func() {
 						EgressMaxConnections:  10,
 						IngressMaxConnections: 20,
 					},
+					NotAnEgressGateway,
+					0,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*generictables.Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -2092,6 +2113,15 @@ var _ = Describe("Endpoints", func() {
 							{
 								Match:  Match(),
 								Action: ClearMarkAction{Mark: 0x98},
+							},
+							{
+								Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{
+								Match:  Match(),
+								Action: NflogAction{Group: 1, Prefix: "DRI"},
 							},
 							{
 								Match:   Match(),
@@ -2125,6 +2155,15 @@ var _ = Describe("Endpoints", func() {
 							},
 							dropVXLANRule,
 							dropIPIPRule,
+							{
+								Match:   Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+								Action:  NfqueueAction{QueueNum: 100},
+								Comment: []string{fmt.Sprintf("%s if no profiles matched", denyActionString)},
+							},
+							{
+								Match:  Match(),
+								Action: NflogAction{Group: 2, Prefix: "DRE"},
+							},
 							{
 								Match:   Match(),
 								Action:  denyAction,
