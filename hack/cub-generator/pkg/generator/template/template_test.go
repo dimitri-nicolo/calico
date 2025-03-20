@@ -10,7 +10,7 @@ import (
 	"testing/fstest"
 	tpl "text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 
 	"github.com/projectcalico/calico/hack/cub-generator/pkg/generator/template"
 )
