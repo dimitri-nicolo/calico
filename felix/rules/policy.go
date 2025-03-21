@@ -1046,7 +1046,7 @@ func PolicyChainName(prefix PolicyChainNamePrefix, polID *types.PolicyID, nft bo
 	}
 	return hashutils.GetLengthLimitedID(
 		string(prefix),
-		polID.Name,
+		name,
 		maxLen,
 	)
 }
