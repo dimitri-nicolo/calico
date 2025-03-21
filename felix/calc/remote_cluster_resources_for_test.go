@@ -405,7 +405,7 @@ func StateWithVXLANBlockForRemoteA(state State, shouldFlush bool) State {
 func StateWithVXLANBlockForRemoteB(state State, shouldFlush bool) State {
 	state = StateWithPool(state, remoteB, "10.0.0.0/16", shouldFlush)
 	state = StateWithBlock(state, remoteB, "10.0.1.0/29", shouldFlush, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
-	state = StateWithVTEP(state, remoteB, "10.0.1.1", shouldFlush, remoteClusterBHostMAC, proto.IPPoolType_VXLAN, remoteClusterBHostIPAddr, remoteClusterBHost)
+	state = StateWithVTEP(state, remoteB, "10.0.1.1", shouldFlush, remoteClusterBHostMAC, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
 	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "10.0.1.1", "", "")
 	return state
 }
@@ -414,7 +414,7 @@ func StateWithVXLANBlockForRemoteB(state State, shouldFlush bool) State {
 func StateWithVXLANWEPForLocal(state State, shouldFlush bool) State {
 	state = StateWithPool(state, local, "10.0.0.0/16", shouldFlush)
 	state = StateWithWEP(state, local, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", localClusterHost, localClusterHostIPAddr, false)
-	state = StateWithVTEP(state, local, "10.0.1.1", shouldFlush, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHostIPAddr, localClusterHost)
+	state = StateWithVTEP(state, local, "10.0.1.1", shouldFlush, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
 	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "", "")
 	return state
 }
@@ -423,7 +423,7 @@ func StateWithVXLANWEPForLocal(state State, shouldFlush bool) State {
 func StateWithVXLANWEPForRemoteA(state State, shouldFlush bool) State {
 	state = StateWithPool(state, remoteA, "10.0.0.0/16", shouldFlush)
 	state = StateWithWEP(state, remoteA, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", remoteClusterAHost, remoteClusterAHostIPAddr, false)
-	state = StateWithVTEP(state, remoteA, "10.0.1.1", shouldFlush, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHostIPAddr, remoteClusterAHost)
+	state = StateWithVTEP(state, remoteA, "10.0.1.1", shouldFlush, remoteClusterAHostMAC, proto.IPPoolType_VXLAN, remoteClusterAHost, remoteClusterAHostIPAddr)
 	state = StateWithNode(state, remoteA, remoteClusterAHost, remoteClusterAHostIPAddr, "10.0.1.1", "", "")
 	return state
 }
@@ -432,7 +432,7 @@ func StateWithVXLANWEPForRemoteA(state State, shouldFlush bool) State {
 func StateWithVXLANWEPForRemoteB(state State, shouldFlush bool) State {
 	state = StateWithPool(state, remoteB, "10.0.0.0/16", shouldFlush)
 	state = StateWithWEP(state, remoteB, "10.0.0.5", shouldFlush, proto.IPPoolType_VXLAN, "local-wep", remoteClusterBHost, remoteClusterBHostIPAddr, false)
-	state = StateWithVTEP(state, remoteB, "10.0.1.1", shouldFlush, remoteClusterBHostMAC, proto.IPPoolType_VXLAN, remoteClusterBHostIPAddr, remoteClusterBHost)
+	state = StateWithVTEP(state, remoteB, "10.0.1.1", shouldFlush, remoteClusterBHostMAC, proto.IPPoolType_VXLAN, remoteClusterBHost, remoteClusterBHostIPAddr)
 	state = StateWithNode(state, remoteB, remoteClusterBHost, remoteClusterBHostIPAddr, "10.0.1.1", "", "")
 	return state
 }
