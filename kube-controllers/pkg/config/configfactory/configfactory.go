@@ -18,8 +18,11 @@ func NewDefaultKubeControllersConfig(configName string) (*v3.KubeControllersConf
 			Node: &v3.NodeControllerConfig{
 				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
 				SyncLabels:       v3.Enabled,
-				HostEndpoint:     nil,
-				LeakGracePeriod:  &v1.Duration{Duration: time.Minute * 15},
+				HostEndpoint: &v3.AutoHostEndpointConfig{
+					AutoCreate:                v3.Disabled,
+					CreateDefaultHostEndpoint: v3.DefaultHostEndpointsEnabled,
+				},
+				LeakGracePeriod: &v1.Duration{Duration: time.Minute * 15},
 			},
 			Policy: &v3.PolicyControllerConfig{
 				ReconcilerPeriod: &v1.Duration{Duration: time.Minute * 5},
