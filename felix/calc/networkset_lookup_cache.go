@@ -30,10 +30,10 @@ func init() {
 }
 
 type networkSetData struct {
-	cidrs  set.Set[ip.CIDR]
+	cidrs                set.Set[ip.CIDR]
 	allowedEgressDomains set.Set[string]
-	key    model.NetworkSetKey
-	labels map[string]string
+	key                  model.NetworkSetKey
+	labels               map[string]string
 }
 
 func (n networkSetData) IsLocal() bool {
@@ -50,6 +50,10 @@ func (n networkSetData) EgressMatchData() *MatchData {
 
 func (n networkSetData) IsHostEndpoint() bool {
 	return false
+}
+
+func (n networkSetData) IsNetworkSet() bool {
+	return true
 }
 
 func (n networkSetData) Key() model.Key {
@@ -104,9 +108,9 @@ func (nc *NetworkSetLookupsCache) OnUpdate(nsUpdate api.Update) (_ bool) {
 		} else {
 			networkSet := nsUpdate.Value.(*model.NetworkSet)
 			nc.addOrUpdateNetworkSet(&networkSetData{
-				key:    k,
-				labels: networkSet.Labels,
-				cidrs:  set.FromArray(ip.CIDRsFromCalicoNets(networkSet.Nets)),
+				key:                  k,
+				labels:               networkSet.Labels,
+				cidrs:                set.FromArray(ip.CIDRsFromCalicoNets(networkSet.Nets)),
 				allowedEgressDomains: set.FromArray(networkSet.AllowedEgressDomains),
 			})
 		}

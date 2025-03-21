@@ -69,7 +69,7 @@ func (lc *LookupsCache) GetNetworkSet(addr [16]byte) (EndpointData, bool) {
 
 // GetNetworkSetFromEgressDomain returns the networkset information for an egress domain.
 // It returns the first networkset it finds that contains the given domain.
-func (lc *LookupsCache) GetNetworkSetFromEgressDomain(domain string) (*EndpointData, bool) {
+func (lc *LookupsCache) GetNetworkSetFromEgressDomain(domain string) (EndpointData, bool) {
 	return lc.nsCache.GetNetworkSetFromEgressDomain(domain)
 }
 

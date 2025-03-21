@@ -192,7 +192,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		ec.OnUpdate(update)
 
 		// take delay with deletion into account
-		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+		time.Sleep(testDeletionDelay + 1*time.Second)
 
 		verifyIpToEndpoint := func(key model.Key, ipAddr net.IP, exists bool, labels map[string]string) {
 			var name string
@@ -209,14 +209,9 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 			ed, ok := ec.GetEndpoint(addrB)
 			if exists {
 				Expect(ok).To(BeTrue(), name+"\n"+ec.DumpEndpoints())
-				Expect(ed.Key).To(Equal(key), ec.DumpEndpoints())
+				Expect(ed.Key()).To(Equal(key), ec.DumpEndpoints())
 				if labels != nil {
-					switch ep := ed.Endpoint.(type) {
-					case *model.WorkloadEndpoint:
-						Expect(ep.Labels).To(Equal(labels), ec.DumpEndpoints())
-					case *model.HostEndpoint:
-						Expect(ep.Labels).To(Equal(labels), ec.DumpEndpoints())
-					}
+					Expect(ed.Labels()).To(Equal(labels), ec.DumpEndpoints())
 				}
 			} else {
 				_, ok = ec.GetEndpoint(addrB)
@@ -265,7 +260,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		ec.OnUpdate(update)
 
 		// delete is delayed
-		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+		time.Sleep(testDeletionDelay + 1*time.Second)
 
 		By("verifying all IPv4 and IPv6 addresses of the host endpoint are not present in the mapping")
 		for _, ipv4 := range hostEpWithName.ExpectedIPv4Addrs {
@@ -333,7 +328,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		}
 		ec.OnUpdate(update)
 		// delete is delayed
-		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+		time.Sleep(testDeletionDelay + 1*time.Second)
 
 		By("verifying all IPv4 are present but no Ipv6 addresses are present")
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to
@@ -354,7 +349,7 @@ var _ = Describe("EndpointLookupsCache tests: endpoints", func() {
 		}
 		ec.OnUpdate(update)
 		// delete is delayed
-		time.Sleep(endpointDataTTLAfterMarkedAsRemoved + 1*time.Second)
+		time.Sleep(testDeletionDelay + 1*time.Second)
 
 		By("verifying all there are no mapping present")
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to

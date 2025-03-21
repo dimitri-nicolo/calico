@@ -686,7 +686,7 @@ func (c *collector) maybeUpdateDomains(data *Data) {
 	if c.domainLookup == nil {
 		return
 	}
-	if data.DstEp == nil || data.DstEp.Networkset != nil {
+	if data.DstEp == nil || data.DstEp.IsNetworkSet() {
 		clientIP := c.getClientIP(data.Tuple.Src)
 		if egressDomains := c.domainLookup.GetTopLevelDomainsForIP(clientIP, data.Tuple.Dst); len(egressDomains) > len(data.DestDomains) {
 			log.Debugf("Updating domains for clientIP %s and ip %s to %v", clientIP, data.Tuple.Dst, egressDomains)
@@ -1368,7 +1368,7 @@ func (c *collector) LogWAFEvents(events []*proto.WAFEvent) {
 		srcEP, _ := c.luc.GetEndpoint(utils.IpStrTo16Byte(wafEvent.SrcIp))
 		dstEP, _ := c.luc.GetEndpoint(utils.IpStrTo16Byte(wafEvent.DstIp))
 		if srcEP != nil {
-			if wep, ok := srcEP.Key.(model.WorkloadEndpointKey); ok {
+			if wep, ok := srcEP.Key().(model.WorkloadEndpointKey); ok {
 				ns, name, err := endpoint.DeconstructNamespaceAndNameFromWepName(wep.WorkloadID)
 				if err == nil {
 					src.PodName = name
@@ -1377,7 +1377,7 @@ func (c *collector) LogWAFEvents(events []*proto.WAFEvent) {
 			}
 		}
 		if dstEP != nil {
-			if wep, ok := dstEP.Key.(model.WorkloadEndpointKey); ok {
+			if wep, ok := dstEP.Key().(model.WorkloadEndpointKey); ok {
 				ns, name, err := endpoint.DeconstructNamespaceAndNameFromWepName(wep.WorkloadID)
 				if err == nil {
 					dst.PodName = name

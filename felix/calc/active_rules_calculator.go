@@ -386,7 +386,9 @@ func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key model.Key, profil
 func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 	if es, ok := selID.(egressSelector); ok {
 		for _, l := range arc.PolicyMatchListeners {
-			l.OnEgressSelectorMatch(string(es), labelId)
+			if labelId, ok := labelId.(model.EndpointKey); ok {
+				l.OnEgressSelectorMatch(string(es), labelId)
+			}
 		}
 		return
 	}
@@ -414,7 +416,9 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
 	if es, ok := selID.(egressSelector); ok {
 		for _, l := range arc.PolicyMatchListeners {
-			l.OnEgressSelectorMatchStopped(string(es), labelId)
+			if labelId, ok := labelId.(model.EndpointKey); ok {
+				l.OnEgressSelectorMatchStopped(string(es), labelId)
+			}
 		}
 		return
 	}

@@ -757,15 +757,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple1,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -791,15 +791,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple1,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -825,15 +825,15 @@ var (
 		UpdateType: metric.UpdateTypeExpire,
 		Tuple:      tuple1,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -845,15 +845,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple2,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -879,15 +879,15 @@ var (
 		UpdateType: metric.UpdateTypeExpire,
 		Tuple:      tuple2,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:      []*calc.RuleID{ingressRule1Allow},
 		IsConnection: false,
 		ProcessName:  "test-process",
@@ -898,15 +898,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple3,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -931,15 +931,15 @@ var (
 		UpdateType: metric.UpdateTypeExpire,
 		Tuple:      tuple3,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:           []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs:    []*calc.RuleID{ingressRule1Deny},
 		IsConnection:      false,
@@ -960,15 +960,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple3,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -994,15 +994,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple4,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -1028,15 +1028,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple5,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,
@@ -1062,15 +1062,15 @@ var (
 		UpdateType: metric.UpdateTypeReport,
 		Tuple:      tuple6,
 		SrcEp:      nil,
-		DstEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
+		DstEp: calc.CalculateRemoteEndpoint(
+			model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
-		},
+			&model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		),
 		RuleIDs:        []*calc.RuleID{ingressRule1Allow},
 		PendingRuleIDs: []*calc.RuleID{ingressRule1Deny},
 		IsConnection:   false,

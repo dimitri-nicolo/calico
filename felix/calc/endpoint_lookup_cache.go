@@ -74,6 +74,7 @@ type EndpointData interface {
 	GenerateName() string
 	IsLocal() bool
 	IsHostEndpoint() bool
+	IsNetworkSet() bool
 	Labels() map[string]string
 	IngressMatchData() *MatchData
 	EgressMatchData() *MatchData
@@ -279,6 +280,12 @@ func (ec *EndpointLookupsCache) CreateLocalEndpointData(key model.EndpointKey, e
 	return ed
 }
 
+func CalculateRemoteEndpoint(key model.EndpointKey, ep model.Endpoint) *RemoteEndpointData {
+	return &RemoteEndpointData{
+		CommonEndpointData: CalculateCommonEndpointData(key, ep),
+	}
+}
+
 func CalculateCommonEndpointData(key model.EndpointKey, ep model.Endpoint) CommonEndpointData {
 	generateName, ips := extractEndpointInfo(ep)
 	commonData := CommonEndpointData{
@@ -318,9 +325,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 			ec.removeEndpointWithDelay(k)
 		} else {
 			endpoint := epUpdate.Value.(model.Endpoint)
-			ed := &RemoteEndpointData{
-				CommonEndpointData: CalculateCommonEndpointData(k, endpoint),
-			}
+			ed := CalculateRemoteEndpoint(k, endpoint)
 			ec.addOrUpdateEndpoint(k, ed)
 		}
 	default:
@@ -851,6 +856,10 @@ func (e *CommonEndpointData) IsHostEndpoint() (isHep bool) {
 		isHep = true
 	}
 	return
+}
+
+func (e *CommonEndpointData) IsNetworkSet() bool {
+	return false
 }
 
 func (e *CommonEndpointData) allIPs() [][16]byte {

@@ -2216,7 +2216,7 @@ var _ = Describe("DNS logging", func() {
 	var nflogReader *NFLogReader
 	var r *mockDNSReporter
 	BeforeEach(func() {
-		epMap := map[[16]byte]*calc.EndpointData{
+		epMap := map[[16]byte]calc.EndpointData{
 			localIp1:  localEd1,
 			localIp2:  localEd2,
 			remoteIp1: remoteEd1,
@@ -2241,11 +2241,10 @@ var _ = Describe("DNS logging", func() {
 		Expect(r.updates).To(HaveLen(1))
 		update := r.updates[0]
 		Expect(update.ClientEP).NotTo(BeNil())
-		Expect(update.ClientEP.Endpoint).To(BeAssignableToTypeOf(&model.WorkloadEndpoint{}))
-		Expect(*(update.ClientEP.Endpoint.(*model.WorkloadEndpoint))).To(Equal(*localWlEp1))
+		Expect(update.ClientEP.Key()).To(Equal(localEd1.Key()))
 		Expect(update.ServerEP).NotTo(BeNil())
-		Expect(update.ServerEP.Networkset).To(BeAssignableToTypeOf(&model.NetworkSet{}))
-		Expect(*(update.ServerEP.Networkset.(*model.NetworkSet))).To(Equal(netSet1))
+		Expect(update.ServerEP.IsNetworkSet()).To(BeTrue())
+		Expect(update.ServerEP.Key()).To(Equal(netSetKey1))
 	})
 })
 
@@ -2287,7 +2286,7 @@ var _ = Describe("L7 logging", func() {
 	var hdsvcip *proto.HTTPData
 	var hdsvcnoport *proto.HTTPData
 	BeforeEach(func() {
-		epMap := map[[16]byte]*calc.EndpointData{
+		epMap := map[[16]byte]calc.EndpointData{
 			localIp1:  localEd1,
 			localIp2:  localEd2,
 			remoteIp1: remoteEd1,
@@ -2546,15 +2545,73 @@ func (r *mockWAFEventReporter) Report(event interface{}) error {
 var _ = Describe("WAFEvent logging", func() {
 	var c *collector
 	var r *mockWAFEventReporter
-	var lep1 *calc.EndpointData = &calc.EndpointData{}
-	var lep2 *calc.EndpointData = &calc.EndpointData{}
+	var lep1 calc.EndpointData
+	var lep2 calc.EndpointData
 	var we0, we1 *proto.WAFEvent
 	BeforeEach(func() {
-		*lep1 = *localEd1
-		*lep2 = *localEd2
-		lep1.Key = model.WorkloadEndpointKey{WorkloadID: "ns1/localworkloadid1"}
-		lep2.Key = model.WorkloadEndpointKey{WorkloadID: "ns2/localworkloadid2"}
-		epMap := map[[16]byte]*calc.EndpointData{
+		lep1 = &calc.LocalEndpointData{
+			CommonEndpointData: calc.CalculateCommonEndpointData(model.WorkloadEndpointKey{WorkloadID: "ns1/localworkloadid1"}, localWlEp1),
+			Ingress: &calc.MatchData{
+				PolicyMatches: map[calc.PolicyID]int{
+					{Name: "policy1", Tier: "default"}: 0,
+					{Name: "policy2", Tier: "default"}: 0,
+				},
+				TierData: map[string]*calc.TierData{
+					"default": {
+						ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
+							rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex: 0,
+					},
+				},
+				ProfileMatchIndex: 0,
+			},
+			Egress: &calc.MatchData{
+				PolicyMatches: map[calc.PolicyID]int{
+					{Name: "policy1", Tier: "default"}: 0,
+					{Name: "policy2", Tier: "default"}: 0,
+				},
+				TierData: map[string]*calc.TierData{
+					"default": {
+						ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
+							rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex: 0,
+					},
+				},
+				ProfileMatchIndex: 0,
+			},
+		}
+		lep2 = &calc.LocalEndpointData{
+			CommonEndpointData: calc.CalculateCommonEndpointData(model.WorkloadEndpointKey{WorkloadID: "ns2/localworkloadid2"}, localWlEp2),
+			Ingress: &calc.MatchData{
+				PolicyMatches: map[calc.PolicyID]int{
+					{Name: "policy1", Tier: "default"}: 0,
+					{Name: "policy2", Tier: "default"}: 0,
+				},
+				TierData: map[string]*calc.TierData{
+					"default": {
+						ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
+							rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex: 0,
+					},
+				},
+				ProfileMatchIndex: 0,
+			},
+			Egress: &calc.MatchData{
+				PolicyMatches: map[calc.PolicyID]int{
+					{Name: "policy1", Tier: "default"}: 0,
+					{Name: "policy2", Tier: "default"}: 0,
+				},
+				TierData: map[string]*calc.TierData{
+					"default": {
+						ImplicitDropRuleID: calc.NewRuleID("default", "policy2", "", calc.RuleIndexTierDefaultAction,
+							rules.RuleDirIngress, rules.RuleActionDeny),
+						EndOfTierMatchIndex: 0,
+					},
+				},
+				ProfileMatchIndex: 0,
+			},
+		}
+		epMap := map[[16]byte]calc.EndpointData{
 			localIp1: lep1,
 			localIp2: lep2,
 		}
