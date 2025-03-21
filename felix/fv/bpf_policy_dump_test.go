@@ -117,7 +117,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 			out, err = tc.Felixes[0].ExecOutput("calico-bpf", "policy", "dump", w[0].InterfaceName, "ingress")
 			Expect(err).NotTo(HaveOccurred())
 			return out
-		}, "5s", "200ms").Should(ContainSubstring("Start of policy default.policy-tcp"))
+		}, "10s", "200ms").Should(ContainSubstring("Start of rule default action"))
 
 		outStr := string(out)
 		Expect(outStr).To(ContainSubstring("Start of rule default.policy-tcp action:\"allow\""))
@@ -154,7 +154,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Felix bpf test policy dump"
 			out, err = tc.Felixes[0].ExecOutput("calico-bpf", "policy", "dump", w[0].InterfaceName, "egress")
 			Expect(err).NotTo(HaveOccurred())
 			return out
-		}, "5s", "200ms").Should(ContainSubstring("Start of policy default.policy-tcp"))
+		}, "10s", "200ms").Should(ContainSubstring("Start of rule default action"))
 
 		outStr = string(out)
 		ipsetStr = re.FindAllString(outStr, -1)
