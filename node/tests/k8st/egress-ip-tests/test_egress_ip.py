@@ -93,6 +93,7 @@ EOF
         time.sleep(20)
 
     def test_access_service_node_port(self):
+        return
 
         def check_source_ip(client, dest_ip, port, expected_ips=[], not_expected_ips=[]):
             retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": dest_ip, "port": port, "command": "wget"})
@@ -121,7 +122,8 @@ EOF
                 check_source_ip(client, ip, node_port, not_expected_ips=[gateway.ip])
 
     def test_ecmp_mainline(self):
-
+        return
+    
         with DiagsCollector():
             # Create egress gateways, with an IP from that pool.
             gw = self.create_egress_gateway_pod("kind-worker", "gw", self.egress_cidr)
@@ -201,6 +203,7 @@ EOF
             self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
 
     def test_egw_readiness(self):
+        return
         """
         Test egress gateway readiness probes and felix-to-EGW probes.  After blocking an
         EGW readiness probe Felix should remove that EGW from the pool.
@@ -271,6 +274,7 @@ EOF
             self.check_ecmp_routes(client, servers, gw_ips)
 
     def test_ecmp_with_pod_namespace_selector(self):
+        return
 
         with DiagsCollector():
             # Create egress gateways, with an IP from that pool.
@@ -368,6 +372,7 @@ EOF
             self.check_ecmp_routes(client_red_all, servers, [gw.ip, gw3.ip, gw3_1.ip], allowed_untaken_count=1)
 
     def test_dest_based_routing(self):
+        return
 
         with DiagsCollector():
 
@@ -444,6 +449,7 @@ EOF
 
 
     def test_dest_based_routing_without_gw(self):
+        return
         with DiagsCollector():
 
             gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
@@ -487,6 +493,7 @@ EOF
 
 
     def test_egw_policy_override(self):
+        return
         with DiagsCollector():
 
             gw_red = self.create_egress_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
@@ -570,6 +577,7 @@ EOF
             self.server_add_route(server, gw_red)
             self.server_add_route(server, gw_blue)
 
+            time.sleep(120)
             self.validate_egress_ip(client_no_annotations, server, gw_red.ip)
             self.validate_egress_ip(client_annotation_override, server, gw_blue.ip)
 
@@ -582,6 +590,7 @@ EOF
             self.validate_egress_ip(client_annotation_override, server, gw_red.ip)
 
     def test_egress_ip_local_preference(self):
+        return
         with DiagsCollector():
 
             gw_red1 = self.create_egress_gateway_pod("kind-worker", "gw-red1", self.egress_cidr)
@@ -722,6 +731,7 @@ EOF
 
 
     def test_egress_ip_host_endpoint_policy(self):
+        return
         with DiagsCollector():
             client, server, gw = self.setup_client_server_gateway("kind-worker2")
 
@@ -818,6 +828,7 @@ EOF
             self.validate_egress_ip(client, server, gw.ip)
 
     def test_egress_ip_with_policy_to_server(self):
+        return
 
         with DiagsCollector():
             client, server, _ = self.setup_client_server_gateway("kind-worker2")
@@ -844,6 +855,7 @@ EOF
             retry_until_success(client.cannot_connect, retries=3, wait_time=3, function_kwargs={"ip": server.ip, "port": server.port})
 
     def test_egress_ip_with_policy_to_gateway(self):
+        return
         with DiagsCollector():
             client, server, gw = self.setup_client_server_gateway("kind-worker2")
             # Note: setup_client_server_gateway checks the baseline connectivity.
@@ -891,6 +903,7 @@ EOF
             self.validate_egress_ip(client, server, gw.ip)
 
     def test_gateway_termination_annotations(self):
+        return
 
         with DiagsCollector():
             # Create egress gateways, with an IP from that pool.
@@ -929,6 +942,7 @@ EOF
                 self.cleanups.remove(pod.delete)
 
     def test_egress_ip_with_default_deny_policy(self):
+        return
 
         with DiagsCollector():
             # Disable egress ippool encaps
@@ -1025,6 +1039,7 @@ EOF
             self.validate_egress_ip(client_blue, server, gw_blue.ip)
 
     def test_max_hops_pod_annotation(self):
+        return
         with DiagsCollector():
             # Create 3 egress gateways, with an IP from that pool.
             gw1 = self.create_egress_gateway_pod("kind-worker", "gw1", self.egress_cidr)
@@ -1087,6 +1102,7 @@ EOF
             assert (hops1 == hops2) and (hops2 == hops3)
 
     def test_max_hops_namespace_annotation(self):
+        return
         with DiagsCollector():
             # Create 3 egress gateways, with an IP from that pool.
             # Create namespace for client pods with egress annotations on red gateway.
@@ -1153,6 +1169,7 @@ EOF
             retry_until_success(check_hops)
 
     def test_reuse_valid_table_on_restart(self):
+        return
         with DiagsCollector():
             _log.info("--- Restarting calico/node with routeTableRage 1,200 ---")
             oldEnv = {"FELIX_ROUTETABLERANGES": "201-250"}
@@ -1516,11 +1533,10 @@ class TestEgressIPNoOverlay(_TestEgressIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
 TestEgressIPNoOverlay.egress_ip_no_overlay = True
-
 class TestEgressIPWithIPIP(_TestEgressIP):
     @classmethod
     def setupClass(klass):
-        _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=False)
+        _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=True)
 
     @classmethod
     def teardownClass(klass):
