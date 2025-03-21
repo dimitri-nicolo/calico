@@ -44,10 +44,10 @@ type FelixSender interface {
 }
 
 type PolicyMatchListener interface {
-	OnPolicyMatch(policyKey model.PolicyKey, endpointKey model.Key)
-	OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey model.Key)
-	OnEgressSelectorMatch(es string, endpointKey interface{})
-	OnEgressSelectorMatchStopped(es string, endpointKey interface{})
+	OnPolicyMatch(policyKey model.PolicyKey, endpointKey model.EndpointKey)
+	OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey model.EndpointKey)
+	OnEgressSelectorMatch(es string, endpointKey model.EndpointKey)
+	OnEgressSelectorMatchStopped(es string, endpointKey model.EndpointKey)
 }
 
 // ActiveRulesCalculator calculates the set of policies and profiles (i.e. the rules) that
@@ -404,7 +404,7 @@ func (arc *ActiveRulesCalculator) onMatchStarted(selID, labelId interface{}) {
 		}
 		arc.sendPolicyUpdate(polKey, policy)
 	}
-	if labelId, ok := labelId.(model.Key); ok {
+	if labelId, ok := labelId.(model.EndpointKey); ok {
 		for _, l := range arc.PolicyMatchListeners {
 			l.OnPolicyMatch(polKey, labelId)
 		}
@@ -427,7 +427,7 @@ func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
 		policy, _ := arc.allPolicies.Get(polKey)
 		arc.sendPolicyUpdate(polKey, policy)
 	}
-	if labelId, ok := labelId.(model.Key); ok {
+	if labelId, ok := labelId.(model.EndpointKey); ok {
 		for _, l := range arc.PolicyMatchListeners {
 			l.OnPolicyMatchStopped(polKey, labelId)
 		}
