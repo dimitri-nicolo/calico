@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package recommendation_scope_controller
 
 import (
@@ -7,14 +7,18 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
+	k8swatch "k8s.io/apimachinery/pkg/watch"
 	k8scache "k8s.io/client-go/tools/cache"
 
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/watcher"
+	"github.com/projectcalico/calico/policy-recommendation/pkg/types"
 	"github.com/projectcalico/calico/policy-recommendation/utils"
 )
 
@@ -54,10 +58,11 @@ func NewRecommendationScopeController(
 	clusterID string,
 	clientSet lmak8s.ClientSet,
 	linseed lsclient.Client,
+	minPollInterval metav1.Duration,
 ) (controller.Controller, error) {
 	logEntry := log.WithField("clusterID", utils.GetLogClusterID(clusterID))
 
-	reconciler := newRecommendationScopeReconciler(ctx, clusterID, clientSet, linseed, logEntry)
+	reconciler := newRecommendationScopeReconciler(ctx, clusterID, clientSet, linseed, minPollInterval, logEntry)
 	if reconciler == nil {
 		return nil, errors.New("failed to create recommendation scope reconciler")
 	}
@@ -72,15 +77,18 @@ func NewRecommendationScopeController(
 		reconciler: reconciler,
 		watcher: watcher.NewWatcher(
 			reconciler,
-			// TODO(dimitrin): [EV-4647] add a filter to only watch for scope with name equal to "default"
-			// for the cluster (https://tigera.atlassian.net/browse/EV-4647).
-			// Currently, the client may print messages like:
-			//	 reflector.go:231: watch of *v3.PolicyRecommendationScope ended with: too old resource version:
-			// Reported as a known issue similar to: https://github.com/kubernetes/kubernetes/issues/22024
-			// The filter should be: fields.OneTermEqualSelector("metadata.name", types.PolicyRecommendationScopeName)
-			k8scache.NewListWatchFromClient(
-				clientSet.ProjectcalicoV3().RESTClient(), KindPolicyRecommendationScopes, v3.AllNamespaces, fields.Everything(),
-			),
+			// The FieldSelector does not work, reported as a known issue (https://tigera.atlassian.net/browse/EV-4647).
+			// The reconciler ignores all recommendation scope resources except the default one.
+			&k8scache.ListWatch{
+				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+					options.FieldSelector = fields.OneTermEqualSelector("metadata.name", types.PolicyRecommendationScopeName).String() // defaultNameFieldLabel
+					return clientSet.ProjectcalicoV3().PolicyRecommendationScopes().List(context.Background(), options)
+				},
+				WatchFunc: func(options metav1.ListOptions) (k8swatch.Interface, error) {
+					options.FieldSelector = fields.OneTermEqualSelector("metadata.name", types.PolicyRecommendationScopeName).String() // defaultNameFieldLabel
+					return clientSet.ProjectcalicoV3().PolicyRecommendationScopes().Watch(context.Background(), options)
+				},
+			},
 			&v3.PolicyRecommendationScope{},
 		),
 	}, nil

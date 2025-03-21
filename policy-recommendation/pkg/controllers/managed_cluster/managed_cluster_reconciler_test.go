@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package managed_cluster_controller
 
 import (
@@ -156,6 +156,7 @@ func newMockRecommendationScopeControllers(
 	clusterID string,
 	clientSet lmak8s.ClientSet,
 	linseed lsclient.Client,
+	minPollInterval metav1.Duration,
 ) (controller.Controller, error) {
 	return &mockRecommendationScopeController{}, nil
 }

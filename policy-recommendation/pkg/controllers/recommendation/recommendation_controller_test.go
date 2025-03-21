@@ -1,3 +1,4 @@
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package recommendation_controller
 
 import (
@@ -119,6 +120,8 @@ var _ = Describe("RecommendationController", func() {
 
 		namespaces := []string{"default"}
 
+		minPollInterval := metav1.Duration{Duration: time.Second * 30}
+
 		mockClock := &MockClock{}
 
 		query := &querymocks.PolicyRecommendationQuery{}
@@ -159,6 +162,7 @@ var _ = Describe("RecommendationController", func() {
 					},
 				},
 			},
+			minPollInterval,
 			mockClock,
 		)
 

@@ -81,6 +81,8 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 
 		namespaces := []string{"default", "kube-system"}
 
+		minPollInterval := metav1.Duration{Duration: 30 * time.Second}
+
 		mockClock := &MockClock{}
 
 		query := &querymocks.PolicyRecommendationQuery{}
@@ -157,6 +159,7 @@ var _ = Describe("RecommendationScopeReconciler", func() {
 					},
 				},
 			},
+			minPollInterval,
 			mockClock,
 		)
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package recommendation_controller
 
 import (
@@ -140,6 +140,7 @@ var _ = Describe("NamespaceReconciler", func() {
 		}
 		query.On("QueryFlows", mock.Anything).Return(flows, nil)
 
+		minPollInterval := metav1.Duration{Duration: time.Second * 30}
 		engine := recengine.NewRecommendationEngine(
 			ctx,
 			"managed-cluster-1",
@@ -161,6 +162,7 @@ var _ = Describe("NamespaceReconciler", func() {
 					},
 				},
 			},
+			minPollInterval,
 			mockClock,
 		)
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2022-2024 Tigera Inc. All rights reserved.
+// Copyright (c) 2022-2025 Tigera Inc. All rights reserved.
 package main
 
 import (
@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,6 +27,11 @@ import (
 	"github.com/projectcalico/calico/policy-recommendation/pkg/controllers/controller"
 	mscontroller "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/managed_cluster"
 	rscontroller "github.com/projectcalico/calico/policy-recommendation/pkg/controllers/recommendation_scope"
+)
+
+const (
+	// minPollInterval duration. The lower bound is set to 30 seconds to avoid excessive polling.
+	minPollInterval = 30 * time.Second
 )
 
 // backendClientAccessor is an interface to access the backend client from the bapi client.
@@ -111,7 +118,7 @@ func main() {
 	}()
 
 	// Create the standalone or management cluster PolicyRecommendationScope controller.
-	rctrl, err := rscontroller.NewRecommendationScopeController(ctx, lmak8s.DefaultCluster, clientSet, linseedClient)
+	rctrl, err := rscontroller.NewRecommendationScopeController(ctx, lmak8s.DefaultCluster, clientSet, linseedClient, metav1.Duration{Duration: minPollInterval})
 	if err != nil {
 		log.WithError(err).Fatal("Failed to create PolicyRecommendationScope controller")
 	}
@@ -132,7 +139,7 @@ func main() {
 			}
 			clientFactory = clientFactory.Impersonate(&impersonationInfo)
 		}
-		mctrl, err = mscontroller.NewManagedClusterController(ctx, client, clientFactory, linseedClient, config.TenantNamespace)
+		mctrl, err = mscontroller.NewManagedClusterController(ctx, client, clientFactory, linseedClient, config.TenantNamespace, metav1.Duration{Duration: minPollInterval})
 		if err != nil {
 			log.WithError(err).Fatal("Failed to create ManagedCluster controller")
 		}

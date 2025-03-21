@@ -87,7 +87,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 .PHONY: fv
 fv:
 	echo "running FVs"
-	$(DOCKER_GO_BUILD) ./run-fvs
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover -count 1'
 
 #############################################
 # Run unit level tests

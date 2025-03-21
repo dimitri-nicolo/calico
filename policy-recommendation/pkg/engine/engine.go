@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera Inc. All rights reserved.
 package engine
 
 import (
@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
@@ -49,6 +50,10 @@ type recommendationScope struct {
 
 	// interval is the engine run interval.
 	interval time.Duration
+
+	// minPollInterval is the minimum polling interval used by the engine to query for new
+	// recommendations.
+	minPollInterval time.Duration
 
 	// stabilization is the period used to determine if a recommendation is stable.
 	stabilization time.Duration
@@ -119,6 +124,7 @@ func NewRecommendationEngine(
 	query flows.PolicyRecommendationQuery,
 	cache rcache.ResourceCache,
 	scope *v3.PolicyRecommendationScope,
+	minPollInterval metav1.Duration,
 	clock Clock,
 ) *RecommendationEngine {
 	logEntry := log.WithField("clusterID", utils.GetLogClusterID(clusterID))
@@ -130,7 +136,7 @@ func NewRecommendationEngine(
 	}
 
 	// Create a new scope with the default values.
-	sc := newRecommendationScope(logEntry)
+	sc := newRecommendationScope(minPollInterval, logEntry)
 	sc.updateScope(*scope)
 
 	return &RecommendationEngine{
@@ -157,7 +163,7 @@ func NewRecommendationEngine(
 func (e *RecommendationEngine) Run(stopChan chan struct{}) {
 	interval := defaultInterval
 	if e.scope != nil {
-		if e.scope.interval >= 30*time.Second {
+		if e.scope.interval >= e.scope.minPollInterval {
 			interval = e.scope.interval
 		} else {
 			e.clog.Warnf("Invalid interval: %s, the interval must be greater than 30 seconds, using default interval: %s", e.scope.interval.String(), interval.String())
@@ -414,11 +420,12 @@ func (e *RecommendationEngine) removeRulesReferencingDeletedNamespace(snp *v3.St
 
 // recommendationScope
 
-func newRecommendationScope(lg *log.Entry) *recommendationScope {
+func newRecommendationScope(minPollInterval metav1.Duration, lg *log.Entry) *recommendationScope {
 	parsedSelector, _ := libcselector.Parse(defaultSelector)
 	return &recommendationScope{
 		initialLookback:           defaultLookback,
 		interval:                  defaultInterval,
+		minPollInterval:           minPollInterval.Duration,
 		stabilization:             defaultStabilizationPeriod,
 		selector:                  parsedSelector,
 		passIntraNamespaceTraffic: false,
@@ -430,7 +437,7 @@ func newRecommendationScope(lg *log.Entry) *recommendationScope {
 // updateScope updates the engine scope with the new PolicyRecommendationScopeSpec.
 func (sc *recommendationScope) updateScope(new v3.PolicyRecommendationScope) {
 	if new.Spec.Interval != nil && sc.interval != new.Spec.Interval.Duration {
-		if new.Spec.Interval.Duration < 30*time.Second {
+		if new.Spec.Interval.Duration < sc.minPollInterval {
 			sc.clog.Warnf("Invalid interval: %s, the interval must be greater than 30 seconds", new.Spec.Interval.Duration.String())
 		} else {
 			sc.interval = new.Spec.Interval.Duration
