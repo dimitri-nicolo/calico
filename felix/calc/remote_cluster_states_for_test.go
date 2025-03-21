@@ -500,8 +500,8 @@ var multipleTunnelEndpointsOverlapBetweenLocalAndRemoteA = func() State {
 
 	state = StateWithPool(state, local, "10.0.0.0/16", true)
 	state = StateWithBlock(state, local, "10.0.1.0/29", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
-	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
-	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
+	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr, remoteTunnelWep...)
+	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr, remoteTunnelWep...)
 	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey1.String())
 
 	state = StateWithPool(state, remoteA, "10.0.0.0/16", false)
@@ -518,8 +518,8 @@ var multipleTunnelEndpointsOverlapIndirectlyBetweenLocalAndRemoteA = func() Stat
 
 	state = StateWithPool(state, local, "10.0.0.0/16", true)
 	state = StateWithBlock(state, local, "10.0.1.0/29", true, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
-	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
-	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr)
+	state = StateWithVTEP(state, local, "10.0.1.1", true, localClusterHostMAC, proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr, remoteTunnelWep...)
+	state = StateWithWGEP(state, local, "10.0.1.2", true, wgPublicKey1.String(), proto.IPPoolType_VXLAN, localClusterHost, localClusterHostIPAddr, remoteTunnelWep...)
 	state = StateWithNode(state, local, localClusterHost, localClusterHostIPAddr, "10.0.1.1", "10.0.1.2", wgPublicKey1.String())
 
 	state = StateWithPool(state, remoteA, "10.0.0.0/16", false)

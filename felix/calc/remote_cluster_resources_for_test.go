@@ -342,7 +342,7 @@ func StateWithVTEP(state State, cluster string, ip string, flush bool, mac strin
 }
 
 // StateWithWGEP is a convenience function to help compose remote cluster testing states.
-func StateWithWGEP(state State, cluster string, ip string, flush bool, publicKey string, poolType proto.IPPoolType, host string, hostIP string) State {
+func StateWithWGEP(state State, cluster string, ip string, flush bool, publicKey string, poolType proto.IPPoolType, host string, hostIP string, rts ...proto.RouteType) State {
 	keyName := host
 	if cluster != "" {
 		keyName = cluster + "/" + host
@@ -358,8 +358,17 @@ func StateWithWGEP(state State, cluster string, ip string, flush bool, publicKey
 		},
 	}
 
+	var updateTypes proto.RouteType
+	if len(rts) > 0 {
+		for _, rt := range rts {
+			updateTypes |= rt
+		}
+	} else {
+		updateTypes = proto.RouteType_REMOTE_TUNNEL
+	}
+
 	tunnelRouteUpdate := types.RouteUpdate{
-		Types:       proto.RouteType_REMOTE_TUNNEL,
+		Types:       updateTypes,
 		IpPoolType:  poolType,
 		Dst:         ip + "/32",
 		DstNodeName: keyName,
