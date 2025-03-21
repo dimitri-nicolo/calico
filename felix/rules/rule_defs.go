@@ -301,6 +301,7 @@ type RuleRenderer interface {
 		adminUp bool,
 		tiers []TierPolicyGroups,
 		profileIDs []string,
+		qosControls *proto.QoSControls,
 		isEgressGateway bool,
 		egwHealthPort uint16,
 		ipVersion uint8,

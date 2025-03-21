@@ -17,6 +17,8 @@ package iptables
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/generictables"
 )
@@ -128,6 +130,20 @@ func (s *actionFactory) TProxy(mark, mask uint32, port uint16) generictables.Act
 		Mark: mark,
 		Mask: mask,
 		Port: port,
+	}
+}
+
+func (a *actionFactory) LimitPacketRate(rate int64, mark uint32) generictables.Action {
+	return LimitPacketRateAction{
+		Rate: rate,
+		Mark: mark,
+	}
+}
+
+func (a *actionFactory) LimitNumConnections(num int64, rejectWith generictables.RejectWith) generictables.Action {
+	return LimitNumConnectionsAction{
+		Num:        num,
+		RejectWith: rejectWith,
 	}
 }
 
@@ -500,4 +516,42 @@ func (tp TProxyAction) ToFragment(_ *environment.Features) string {
 
 func (tp TProxyAction) String() string {
 	return fmt.Sprintf("TProxy mark %#x/%#x port %d", tp.Mark, tp.Mask, tp.Port)
+}
+
+type LimitPacketRateAction struct {
+	Rate                int64
+	Mark                uint32
+	TypeLimitPacketRate struct{}
+}
+
+func (a LimitPacketRateAction) ToFragment(features *environment.Features) string {
+	if a.Mark == 0 {
+		logrus.WithField("mark", a.Mark).Panic("Invalid mark")
+	}
+	if a.Rate < 0 {
+		logrus.WithField("rate", a.Rate).Panic("Invalid rate")
+	}
+	return fmt.Sprintf("-m limit --limit %d/sec --jump MARK --set-mark %#x/%#x", a.Rate, a.Mark, a.Mark)
+}
+
+func (a LimitPacketRateAction) String() string {
+	return fmt.Sprintf("LimitPacketRate:%d/s", a.Rate)
+}
+
+type LimitNumConnectionsAction struct {
+	Num                     int64
+	RejectWith              generictables.RejectWith
+	TypeLimitNumConnections struct{}
+}
+
+func (a LimitNumConnectionsAction) ToFragment(features *environment.Features) string {
+	if a.Num < 0 {
+		logrus.WithField("rate", a.Num).Panic("Invalid limit")
+	}
+	// '-m tcp --tcp-flags FIN,SYN,RST,ACK SYN' is equivalent to '--syn' but the long form is shown on the output of 'iptables-*-save', so use the long form too for consistency
+	return fmt.Sprintf("-p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m connlimit --connlimit-above %d --connlimit-mask 0 -j REJECT --reject-with %s", a.Num, a.RejectWith)
+}
+
+func (a LimitNumConnectionsAction) String() string {
+	return fmt.Sprintf("LimitNumConnectionsAction:%d, rejectWith:%s", a.Num, a.RejectWith)
 }
