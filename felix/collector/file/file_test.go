@@ -69,7 +69,7 @@ func makeLogSlice(n int) []*flowlog.FlowLog {
 					Name:           "foo-1234b",
 					AggregatedName: "foo-",
 				},
-				DstService: metrics.NoDestService,
+				DstService: flowlog.EmptyService,
 				Action:     "allow",
 				Reporter:   "src",
 			},

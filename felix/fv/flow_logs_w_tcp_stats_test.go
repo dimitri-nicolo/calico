@@ -37,6 +37,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 	BeforeEach(func() {
 		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
+		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
 		opts.IPIPEnabled = false
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
@@ -79,7 +80,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with TCP stats", [
 		cc.CheckConnectivity()
 		Eventually(func() error {
 			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
-			flogs := flowTester.GetFlows("file")
+			flogs := flowTester.GetFlows()
 			if len(flogs) == 0 {
 				return fmt.Errorf("Error reading flowlogs")
 			}

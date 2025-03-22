@@ -43,7 +43,7 @@ var (
 
 type (
 	Action       string
-	reporterType string
+	ReporterType string
 )
 
 type FlowService struct {
@@ -59,7 +59,7 @@ type FlowMeta struct {
 	DstMeta    endpoint.Metadata `json:"destinationMeta"`
 	DstService FlowService       `json:"destinationService"`
 	Action     Action            `json:"action"`
-	Reporter   reporterType      `json:"flowReporter"`
+	Reporter   ReporterType      `json:"flowReporter"`
 }
 
 type TCPRtt struct {
@@ -141,10 +141,10 @@ func newFlowMetaWithNoDestPortsAggregation(mu metric.Update, includeService bool
 	if err != nil {
 		return FlowMeta{}, err
 	}
-	f.Tuple.Src = emptyIP
+	f.Tuple.Src = EmptyIP
 	f.Tuple.L4Src = unsetIntField
 	f.Tuple.L4Dst = unsetIntField
-	f.Tuple.Dst = emptyIP
+	f.Tuple.Dst = EmptyIP
 	f.SrcMeta.Name = FieldNotIncluded
 	f.DstMeta.Name = FieldNotIncluded
 	f.DstService.PortName = FieldNotIncluded

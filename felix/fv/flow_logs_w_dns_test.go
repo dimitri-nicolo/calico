@@ -91,6 +91,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 	BeforeEach(func() {
 		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
+		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
 		// Instead of relying on external websites for DNS tests, we use an internally hosted HTTP service,
 		// and internal dns server, making functional validation tests more self-contained and reliable.
@@ -260,7 +261,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 			// networkset2 should be allowed.  All should have policy hits from both tiers.
 			var errs []string
 			var foundDNS, foundNetset1, foundNetset2 bool
-			err := flowTester.IterFlows("file", func(flowLog flowlog.FlowLog) error {
+			err := flowTester.IterFlows(func(flowLog flowlog.FlowLog) error {
 				// Source for every log should be ep1_1.
 				if flowLog.SrcMeta.Type != "wep" || flowLog.SrcMeta.Namespace != "default" || flowLog.SrcMeta.Name != ep1_1.Name {
 					errs = append(errs, fmt.Sprintf("Unexpected source meta in flow: %#v", flowLog.SrcMeta))
@@ -454,6 +455,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 	BeforeEach(func() {
 		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
+		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
 		externalWorkloads = infrastructure.StartExternalWorkloads("dns-external-workload", 2)
 		dnsRecords := map[string][]dns.RecordIP{
@@ -535,7 +537,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 
 			errs := []string{}
 			// Track all errors before failing
-			flowTester.IterFlows("file", func(flowLog flowlog.FlowLog) error {
+			flowTester.IterFlows(func(flowLog flowlog.FlowLog) error {
 				if flowLog.SrcMeta.Type == "wep" && flowLog.DstMeta.Type == "net" && flowLog.DstMeta.AggregatedName == "pub" {
 					log.Debugf("FlowLog: %#v", flowLog)
 					if strings.Contains(flowLog.SrcMeta.AggregatedName, ep1_1.Name) {

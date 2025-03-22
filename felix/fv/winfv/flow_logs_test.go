@@ -77,7 +77,7 @@ var _ = Describe("Windows flow logs test", func() {
 		Expect(nginx).NotTo(BeEmpty())
 	})
 
-	checkFlowLogs := func(flowLogsOutput string) {
+	checkFlowLogs := func() {
 		// Within 60s we should see the complete set of expected allow and deny
 		// flow logs.
 		Eventually(func() error {
@@ -86,7 +86,7 @@ var _ = Describe("Windows flow logs test", func() {
 				// Windows VXLAN can't complete a flow in time.
 				flowTester.IgnoreStartCompleteCount = true
 			}
-			err := flowTester.PopulateFromFlowLogs(flowLogsOutput)
+			err := flowTester.PopulateFromFlowLogs()
 			if err != nil {
 				return err
 			}
@@ -228,7 +228,7 @@ var _ = Describe("Windows flow logs test", func() {
 			}
 			setupAndRunFelix(config)
 
-			checkFlowLogs("file")
+			checkFlowLogs()
 		})
 
 		It("should get expected flow logs with default aggregation", func() {
@@ -244,7 +244,7 @@ var _ = Describe("Windows flow logs test", func() {
 			}
 			setupAndRunFelix(config)
 
-			checkFlowLogs("file")
+			checkFlowLogs()
 		})
 
 		AfterEach(func() {

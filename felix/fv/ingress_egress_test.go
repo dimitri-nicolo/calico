@@ -30,7 +30,6 @@ import (
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
-	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -136,7 +135,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 				"end-" + w[2].Name + "--" + w[0].Name + "--dst":   true,
 				"end-" + w[2].Name + "--" + w[0].Name + "--src":   true,
 			}
-			cwlogs, err := flowlogs.ReadFlowLogsFile(tc.Felixes[0].FlowLogDir())
+			cwlogs, err := tc.Felixes[0].FlowLogs()
 			if err != nil {
 				return err
 			}
@@ -322,6 +321,7 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
+		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 		tc, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
