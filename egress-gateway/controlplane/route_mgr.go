@@ -194,23 +194,18 @@ func (m *RouteManager) Start(ctx context.Context) {
 				break
 			}
 
-			logrus.Infof("Sridhar2 thisWorkload = %+v", thisWorkload)
-			logrus.Infof("Sridhar2 workloadsByNodeName = %+v", workloadsByNodeName)
-			logrus.Infof("Sridhar2 tunnelsByNodeName = %+v", tunnelsByNodeName)
 			activeTunnelsByNodeName := calculateActiveTunnelsForNodes(
 				thisWorkload,
 				workloadsByNodeName,
 				tunnelsByNodeName,
 			)
 
-			logrus.Infof("Sridhar2 activeTunnelsByNodeName = %+v", activeTunnelsByNodeName)
 			// now that we know what src-IP outbound egress packets will be coming in with,
 			// we can begin building routes back to the nodes via the same tunnels/IP's.
 			// we'll first create default routes and FDB entries for remote tunnels
 			var fdbNeighsByHWAddr map[string]netlink.Neigh
 			var exitRoutesByDstCIDR map[string]netlink.Route
 			fdbNeighsByHWAddr, exitRoutesByDstCIDR, incompleteTunnelUpdateKeys = m.createTunnelNeighsAndRoutes(activeTunnelsByNodeName)
-			logrus.Infof("Sridhar2 exitRoutesByDstCIDR %+v", exitRoutesByDstCIDR)
 
 			// fill in remaining FDB entries, ARP entries, and encap routes,
 			var routesByDstCIDR map[string]netlink.Route
@@ -288,11 +283,11 @@ func calculateActiveTunnelsForNodes(
 
 	// first check if the egress gateway's node has a wireguard device - if not, we can ignore all wireguard tunnels on other hosts
 	gatewayNodeTunnels := tunnelsByNodeName[thisWorkload.DstNodeName]
-	logrus.Infof("Sridhar2 searching gateway's host tunnels for wireguard devices: %+v", gatewayNodeTunnels)
+	logrus.Debugf("searching gateway's host tunnels for wireguard devices: %+v", gatewayNodeTunnels)
 	for _, tunnel := range gatewayNodeTunnels {
 		if protoutil.IsWireguardTunnel(tunnel) {
 			gatewayNodeHasWireguard = true
-			logrus.Info("Sridhar2 wireguard device found on gateway host")
+			logrus.Debug("wireguard device found on gateway host")
 		}
 	}
 
@@ -317,13 +312,8 @@ func calculateActiveTunnelsForNodes(
 		// wireguard tunnels take precedence over overlay tunnels - if both are enabled, wireguard is used
 		for _, tunnel := range tunnels {
 			// this is our best guess that wireguard will be used
-			if tunnel.TunnelType != nil && tunnel.TunnelType.Wireguard {
-				logrus.Infof("Sridhar2 tunnel type wg %+v %v", tunnel, protoutil.IsWireguardTunnel(tunnel))
-			} else {
-				logrus.Infof("Sridhar2 tunnel type not wg %+v", tunnel, protoutil.IsWireguardTunnel(tunnel))
-			}
 			if gatewayNodeHasWireguard && protoutil.IsWireguardTunnel(tunnel) {
-				logrus.Infof("Sridhar2 found wireguard peer: %+v", tunnel)
+				logrus.Debugf("found wireguard peer: %+v", tunnel)
 				activeTunnel = tunnel
 				break // highest priority tunnel matched, no need to check any more
 			} else if gatewayEncapType == tunnel.IpPoolType {
@@ -342,7 +332,7 @@ func calculateActiveTunnelsForNodes(
 				activeTunnel = tunnel
 			}
 		}
-		logrus.Infof("Sridhar2 added tunnel %+v for %s", activeTunnel, nodeName)
+		logrus.Debugf("added tunnel %+v", activeTunnel)
 		activeTunnelsByNodeName[nodeName] = activeTunnel
 	}
 
