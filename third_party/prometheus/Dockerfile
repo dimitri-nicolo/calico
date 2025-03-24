@@ -1,9 +1,9 @@
 # Copyright (c) 2021-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE
-ARG UBI8_IMAGE
+ARG UBI_IMAGE
 
-FROM ${UBI8_IMAGE} AS ubi
+FROM ${UBI_IMAGE} AS ubi
 
 RUN microdnf upgrade
 

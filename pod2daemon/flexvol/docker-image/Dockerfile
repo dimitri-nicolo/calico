@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG UBI8_IMAGE
+ARG UBI_IMAGE
 ARG CALICO_BASE
 
-FROM ${UBI8_IMAGE} AS ubi
+FROM ${UBI_IMAGE} AS ubi
 
 FROM scratch AS source
 
