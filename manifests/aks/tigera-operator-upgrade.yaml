@@ -57146,7 +57146,6 @@ rules:
       - gatewayapis/finalizers
       - goldmanes
       - imagesets
-      - whiskers
       - installations
       - installations/finalizers
       - installations/status
@@ -57182,6 +57181,7 @@ rules:
       - tigerastatuses/status
       - tlspassthroughroutes
       - tlsterminatedroutes
+      - whiskers
     verbs:
       - get
       - list
