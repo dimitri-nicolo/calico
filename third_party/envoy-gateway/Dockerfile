@@ -8,12 +8,15 @@
 
 ARG CALICO_BASE
 
-FROM --platform=linux/amd64 busybox AS source
+FROM busybox AS source
+
 # Create the data directory for the gateway
 RUN mkdir -p /var/lib/eg
 
 FROM ${CALICO_BASE}
+
 ARG TARGETARCH
+
 COPY bin/envoy-gateway-${TARGETARCH} /usr/local/bin/envoy-gateway
 COPY --from=source --chown=65532:65532 /var/lib /var/lib
 
