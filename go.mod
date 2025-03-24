@@ -33,7 +33,7 @@ require (
 	github.com/containernetworking/cni v1.2.3
 	github.com/containernetworking/plugins v1.6.2
 	github.com/corazawaf/coraza-coreruleset/v4 v4.7.0
-	github.com/corazawaf/coraza/v3 v3.3.2
+	github.com/corazawaf/coraza/v3 v3.3.3
 	github.com/coreos/go-iptables v0.8.0
 	github.com/coreos/go-oidc v2.3.0+incompatible
 	github.com/coreos/go-semver v0.3.1
@@ -63,7 +63,7 @@ require (
 	github.com/gofrs/flock v0.12.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
-	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/golang/protobuf v1.5.4
 	github.com/golang/snappy v1.0.0
 	github.com/google/btree v1.1.3
