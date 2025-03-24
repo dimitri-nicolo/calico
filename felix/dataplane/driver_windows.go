@@ -41,7 +41,8 @@ func StartDataplaneDriver(configParams *config.Config,
 	childExitedRestartCallback func(),
 	ipamClient ipam.Interface,
 	k8sClientSet *kubernetes.Clientset,
-	lookupsCache *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
+	lookupsCache *calc.LookupsCache,
+) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	log.Info("Using Windows dataplane driver.")
 
 	dpConfig := windataplane.Config{

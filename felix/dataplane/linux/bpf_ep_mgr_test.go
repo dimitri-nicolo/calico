@@ -657,6 +657,16 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		Expect(bpfEpMgr).NotTo(BeNil())
 	})
 
+	Context("with lookup cache", func() {
+		BeforeEach(func() {
+			lookupsCache = calc.NewLookupsCache()
+		})
+
+		It("exists", func() {
+			Expect(bpfEpMgr).NotTo(BeNil())
+		})
+	})
+
 	It("does not have HEP in initial state", func() {
 		Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).NotTo(Equal(hostEp))
 	})
@@ -772,7 +782,6 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			Expect(dp.programAttached("eth20:ingress")).To(BeTrue())
 			Expect(dp.programAttached("eth20:egress")).To(BeTrue())
 			Expect(dp.programAttached("eth20:xdp")).To(BeFalse())
-
 		})
 
 		It("should add host ifaces to iface tree", func() {
