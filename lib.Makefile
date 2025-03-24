@@ -218,7 +218,7 @@ ifeq ($(BUILDARCH),amd64)
 	# *-amd64 tagged images for etcd are not available until v3.5.0
 	ETCD_IMAGE = quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
-UBI8_IMAGE ?= registry.access.redhat.com/ubi8/ubi-minimal:latest
+UBI_IMAGE ?= registry.access.redhat.com/ubi8/ubi-minimal:latest
 UBI9_IMAGE ?= registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 ifeq ($(GIT_USE_SSH),true)
@@ -283,7 +283,7 @@ CERTS_PATH := $(REPO_ROOT)/hack/test/certs
 
 # The image to use for building calico/base-dependent modules (e.g. apiserver, typha).
 ifdef USE_UBI8_AS_CALICO_BASE
-CALICO_BASE ?= $(UBI8_IMAGE)
+CALICO_BASE ?= $(UBI_IMAGE)
 else ifdef USE_UBI9_AS_CALICO_BASE
 CALICO_BASE ?= $(UBI9_IMAGE)
 else
@@ -300,7 +300,7 @@ endif
 
 # DOCKER_BUILD is the base build command used for building all images.
 DOCKER_BUILD=docker buildx build --load --platform=linux/$(ARCH) $(DOCKER_PULL)\
-	--build-arg UBI8_IMAGE=$(UBI8_IMAGE) \
+	--build-arg UBI_IMAGE=$(UBI_IMAGE) \
 	--build-arg UBI9_IMAGE=$(UBI9_IMAGE) \
 	--build-arg GIT_VERSION=$(GIT_VERSION) \
 	--build-arg BPFTOOL_IMAGE=$(BPFTOOL_IMAGE) \
