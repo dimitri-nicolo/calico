@@ -11,18 +11,18 @@ execution_time_limit:
 global_job_config:
   env_vars:
     - name: DEV_REGISTRIES
-      value: quay.io/calico docker.io/calico
+      value: gcr.io/unique-caldron-775/cnx/tigera
   secrets:
-    - name: docker
-    - name: quay-robot-calico+semaphoreci
+    - name: docker-hub
+    - name: google-service-account-for-gcr
   prologue:
     commands:
       - checkout
       # Semaphore is doing shallow clone on a commit without tags.
       # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
       - retry git fetch --unshallow
-      - echo $DOCKER_TOKEN | docker login --username "$DOCKER_USER" --password-stdin
-      - echo $QUAY_TOKEN | docker login --username "$QUAY_USER" --password-stdin quay.io
+      - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+      - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
       - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
 
 blocks:
