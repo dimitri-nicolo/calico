@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package recommendation_controller
 
 import (
@@ -13,7 +13,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -31,9 +30,6 @@ import (
 )
 
 const (
-	// kindKubernetesNetworkPolicies is the kind of the Kubernetes Namespace resource.
-	kindKubernetesNamespaces = "namespaces"
-
 	// namespaceIsolationTierLabel is the label used to identify the namespace-isolation tier.
 	namespaceIsolationTierLabel = v3.LabelTier + "=" + rectypes.PolicyRecommendationTierName
 
@@ -93,7 +89,14 @@ func NewRecommendationController(
 		watchers: []watcher.Watcher{
 			watcher.NewWatcher(
 				newNamespaceReconciler(ctx, clientSet, cache, engine, clog),
-				k8scache.NewListWatchFromClient(clientSet.CoreV1().RESTClient(), kindKubernetesNamespaces, v3.AllNamespaces, fields.Everything()),
+				&k8scache.ListWatch{
+					ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+						return clientSet.CoreV1().Namespaces().List(context.Background(), options)
+					},
+					WatchFunc: func(options metav1.ListOptions) (k8swatch.Interface, error) {
+						return clientSet.CoreV1().Namespaces().Watch(context.Background(), options)
+					},
+				},
 				&v1.Namespace{},
 			),
 			watcher.NewWatcher(

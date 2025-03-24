@@ -78,8 +78,8 @@ type GenericControllerConfig struct {
 }
 
 type NodeControllerConfig struct {
-	SyncLabels        bool
-	AutoHostEndpoints bool
+	SyncLabels             bool
+	AutoHostEndpointConfig *AutoHostEndpointConfig
 
 	// Should the Node controller delete Calico nodes?  Generally, this is
 	// true for etcdv3 datastores.
@@ -118,6 +118,19 @@ type UsageControllerConfig struct {
 	UsageReportsPerDay         int
 	UsageReportRetentionPeriod time.Duration
 	Kubeconfig                 string
+}
+
+type AutoHostEndpointConfig struct {
+	AutoCreate                bool
+	CreateDefaultHostEndpoint v3.DefaultHostEndpointMode
+	Templates                 []AutoHostEndpointTemplate
+}
+
+type AutoHostEndpointTemplate struct {
+	GenerateName   string
+	InterfaceCIDRs []string
+	Labels         map[string]string
+	NodeSelector   string
 }
 
 type LoadBalancerControllerConfig struct {
@@ -463,19 +476,69 @@ func mergeAutoHostEndpoints(envVars map[string]string, status *v3.KubeController
 	if p {
 		status.EnvironmentVars[EnvAutoHostEndpoints] = v
 		if strings.ToLower(v) == "enabled" {
-			rc.Node.AutoHostEndpoints = true
+			rc.Node.AutoHostEndpointConfig = &AutoHostEndpointConfig{
+				AutoCreate:                true,
+				CreateDefaultHostEndpoint: v3.DefaultHostEndpointsEnabled,
+			}
 		} else if strings.ToLower(v) != "disabled" {
 			log.WithField(EnvAutoHostEndpoints, v).Fatal("invalid environment variable value")
 		}
 	} else {
-		if ac.Node != nil && ac.Node.HostEndpoint != nil && ac.Node.HostEndpoint.AutoCreate == v3.Enabled {
-			rc.Node.AutoHostEndpoints = true
+		if ac.Node != nil && ac.Node.HostEndpoint != nil {
+			rc.Node.AutoHostEndpointConfig = &AutoHostEndpointConfig{}
+			if ac.Node.HostEndpoint.AutoCreate == v3.Enabled {
+				rc.Node.AutoHostEndpointConfig.AutoCreate = true
+			} else {
+				rc.Node.AutoHostEndpointConfig.AutoCreate = false
+			}
+
+			rc.Node.AutoHostEndpointConfig.CreateDefaultHostEndpoint = ac.Node.HostEndpoint.CreateDefaultHostEndpoint
+
+			var templates []AutoHostEndpointTemplate
+			for _, template := range ac.Node.HostEndpoint.Templates {
+				rcTemplate := AutoHostEndpointTemplate{
+					GenerateName:   template.GenerateName,
+					InterfaceCIDRs: template.InterfaceCIDRs,
+					NodeSelector:   template.NodeSelector,
+					Labels:         template.Labels,
+				}
+
+				templates = append(templates, rcTemplate)
+			}
+			rc.Node.AutoHostEndpointConfig.Templates = templates
 		}
 	}
-	if rc.Node.AutoHostEndpoints {
-		sc.Node.HostEndpoint = &v3.AutoHostEndpointConfig{AutoCreate: v3.Enabled}
+
+	if rc.Node.AutoHostEndpointConfig == nil {
+		rc.Node.AutoHostEndpointConfig = &AutoHostEndpointConfig{
+			AutoCreate:                false,
+			CreateDefaultHostEndpoint: v3.DefaultHostEndpointsEnabled,
+		}
 	} else {
-		sc.Node.HostEndpoint = &v3.AutoHostEndpointConfig{AutoCreate: v3.Disabled}
+		sc.Node.HostEndpoint = &v3.AutoHostEndpointConfig{}
+		if rc.Node.AutoHostEndpointConfig.AutoCreate {
+			sc.Node.HostEndpoint.AutoCreate = v3.Enabled
+		} else {
+			sc.Node.HostEndpoint.AutoCreate = v3.Disabled
+		}
+
+		sc.Node.HostEndpoint.CreateDefaultHostEndpoint = rc.Node.AutoHostEndpointConfig.CreateDefaultHostEndpoint
+
+		if rc.Node.AutoHostEndpointConfig.Templates != nil {
+			var templates []v3.Template
+			for template := range rc.Node.AutoHostEndpointConfig.Templates {
+				rcTemplate := (rc.Node.AutoHostEndpointConfig.Templates)[template]
+				scTemplate := v3.Template{
+					GenerateName:   rcTemplate.GenerateName,
+					InterfaceCIDRs: rcTemplate.InterfaceCIDRs,
+					NodeSelector:   rcTemplate.NodeSelector,
+					Labels:         rcTemplate.Labels,
+				}
+
+				templates = append(templates, scTemplate)
+			}
+			sc.Node.HostEndpoint.Templates = templates
+		}
 	}
 }
 

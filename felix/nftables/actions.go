@@ -146,6 +146,20 @@ func (s *actionSet) TProxy(mark, mask uint32, port uint16) generictables.Action 
 	}
 }
 
+func (a *actionSet) LimitPacketRate(rate int64, mark uint32) generictables.Action {
+	return LimitPacketRateAction{
+		Rate: rate,
+		// Mark is not used on nftables mode
+	}
+}
+
+func (a *actionSet) LimitNumConnections(num int64, rejectWith generictables.RejectWith) generictables.Action {
+	return LimitNumConnectionsAction{
+		Num:        num,
+		RejectWith: rejectWith,
+	}
+}
+
 func escapeLogPrefix(prefix string) string {
 	return fmt.Sprintf("\"%s\"", prefix)
 }
@@ -445,4 +459,45 @@ func (c SetConnMarkAction) ToFragment(features *environment.Features) string {
 
 func (c SetConnMarkAction) String() string {
 	return fmt.Sprintf("SetConnMarkWithMask:%#x/%#x", c.Mark, c.Mask)
+}
+
+type LimitPacketRateAction struct {
+	Rate int64
+	// Mark is not used on nftables mode
+	TypeLimitPacketRate struct{}
+}
+
+func (a LimitPacketRateAction) ToFragment(features *environment.Features) string {
+	if a.Rate < 0 {
+		logrus.WithField("rate", a.Rate).Panic("Invalid rate")
+	}
+	return fmt.Sprintf("limit rate over %d/second drop", a.Rate)
+}
+
+func (a LimitPacketRateAction) String() string {
+	return fmt.Sprintf("LimitPacketRate:%d/s", a.Rate)
+}
+
+type LimitNumConnectionsAction struct {
+	Num                     int64
+	RejectWith              generictables.RejectWith
+	TypeLimitNumConnections struct{}
+}
+
+func (a LimitNumConnectionsAction) ToFragment(features *environment.Features) string {
+	rejectWith := ""
+	switch a.RejectWith {
+	case generictables.RejectWithTCPReset:
+		rejectWith = "tcp reset"
+	default:
+		logrus.WithField("reject-with", a.RejectWith).Panic("Unknown reject-with value")
+	}
+	if a.Num < 0 {
+		logrus.WithField("rate", a.Num).Panic("Invalid limit")
+	}
+	return fmt.Sprintf("ct count over %d reject with %s", a.Num, rejectWith)
+}
+
+func (a LimitNumConnectionsAction) String() string {
+	return fmt.Sprintf("LimitNumConnectionsAction:%d, rejectWith:%s", a.Num, a.RejectWith)
 }

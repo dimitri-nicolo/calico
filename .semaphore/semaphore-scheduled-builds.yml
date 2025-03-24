@@ -368,7 +368,7 @@ blocks:
   run:
     when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/', '/process/testing/winfv-cni-plugin/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies:
-    - cni-plugin
+    - Prerequisites
   task:
     secrets:
       - name: banzai-secrets
@@ -405,10 +405,19 @@ blocks:
       - name: KUBE_VERSION
         value: v1.29.7
     jobs:
-      - name: Containerd - Windows FV
+      - name: Containerd - Windows FV - overlay
         execution_time_limit:
           minutes: 60
         commands:
+          - export BACKEND=overlay
+          - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-${BACKEND}-rg
+          - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
+      - name: Containerd - Windows FV - l2bridge
+        execution_time_limit:
+          minutes: 60
+        commands:
+          - export BACKEND=l2bridge
+          - export AZURE_RESOURCE_GROUP=${USER}-capz-win-cni-${SEMAPHORE_WORKFLOW_ID:0:8}-${BACKEND}-rg
           - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
 - name: confd
   run:
@@ -481,8 +490,8 @@ blocks:
           - "cache store fv.test-${SEMAPHORE_GIT_SHA} fv/fv.test"
           - cache store go-pkg-cache .go-pkg-cache
           - "cache store go-mod-cache ${HOME}/go/pkg/mod/cache"
-          - docker save -o /tmp/calico-felix.tar tigera/felix:latest-amd64
-          - "cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/calico-felix.tar"
+          - docker save -o /tmp/calico-felix-test.tar tigera/felix-test:latest-amd64
+          - "cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/calico-felix-test.tar"
           - docker save -o /tmp/felixtest-typha.tar felix-test/typha:latest-amd64
           - "cache store felixtest-typha-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-typha.tar"
           - docker save -o /tmp/felixtest-dns-server.tar tigera-test/dns-server:latest
@@ -603,9 +612,9 @@ blocks:
           ' ; fi
         - sudo systemctl restart docker
         # Load in the docker images pre-built by the build job.
-        - docker load -i /tmp/calico-felix.tar
-        - docker tag tigera/felix:latest-amd64 felix:latest-amd64
-        - rm /tmp/calico-felix.tar
+        - docker load -i /tmp/calico-felix-test.tar
+        - docker tag tigera/felix-test:latest-amd64 felix-test:latest-amd64
+        - rm /tmp/calico-felix-test.tar
         - docker load -i /tmp/felixtest-typha.tar
         - docker tag felix-test/typha:latest-amd64 typha:latest-amd64
         - rm /tmp/felixtest-typha.tar
@@ -922,50 +931,6 @@ blocks:
             artifact push job report.json -d test-results/junit.json || true
             artifact push workflow report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
           - test-results publish /home/semaphore/calico/felix/report/k8sfv_suite.xml --name "typha-k8sfv" || true
-- name: whisker-backend
-  run:
-    when: "true or change_in(['/*', '/whisker-backend/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  execution_time_limit:
-    minutes: 30
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd whisker-backend
-    jobs:
-      - name: make ci
-        commands:
-          - ../.semaphore/run-and-monitor make-ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
-- name: whisker
-  run:
-    when: "true or change_in(['/*', '/whisker/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  execution_time_limit:
-    minutes: 30
-  dependencies:
-    - Prerequisites
-  task:
-    prologue:
-      commands:
-        - cd whisker
-    jobs:
-      - name: make ci
-        commands:
-          - ../.semaphore/run-and-monitor make-ci.log make ci
-      - name: Build binary
-        matrix:
-          - env_var: ARCH
-            values:
-              - arm64
-        commands:
-          - ../.semaphore/run-and-monitor image-$ARCH.log make build ARCH=$ARCH
 - name: calicoq
   run:
     when: "true or change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -1910,7 +1875,7 @@ blocks:
   task:
     prologue:
       commands:
-        - sem-version go 1.23.4
+        - sem-version go 1.23.7
         - cd third_party/alertmanager
     jobs:
       - name: alertmanager tests

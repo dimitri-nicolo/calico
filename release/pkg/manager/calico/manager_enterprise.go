@@ -183,19 +183,27 @@ func (m *EnterpriseManager) modifyHelmChartsValues() error {
 	}
 
 	// Update the registry in the tigera-operator & tigera-prometheus-operator values.yaml file.
+	manifestRegistry, err := m.getOperatorRegistryFromManifests()
+	if err != nil {
+		return err
+	}
+	operatorValuesYAML := filepath.Join(m.repoRoot, "charts", "tigera-operator", "values.yaml")
+	if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s~%s~%s~g`, manifestRegistry, m.operatorRegistry), operatorValuesYAML}, nil); err != nil {
+		logrus.WithField("file", operatorValuesYAML).WithError(err).Error("failed to update registry in values file")
+		return err
+	}
 	var registry string
 	if len(m.imageRegistries) > 0 {
 		registry = m.imageRegistries[0]
 	}
-	manifestRegistry, err := m.getRegistryFromManifests()
+	manifestRegistry, err = m.getRegistryFromManifests()
 	if err != nil {
 		return err
 	}
-	for _, valuesYAML := range []string{filepath.Join(m.repoRoot, "charts", "tigera-operator", "values.yaml"), prometheusValuesYAML} {
-		if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s~%s~%s~g`, manifestRegistry, registry), valuesYAML}, nil); err != nil {
-			logrus.WithField("file", valuesYAML).WithError(err).Error("failed to update registry in values file")
-			return err
-		}
+	manifestRegistry = strings.TrimSuffix(manifestRegistry, "/tigera")
+	if _, err := m.runner.Run("sed", []string{"-i", fmt.Sprintf(`s~%s~%s~g`, manifestRegistry, registry), prometheusValuesYAML}, nil); err != nil {
+		logrus.WithField("file", prometheusValuesYAML).WithError(err).Error("failed to update registry in values file")
+		return err
 	}
 	return nil
 }
@@ -343,6 +351,24 @@ func (m *EnterpriseManager) getRegistryFromManifests() (string, error) {
 			splits := strings.SplitAfter(i, "/tigera/")
 			registry := strings.TrimSuffix(splits[0], "/")
 			logrus.WithField("registry", registry).Debugf("Using registry from image %s", i)
+			return registry, nil
+		}
+	}
+	return "", fmt.Errorf("failed to find registry from manifests")
+}
+
+func (m *EnterpriseManager) getOperatorRegistryFromManifests() (string, error) {
+	args := []string{"-Po", `image:\K(.*)`, "tigera-operator.yaml"}
+	out, err := m.runner.RunInDir(filepath.Join(m.repoRoot, "manifests"), "grep", args, nil)
+	if err != nil {
+		return "", err
+	}
+	imgs := strings.Split(out, "\n")
+	for _, i := range imgs {
+		if strings.Contains(i, "operator") {
+			splits := strings.SplitAfter(i, "/tigera/")
+			registry := strings.TrimSuffix(splits[0], "/tigera/")
+			logrus.WithField("registry", registry).Debugf("Using operator registry from image %s", i)
 			return registry, nil
 		}
 	}

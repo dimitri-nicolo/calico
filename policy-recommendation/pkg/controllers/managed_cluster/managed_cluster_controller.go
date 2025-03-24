@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2025 Tigera, Inc. All rights reserved.
 package managed_cluster_controller
 
 import (
@@ -50,6 +50,7 @@ func NewManagedClusterController(
 	clientFactory lmak8s.ClientSetFactory,
 	linseed lsclient.Client,
 	tenantNamespace string,
+	minPollInterval metav1.Duration,
 ) (controller.Controller, error) {
 	// The mapping of managed cluster names to PolicyRecommendationScope controllers.
 	managedClusters := make(map[string]*managedClusterCtrlContext)
@@ -60,7 +61,7 @@ func NewManagedClusterController(
 		watcher: watcher.NewWatcher(
 			newManagedClusterReconciler(
 				ctx, client, clientFactory, linseed, managedClusters,
-				rscope.NewRecommendationScopeController, tenantNamespace),
+				rscope.NewRecommendationScopeController, tenantNamespace, minPollInterval),
 			newManagedClusterListWatcher(ctx, client, tenantNamespace),
 			&v3.ManagedCluster{},
 		),

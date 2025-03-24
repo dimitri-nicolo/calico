@@ -2,18 +2,18 @@
 # This file contains Makefile configuration parameters and metadata for this branch.
 #################################################################################################
 
-# The version of github.com/projectcalico/go-build to use.
+# The version of calico/go-build and calico/base to use.
 GO_BUILD_VER=1.24.0-llvm18.1.8-k8s1.31.5-2
-CALICO_BASE_VER=ubi8-1739912267
+CALICO_BASE_VER=ubi8-1741131622
 # TODO Remove once CALICO_BASE is updated to UBI9
-CALICO_BASE_UBI9_VER=ubi9-1739912267
+CALICO_BASE_UBI9_VER=ubi9-1741131622
 
 # Env var to ACK Ginkgo deprecation warnings, may need updating with go-build.
 ACK_GINKGO=ACK_GINKGO_DEPRECATIONS=1.16.5
 
 # Version of Kubernetes to use for tests, bitnami/kubectl, and kubectl binary release in
 # compliance benchmarker, confd, and kube-controllers.
-K8S_VERSION=v1.32.2
+K8S_VERSION=v1.32.3
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
@@ -21,9 +21,9 @@ ETCD_VERSION=v3.5.6
 GHR_VERSION=v0.17.0
 GITHUB_CLI_VERSION=2.65.0
 HELM_VERSION=v3.16.4
-KINDEST_NODE_VERSION=v1.31.4
+KINDEST_NODE_VERSION=v1.31.6
 KINDEST_NODE_VERSION_DUAL_TOR=v1.24.7
-KIND_VERSION=v0.25.0
+KIND_VERSION=v0.27.0
 
 # The Semaphore calico-private ID, used when making calls to the Semaphore API.
 SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657

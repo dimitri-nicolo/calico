@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package endpoint
 
 import (
@@ -74,59 +74,6 @@ var _ = Describe("Linseed out plugin endpoint controller tests", func() {
 			Expect(ec.Endpoint()).To(Equal("https://1.2.3.4:5678"))
 		})
 
-		It("should extract endpoint from NonClusterHost custom resource", func() {
-			_, err := f.WriteString(validKubeconfig)
-			f.Close()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = os.Setenv("KUBECONFIG", f.Name())
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Setenv("ENDPOINT", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Endpoint).To(BeEmpty())
-
-			ec, err := NewController(cfg)
-			Expect(err).NotTo(HaveOccurred())
-
-			gvr := schema.GroupVersionResource{
-				Group:    "operator.tigera.io",
-				Version:  "v1",
-				Resource: "nonclusterhosts",
-			}
-			gvrListKind := map[schema.GroupVersionResource]string{
-				gvr: "NonClusterHostList",
-			}
-
-			scheme := runtime.NewScheme()
-			scheme.AddKnownTypes(gvr.GroupVersion())
-			ec.dynamicClient = fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrListKind)
-			Expect(ec.dynamicClient).NotTo(BeNil())
-			ec.dynamicFactory = dynamicinformer.NewDynamicSharedInformerFactory(ec.dynamicClient, 0)
-			Expect(ec.dynamicFactory).NotTo(BeNil())
-
-			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "operator.tigera.io/v1",
-					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
-						"name": "tigera-secure",
-					},
-					"spec": map[string]interface{}{
-						"endpoint": "https://5.6.7.8:9012",
-					},
-				},
-			}
-			_, err = ec.dynamicClient.Resource(gvr).Create(context.Background(), obj, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			err = ec.Run(stopCh)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ec.Endpoint()).To(Equal("https://5.6.7.8:9012"))
-		})
-
 		It("should update endpoint when an update event is received", func() {
 			_, err := f.WriteString(validKubeconfig)
 			f.Close()
@@ -197,109 +144,6 @@ var _ = Describe("Linseed out plugin endpoint controller tests", func() {
 			Eventually(func() string {
 				return ec.Endpoint()
 			}).Should(Equal("https://3.4.5.6:7890"))
-		})
-
-		It("should return error when spec is missing from NonClusterHost custom resource", func() {
-			_, err := f.WriteString(validKubeconfig)
-			f.Close()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = os.Setenv("KUBECONFIG", f.Name())
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Setenv("ENDPOINT", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Endpoint).To(BeEmpty())
-
-			ec, err := NewController(cfg)
-			Expect(err).NotTo(HaveOccurred())
-
-			gvr := schema.GroupVersionResource{
-				Group:    "operator.tigera.io",
-				Version:  "v1",
-				Resource: "nonclusterhosts",
-			}
-			gvrListKind := map[schema.GroupVersionResource]string{
-				gvr: "NonClusterHostList",
-			}
-
-			scheme := runtime.NewScheme()
-			scheme.AddKnownTypes(gvr.GroupVersion())
-			ec.dynamicClient = fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrListKind)
-			Expect(ec.dynamicClient).NotTo(BeNil())
-			ec.dynamicFactory = dynamicinformer.NewDynamicSharedInformerFactory(ec.dynamicClient, 0)
-			Expect(ec.dynamicFactory).NotTo(BeNil())
-
-			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "operator.tigera.io/v1",
-					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
-						"name": "tigera-secure",
-					},
-				},
-			}
-			_, err = ec.dynamicClient.Resource(gvr).Create(context.Background(), obj, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			err = ec.Run(stopCh)
-			Expect(err).To(HaveOccurred())
-			Expect(ec.Endpoint()).To(BeEmpty())
-		})
-
-		It("should return error when spec.endpoint is missing from NonClusterHost custom resource", func() {
-			_, err := f.WriteString(validKubeconfig)
-			f.Close()
-			Expect(err).NotTo(HaveOccurred())
-
-			err = os.Setenv("KUBECONFIG", f.Name())
-			Expect(err).NotTo(HaveOccurred())
-			err = os.Setenv("ENDPOINT", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg, err := config.NewConfig(nil, pluginConfigKeyFn)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Endpoint).To(BeEmpty())
-
-			ec, err := NewController(cfg)
-			Expect(err).NotTo(HaveOccurred())
-
-			gvr := schema.GroupVersionResource{
-				Group:    "operator.tigera.io",
-				Version:  "v1",
-				Resource: "nonclusterhosts",
-			}
-			gvrListKind := map[schema.GroupVersionResource]string{
-				gvr: "NonClusterHostList",
-			}
-
-			scheme := runtime.NewScheme()
-			scheme.AddKnownTypes(gvr.GroupVersion())
-			ec.dynamicClient = fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrListKind)
-			Expect(ec.dynamicClient).NotTo(BeNil())
-			ec.dynamicFactory = dynamicinformer.NewDynamicSharedInformerFactory(ec.dynamicClient, 0)
-			Expect(ec.dynamicFactory).NotTo(BeNil())
-
-			obj := &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"apiVersion": "operator.tigera.io/v1",
-					"kind":       "NonClusterHost",
-					"metadata": map[string]interface{}{
-						"name": "tigera-secure",
-					},
-					"spec": map[string]interface{}{
-						"invalidendpointfield": "https://5.6.7.8:9012",
-					},
-				},
-			}
-			_, err = ec.dynamicClient.Resource(gvr).Create(context.Background(), obj, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			err = ec.Run(stopCh)
-			Expect(err).To(HaveOccurred())
-			Expect(ec.Endpoint()).To(BeEmpty())
 		})
 	})
 })

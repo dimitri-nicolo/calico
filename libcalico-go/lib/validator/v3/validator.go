@@ -295,6 +295,7 @@ func init() {
 	registerFieldValidator("prometheusHost", validatePrometheusHost)
 	registerFieldValidator("ipType", validateIPType)
 	registerFieldValidator("policyrecstatus", RegexValidator("RecStatus", enabledDisabledRegex))
+	registerFieldValidator("createDefaultHostEndpoint", validateCreateDefaultHostEndpoint)
 
 	registerFieldValidator("sourceAddress", RegexValidator("SourceAddress", SourceAddressRegex))
 	registerFieldValidator("failureDetectionMode", RegexValidator("FailureDetectionMode", FailureDetectionModeRegex))
@@ -711,6 +712,11 @@ func validateAssignIPs(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate Assign IPs: %s", s)
 	return assignIPsRegex.MatchString(s)
+}
+
+func validateCreateDefaultHostEndpoint(fl validator.FieldLevel) bool {
+	s := api.DefaultHostEndpointMode(fl.Field().String())
+	return s == api.DefaultHostEndpointsEnabled || s == api.DefaultHostEndpointsDisabled
 }
 
 func RegexValidator(desc string, rx *regexp.Regexp) func(fl validator.FieldLevel) bool {

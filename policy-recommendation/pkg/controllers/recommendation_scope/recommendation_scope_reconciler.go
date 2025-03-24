@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package recommendation_scope_controller
 
 import (
@@ -60,6 +60,10 @@ type recommendationScopeReconciler struct {
 	// stopChan is used to stop the controller.
 	stopChan chan struct{}
 
+	// minPollInterval is the minimum interval used by the engine to poll for new
+	// recommendations.
+	minPollInterval metav1.Duration
+
 	// clog is the logger for the controller.
 	clog *log.Entry
 
@@ -68,16 +72,17 @@ type recommendationScopeReconciler struct {
 }
 
 func newRecommendationScopeReconciler(
-	ctx context.Context, clusterID string, clientSet lmak8s.ClientSet, linseed lsclient.Client, clog *log.Entry,
+	ctx context.Context, clusterID string, clientSet lmak8s.ClientSet, linseed lsclient.Client, minPollInterval metav1.Duration, clog *log.Entry,
 ) *recommendationScopeReconciler {
 
 	return &recommendationScopeReconciler{
-		clog:      clog,
-		ctx:       ctx,
-		clusterID: clusterID,
-		clientSet: clientSet,
-		linseed:   linseed,
-		enabled:   v3.PolicyRecommendationScopeDisabled,
+		clog:            clog,
+		ctx:             ctx,
+		clusterID:       clusterID,
+		clientSet:       clientSet,
+		linseed:         linseed,
+		enabled:         v3.PolicyRecommendationScopeDisabled,
+		minPollInterval: minPollInterval,
 	}
 }
 
@@ -109,6 +114,7 @@ func (r *recommendationScopeReconciler) Reconcile(key types.NamespacedName) erro
 						flows.NewRecommendationFlowLogQuery(r.ctx, r.linseed, r.clusterID),
 						cache,
 						scope,
+						r.minPollInterval,
 						realClock{},
 					)
 					// Create the recommendation controller.

@@ -3,14 +3,16 @@
 set -e
 set -x
 
-FV_DIR="/home/semaphore/calico-private/process/testing/winfv-cni-plugin/aso"
+: ${BACKEND:?Error: BACKEND is not set}
+
+FV_DIR="$HOME/$SEMAPHORE_GIT_DIR/process/testing/winfv-cni-plugin/aso"
 pushd ${FV_DIR}
 
 # Prepare local files
 cp $HOME/$SEMAPHORE_GIT_DIR/cni-plugin/bin/windows/*.exe ./windows
 
 # Run FV.
-make run-fv | tee run-fv.log
+BACKEND=$BACKEND make run-fv | tee run-fv.log
 
 # Get results and logs
 ls -ltr ./report

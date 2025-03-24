@@ -1,4 +1,4 @@
-// Copyright (c) 2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 package managed_cluster_controller
 
 import (
@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,10 +35,14 @@ type managedClusterReconciler struct {
 
 	// newRecommendationScopeController is the function that creates a new PolicyRecommendationScope
 	// controller. This has been added for convenience of testing.
-	newRecommendationScopeController func(context.Context, string, lmak8s.ClientSet, lsclient.Client) (controller.Controller, error)
+	newRecommendationScopeController func(context.Context, string, lmak8s.ClientSet, lsclient.Client, metav1.Duration) (controller.Controller, error)
 
 	// tenantNamespace is the namespace where the tenant resources are stored.
 	tenantNamespace string
+
+	// minPollInterval is the minimum polling interval used by the engine to query for new
+	// recommendations.
+	minPollInterval metav1.Duration
 
 	// mutex is used to synchronize updates from managed clusters.
 	mutex sync.Mutex
@@ -49,8 +54,9 @@ func newManagedClusterReconciler(
 	clientFactory lmak8s.ClientSetFactory,
 	linseed lsclient.Client,
 	managedClusters map[string]*managedClusterCtrlContext,
-	newScopeController func(context.Context, string, lmak8s.ClientSet, lsclient.Client) (controller.Controller, error),
+	newScopeController func(context.Context, string, lmak8s.ClientSet, lsclient.Client, metav1.Duration) (controller.Controller, error),
 	tenantNamespace string,
+	minPollInterval metav1.Duration,
 ) controller.Reconciler {
 	return &managedClusterReconciler{
 		ctx:                              ctx,
@@ -60,6 +66,7 @@ func newManagedClusterReconciler(
 		managedClusters:                  managedClusters,
 		newRecommendationScopeController: newScopeController,
 		tenantNamespace:                  tenantNamespace,
+		minPollInterval:                  minPollInterval,
 	}
 }
 
@@ -101,7 +108,7 @@ func (r *managedClusterReconciler) Reconcile(key types.NamespacedName) error {
 		return err
 	}
 
-	ctrl, err := r.newRecommendationScopeController(r.ctx, clusterID, clientSet, r.linseed)
+	ctrl, err := r.newRecommendationScopeController(r.ctx, clusterID, clientSet, r.linseed, r.minPollInterval)
 	if err != nil {
 		log.WithError(err).Error("failed to create PolicyRecommendationScope controller")
 		return err

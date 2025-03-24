@@ -1,3 +1,4 @@
+// Copyright (c) 2025 Tigera Inc. All rights reserved.
 package flows
 
 import (
@@ -12,8 +13,8 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
-// MockResults results for most tests. Consists of two returned flows.
-var MockResults = []rest.MockResult{
+// mockResults results for most tests. Consists of two returned flows.
+var mockResults = []rest.MockResult{
 	{
 		Body: lapi.List[lapi.L3Flow]{
 			TotalHits: 7,
@@ -182,7 +183,7 @@ func TestQueryFlows(t *testing.T) {
 
 	t.Run("should fetch flows when valid params are provided", func(t *testing.T) {
 		mockLinseedClient = client.NewMockClient("")
-		mockLinseedClient.SetResults(MockResults...)
+		mockLinseedClient.SetResults(mockResults...)
 
 		q := NewRecommendationFlowLogQuery(ctx, mockLinseedClient, "test-cluster-id")
 		params := &RecommendationFlowLogQueryParams{
