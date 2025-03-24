@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG UBI8_IMAGE
+ARG UBI_IMAGE
 ARG CALICO_BASE
 
-FROM ${UBI8_IMAGE} AS builder
+FROM ${UBI_IMAGE} AS builder
 
 # Update base packages to pick up security updates and embedding iptables
 RUN microdnf upgrade && microdnf install findutils iptables && \

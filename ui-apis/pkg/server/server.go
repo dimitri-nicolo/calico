@@ -399,7 +399,11 @@ func Start(cfg *Config) error {
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to create goldmane stats client.")
 		}
-		statsCli, err := goldmane.NewStatisticsAPIClient(strings.TrimPrefix("https://", cfg.VoltronURL), grpc.WithTransportCredentials(creds))
+
+		trimmedURL := strings.TrimPrefix(cfg.VoltronURL, "https://")
+		logrus.Infof("Connecting to goldmane stats at %s.", trimmedURL)
+		statsCli, err := goldmane.NewStatisticsAPIClient(trimmedURL, grpc.WithTransportCredentials(creds))
+
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to create goldmane stats client.")
 		}
