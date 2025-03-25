@@ -252,7 +252,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 		Key:   key,
 		Value: wep,
 	}
-  
+
 	updTypes := proto.RouteType_REMOTE_WORKLOAD
 	if host == localHostname {
 		updTypes = proto.RouteType_LOCAL_WORKLOAD
@@ -281,7 +281,7 @@ func StateWithWEP(state State, cluster string, ip string, flush bool, poolType p
 	} else {
 		// WEPs are only received by the FV calc graph for local WEPs, unless in WorkloadIPs mode.
 		newState.DatastoreState = append(newState.DatastoreState, KVPair{Key: GlobalConfigKey{Name: "RouteSource"}, Value: &workloadIPs})
-	  epData := calc.CalculateRemoteEndpoint(key, wep)
+		epData := calc.CalculateRemoteEndpoint(key, wep)
 		newState.ExpectedCachedRemoteEndpoints = append(newState.ExpectedCachedRemoteEndpoints, epData)
 	}
 
