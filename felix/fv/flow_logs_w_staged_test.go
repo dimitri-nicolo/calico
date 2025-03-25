@@ -7,9 +7,11 @@ package fv_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -2512,3 +2514,19 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		infra.Stop()
 	})
 })
+
+func getRuleFunc(felix *infrastructure.Felix, rule string) func() error {
+	cmd := []string{"iptables-save", "-t", "filter"}
+	if NFTMode() {
+		cmd = []string{"nft", "list", "ruleset"}
+	}
+	return func() error {
+		if out, err := felix.ExecOutput(cmd...); err != nil {
+			return err
+		} else if strings.Count(out, rule) > 0 {
+			return nil
+		} else {
+			return errors.New("Rule not programmed: \nRule: " + rule + "\n" + out)
+		}
+	}
+}

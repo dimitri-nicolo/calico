@@ -707,7 +707,8 @@ func (config *Config) TableRefreshInterval() time.Duration {
 }
 
 func (config *Config) FlowLogsEnabled() bool {
-	return config.FlowLogsFileEnabled
+	// return config.FlowLogsFileEnabled
+	return true
 }
 
 // Copy makes a copy of the object.  Internal state is deep copied but config parameters are only shallow copied.

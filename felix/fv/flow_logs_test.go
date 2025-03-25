@@ -120,6 +120,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		opts.IPIPEnabled = false
 		opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
 		opts.ExtraEnvVars["FELIX_BPFCONNTRACKTIMEOUTS"] = "TCPFinsSeen=30s"
@@ -795,7 +796,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		BeforeEach(func() {
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
@@ -927,7 +927,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				attempts := 0
 				for time.Now().Before(endTime) || attempts < 2 {
 					for _, f := range tc.Felixes {
-						//_, err := flowlogs.ReadFlowLogsFile(f.FlowLogDir())
 						_, err := f.FlowLogs()
 						Expect(err).To(BeAssignableToTypeOf(&os.PathError{}))
 					}
@@ -1279,3 +1278,20 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 		Expect(numExpectedFlows).Should(Equal(2))
 	})
 })
+
+func countNodesWithNodeIP(c client.Interface) int {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+
+	nodeList, err := c.Nodes().List(ctx, options.ListOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	count := 0
+	for _, n := range nodeList.Items {
+		if n.Spec.BGP.IPv4Address != "" {
+			count++
+		}
+	}
+
+	return count
+}
