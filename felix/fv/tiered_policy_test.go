@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -427,11 +428,16 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 			infra = getInfra()
 			opts = infrastructure.DefaultTopologyOptions()
 			opts.IPIPEnabled = false
-			opts.FlowLogSource = infrastructure.FlowLogSourceGoldmane
+			opts.FlowLogSource = infrastructure.FlowLogSourceFile
 
 			opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDESERVICE"] = "true"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSGOLDMANESERVER"] = localGoldmaneServer
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrByPodPrefix))
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrByPodPrefix))
+			//opts.ExtraEnvVars["FELIX_FLOWLOGSGOLDMANESERVER"] = flowlogs.LocalGoldmaneServer
 
 			testSetup()
 
@@ -486,9 +492,11 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 			}
 
 			flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-				ExpectLabels:           true,
+				ExpectPolicies:         true,
 				ExpectEnforcedPolicies: true,
 				MatchEnforcedPolicies:  true,
+				ExpectPendingPolicies:  true,
+				MatchPendingPolicies:   true,
 				Includes:               []metrics.IncludeFilter{metrics.IncludeByDestPort(wepPort)},
 			})
 
