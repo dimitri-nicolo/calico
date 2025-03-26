@@ -707,7 +707,7 @@ func (config *Config) TableRefreshInterval() time.Duration {
 }
 
 func (config *Config) FlowLogsEnabled() bool {
-	// return config.FlowLogsFileEnabled
+	// Flow logs is always enabled in Calico Enterprise, and Cloud.
 	return true
 }
 
