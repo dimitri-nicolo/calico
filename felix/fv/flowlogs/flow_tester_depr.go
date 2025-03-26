@@ -1,5 +1,6 @@
-// Copyright (c) 2019-2023 Tigera, Inc. All rights reserved.
-package metrics
+// Copyright (c) 2019-2025 Tigera, Inc. All rights reserved.
+
+package flowlogs
 
 import (
 	"errors"

@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2018-2024 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -24,8 +24,8 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
-	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/felix/ip"
@@ -377,17 +377,19 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
-		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-			ExpectLabels:          true,
-			ExpectPolicies:        true,
-			ExpectPendingPolicies: true,
-			MatchLabels:           false,
-			MatchPolicies:         true,
-			MatchPendingPolicies:  true,
-			Includes:              []metrics.IncludeFilter{metrics.IncludeByDestPort(wepPort)},
-			CheckBytes:            false,
-			CheckNumFlowsStarted:  true,
-			CheckFlowsCompleted:   true,
+		flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+			ExpectLabels:           true,
+			ExpectAllPolicies:      true,
+			MatchAllPolicies:       true,
+			ExpectEnforcedPolicies: true,
+			MatchEnforcedPolicies:  true,
+			ExpectPendingPolicies:  true,
+			MatchPendingPolicies:   true,
+			MatchLabels:            false,
+			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
+			CheckBytes:             false,
+			CheckNumFlowsStarted:   true,
+			CheckFlowsCompleted:    true,
 		})
 
 		ep1_1_Meta := endpoint.Metadata{
@@ -423,12 +425,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		Expect(ok).To(BeTrue())
 		ip2_3, ok := ip.ParseIPAs16Byte("10.65.1.2")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_2_Tuple_Agg0 := tuple.Make(ip1_1, ip2_2, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_3_Tuple_Agg0 := tuple.Make(ip1_1, ip2_3, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep2_1_to_ep1_1_Tuple_Agg0 := tuple.Make(ip2_1, ip1_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep2_2_to_ep1_1_Tuple_Agg0 := tuple.Make(ip2_2, ip1_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep2_3_to_ep1_1_Tuple_Agg0 := tuple.Make(ip2_3, ip1_1, 6, metrics.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_2_Tuple_Agg0 := tuple.Make(ip1_1, ip2_2, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_3_Tuple_Agg0 := tuple.Make(ip1_1, ip2_3, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep2_1_to_ep1_1_Tuple_Agg0 := tuple.Make(ip2_1, ip1_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep2_2_to_ep1_1_Tuple_Agg0 := tuple.Make(ip2_2, ip1_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep2_3_to_ep1_1_Tuple_Agg0 := tuple.Make(ip2_3, ip1_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
 
 		dstService := flowlog.FlowService{
 			Namespace: "default",
@@ -1097,17 +1099,19 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
-		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-			ExpectLabels:          true,
-			ExpectPolicies:        true,
-			ExpectPendingPolicies: true,
-			MatchLabels:           false,
-			MatchPolicies:         true,
-			MatchPendingPolicies:  false,
-			Includes:              []metrics.IncludeFilter{metrics.IncludeByDestPort(wepPort)},
-			CheckBytes:            false,
-			CheckNumFlowsStarted:  true,
-			CheckFlowsCompleted:   true,
+		flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+			ExpectLabels:           true,
+			ExpectAllPolicies:      true,
+			MatchAllPolicies:       true,
+			ExpectEnforcedPolicies: true,
+			MatchEnforcedPolicies:  true,
+			ExpectPendingPolicies:  true,
+			MatchPendingPolicies:   false,
+			MatchLabels:            false,
+			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
+			CheckBytes:             false,
+			CheckNumFlowsStarted:   true,
+			CheckFlowsCompleted:    true,
 		})
 
 		ep1_1_Meta := endpoint.Metadata{
@@ -1126,8 +1130,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -1314,17 +1318,19 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
-		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-			ExpectLabels:          true,
-			ExpectPolicies:        true,
-			ExpectPendingPolicies: true,
-			MatchLabels:           false,
-			MatchPolicies:         true,
-			MatchPendingPolicies:  true,
-			Includes:              []metrics.IncludeFilter{metrics.IncludeByDestPort(wepPort)},
-			CheckBytes:            false,
-			CheckNumFlowsStarted:  true,
-			CheckFlowsCompleted:   true,
+		flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+			ExpectLabels:           true,
+			ExpectAllPolicies:      true,
+			MatchAllPolicies:       true,
+			ExpectEnforcedPolicies: true,
+			MatchEnforcedPolicies:  true,
+			ExpectPendingPolicies:  true,
+			MatchPendingPolicies:   true,
+			MatchLabels:            false,
+			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
+			CheckBytes:             false,
+			CheckNumFlowsStarted:   true,
+			CheckFlowsCompleted:    true,
 		})
 
 		ep1_1_Meta := endpoint.Metadata{
@@ -1343,8 +1349,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -1540,17 +1546,19 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
-		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-			ExpectLabels:          true,
-			ExpectPolicies:        true,
-			ExpectPendingPolicies: true,
-			MatchLabels:           false,
-			MatchPolicies:         true,
-			MatchPendingPolicies:  false,
-			Includes:              []metrics.IncludeFilter{metrics.IncludeByDestPort(wepPort)},
-			CheckBytes:            false,
-			CheckNumFlowsStarted:  true,
-			CheckFlowsCompleted:   true,
+		flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+			ExpectLabels:           true,
+			ExpectAllPolicies:      true,
+			MatchAllPolicies:       true,
+			ExpectEnforcedPolicies: true,
+			MatchEnforcedPolicies:  true,
+			MatchPendingPolicies:   false,
+			ExpectPendingPolicies:  true,
+			MatchLabels:            false,
+			Includes:               []flowlogs.IncludeFilter{flowlogs.IncludeByDestPort(wepPort)},
+			CheckBytes:             false,
+			CheckNumFlowsStarted:   true,
+			CheckFlowsCompleted:    true,
 		})
 
 		ep1_1_Meta := endpoint.Metadata{
@@ -1569,8 +1577,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ aggregation of flow log wit
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -2080,15 +2088,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
-		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-			ExpectLabels:          true,
-			ExpectPolicies:        true,
-			ExpectPendingPolicies: true,
-			MatchPolicies:         true,
-			MatchPendingPolicies:  true,
-			Includes: []metrics.IncludeFilter{
-				metrics.IncludeByDestPort(wepPort),
-				metrics.IncludeByDestPort(wep2Port),
+		flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+			ExpectLabels:           true,
+			ExpectAllPolicies:      true,
+			MatchAllPolicies:       true,
+			ExpectEnforcedPolicies: true,
+			MatchEnforcedPolicies:  true,
+			ExpectPendingPolicies:  true,
+			MatchPendingPolicies:   true,
+			Includes: []flowlogs.IncludeFilter{
+				flowlogs.IncludeByDestPort(wepPort),
+				flowlogs.IncludeByDestPort(wep2Port),
 			},
 			CheckNumFlowsStarted: true,
 			CheckFlowsCompleted:  true,
@@ -2110,8 +2120,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.
@@ -2302,15 +2312,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 			tc.Felixes[ii].Exec("conntrack", "-F")
 		}
 
-		flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-			ExpectLabels:          true,
-			ExpectPolicies:        true,
-			ExpectPendingPolicies: true,
-			MatchPolicies:         true,
-			MatchPendingPolicies:  true,
-			Includes: []metrics.IncludeFilter{
-				metrics.IncludeByDestPort(wepPort),
-				metrics.IncludeByDestPort(wep2Port),
+		flowTester := flowlogs.NewFlowTester(flowlogs.FlowTesterOptions{
+			ExpectLabels:           true,
+			ExpectAllPolicies:      true,
+			MatchAllPolicies:       true,
+			ExpectEnforcedPolicies: true,
+			MatchEnforcedPolicies:  true,
+			ExpectPendingPolicies:  true,
+			MatchPendingPolicies:   true,
+			Includes: []flowlogs.IncludeFilter{
+				flowlogs.IncludeByDestPort(wepPort),
+				flowlogs.IncludeByDestPort(wep2Port),
 			},
 			CheckNumFlowsStarted: true,
 			CheckFlowsCompleted:  true,
@@ -2332,8 +2344,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged polici
 		Expect(ok).To(BeTrue())
 		ip2_1, ok := ip.ParseIPAs16Byte("10.65.1.0")
 		Expect(ok).To(BeTrue())
-		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsIncluded, wepPort)
-		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, metrics.SourcePortIsNotIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg0 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsIncluded, wepPort)
+		ep1_1_to_ep2_1_Tuple_Agg1 := tuple.Make(ip1_1, ip2_1, 6, flowlogs.SourcePortIsNotIncluded, wepPort)
 
 		Eventually(func() error {
 			// Felix 0.

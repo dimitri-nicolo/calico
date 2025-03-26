@@ -24,8 +24,8 @@ import (
 	"github.com/projectcalico/calico/felix/collector/flowlog"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/dns"
+	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
-	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
@@ -58,7 +58,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		tc                infrastructure.TopologyContainers
 		dnsServer         *containers.Container
 		externalWorkloads []*containers.Container
-		flowLogsReaders   []metrics.FlowLogReader
+		flowLogsReaders   []flowlogs.FlowLogReader
 		client            client.Interface
 		ep1_1             *workload.Workload
 		dnsServerIP       string
@@ -212,7 +212,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, gnp, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
-		flowLogsReaders = []metrics.FlowLogReader{}
+		flowLogsReaders = []flowlogs.FlowLogReader{}
 		for _, f := range tc.Felixes {
 			flowLogsReaders = append(flowLogsReaders, f)
 		}
@@ -254,7 +254,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		}
 
 		Eventually(func() error {
-			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
+			flowTester := flowlogs.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
 
 			// Track all errors before failing.  All flows originating from our workload should be going to either
 			// the DNS server or the network sets.  If bound for the network sets then networkset1 should be denied and
@@ -427,7 +427,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		dnsServer         *containers.Container
 		externalWorkloads []*containers.Container
 		tc                infrastructure.TopologyContainers
-		flowLogsReaders   []metrics.FlowLogReader
+		flowLogsReaders   []flowlogs.FlowLogReader
 		ep1_1, ep2_1      *workload.Workload
 
 		dnsServerIP string
@@ -496,7 +496,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		ep2_1 = workload.Run(tc.Felixes[1], "ep2-1", "default", "10.65.0.1", "8056", "tcp")
 		ep2_1.ConfigureInInfra(infra)
 
-		flowLogsReaders = []metrics.FlowLogReader{}
+		flowLogsReaders = []flowlogs.FlowLogReader{}
 		for _, f := range tc.Felixes {
 			flowLogsReaders = append(flowLogsReaders, f)
 		}
@@ -533,7 +533,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests by client", []
 		}
 
 		Eventually(func() error {
-			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
+			flowTester := flowlogs.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
 
 			errs := []string{}
 			// Track all errors before failing

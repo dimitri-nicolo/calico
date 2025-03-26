@@ -1,5 +1,6 @@
-// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
-package metrics
+// Copyright (c) 2022-2025 Tigera, Inc. All rights reserved.
+
+package flowlogs
 
 import (
 	"errors"
@@ -48,13 +49,13 @@ type FlowTester struct {
 type FlowTesterOptions struct {
 	// Whether to expect labels or policies in the flow logs
 	ExpectLabels           bool
-	ExpectPolicies         bool
+	ExpectAllPolicies      bool
 	ExpectEnforcedPolicies bool
 	ExpectPendingPolicies  bool
 
 	// Whether to include labels or policies in the match criteria
 	MatchLabels           bool
-	MatchPolicies         bool
+	MatchAllPolicies      bool
 	MatchEnforcedPolicies bool
 	MatchPendingPolicies  bool
 
@@ -132,7 +133,7 @@ func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
 				return fmt.Errorf("unexpected dst Labels in %v", fl.FlowLabels)
 			}
 		}
-		if t.options.ExpectPolicies {
+		if t.options.ExpectAllPolicies {
 			if len(fl.FlowAllPolicySet) == 0 {
 				return fmt.Errorf("missing Policies in %v", fl.FlowMeta)
 			}
@@ -282,7 +283,7 @@ func (t *FlowTester) flowMetaFromFlowLog(fl flowlog.FlowLog) flowMeta {
 		sort.Strings(dstLabels)
 		fm.labels = strings.Join(srcLabels, ";") + "|" + strings.Join(dstLabels, ";")
 	}
-	if t.options.MatchPolicies {
+	if t.options.MatchAllPolicies {
 		var policies []string
 		for p := range fl.FlowAllPolicySet {
 			policies = append(policies, p)
