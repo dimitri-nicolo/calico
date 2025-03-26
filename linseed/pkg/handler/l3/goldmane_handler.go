@@ -82,7 +82,7 @@ func (h goldmaneFlowHandler) Create() http.HandlerFunc {
 			} else {
 				// This branch means we received a Flow object that we deem to be invalid. This
 				// could be a bug, or it could be a malicious client.
-				logCtx.WithError(err).Error("Invalid flow object received")
+				logCtx.WithField("log", d).WithError(err).Error("Invalid flow object received")
 				httputils.JSONError(w, &v1.HTTPError{
 					Status: http.StatusBadRequest,
 					Msg:    err.Error(),
