@@ -1278,20 +1278,3 @@ var _ = infrastructure.DatastoreDescribe("ipv6 flow log tests", []apiconfig.Data
 		Expect(numExpectedFlows).Should(Equal(2))
 	})
 })
-
-func countNodesWithNodeIP(c client.Interface) int {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-
-	nodeList, err := c.Nodes().List(ctx, options.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
-
-	count := 0
-	for _, n := range nodeList.Items {
-		if n.Spec.BGP.IPv4Address != "" {
-			count++
-		}
-	}
-
-	return count
-}

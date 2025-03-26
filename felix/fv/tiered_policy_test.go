@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -22,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector/types/endpoint"
 	"github.com/projectcalico/calico/felix/collector/types/tuple"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -428,16 +428,11 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 			infra = getInfra()
 			opts = infrastructure.DefaultTopologyOptions()
 			opts.IPIPEnabled = false
-			opts.FlowLogSource = infrastructure.FlowLogSourceFile
+			opts.FlowLogSource = infrastructure.FlowLogSourceGoldmane
 
 			opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDESERVICE"] = "true"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrByPodPrefix))
-			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrByPodPrefix))
-			//opts.ExtraEnvVars["FELIX_FLOWLOGSGOLDMANESERVER"] = flowlogs.LocalGoldmaneServer
+			opts.ExtraEnvVars["FELIX_FLOWLOGSGOLDMANESERVER"] = flowlogs.LocalGoldmaneServer
 
 			testSetup()
 
@@ -492,7 +487,7 @@ var _ = infrastructure.DatastoreDescribe("connectivity tests and flow logs with 
 			}
 
 			flowTester := metrics.NewFlowTester(metrics.FlowTesterOptions{
-				ExpectPolicies:         true,
+				ExpectLabels:           true,
 				ExpectEnforcedPolicies: true,
 				MatchEnforcedPolicies:  true,
 				ExpectPendingPolicies:  true,

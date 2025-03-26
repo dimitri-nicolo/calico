@@ -81,7 +81,9 @@ func New(
 		pr.AddAggregator(p.NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		statsCollector.RegisterMetricsReporter(pr)
 	}
+
 	dispatchers := map[string]types.Reporter{}
+
 	if configParams.FlowLogsFileEnabled {
 		log.WithFields(log.Fields{
 			"directory": configParams.GetFlowLogsFileDirectory(),
@@ -96,12 +98,14 @@ func New(
 		)
 		dispatchers[FlowLogsFileReporterName] = fd
 	}
+
 	goldmaneAddr := configParams.FlowLogsGoldmaneServer
 	if goldmaneAddr != "" {
 		log.Infof("Creating Flow Logs GoldmaneReporter with address %v", goldmaneAddr)
 		gd := goldmane.NewReporter(goldmaneAddr)
 		dispatchers[FlowLogsGoldmaneReporterName] = gd
 	}
+
 	if len(dispatchers) > 0 {
 		log.Info("Creating Flow Logs Reporter")
 		var offsetReader flowlog.LogOffset = &flowlog.NoOpLogOffset{}
@@ -114,6 +118,7 @@ func New(
 		configureFlowAggregation(configParams, cw)
 		statsCollector.RegisterMetricsReporter(cw)
 	}
+
 	if configParams.SyslogReporterEnabled {
 		log.Info("Creating a Syslog Reporter")
 		syslogReporter := syslog.New(configParams.SyslogReporterNetwork, configParams.SyslogReporterAddress)
@@ -232,29 +237,29 @@ func configureFlowAggregation(configParams *config.Config, fr *flowlog.FlowLogRe
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
 			fr.AddAggregator(cad, []string{FlowLogsFileReporterName})
 		}
-		if configParams.FlowLogsGoldmaneServer != "" {
-			log.Info("Creating golemane Aggregator for allowed")
-			gaa := flowlog.NewAggregator().
-				AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
-				DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
-				IncludeLabels(true).
-				IncludePolicies(true).
-				IncludeService(true).
-				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
-				ForAction(rules.RuleActionAllow)
-			log.Info("Adding Flow Logs Aggregator (allowed) for goldmane")
-			fr.AddAggregator(gaa, []string{FlowLogsGoldmaneReporterName})
-			log.Info("Creating goldmane Aggregator for denied")
-			gad := flowlog.NewAggregator().
-				AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
-				DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
-				IncludeLabels(true).
-				IncludePolicies(true).
-				IncludeService(true).
-				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
-				ForAction(rules.RuleActionDeny)
-			log.Info("Adding Flow Logs Aggregator (denied) for goldmane")
-			fr.AddAggregator(gad, []string{FlowLogsGoldmaneReporterName})
-		}
+	}
+	if configParams.FlowLogsGoldmaneServer != "" {
+		log.Info("Creating golemane Aggregator for allowed")
+		gaa := flowlog.NewAggregator().
+			AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
+			DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
+			IncludeLabels(true).
+			IncludePolicies(true).
+			IncludeService(true).
+			MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+			ForAction(rules.RuleActionAllow)
+		log.Info("Adding Flow Logs Aggregator (allowed) for goldmane")
+		fr.AddAggregator(gaa, []string{FlowLogsGoldmaneReporterName})
+		log.Info("Creating goldmane Aggregator for denied")
+		gad := flowlog.NewAggregator().
+			AggregateOver(flowlog.AggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
+			DisplayDebugTraceLogs(configParams.FlowLogsCollectorDebugTrace).
+			IncludeLabels(true).
+			IncludePolicies(true).
+			IncludeService(true).
+			MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+			ForAction(rules.RuleActionDeny)
+		log.Info("Adding Flow Logs Aggregator (denied) for goldmane")
+		fr.AddAggregator(gad, []string{FlowLogsGoldmaneReporterName})
 	}
 }
