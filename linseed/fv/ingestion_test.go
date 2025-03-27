@@ -37,11 +37,12 @@ func ingestionSetupAndTeardown(t *testing.T, idx bapi.Index) func() {
 func TestFV_FlowIngestion(t *testing.T) {
 	addr := "https://localhost:8443/api/v1/flows/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":25, "total":25}`
-	cluster := cluster1
-	clusterInfo := cluster1Info
 
 	RunFlowLogTest(t, "ingest flow logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -84,13 +85,14 @@ func TestFV_FlowIngestion(t *testing.T) {
 }
 
 func TestFV_DNSIngestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/dns/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":11, "total":11}`
 
 	RunDNSLogTest(t, "ingest dns logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -138,13 +140,14 @@ func TestFV_DNSIngestion(t *testing.T) {
 }
 
 func TestFV_L7Ingestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/l7/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":15, "total":15}`
 
 	RunL7LogTest(t, "ingest l7 logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -243,13 +246,14 @@ func TestFV_KubeAuditIngestion(t *testing.T) {
 }
 
 func TestFV_EEAuditIngestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/audit/logs/ee/bulk"
 	expectedResponse := `{"failed":0, "succeeded":35, "total":35}`
 
 	RunAuditEETest(t, "ingest ee audit logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -298,13 +302,14 @@ func TestFV_EEAuditIngestion(t *testing.T) {
 }
 
 func TestFV_BGPIngestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/bgp/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":4, "total":4}`
 
 	RunBGPLogTest(t, "ingest bgp logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -355,13 +360,14 @@ func TestFV_BGPIngestion(t *testing.T) {
 }
 
 func TestFV_WAFIngestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/waf/logs/bulk"
 	expectedResponse := `{"failed":0, "succeeded":2, "total":2}`
 
 	RunWAFTest(t, "ingest waf logs via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -411,8 +417,6 @@ func TestFV_WAFIngestion(t *testing.T) {
 }
 
 func TestFV_GoldmaneFlowIngestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/flows/bulk"
 	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
 
@@ -463,6 +467,9 @@ func TestFV_GoldmaneFlowIngestion(t *testing.T) {
 	RunFlowLogTest(t, "ingest Goldmane flow logs via bulk API", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
 
+		cluster := cluster1
+		clusterInfo := cluster1Info
+
 		b, err := json.Marshal(flo)
 		require.NoError(t, err)
 
@@ -492,17 +499,21 @@ func TestFV_GoldmaneFlowIngestion(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resultList)
 		require.Equal(t, int64(1), resultList.TotalHits)
+		require.NotNil(t, resultList.Items[0].Policies)
+		require.Len(t, resultList.Items[0].Policies.EnforcedPolicies, 1)
+		require.Len(t, resultList.Items[0].Policies.PendingPolicies, 1)
 	})
 }
 
 func TestFV_RuntimeIngestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/runtime/reports/bulk"
 	expectedResponse := `{"failed":0, "succeeded":29, "total":29}`
 
 	RunRuntimeReportTest(t, "ingest runtime reports via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -554,8 +565,6 @@ func TestFV_RuntimeIngestion(t *testing.T) {
 }
 
 func TestFV_Ingestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/audit/logs/ee/bulk"
 	expectedResponse := `{"Msg":"http: request body too large", "Status":400}`
 
@@ -563,6 +572,9 @@ func TestFV_Ingestion(t *testing.T) {
 		t.Skip()
 
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		// setup HTTP httpClient and HTTP request
 		httpClient := mTLSClient(t)
@@ -581,13 +593,14 @@ func TestFV_Ingestion(t *testing.T) {
 }
 
 func TestFV_AnomalyDetectionEventsIngestion(t *testing.T) {
-	cluster := cluster1
-	clusterInfo := cluster1Info
 	addr := "https://localhost:8443/api/v1/events/bulk"
 	expectedResponse := `{"failed":0, "succeeded":1, "total":1}`
 
 	RunEventsTest(t, "ingest anomaly detection events via bulk API with production data", func(t *testing.T, idx bapi.Index) {
 		defer ingestionSetupAndTeardown(t, idx)()
+
+		cluster := cluster1
+		clusterInfo := cluster1Info
 
 		spec := xndJSONPostHTTPReqSpec(addr, clusterInfo.Tenant, cluster, token, []byte(anomalyDetectionEvent))
 		httpClient := mTLSClient(t)
