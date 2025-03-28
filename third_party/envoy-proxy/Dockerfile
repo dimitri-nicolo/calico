@@ -1,10 +1,11 @@
 # Copyright (c) 2024-2025 Tigera, Inc. All rights reserved.
 
 ARG CALICO_BASE_UBI9
+ARG ENVOYBINARY_IMAGE
 ARG THIRD_PARTY_REGISTRY
 ARG UBI9_IMAGE
 
-FROM ${THIRD_PARTY_REGISTRY}/envoybinary:v1.31.5 AS envoybinary
+FROM ${ENVOYBINARY_IMAGE} AS envoybinary
 
 FROM ${UBI9_IMAGE} AS ubi
 

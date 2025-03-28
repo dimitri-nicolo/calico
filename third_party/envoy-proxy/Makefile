@@ -5,6 +5,10 @@ PACKAGE_NAME ?= github.com/projectcalico/calico/third_party/envoy-proxy
 ENVOY_PROXY_IMAGE ?= envoy-proxy
 BUILD_IMAGES ?= $(ENVOY_PROXY_IMAGE)
 
+ENVOYBINARY_IMAGE ?= quay.io/tigera/envoybinary:v1.31.5
+
+EXCLUDEARCH ?= ppc64le s390x
+
 ##############################################################################
 # Include lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -39,7 +43,7 @@ image: $(BUILD_IMAGES)
 
 $(ENVOY_PROXY_IMAGE): $(ENVOY_PROXY_IMAGE_CREATED)
 $(ENVOY_PROXY_IMAGE_CREATED): Dockerfile
-	$(DOCKER_BUILD) --build-arg THIRD_PARTY_REGISTRY=$(THIRD_PARTY_REGISTRY) \
+	$(DOCKER_BUILD) --build-arg ENVOYBINARY_IMAGE=$(ENVOYBINARY_IMAGE) \
 		-t $(ENVOY_PROXY_IMAGE):latest-$(ARCH) -f Dockerfile .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@

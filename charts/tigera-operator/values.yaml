@@ -14,6 +14,9 @@ installation:
   #
   # Example: --set installation.imagePullSecrets[0].name=my-existing-secret
   imagePullSecrets: []
+
+# apiServer configures the Calico API server, needed for interacting with
+# the projectcalico.org/v3 suite of APIs.
 apiServer:
   enabled: true
 # When enabled a subchart called tigera-prometheus-operator will be installed.
@@ -53,6 +56,7 @@ applicationLayer:
   enabled: false
 amazonCloudIntegration:
   enabled: false
+
 defaultFelixConfiguration:
   enabled: false
 # MCM configuration options.

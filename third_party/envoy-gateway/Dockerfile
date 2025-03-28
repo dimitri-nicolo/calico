@@ -10,7 +10,7 @@ ARG CALICO_BASE
 
 FROM busybox AS source
 
-# Create the data directory for eg
+# Create the data directory for the gateway
 RUN mkdir -p /var/lib/eg
 
 FROM ${CALICO_BASE}
