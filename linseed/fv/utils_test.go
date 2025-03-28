@@ -21,8 +21,10 @@ import (
 )
 
 // Use a relative path to the client token in the calico-private/linseed/fv directory.
-const TokenPath = "./client-token"
-const TokenPathMultiCluster = "./client-token-multi-cluster"
+const (
+	TokenPath             = "./client-token"
+	TokenPathMultiCluster = "./client-token-multi-cluster"
+)
 
 func NewLinseedClient(args *RunLinseedArgs, tokenPath string) (client.Client, error) {
 	cfg := rest.Config{
