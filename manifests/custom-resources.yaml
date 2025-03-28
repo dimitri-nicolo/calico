@@ -108,5 +108,3 @@ apiVersion: operator.tigera.io/v1
 kind: Whisker
 metadata:
   name: default
-spec: {}
-
