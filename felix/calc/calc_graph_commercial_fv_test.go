@@ -203,7 +203,7 @@ var localEp1WithNode = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.2",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
 		DstNodeName: "localhostname",
@@ -224,7 +224,7 @@ var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.2", "10.0.0.2",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.2/32",
 		DstNodeName: "localhostname",
@@ -247,7 +247,7 @@ var localEp1WithNodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.2",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
 		DstNodeName: "localhostname",
@@ -270,7 +270,7 @@ var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.2",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
 		DstNodeName: "localhostname",
@@ -368,7 +368,7 @@ var localEp2WithNode = localEp2WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.3",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
 		DstNodeName: "localhostname",
@@ -429,7 +429,7 @@ var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
 	"10.0.0.2",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
 		DstNodeName: "localhostname",
@@ -471,7 +471,7 @@ var threeEndpointsSharingIPWithNode = localEpsWithPolicy.withKVUpdates(
 	"10.0.0.2",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
 		DstNodeName: "localhostname",
@@ -514,7 +514,7 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 	"10.0.0.2",
 ).withRoutes(
 	felixtypes.RouteUpdate{
-		Type:        proto.RouteType_LOCAL_HOST,
+		Types:       proto.RouteType_LOCAL_HOST,
 		IpPoolType:  proto.IPPoolType_NONE,
 		Dst:         "192.168.0.1/32",
 		DstNodeName: "localhostname",
@@ -1375,7 +1375,7 @@ var (
 	},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -1446,7 +1446,7 @@ var (
 	},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -1632,7 +1632,7 @@ var (
 		felixtypes.ProfileID{Name: "egress"},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -1702,7 +1702,7 @@ var (
 		felixtypes.ProfileID{Name: "egress"},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -1815,7 +1815,7 @@ var (
 	},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -1918,7 +1918,7 @@ var (
 	},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -1993,7 +1993,7 @@ var (
 	},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -2025,13 +2025,13 @@ var (
 		},
 	).withRoutes(
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.1/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
 		},
 		felixtypes.RouteUpdate{
-			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Types:         proto.RouteType_LOCAL_WORKLOAD,
 			Dst:           "137.0.0.2/32",
 			DstNodeName:   localHostname,
 			LocalWorkload: true,
@@ -2149,7 +2149,7 @@ var (
 		},
 		).withRoutes(
 			felixtypes.RouteUpdate{
-				Type:          proto.RouteType_LOCAL_WORKLOAD,
+				Types:         proto.RouteType_LOCAL_WORKLOAD,
 				Dst:           "137.0.0.1/32",
 				DstNodeName:   localHostname,
 				LocalWorkload: true,
@@ -2227,7 +2227,7 @@ var (
 		},
 		).withRoutes(
 			felixtypes.RouteUpdate{
-				Type:          proto.RouteType_LOCAL_WORKLOAD,
+				Types:         proto.RouteType_LOCAL_WORKLOAD,
 				Dst:           "137.0.0.1/32",
 				DstNodeName:   localHostname,
 				LocalWorkload: true,
@@ -2293,7 +2293,7 @@ var (
 			felixtypes.ProfileID{Name: "egress"},
 		).withRoutes(
 			felixtypes.RouteUpdate{
-				Type:          proto.RouteType_LOCAL_WORKLOAD,
+				Types:         proto.RouteType_LOCAL_WORKLOAD,
 				Dst:           "137.0.0.1/32",
 				DstNodeName:   localHostname,
 				LocalWorkload: true,

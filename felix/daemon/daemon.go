@@ -124,7 +124,7 @@ const (
 // To avoid having to maintain rarely-used code paths, Felix handles updates to its
 // main config parameters by exiting and allowing itself to be restarted by the init
 // daemon.
-func Run(configFile string, gitVersion string, buildDate string, gitRevision string) {
+func Run(configFile string, gitVersion, buildDate, gitRevision string, nonClusterHost bool) {
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.
 	logutils.ConfigureEarlyLogging()
@@ -203,6 +203,24 @@ configRetry:
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
+
+		// For non-cluster host Felix, the Typha address and port will be obtained from the
+		// NonClusterHost resource created within the cluster. The separate Typha deployment
+		// responsible for handling non-cluster host Felix traffic should be exposed via an
+		// Ingress or a LoadBalancer service. We need to set the TyphaAddr field in fileConfig
+		// to ensure the subsequent UpdateFrom calls properly merges and validates configuration
+		// from different source. This also important for the handleConfigUpdate function to
+		// correctly calculate the changed fields.
+		if nonClusterHost {
+			if addr, err := bootstrapNonClusterHostTyphaAddress(ctx); err != nil {
+				log.WithError(err).Error("Failed to get Typha address for non-cluster hosts")
+				time.Sleep(1 * time.Second)
+				continue configRetry
+			} else {
+				fileConfig["TyphaAddr"] = addr
+			}
+		}
+
 		// Parse and merge the local config.
 		_, err = configParams.UpdateFrom(envConfig, config.EnvironmentVariable)
 		if err != nil {
@@ -456,12 +474,14 @@ configRetry:
 	var lookupsCache *calc.LookupsCache
 	var dpStatsCollector collector.Collector
 
-	// Initialzed the lookup cache here and pass it along to both the calc_graph
-	// as well as dataplane driver, which actually uses this for lookups.
-	lookupsCache = calc.NewLookupsCache()
+	if configParams.FlowLogsEnabled() {
+		// Initialzed the lookup cache here and pass it along to both the calc_graph
+		// as well as dataplane driver, which actually uses this for lookups.
+		lookupsCache = calc.NewLookupsCache()
 
-	// Start the stats collector which also depends on the lookups cache.
-	dpStatsCollector = collector.New(configParams, lookupsCache, healthAggregator)
+		// Start the stats collector which also depends on the lookups cache.
+		dpStatsCollector = collector.New(configParams, lookupsCache, healthAggregator)
+	}
 
 	// Configure Windows firewall rules if appropriate
 	winutils.MaybeConfigureWindowsFirewallRules(configParams.WindowsManageFirewallRules, configParams.PrometheusMetricsEnabled, configParams.PrometheusMetricsPort, configParams.PrometheusReporterEnabled, configParams.PrometheusReporterPort)

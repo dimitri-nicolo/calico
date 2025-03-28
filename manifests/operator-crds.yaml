@@ -31284,8 +31284,12 @@ spec:
             properties:
               endpoint:
                 description: 'Location of the log ingestion point for non-cluster
-                  hosts. example: https://1.2.3.4:443'
+                  hosts. For example: https://1.2.3.4:443'
                 pattern: ^https://.+$
+                type: string
+              typhaEndpoint:
+                description: 'Location of the Typha endpoint for non-cluster host
+                  Felix and Typha communication. For example: 5.6.7.8:5473'
                 type: string
             required:
             - endpoint
@@ -36125,6 +36129,10 @@ spec:
                 description: FlowLogsFlushInterval configures the interval at which
                   Felix exports flow logs.
                 pattern: ^([0-9]+(\\.[0-9]+)?(ms|s|m|h))*$
+                type: string
+              flowLogsGoldmaneServer:
+                description: FlowLogGoldmaneServer is the flow server endpoint to
+                  which flow data should be published.
                 type: string
               flowLogsMaxOriginalIPsIncluded:
                 description: FlowLogsMaxOriginalIPsIncluded specifies the number of

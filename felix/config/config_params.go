@@ -226,11 +226,6 @@ type Config struct {
 	BPFProfiling                       string            `config:"oneof(Disabled,Enabled);Disabled;non-zero"`
 	BPFExportBufferSizeMB              int               `config:"int;1;non-zero"`
 
-	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
-	FlowLogsCollectTcpStats     bool `config:"bool;false"`
-	FlowLogsCollectProcessPath  bool `config:"bool;false"`
-	FlowLogsCollectorDebugTrace bool `config:"bool;false"`
-
 	// DebugBPFCgroupV2 controls the cgroup v2 path that we apply the connect-time load balancer to.  Most distros
 	// are configured for cgroup v1, which prevents all but the root cgroup v2 from working so this is only useful
 	// for development right now.
@@ -282,13 +277,16 @@ type Config struct {
 	TyphaWriteTimeout time.Duration `config:"seconds;10;local"`
 
 	// TyphaKeyFile path to the TLS private key to use when communicating with Typha.  If this parameter is specified,
-	// the other TLS parameters must also be specified.
+	// the other TLS parameters must also be specified.  For non-cluster hosts, the private key is generated locally
+	// and rotated when the certificate expires.
 	TyphaKeyFile string `config:"file(must-exist);;local"`
 	// TyphaCertFile path to the TLS certificate to use when communicating with Typha.  If this parameter is specified,
-	// the other TLS parameters must also be specified.
+	// the other TLS parameters must also be specified.  For non-cluster hosts, the certificate will be signed by the
+	// in-cluster Tigera operator signer.
 	TyphaCertFile string `config:"file(must-exist);;local"`
 	// TyphaCAFile path to the TLS CA file to use when communicating with Typha.  If this parameter is specified,
-	// the other TLS parameters must also be specified.
+	// the other TLS parameters must also be specified.  For non-cluster hosts, the CA file is extracted from the
+	// tigera-ca-bundle ConfigMap under the TyphaK8sNamespace namespace.
 	TyphaCAFile string `config:"file(must-exist);;local"`
 	// TyphaCN Common name to use when authenticating to Typha over TLS. If any TLS parameters are specified then one of
 	// TyphaCN and TyphaURISAN must be set.
@@ -465,6 +463,12 @@ type Config struct {
 	FlowLogsFilePerFlowProcessArgsLimit   int    `config:"int;5"`
 	FlowLogsFileNatOutgoingPortLimit      int    `config:"int;3"`
 	FlowLogsFileDomainsLimit              int    `config:"int;5"`
+
+	FlowLogsCollectProcessInfo  bool   `config:"bool;false"`
+	FlowLogsCollectTcpStats     bool   `config:"bool;false"`
+	FlowLogsCollectProcessPath  bool   `config:"bool;false"`
+	FlowLogsCollectorDebugTrace bool   `config:"bool;false"`
+	FlowLogsGoldmaneServer      string `config:"string;"`
 
 	// Config for DNS logs.
 	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
@@ -703,6 +707,11 @@ func (config *Config) TableRefreshInterval() time.Duration {
 		return config.NftablesRefreshInterval
 	}
 	return config.IptablesRefreshInterval
+}
+
+func (config *Config) FlowLogsEnabled() bool {
+	// Flow logs is always enabled in Calico Enterprise, and Cloud.
+	return true
 }
 
 // Copy makes a copy of the object.  Internal state is deep copied but config parameters are only shallow copied.

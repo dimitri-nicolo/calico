@@ -162,10 +162,13 @@ promotions:
     pipeline_file: push-images/envoy.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
-  - name: Publish openstack packages
-    pipeline_file: push-images/packaging.yaml
-    auto_promote:
-      when: "branch =~ 'master|release-'"
+
+  # Enterprise doesn't build or publish OpenStack packages.
+  # - name: Publish openstack packages
+  #   pipeline_file: push-images/packaging.yaml
+  #   auto_promote:
+  #     when: "branch =~ 'master|release-'"
+
   - name: Push third-party envoy-gateway images
     pipeline_file: push-images/third_party/envoy-gateway.yml
     auto_promote:
@@ -178,6 +181,7 @@ promotions:
     pipeline_file: push-images/third_party/envoy-ratelimit.yml
     auto_promote:
       when: "branch =~ 'master|release-'"
+
   - name: Push third-party prometheus-operator images
     pipeline_file: push-images/third_party/prometheus-operator.yml
     auto_promote:
