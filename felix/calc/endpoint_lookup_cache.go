@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2025 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -12,6 +12,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	apispec "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dispatcher"
@@ -101,16 +102,16 @@ type MatchData struct {
 }
 
 type TierData struct {
-	// ImplicitDropRuleID is used to track the last policy in each tier that
+	// TierDefaultActionRuleID is used to track the last policy in each tier that
 	// selected this endpoint. This special RuleID is created so that implicitly
 	// dropped packets in each tier can be counted against these policies as
 	// being responsible for denying the packet.
 	//
 	// May be set to nil if the tier only contains staged policies.
-	ImplicitDropRuleID *RuleID
+	TierDefaultActionRuleID *RuleID
 
 	// The index into the policy match slice that the implicit drop rule is added. This is always the last
-	// index for this tier and equal to FirstPolicyMatchIndex+len(StagedPolicyImplicitDropRuleIDs).
+	// index for this tier and equal to FirstPolicyMatchIndex+len(StagedPolicyTierDefaultActionRuleID).
 	EndOfTierMatchIndex int
 }
 
@@ -219,6 +220,12 @@ func (ec *EndpointLookupsCache) CreateLocalEndpointData(key model.EndpointKey, e
 		}
 		tdIngress := &TierData{}
 		tdEgress := &TierData{}
+
+		tierDefaultAction := rules.RuleActionDeny
+		if ti.DefaultAction == apispec.Pass {
+			tierDefaultAction = rules.RuleActionPass
+		}
+
 		var hasIngress, hasEgress bool
 		for _, pol := range ti.OrderedPolicies {
 			namespace, tier, name, err := names.DeconstructPolicyName(pol.Key.Name)
@@ -227,9 +234,9 @@ func (ec *EndpointLookupsCache) CreateLocalEndpointData(key model.EndpointKey, e
 				continue
 			}
 			if pol.GovernsIngress() {
-				// Add a ingress implicit drop lookup..
+				// Add an ingress tier default action lookup.
 				rid := NewRuleID(tier, name, namespace, RuleIndexTierDefaultAction,
-					rules.RuleDirIngress, rules.RuleActionDeny)
+					rules.RuleDirIngress, tierDefaultAction)
 				ed.Ingress.PolicyMatches[rid.PolicyID] = policyMatchIdxIngress
 
 				if model.PolicyIsStaged(pol.Key.Name) {
@@ -238,14 +245,14 @@ func (ec *EndpointLookupsCache) CreateLocalEndpointData(key model.EndpointKey, e
 					policyMatchIdxIngress++
 				} else {
 					// This is a non-staged policy, update our end-of-tier match.
-					tdIngress.ImplicitDropRuleID = rid
+					tdIngress.TierDefaultActionRuleID = rid
 				}
 				hasIngress = true
 			}
 			if pol.GovernsEgress() {
-				// Add a egress implicit drop lookup..
+				// Add an egress tier default action lookup.
 				rid := NewRuleID(tier, name, namespace, RuleIndexTierDefaultAction,
-					rules.RuleDirEgress, rules.RuleActionDeny)
+					rules.RuleDirEgress, tierDefaultAction)
 				ed.Egress.PolicyMatches[rid.PolicyID] = policyMatchIdxEgress
 
 				if model.PolicyIsStaged(pol.Key.Name) {
@@ -254,7 +261,7 @@ func (ec *EndpointLookupsCache) CreateLocalEndpointData(key model.EndpointKey, e
 					policyMatchIdxEgress++
 				} else {
 					// This is a non-staged policy, update our end-of-tier match.
-					tdEgress.ImplicitDropRuleID = rid
+					tdEgress.TierDefaultActionRuleID = rid
 				}
 				hasEgress = true
 			}
