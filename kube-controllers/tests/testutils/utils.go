@@ -19,15 +19,20 @@
 package testutils
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	//nolint:staticcheck // Ignore ST1001: should not use dot imports
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -106,17 +111,55 @@ func ApplyCRDs(apiserver *containers.Container) {
 	// the apiserver needs additional time to register the CRD's API in discovery.
 	// Tests that hit the new CRD immediately race against that registration and can
 	// see a NoKindMatchError from the controller-runtime RESTMapper. Wait for all
-	// CRDs to report Established before returning. The budget is generous because a
-	// slow-starting apiserver on a loaded CI runner can take well over 30s to
-	// establish every CRD.
+	// CRDs to report Established before returning.
+	//
+	// Each poll lists the CRDs in one request and evaluates every CRD's Established
+	// condition from that response, so a CRD is judged on the state in that one
+	// list rather than on the time spent reaching the CRDs ahead of it, and the
+	// retry budget applies to the set as a whole.
+	kubeconfig, removeKubeconfig := BuildKubeconfig(apiserver.IP)
+	defer removeKubeconfig()
+	restCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	crdClient, err := apiextclient.NewForConfig(restCfg)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
 	waitEstablished := func() error {
-		out, err := apiserver.ExecOutput("kubectl", "wait", "--for=condition=Established", "--all", "crds", "--timeout=30s")
+		crds, err := crdClient.ApiextensionsV1().CustomResourceDefinitions().List(
+			context.Background(), metav1.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("%s: %s", err, out)
+			return err
+		}
+		// An empty list means the apply has not landed yet, so treat it as not ready.
+		if len(crds.Items) == 0 {
+			return fmt.Errorf("no CRDs found yet")
+		}
+		// Iterate by index to avoid copying items; a CRD carries its full schema.
+		var pending []string
+		for i := range crds.Items {
+			if !crdEstablished(&crds.Items[i]) {
+				pending = append(pending, crds.Items[i].Name)
+			}
+		}
+		if len(pending) > 0 {
+			return fmt.Errorf("%d/%d CRDs not yet Established: %s",
+				len(pending), len(crds.Items), strings.Join(pending, ", "))
 		}
 		return nil
 	}
 	EventuallyWithOffset(1, waitEstablished, 120*time.Second, 1*time.Second).ShouldNot(HaveOccurred())
+}
+
+// crdEstablished reports whether the apiserver has finished registering the CRD's
+// API. A CRD that has no conditions yet has only just been accepted, so the
+// absence of an Established=True condition counts as not established.
+func crdEstablished(crd *apiextensionsv1.CustomResourceDefinition) bool {
+	for _, c := range crd.Status.Conditions {
+		if c.Type == apiextensionsv1.Established {
+			return c.Status == apiextensionsv1.ConditionTrue
+		}
+	}
+	return false
 }
 
 func RunK8sApiserver(etcdIp string) *containers.Container {
