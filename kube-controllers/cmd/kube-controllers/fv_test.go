@@ -197,6 +197,19 @@ var _ = Describe("kube-controllers metrics and pprof FV tests", func() {
 		kubectrls = testutils.RunKubeControllers(apiconfig.Kubernetes, etcd.IP, kconfigfile, "node")
 	})
 
+	// waitForListener blocks until probe reports the endpoint serving.
+	//
+	// A container counts as running once 'docker run' has started it, which is
+	// before kube-controllers has initialised the datastore and bound its ports.
+	// This matters most for assertions that an endpoint is absent: to an HTTP
+	// client, "pprof is not served on this port" and "nothing is listening yet"
+	// are the same answer, so such an assertion holds vacuously against a
+	// process that is still starting.
+	waitForListener := func(desc string, probe func() error) {
+		EventuallyWithOffset(1, probe, 30*time.Second, 1*time.Second).Should(Succeed(),
+			"%s never came up", desc)
+	}
+
 	AfterEach(func() {
 		kubectrls.Stop()
 		apiserver.Stop()
@@ -233,20 +246,26 @@ var _ = Describe("kube-controllers metrics and pprof FV tests", func() {
 	}
 
 	It("should not expose pprof endpoints on the prometheus port", func() {
-		// By checking that prometheus metrics are available on the default port.
 		metricsEndpoint := fmt.Sprintf("http://%s:9094", kubectrls.IP)
-		Expect(get(metricsEndpoint, "/metrics")).To(Succeed())
+		pprofEndpoint := fmt.Sprintf("http://%s:9095", kubectrls.IP)
 
-		// By checking that pprof endpoints are not available on the prometheus port.
+		// Both servers must be proven up before asserting what they do not
+		// serve. Each wait is an assertion in its own right: metrics are served
+		// on the metrics port, pprof on the debug port. pprof binds to loopback
+		// only, so it is reachable just from inside the container's network
+		// namespace.
+		waitForListener("prometheus metrics port", func() error {
+			return get(metricsEndpoint, "/metrics")
+		})
+		waitForListener("pprof debug port", func() error {
+			return getFromContainerNS("http://127.0.0.1:9095/debug/pprof/profile?seconds=1")
+		})
+
+		// pprof endpoints are not available on the prometheus port.
 		Expect(get(metricsEndpoint, "/debug/pprof/profile?seconds=1")).NotTo(Succeed())
 
-		// pprof binds to loopback only, so it must be queried from inside the
-		// container's network namespace.
-		Expect(getFromContainerNS("http://127.0.0.1:9095/debug/pprof/profile?seconds=1")).To(Succeed())
-
-		// Confirm that the pprof port is NOT reachable from outside the
-		// container (i.e. not bound to 0.0.0.0).
-		pprofEndpoint := fmt.Sprintf("http://%s:9095", kubectrls.IP)
+		// The pprof port is NOT reachable from outside the container (i.e. not
+		// bound to 0.0.0.0).
 		Expect(get(pprofEndpoint, "/debug/pprof/profile?seconds=1")).NotTo(Succeed())
 	})
 })
