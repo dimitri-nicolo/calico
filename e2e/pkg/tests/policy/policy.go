@@ -374,9 +374,9 @@ var _ = describe.CalicoDescribe(
 
 			err := cli.Create(context.Background(), defaultDeny)
 			Expect(err).NotTo(HaveOccurred())
-			defer func() {
-				Expect(cli.Delete(context.Background(), defaultDeny)).NotTo(HaveOccurred())
-			}()
+			DeferCleanup(func() {
+				Expect(utils.DeleteResource(context.Background(), cli, defaultDeny)).NotTo(HaveOccurred())
+			})
 
 			By("checking client not able to contact the server since deny egress rule created.")
 			checker.ExpectFailure(client1, server1.ClusterIP())
