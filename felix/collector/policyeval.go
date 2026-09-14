@@ -237,7 +237,7 @@ func (c *collector) computePendingTrace(direction rules.RuleDir, store *policyst
 		log.WithField("endpoint", ep.Key()).Trace("The endpoint is not yet tracked by the PolicyStore")
 		return nil, false
 	}
-	trace, err := checker.Evaluate(checker.StagedAsEnforced, direction, store, protoEp, flow)
+	trace, err := checker.Evaluate(checker.StagedAsEnforced, direction, store, protoEp, flow, nil)
 	if err != nil {
 		// Keep the trace we worked out last time: reporting no pending policy at all would be a
 		// stronger claim than we are in a position to make. The checker logs the reason, rate

@@ -43,6 +43,7 @@ import (
 	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policyscale"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/felix/calc"
@@ -167,9 +168,11 @@ func newPolicyEvalBench(fx *policyscale.Fixture, cacheSize, workers int) *policy
 		stats = &policystore.VerdictCacheStats{}
 		opts = append(opts, policystore.WithVerdictCache(cacheSize, stats))
 	}
+	opts = append(opts, policystore.WithPolicyCompiler(checker.NewPolicyCompiler()))
 	psm := policystore.NewPolicyStoreManagerWithOpts(opts...)
 	psm.DoWithLock(func(ps *policystore.PolicyStore) {
 		fx.LoadStore(ps)
+		ps.SetPolicyCompiler(checker.NewPolicyCompiler())
 		ps.Endpoints[ftypes.WorkloadEndpointID{
 			OrchestratorId: key.OrchestratorID,
 			WorkloadId:     key.WorkloadID,

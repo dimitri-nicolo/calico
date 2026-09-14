@@ -25,6 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/policystore"
 	bpfconntrack "github.com/projectcalico/calico/felix/bpf/conntrack/timeouts"
 	"github.com/projectcalico/calico/felix/calc"
@@ -239,7 +240,7 @@ func newCollector(lc *calc.LookupsCache, cfg *Config) Collector {
 	}
 
 	if c.policyStoreManager == nil {
-		var opts []policystore.PolicyStoreManagerOption
+		opts := []policystore.PolicyStoreManagerOption{policystore.WithPolicyCompiler(checker.NewPolicyCompiler())}
 		if cfg.PolicyEvaluationCacheSize > 0 {
 			log.Infof("Pending policy verdict cache enabled, capacity %d", cfg.PolicyEvaluationCacheSize)
 			opts = append(opts, policystore.WithVerdictCache(cfg.PolicyEvaluationCacheSize, verdictCacheStats))

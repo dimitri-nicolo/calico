@@ -98,6 +98,7 @@ func BenchmarkEvaluateComposite(b *testing.B) {
 
 	fx := policyscale.Build(policyscale.Composite())
 	store, ep := fx.NewStore(), fx.Endpoint()
+	compileStoreForTest(store)
 	target := fx.EgressTarget()
 
 	cases := []struct {
@@ -114,7 +115,7 @@ func BenchmarkEvaluateComposite(b *testing.B) {
 	}
 	for _, c := range cases {
 		b.Run(c.name, func(b *testing.B) {
-			trace, err := Evaluate(StagedAsEnforced, c.dir, store, ep, c.flow)
+			trace, err := Evaluate(StagedAsEnforced, c.dir, store, ep, c.flow, nil)
 			if err != nil {
 				b.Fatalf("evaluation failed: %v", err)
 			}
@@ -125,7 +126,7 @@ func BenchmarkEvaluateComposite(b *testing.B) {
 			rec := perfdoc.Start(b)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				benchTraceSink, _ = Evaluate(StagedAsEnforced, c.dir, store, ep, c.flow)
+				benchTraceSink, _ = Evaluate(StagedAsEnforced, c.dir, store, ep, c.flow, nil)
 			}
 			b.StopTimer()
 			b.ReportMetric(float64(c.walk), "rules/op")
@@ -164,6 +165,7 @@ func BenchmarkEvaluateVerdictCache(b *testing.B) {
 	} {
 		b.Run(c.name, func(b *testing.B) {
 			store := fx.NewStore()
+			compileStoreForTest(store)
 			stats := &policystore.VerdictCacheStats{}
 			if c.cache {
 				store.Verdicts = policystore.NewVerdictCache(1<<16, stats)
@@ -173,7 +175,7 @@ func BenchmarkEvaluateVerdictCache(b *testing.B) {
 			rec := perfdoc.Start(b)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				benchTraceSink, _ = Evaluate(StagedAsEnforced, rules.RuleDirEgress, store, ep, s.Next())
+				benchTraceSink, _ = Evaluate(StagedAsEnforced, rules.RuleDirEgress, store, ep, s.Next(), nil)
 			}
 			b.StopTimer()
 			fields := map[string]any{
@@ -218,7 +220,7 @@ func benchEvaluateBaselinePolicyScale(b *testing.B, spec policyscale.Spec, level
 
 	// Pre-flight outside the timed loop: prove the walk is the intended one and that
 	// the warning count matches the analytic count, so that warnings/op is exact.
-	trace, _ := Evaluate(EnforcedOnly, rules.RuleDirIngress, store, ep, flow)
+	trace, _ := Evaluate(EnforcedOnly, rules.RuleDirIngress, store, ep, flow, nil)
 	if matchEarly {
 		if len(trace) != 1 || trace[0].Action != rules.RuleActionAllow || trace[0].Index != 0 {
 			b.Fatalf("expected an immediate allow from the match-early policy, got %v", trace)
@@ -237,7 +239,7 @@ func benchEvaluateBaselinePolicyScale(b *testing.B, spec policyscale.Spec, level
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		benchTraceSink, _ = Evaluate(EnforcedOnly, rules.RuleDirIngress, store, ep, flow)
+		benchTraceSink, _ = Evaluate(EnforcedOnly, rules.RuleDirIngress, store, ep, flow, nil)
 	}
 	b.StopTimer()
 	b.ReportMetric(float64(counter.count.Load())/float64(b.N), "warnings/op")

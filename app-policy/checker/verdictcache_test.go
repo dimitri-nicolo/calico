@@ -63,11 +63,11 @@ func TestCachedEvaluateAgreesWithUncached(t *testing.T) {
 			}
 
 			viaCache := func(scope PolicyScope, dir rules.RuleDir, _ *policystore.PolicyStore, ep *proto.WorkloadEndpoint, flow Flow) ([]*calc.RuleID, error) {
-				return Evaluate(scope, dir, cached, ep, flow)
+				return evaluateNoBuf(scope, dir, cached, ep, flow)
 			}
 			for pass := 0; pass < 2; pass++ {
 				for _, scope := range []PolicyScope{StagedAsEnforced, EnforcedOnly} {
-					assertEquivalent(t, fmt.Sprintf("%s pass %d scope %d", c.name, pass, scope), scope, viaCache, Evaluate, plain, ep, corpus)
+					assertEquivalent(t, fmt.Sprintf("%s pass %d scope %d", c.name, pass, scope), scope, viaCache, evaluateNoBuf, plain, ep, corpus)
 				}
 			}
 			// The second pass repeats every flow of the first, so at least that many hits.
@@ -94,8 +94,8 @@ func cachedEvaluator(t *testing.T) evaluator {
 		if store.Verdicts == nil {
 			store.Verdicts = policystore.NewVerdictCache(1024, nil)
 		}
-		first, err1 := Evaluate(scope, dir, store, ep, flow)
-		second, err2 := Evaluate(scope, dir, store, ep, flow)
+		first, err1 := evaluateNoBuf(scope, dir, store, ep, flow)
+		second, err2 := evaluateNoBuf(scope, dir, store, ep, flow)
 		if (err1 != nil) != (err2 != nil) || !sameTrace(first, second) {
 			t.Errorf("cached evaluation differs from the first: %v (%v) vs %v (%v)", formatTrace(first), err1, formatTrace(second), err2)
 		}
@@ -124,7 +124,7 @@ func TestVerdictCacheFollowsStoreUpdates(t *testing.T) {
 
 	eval := func() []*calc.RuleID {
 		t.Helper()
-		trace, err := Evaluate(StagedAsEnforced, rules.RuleDirIngress, store, ep, flow)
+		trace, err := evaluateNoBuf(StagedAsEnforced, rules.RuleDirIngress, store, ep, flow)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -162,7 +162,7 @@ func TestVerdictCacheFollowsStoreUpdates(t *testing.T) {
 	// The policy goes away: the evaluation fails, and the failure is not cached.
 	apply(&proto.ToDataplane{Payload: &proto.ToDataplane_ActivePolicyRemove{ActivePolicyRemove: &proto.ActivePolicyRemove{Id: pID}}})
 	for i := 0; i < 2; i++ {
-		if _, err := Evaluate(StagedAsEnforced, rules.RuleDirIngress, store, ep, flow); err == nil {
+		if _, err := evaluateNoBuf(StagedAsEnforced, rules.RuleDirIngress, store, ep, flow); err == nil {
 			t.Fatal("expected the evaluation to fail with the policy missing")
 		}
 	}
@@ -188,7 +188,7 @@ func TestVerdictKeyIncludesSourcePortOnlyWhenRulesUseIt(t *testing.T) {
 	// Rules ignore the source port: one entry serves every source port.
 	store, ep, stats := build(&proto.Rule{Action: "allow", DstPorts: []*proto.PortRange{{First: 80, Last: 80}}})
 	for sp := 1000; sp < 1010; sp++ {
-		trace, err := Evaluate(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", sp, "10.0.0.5", 80))
+		trace, err := evaluateNoBuf(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", sp, "10.0.0.5", 80))
 		if err != nil || !allowed(trace) {
 			t.Fatalf("source port %d: %v %v", sp, formatTrace(trace), err)
 		}
@@ -201,7 +201,7 @@ func TestVerdictKeyIncludesSourcePortOnlyWhenRulesUseIt(t *testing.T) {
 	store, ep, stats = build(&proto.Rule{Action: "allow", SrcPorts: []*proto.PortRange{{First: 1000, Last: 1004}}})
 	for pass := 0; pass < 2; pass++ {
 		for sp := 1000; sp < 1010; sp++ {
-			trace, err := Evaluate(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", sp, "10.0.0.5", 80))
+			trace, err := evaluateNoBuf(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", sp, "10.0.0.5", 80))
 			if err != nil || allowed(trace) != (sp <= 1004) {
 				t.Fatalf("pass %d source port %d: %v %v", pass, sp, formatTrace(trace), err)
 			}
@@ -214,7 +214,7 @@ func TestVerdictKeyIncludesSourcePortOnlyWhenRulesUseIt(t *testing.T) {
 	// A negated named source port counts as looking at the source port too.
 	store, ep, stats = build(&proto.Rule{Action: "allow", NotSrcNamedPortIpSetIds: []string{"np"}})
 	for sp := 1000; sp < 1003; sp++ {
-		_, _ = Evaluate(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", sp, "10.0.0.5", 80))
+		_, _ = evaluateNoBuf(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", sp, "10.0.0.5", 80))
 	}
 	if stats.Misses.Load() != 3 {
 		t.Fatalf("named source port endpoint: %d misses, want 3", stats.Misses.Load())
@@ -240,7 +240,7 @@ func TestVerdictCacheSkipsL7FlowsAndNilAddresses(t *testing.T) {
 	}
 	for name, f := range flows {
 		for i := 0; i < 2; i++ {
-			if _, err := Evaluate(StagedAsEnforced, rules.RuleDirIngress, store, ep, f); err != nil {
+			if _, err := evaluateNoBuf(StagedAsEnforced, rules.RuleDirIngress, store, ep, f); err != nil {
 				t.Fatalf("%s: %v", name, err)
 			}
 		}
@@ -251,7 +251,7 @@ func TestVerdictCacheSkipsL7FlowsAndNilAddresses(t *testing.T) {
 
 	// And a plain L4 flow on the same store is cached.
 	for i := 0; i < 2; i++ {
-		_, _ = Evaluate(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", 1, "10.0.0.5", 80))
+		_, _ = evaluateNoBuf(StagedAsEnforced, rules.RuleDirIngress, store, ep, policyscale.NewFlow("10.0.0.9", 1, "10.0.0.5", 80))
 	}
 	if stats.Hits.Load() != 1 || stats.Misses.Load() != 1 {
 		t.Fatalf("L4 flow: %+v", stats)

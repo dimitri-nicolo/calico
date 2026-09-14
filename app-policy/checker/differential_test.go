@@ -14,13 +14,13 @@
 
 package checker
 
-// Differential tests for Evaluate.
+// Differential tests for evaluateNoBuf.
 //
 // Two evaluators are run over the same corpus and must agree on every trace. Today the second
 // evaluator is the policyscale oracle, which answers from the generator's model of each rule
 // rather than from the proto the engine reads. A change that adds a second implementation of the
 // walk (compiled policies, a verdict cache, evaluation on another goroutine) runs it through the
-// same harness against Evaluate, and through the named cases below, before it is switched on.
+// same harness against evaluateNoBuf, and through the named cases below, before it is switched on.
 
 import (
 	"fmt"
@@ -37,9 +37,14 @@ import (
 	"github.com/projectcalico/calico/felix/types"
 )
 
-// evaluator is the shape of Evaluate, so that another implementation can be run through the
+// evaluator is the shape of evaluateNoBuf, so that another implementation can be run through the
 // same harness.
 type evaluator func(scope PolicyScope, dir rules.RuleDir, store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, flow Flow) ([]*calc.RuleID, error)
+
+// evaluateNoBuf is Evaluate without a trace buffer, in the evaluator shape.
+func evaluateNoBuf(scope PolicyScope, dir rules.RuleDir, store *policystore.PolicyStore, ep *proto.WorkloadEndpoint, flow Flow) ([]*calc.RuleID, error) {
+	return Evaluate(scope, dir, store, ep, flow, nil)
+}
 
 // corpusFlow is one evaluation of the differential corpus.
 type corpusFlow struct {
@@ -69,7 +74,7 @@ func TestEvaluateAgreesWithOracle(t *testing.T) {
 			store, ep := fx.NewStore(), fx.Endpoint()
 			corpus := differentialCorpus(fx, 7, 250, 257)
 			for _, scope := range []PolicyScope{StagedAsEnforced, EnforcedOnly} {
-				assertEquivalent(t, fmt.Sprintf("%s scope %d", c.name, scope), scope, Evaluate, oracleEvaluator(fx), store, ep, corpus)
+				assertEquivalent(t, fmt.Sprintf("%s scope %d", c.name, scope), scope, evaluateNoBuf, oracleEvaluator(fx), store, ep, corpus)
 			}
 		})
 	}
@@ -228,7 +233,7 @@ type namedCase struct {
 func TestEvaluateNamedCases(t *testing.T) {
 	_, restoreLogging := withBenchLogging(log.ErrorLevel)
 	defer restoreLogging()
-	runNamedCases(t, Evaluate)
+	runNamedCases(t, evaluateNoBuf)
 }
 
 // runNamedCases checks an evaluator against every named case.
